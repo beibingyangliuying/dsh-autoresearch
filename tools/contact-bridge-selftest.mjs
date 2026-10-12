@@ -6,6 +6,8 @@
 // row's configuration on every prompt assembly, so a settings edit reaches the next agent with no
 // listener and no staleness window. The second is safety: a settings read that fails, or a value that
 // is absent, must leave the preset working rather than take it down.
+import { readFileSync } from 'node:fs'
+import * as contact from '../contact-bridge.js'
 import { apply, contactLine, readContactAddress } from '../contact-bridge.js'
 
 let failures = 0
@@ -81,6 +83,25 @@ check(
 )
 check(Config !== undefined, 'the schema resolves here (a missing one drops the settings form)')
 check(typeof bundle.apply === 'function', 'the bundle row exports apply')
+
+// --- the export and access contract ---------------------------------------------------------------
+// A row whose `inject` is missing leaves its service accesses undeclared, and a row that hard-injects a
+// service its mount does not provide never starts. Either one marks the WHOLE preset broken and hides
+// it from the new-session roster, so both are asserted here rather than discovered from a badge.
+
+check(
+  typeof contact.apply === 'function' && Array.isArray(contact.inject) && contact.inject.every((s) => typeof s === 'string'),
+  'the row exports apply and a string inject list',
+  JSON.stringify(contact.inject),
+)
+
+const source = readFileSync(new URL('../contact-bridge.js', import.meta.url), 'utf8')
+const declared = new Set(contact.inject ?? [])
+// `settings` is read through ctx.get on purpose, so it appears without being injected.
+const undeclared = [...new Set([...source.matchAll(/\bctx\??\.([a-zA-Z_][a-zA-Z0-9_]*)/g)].map((m) => m[1]))].filter(
+  (name) => name !== 'get' && name !== 'settings' && !declared.has(name),
+)
+check(undeclared.length === 0, 'every ctx.<service> access is injected or read optionally', undeclared.join(', '))
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
