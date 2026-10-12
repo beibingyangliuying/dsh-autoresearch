@@ -7,5 +7,9 @@
   "repository": { "type": "git", "url": "git+https://github.com/beibingyangliuying/dsh-autoresearch.git" },
   "homepage": "https://github.com/beibingyangliuying/dsh-autoresearch",
   "type": "module",
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+  "exports": { ".": "./index.js", "./client": "./client.js" },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "immediately": true, "inject": [] }
+  }
 }

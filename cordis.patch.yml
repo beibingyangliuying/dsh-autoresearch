@@ -257,3 +257,10 @@
 
           - id: autoresearch-skills
             name: '@beibingyangliuying/dsh-autoresearch-preset/skills.js'
+# ── the bundle's own host row: carries the client half (the settings page) ──
+# A bundle patch is a list of id-targeted patches, so a NEW row needs insert: - a bare id is
+# read as an override and skipped with 'entry ... not found'.
+
+- insert:
+    - id: autoresearch-bundle
+      name: '@beibingyangliuying/dsh-autoresearch-preset'
