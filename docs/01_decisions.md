@@ -234,3 +234,31 @@ skill 里。
 **新发现的 Windows 陷阱（两个自测同时踩到）**：OneDrive 同步的目录带 **`ReparsePoint`** 属性，`Dirent.isDirectory()` 对它们返回 **false** ✗，尽管里面有文件 ✓ ⇒ 技能读取与文档权威清单都**静默变空** ✗。修法：**不要依赖 `isDirectory()`**，直接探测 `SKILL.md`（或 try 读取）✓。
 
 **教训**：两项功能都是"**先查服务的自述，再选机制**"的产物 ✓（对比上一轮"凭印象指认机制"✗）；而两次静默变空都是**自测**发现的 ✓ —— 自测在本项目已是第 5、6 次兜住错误 ✓。
+
+## 19. 预设再次"消失"的真因：`exports` 把包封死了（契约 Revision 4，2026-10-12）
+
+**现象**：设置页卡片红徽章"加载失败"，理由是三行全部 `never started`——与第 15 节（相对行名）**同一个后果、相反的成因**。
+
+**根因**：`package.json` 的 `exports` 只列了 `.` 与 `./client`（B1 加客户端半时引入 ✗）。Node 的 `exports` 是**封包**语义 ⇒ 三个行名（`<pkg>/isolation.js`、`/contact-bridge.js`、`/skills.js`）全部 `ERR_PACKAGE_PATH_NOT_EXPORTED` ✗ ⇒ 行连导入都没开始（`entry.fiber === undefined` ⇒ 注册表报 `never started`）⇒ `mountPreset` 抛错 ⇒ `record.broken` ⇒ 新建入口静默过滤 ✗。
+
+**为什么三条护栏都没响**（这是本节最值钱的部分）：
+
+| 我以为在守什么 | 实际守的是什么 |
+|---|---|
+| A4 加的"行名可解析"护栏 | 用的是 `existsSync(bundleDir/subpath)` ✗ —— **查了磁盘、没查解析器**。文件就在那儿，而 Node 拒绝解析它 ⇒ 报 OK ✓✗ |
+| `preset-selftest` 的检查 [2]~[5] | 默认读 `.tmp/composed-web.txt`，那份**写于 14:17**（8 小时前，在改名与重打包之前 ✗）⇒ 一直在验**旧现实**，既报**假 FAIL**（缺 contact/skills 行）也报**假 PASS** ✗ |
+| 六项自测全 PASS 的结论 | 因此对整段下午都**部分无效** ✗ |
+
+**为什么我把力气用错了地方**：连续三轮把它误判成另外两个原因（`inject: ['settings']` 硬依赖 ✗ / `inject` 导出被吃 ✗）——都是**先猜机制、后取证**。而真证据一条命令就能拿到：`createRequire(profileDir).resolve('<pkg>/isolation.js')` ✓。
+
+**注册表代码给出确定性结论**（不再靠推测）：`activate(record)` 只在启动时挂载一次，失败即 `record.broken`；`diagnostic(record)` 在 `generation === undefined` 时**直接返回 `record.broken`**（注释原文 *"A mount failure is final."*）⇒ **失败是终局的，必须重启内核**，刷新页面无效 ✓。
+
+**修法**：① `exports` 补全三个行子路径（+ `./package.json`）✓；② 护栏改为**从 profile 基线走 Node 解析器**（这才是试挂载真正用的那一步）✓；③ 新增**快照新鲜度护栏**：快照必须比 `cordis.patch.yml` 与 `package.json` 新，否则直接 FAIL 并打印重生成命令 ✓。
+
+**两条新护栏都做了负向对照**（在**真实的坏状态**上先响一次，而不是自造夹具）：解析护栏在修 `exports` **之前** FAIL 并点名三个子路径 ✓；新鲜度护栏在改完 `package.json` 后 FAIL 并点名 `package.json` ✓。
+
+**验证**：从 profile 基线逐行 `resolve + import`，三行全部 `apply=yes`、inject 正确 ✓（`client` 在 Node 里 `window is not defined` 是预期的——它是浏览器代码）。契约新增 `INV-ROW-1`，Revision 3 → **4** ✓。
+
+**教训（两条，同一类错误的两个新变种）**：
+1. **"文件存在"不等于"模块可解析"** —— 断言必须打在实际的机制上，而不是它邻近的一个易查事实；
+2. **验证所依据的快照本身也需要被验证** —— 我反复强调"看结果不看文本"，但这次的"结果"是**八小时前的结果**。陈旧输入给出的是**看起来同样确定的错误结论** ✗。

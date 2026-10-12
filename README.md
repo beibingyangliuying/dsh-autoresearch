@@ -168,9 +168,18 @@ that property. `preset-selftest.mjs` asserts the link is still a link.
   resolves against the patch file while the composition is built, but against a different base URL
   during the registry's trial mount. The row then reports `never started`, the whole preset is marked
   `broken`, and the new-session roster **silently filters it out**. Name such a plugin by a resolvable
-  package subpath (for example `@local/<bundle>/isolation.js`). Diagnose it on the preset settings
+  package subpath (for example `@<scope>/<bundle>/isolation.js`) **that Node can actually resolve** —
+  see the next entry, which is how that requirement is checked.
   page: the card carries a red "failed to load" badge whose tooltip is the reason — and that page
   reads a cached store, so refresh before concluding anything.
+- **A package that declares `exports` seals itself against its own row names.** Node resolves a row
+  name written as a package subpath (`<bundle>/isolation.js`) through the package's `exports` map, so a
+  subpath that map omits throws `ERR_PACKAGE_PATH_NOT_EXPORTED` **while the file sits right there on
+  disk**. The row reports `never started`, the whole preset is marked `broken`, and the roster hides it —
+  the same outcome as a relative name, from the opposite cause. Declaring a client half is what seals a
+  package, so every declared row subpath belongs in that map. `preset-selftest.mjs` resolves each
+  declared row name through Node **from the profile**, which is the check that sees this; asking the
+  file system whether the file exists does not.
 - **Tool isolation must be a deny list, not an allow list.** `ctx.tools.restrict()` filters what a
   scope **inherits** — the global layer and every ancestor layer on its chain — and never its own
   layer. For an agent, the preset's own rows are an **ancestor contribution**, so an `allow` list of
