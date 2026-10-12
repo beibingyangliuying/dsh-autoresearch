@@ -115,6 +115,17 @@ if (!existsSync(composedFile)) {
     'no relative row name (it breaks the registry trial mount)',
     relativeNames.map((l) => l.trim()).join(' | '),
   )
+
+  // The other half of the same failure: a row that names a subpath of THIS bundle must point at a
+  // file that exists. A rename that misses the row leaves it unresolvable, which marks the whole
+  // preset broken and hides it from the roster exactly like a relative name does.
+  const bundleDir = patchFile.replace(/[\\/][^\\/]+$/, '')
+  const bundleName = JSON.parse(readFileSync(`${bundleDir}/package.json`, 'utf8')).name
+  const unresolved = block
+    .map((l) => /^\s*name:\s*['"]?([^'"\s]+)['"]?\s*$/.exec(l)?.[1])
+    .filter((spec) => spec !== undefined && spec.startsWith(`${bundleName}/`))
+    .filter((spec) => !existsSync(`${bundleDir}/${spec.slice(bundleName.length + 1)}`))
+  ok(unresolved.length === 0, 'every row naming a bundle subpath resolves to a file', unresolved.join(', '))
   for (const id of ['present', 'tool-ralph']) {
     ok(!rowIds.includes(id), `removed by decision: ${id} absent`)
   }
