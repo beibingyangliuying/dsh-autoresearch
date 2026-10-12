@@ -1,14 +1,47 @@
-// Unit self-test for the preset's configurable-values bridge, runnable without DSH.
+// Unit self-test for the prompt bridge, runnable without DSH.
 //
 // Usage: node tools/contact-bridge-selftest.mjs
 //
-// It drives `apply()` with a fake prompt registry and asserts what gets registered. The point of the
-// row is that an unconfigured preset behaves exactly as before, so "registers nothing when empty" is
-// the load-bearing check.
-import { apply, contactLine, Config } from '../contact-bridge.js'
+// The load-bearing property is freshness: the section text is a function that re-reads the bundle
+// row's configuration on every prompt assembly, so a settings edit reaches the next agent with no
+// listener and no staleness window. The second is safety: a settings read that fails, or a value that
+// is absent, must leave the preset working rather than take it down.
+import { apply, contactLine, readContactAddress } from '../contact-bridge.js'
+
+let failures = 0
+const check = (condition, label, detail = '') => {
+  console.log(`  ${condition ? 'OK  ' : 'FAIL'} ${label}${detail ? `  ${detail}` : ''}`)
+  if (!condition) failures += 1
+}
+
+console.log('prompt bridge self-test')
+
+// --- the pure pieces ----------------------------------------------------------------------------
+
+check(contactLine(undefined) === undefined, 'contactLine(undefined) has nothing to announce')
+check(contactLine('   ') === undefined, 'a whitespace-only address has nothing to announce')
+check(String(contactLine('a@b.c')).includes('a@b.c'), 'contactLine carries the address')
+check(String(contactLine('a@b.c')).includes('mailto='), 'contactLine tells the agent how to use it')
+
+const throwing = () => { throw new Error('settings unavailable') }
+check(readContactAddress({ describe: throwing }) === '', 'a failing settings read yields an empty address, not a throw')
+check(readContactAddress(undefined) === '', 'a missing settings service yields an empty address')
+check(readContactAddress({ describe: () => [] }) === '', 'no entries yields an empty address')
+check(
+  readContactAddress({ describe: () => [{ ns: 'x', value: { other: 1 } }] }) === '',
+  'an entry without mailto does not match',
+)
+check(
+  readContactAddress({ describe: () => [{ ns: 'x', value: { mailto: ' a@b.c ' } }] }) === 'a@b.c',
+  'a matching entry is trimmed',
+)
+
+// --- the registration and its freshness ---------------------------------------------------------
 
 const sections = []
+let described = [{ ns: 'include:autoresearch-bundle', value: { mailto: 'first@example.org' }, revision: 1 }]
 const fake = {
+  settings: { describe: () => described },
   systemPrompt: {
     section: (section) => {
       sections.push(section)
@@ -17,47 +50,37 @@ const fake = {
   },
 }
 
-let failures = 0
-const check = (condition, label, detail = '') => {
-  console.log(`  ${condition ? 'OK  ' : 'FAIL'} ${label}${detail ? `  ${detail}` : ''}`)
-  if (!condition) failures += 1
-}
+apply(fake)
 
-const textOf = (section) => (typeof section.text === 'function' ? section.text({}) : section.text)
-
-console.log('contact bridge self-test')
-
-check(contactLine(undefined) === undefined, 'contactLine(undefined) has nothing to announce')
-check(contactLine('   ') === undefined, 'a whitespace-only address has nothing to announce')
-
-apply(fake, {})
-check(sections.length === 0, 'no config: registers nothing (the preset is unchanged)', `sections=${sections.length}`)
-
-apply(fake, { mailto: '   ' })
-check(sections.length === 0, 'blank config: registers nothing', `sections=${sections.length}`)
-
-apply(fake, { mailto: 'someone@example.org' })
-check(sections.length === 1, 'configured: registers exactly one section', `sections=${sections.length}`)
-
+check(sections.length === 1, 'apply registers exactly one prompt section', `sections=${sections.length}`)
 const section = sections[0] ?? {}
 check(section.name === 'autoresearch-contact', 'section carries a stable name', String(section.name))
 check(Number.isFinite(section.order), 'section carries a finite order (a non-finite one throws)', String(section.order))
+check(typeof section.text === 'function', 'section text is a function, so it can be re-read', typeof section.text)
 
-const text = String(textOf(section) ?? '')
-check(text.includes('someone@example.org'), 'section text announces the configured address')
-check(text.includes('mailto='), 'section text tells the agent how to use it')
+const textOf = () => String(section.text({}) ?? '')
+check(textOf().includes('first@example.org'), 'the first assembly announces the configured address')
 
-// The address must never be invented when nothing is configured.
-check(!String(textOf({ text: contactLine(undefined) ?? '' })).includes('@'), 'no address appears when none is set')
+// The point of the function: change the stored value and the very next assembly reflects it.
+described = [{ ns: 'include:autoresearch-bundle', value: { mailto: 'second@example.org' }, revision: 2 }]
+check(textOf().includes('second@example.org'), 'a later assembly picks up a settings edit with no listener')
+check(!textOf().includes('first@example.org'), 'the stale address is gone', textOf().slice(0, 60))
 
-// The loader validates whatever `Config` holds. Exporting a look-alike object (which is what a missing
-// schema used to fall back to) fails the mount and marks the WHOLE preset broken, so that contract is
-// checked here rather than discovered from a red badge in the settings page.
+// And an unreadable configuration is announced as nothing rather than as an error.
+described = []
+check(textOf() === '', 'an unreadable configuration yields empty text, not a broken section', JSON.stringify(textOf()))
+
+// --- the bundle row's Config contract -----------------------------------------------------------
+
+const bundle = await import('../index.js')
+const Config = bundle.Config
 check(
   Config === undefined || typeof Config?.['~standard']?.validate === 'function',
-  'Config is a schema (Standard Schema) or undefined, never a look-alike object',
+  'the bundle row Config is a Standard Schema or undefined, never a look-alike object',
   typeof Config,
 )
-check(Config !== undefined, 'the schema resolves in this environment (a missing one drops the settings form)')
+check(Config !== undefined, 'the schema resolves here (a missing one drops the settings form)')
+check(typeof bundle.apply === 'function', 'the bundle row exports apply')
+
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

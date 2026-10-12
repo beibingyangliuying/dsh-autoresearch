@@ -1,50 +1,39 @@
-// Configurable values for the `autoresearch` preset, bridged into the system prompt.
+// Preset-scoped half: reads the bundle row's configuration and states it in the system prompt.
 //
 // A discipline skill is static Markdown, so it cannot read a value the user typed into the settings
-// page. This row carries the configurable values and registers them as a system-prompt section, so
-// an agent of this preset knows them without an extra tool call — and no checked-in file has to hold
-// anyone's personal address.
+// page. This row bridges it: the value lives in the bundle's own top-level row (the only place the
+// settings layer can see), and this row announces it to the agents of THIS preset.
 //
-// Why a prompt section:
-//   * `agent/created` never reaches a listener registered in this row's scope (it fires before the
-//     agent is linked to its scope), so it is not a usable hook here;
-//   * `system-prompt/assemble` is a waterfall on the same scoped event family, and re-implementing
-//     assembly by hand is more surface than this needs;
-//   * `ctx.systemPrompt.section()` is the registry's own extension point and is scoped to this row,
-//     like every other contribution this preset makes.
+// Why the section text is a function: the host `settings.describe()` is synchronous, so the text is
+// re-read on every prompt assembly. The value therefore tracks a settings edit with no listener, no
+// cache and no staleness window.
 //
-// The schema is imported dynamically so the module also loads outside a DSH install (the self-test
-// runs it straight from the repository, where the bare specifier does not resolve). At runtime it
-// always resolves.
-const schema = await import('@deepseek-ai/schemastery')
-  .then((module) => module.default)
-  .catch(() => undefined)
-
+// Why a prompt section and not `agent/created`: a listener registered in this row's scope never
+// receives `agent/created` (it is dispatched before an agent is linked to its scope), while
+// `ctx.systemPrompt.section()` is the prompt registry's own scoped extension point.
 export const name = 'autoresearch-contact'
 
-/** The prompt registry this row contributes to. */
-export const inject = ['systemPrompt']
+/** The host services this row reads and contributes through. */
+export const inject = ['settings', 'systemPrompt']
 
 /** Section placement. Any finite order is accepted; duplicate section NAMES are what throw. */
 const SECTION_ORDER = 62
 
-/**
- * Editable per profile. Empty by default, and an empty value registers nothing at all — the preset
- * behaves exactly as before until someone fills the field in.
- */
-// The loader validates whatever this holds, so an unavailable schema must yield `undefined` - the
-// ordinary "this plugin has no config" case - and never a look-alike object: exporting a plain
-// object fails the mount, which marks the WHOLE preset broken and hides it from the roster.
-export const Config = schema === undefined
-  ? undefined
-  : schema.object({
-      mailto: schema
-        .string()
-        .default('')
-        .description(
-          'Contact address for the metadata APIs (the "polite pool"). OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact; leave empty to send none.',
-        ),
-    })
+/** The address as the bundle row currently holds it; empty when unset or unreadable. */
+export function readContactAddress(settings) {
+  try {
+    const entries = settings?.describe?.() ?? []
+    for (const entry of entries) {
+      const value = entry?.value
+      if (value !== null && typeof value === 'object' && 'mailto' in value) {
+        return String(value.mailto ?? '').trim()
+      }
+    }
+  } catch {
+    // A settings read must never take the preset down; an unannounced address is recoverable.
+  }
+  return ''
+}
 
 /** The single prompt line, or undefined when there is nothing configured to announce. */
 export function contactLine(mailto) {
@@ -58,13 +47,10 @@ export function contactLine(mailto) {
   ].join(' ')
 }
 
-export function apply(ctx, config) {
-  const text = contactLine(config?.mailto)
-  if (text === undefined) return
-
+export function apply(ctx) {
   ctx.systemPrompt.section({
     name: 'autoresearch-contact',
     order: SECTION_ORDER,
-    text,
+    text: () => contactLine(readContactAddress(ctx.settings)) ?? '',
   })
 }
