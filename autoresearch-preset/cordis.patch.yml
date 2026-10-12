@@ -246,14 +246,14 @@
           # ── tool isolation（屏蔽 profile 级的其它 global 工具）──────────────
 
           - id: autoresearch-isolation
-            name: '@local/dsh-autoresearch-preset/isolation.js'
+            name: '@beibingyangliuying/dsh-autoresearch-preset/isolation.js'
 
           # ── configurable values → system prompt（empty config registers nothing）──
 
           - id: autoresearch-contact
-            name: '@local/dsh-autoresearch-preset/contact-bridge.js'
+            name: '@beibingyangliuying/dsh-autoresearch-preset/contact-bridge.js'
 
           # ── ship the disciplines inside the preset (visible only to this preset) ──
 
           - id: autoresearch-skills
-            name: '@local/dsh-autoresearch-preset/skills.js'
+            name: '@beibingyangliuying/dsh-autoresearch-preset/skills.js'
