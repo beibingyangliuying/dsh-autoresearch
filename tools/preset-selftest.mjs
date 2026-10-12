@@ -8,13 +8,17 @@
 // Checks:
 //   [1] the profile's bundle entry is still a LINK to this workspace, not a copy
 //       (a copy silently breaks "edit the source and it takes effect")
-//   [2] the composed tree contains the preset, with the expected plugin rows
+//   [2] the composed dump is NEWER than the preset source, and the composed tree it holds contains
+//       the preset with the expected plugin rows
+//       (a stale dump is worse than none: it reports both false passes and false failures about a
+//        reality that no longer exists. This check exists because that actually happened.)
 //   [3] every paragraph of the source persona survives into the composed tree
 //       (the tree re-serialises the scalar with `>-`, so compare ignoring whitespace)
 //   [4] all discipline rules and skill-routing bullets are present
 //   [5] always-on cost of the persona
 // Exit code is 1 when any check fails.
-import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync } from 'node:fs'
+import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync, statSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 
 const composedFile = process.argv[2] ?? '.tmp/composed-web.txt'
@@ -29,6 +33,9 @@ const profileEntry = join(
   '@beibingyangliuying',
   'dsh-autoresearch-preset',
 )
+
+/** The profile's own base URL: the base the registry's trial mount resolves row names from. */
+const profileDir = resolve(profileEntry, '..', '..', '..')
 
 let failures = 0
 const ok = (cond, label, detail = '') => {
@@ -78,6 +85,17 @@ if (!existsSync(composedFile)) {
   ok(false, 'composed dump exists', `${composedFile} — run: dsh --profile web --dump-config > ${composedFile}`)
 } else {
   const composed = readFileSync(composedFile, 'utf8').split('\n')
+
+  // Refuse to report on a snapshot that predates its source.
+  const sourceFiles = [patchFile, 'package.json']
+  const staleAgainst = sourceFiles.filter((file) => statSync(file).mtimeMs > statSync(composedFile).mtimeMs)
+  ok(
+    staleAgainst.length === 0,
+    'composed dump is newer than the preset source',
+    staleAgainst.length === 0
+      ? ''
+      : `${composedFile} predates ${staleAgainst.join(', ')} — run: dsh --profile web --dump-config > ${composedFile}`,
+  )
   const start = composed.findIndex((l) => l.includes('- id: preset-autoresearch'))
   ok(start !== -1, 'row "- id: preset-autoresearch" present')
   let end = composed.length
@@ -125,7 +143,27 @@ if (!existsSync(composedFile)) {
     .map((l) => /^\s*name:\s*['"]?([^'"\s]+)['"]?\s*$/.exec(l)?.[1])
     .filter((spec) => spec !== undefined && spec.startsWith(`${bundleName}/`))
     .filter((spec) => !existsSync(`${bundleDir}/${spec.slice(bundleName.length + 1)}`))
-  ok(unresolved.length === 0, 'every row naming a bundle subpath resolves to a file', unresolved.join(', '))
+  ok(unresolved.length === 0, 'every row naming a bundle subpath exists as a file', unresolved.join(', '))
+
+  // The same catastrophe one layer deeper, and the one that actually bit us. The registry's trial
+  // mount resolves each row name from the PROFILE's base URL through Node's resolver, so a package
+  // that declares `exports` is sealed by that map. A subpath it omits throws
+  // ERR_PACKAGE_PATH_NOT_EXPORTED while the file sits right there and the check above reports OK:
+  // the row never starts, the whole preset is marked broken, and it silently disappears from the
+  // new-session roster. Ask Node, from the base the mount uses - never the file system.
+  const requireFromProfile = createRequire(join(profileDir, 'composed-entry.js'))
+  const unresolvable = block
+    .map((l) => /^\s*name:\s*['"]?([^'"\s]+)['"]?\s*$/.exec(l)?.[1])
+    .filter((spec) => spec !== undefined && spec.startsWith(`${bundleName}/`))
+    .filter((spec) => {
+      try {
+        requireFromProfile.resolve(spec)
+        return false
+      } catch {
+        return true
+      }
+    })
+  ok(unresolvable.length === 0, 'every row name resolves through Node from the profile', unresolvable.join(', '))
   for (const id of ['present', 'tool-ralph']) {
     ok(!rowIds.includes(id), `removed by decision: ${id} absent`)
   }

@@ -11,12 +11,14 @@
 // Why a prompt section and not `agent/created`: a listener registered in this row's scope never
 // receives `agent/created` (it is dispatched before an agent is linked to its scope), while
 // `ctx.systemPrompt.section()` is the prompt registry's own scoped extension point.
-export const inject = ['systemPrompt']
-
 export const name = 'autoresearch-contact'
 
 /** The host services this row reads and contributes through. */
-// systemPrompt is a hard dependency; settings is NOT injected on purpose. It is read through the\n// service registry's optional access (ctx.get), because a hard inject blocks activation wherever the\n// service is absent - a preset trial mount is one such place - and one row that never starts marks the\n// WHOLE preset broken and hides it from the new-session roster.\nexport const inject = ['systemPrompt']
+// systemPrompt is a hard dependency; settings is NOT injected on purpose. It is read through the
+// service registry's optional access (ctx.get), because a hard inject blocks activation wherever the
+// service is absent - a preset trial mount is one such place - and one row that never starts marks
+// the WHOLE preset broken and hides it from the new-session roster.
+export const inject = ['systemPrompt']
 
 /** Section placement. Any finite order is accepted; duplicate section NAMES are what throw. */
 const SECTION_ORDER = 62
