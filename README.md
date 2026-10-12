@@ -30,8 +30,9 @@ Confirm it registered — the composition should carry the preset row:
 dsh --profile web --dump-config | Select-String 'preset-autoresearch'
 ```
 
-The GitHub path above has not been exercised yet; the local-link path has. If GitHub installation
-fails, open an issue with the error rather than working around it silently.
+That GitHub path is verified end to end: the package lands in the profile as a real copy, pnpm
+hoists the one dependency so the row's import resolves, and the composition then carries the preset and
+its three rows. The local-link path is for developing against a checkout.
 
 ## Start a session with the preset
 
