@@ -3,17 +3,24 @@
 // Usage: node tools/isolation-selftest.mjs
 //
 // It drives `apply()` with a fake tool registry whose global view is a known set, then asserts the
-// filter handed to `restrict()`.
+// filters handed to `restrict()`.
 //
-// The load-bearing assertion is that the filter carries NO `allow` list. `restrict()` filters what a
-// scope inherits — for an agent, the preset's own rows are an ancestor contribution — so an allow
-// list would mask the preset's own shell/filesystem/skill tools along with the globals. That was a
-// real defect: the preset shipped with no shell and no file tools. A deny list naming only the
-// unwanted globals cannot do that.
+// Two load-bearing assertions:
+//   1. the filter carries NO `allow` list — `restrict()` filters what a scope inherits, and for an
+//      agent this preset's own rows are an ancestor contribution, so an allow list would mask the
+//      preset's own shell/filesystem/skill tools along with the globals (a defect that shipped);
+//   2. a second pass runs on `agent/created` — a plugin that registers after the preset activates
+//      (config-manager waits for `settings` and `credentials`) is only visible then, and without
+//      this pass it leaks into research sessions.
+//
+// The fake models ONE scope whose registry view GROWS, because that is what the real plugin sees.
+// An earlier version fabricated a listener `this` that carried `tools`; the test passed while the
+// real handler failed on `this.tools === undefined`. A fake must not be more capable than reality.
 import { rmSync } from 'node:fs'
 import { apply } from '../autoresearch-preset/isolation.js'
 
-const GLOBAL_VIEW = [
+/** The global view at activation: nothing from a late-registering plugin yet. */
+const VIEW_AT_ACTIVATION = [
   { name: 'mnemon_recall' },
   { name: 'mnemon_runtime_memory' },
   { name: 'read_page' },
@@ -23,19 +30,31 @@ const GLOBAL_VIEW = [
   { name: 'read_image' },
   { name: 'univer_api' },
   { name: 'univer_execute' },
-  { name: 'config_backup' },
   { name: 'code_review' },
-  { name: 'some_future_plugin_tool' },
 ]
 
+/** Tools that appear only later: a plugin waiting on a late service, plus a future install. */
+const LATE_TOOLS = [{ name: 'config_backup' }, { name: 'config_restore' }, { name: 'some_future_plugin_tool' }]
+
 const calls = []
-const fake = {
+const handlers = {}
+let currentView = [...VIEW_AT_ACTIVATION]
+let registryBroken = false
+
+const scope = {
   tools: {
-    schemas: () => GLOBAL_VIEW,
+    schemas: () => {
+      if (registryBroken) throw new Error('registry unavailable')
+      return currentView
+    },
     restrict: (filter) => {
       calls.push(filter)
       return () => {}
     },
+  },
+  on: (event, handler) => {
+    handlers[event] = handler
+    return () => {}
   },
 }
 
@@ -46,32 +65,56 @@ const check = (condition, label, detail = '') => {
 }
 
 console.log('isolation self-test')
-apply(fake)
+apply(scope)
 
-check(calls.length === 1, 'restrict() called exactly once', `calls=${calls.length}`)
-const filter = calls[0] ?? {}
+check(calls.length === 1, 'restrict() called once at activation', `calls=${calls.length}`)
+check(typeof handlers['agent/created'] === 'function', 'a handler is registered for agent/created')
+
+const first = calls[0] ?? {}
 
 // The regression guard for the shipped defect.
-check(!('allow' in filter), 'filter carries NO allow list (an allow list masks the preset\'s own tools)')
-check(Array.isArray(filter.deny) && filter.deny.length > 0, 'filter carries a non-empty deny list')
+check(!('allow' in first), "activation filter carries NO allow list (an allow list masks the preset's own tools)")
+check(Array.isArray(first.deny) && first.deny.length > 0, 'activation filter carries a non-empty deny list')
 
-const denied = new Set(filter.deny ?? [])
-const kept = new Set(GLOBAL_VIEW.map((s) => s.name).filter((n) => !denied.has(n)))
+const deniedAtActivation = new Set(first.deny ?? [])
+const keptAtActivation = new Set(VIEW_AT_ACTIVATION.map((s) => s.name).filter((n) => !deniedAtActivation.has(n)))
 
-check(kept.has('mnemon_recall'), 'keeps mnemon (progress-sync depends on it)')
-check(kept.has('read_page') && kept.has('x_search'), 'keeps modsearch page/X search')
-check(kept.has('str_replace_editor') && kept.has('undo_last_edit'), 'keeps better-edit tools')
-check(kept.has('read_image'), 'keeps read_image')
+check(keptAtActivation.has('mnemon_recall'), 'keeps mnemon (progress-sync depends on it)')
+check(keptAtActivation.has('read_page') && keptAtActivation.has('x_search'), 'keeps modsearch page/X search')
+check(keptAtActivation.has('str_replace_editor') && keptAtActivation.has('undo_last_edit'), 'keeps better-edit tools')
+check(keptAtActivation.has('read_image'), 'keeps read_image')
+check(deniedAtActivation.has('univer_api') && deniedAtActivation.has('univer_execute'), 'denies univer')
+check(deniedAtActivation.has('code_review'), 'denies code-review')
+check(!deniedAtActivation.has('config_backup'), 'config-manager is invisible at activation (that is the gap)')
 
-check(denied.has('univer_api') && denied.has('univer_execute'), 'denies univer')
-check(denied.has('config_backup'), 'denies config-manager')
-check(denied.has('code_review'), 'denies code-review')
-check(denied.has('some_future_plugin_tool'), 'denies a plugin installed later (recomputed per activation)')
+// The late plugin registers, then an agent is created: the same scope, a complete view.
+currentView = [...VIEW_AT_ACTIVATION, ...LATE_TOOLS]
+handlers['agent/created']()
+
+check(calls.length === 2, 'restrict() called a second time on agent creation', `calls=${calls.length}`)
+const second = calls[1] ?? {}
+check(!('allow' in second), 'agent filter carries NO allow list')
+const deniedAtAgent = new Set(second.deny ?? [])
+
+check(deniedAtAgent.has('config_backup') && deniedAtAgent.has('config_restore'), 'agent pass denies config-manager')
+check(deniedAtAgent.has('some_future_plugin_tool'), 'agent pass denies a plugin installed later')
+check(!deniedAtAgent.has('mnemon_recall'), 'agent pass still keeps mnemon')
+check(!deniedAtAgent.has('read_page'), 'agent pass still keeps modsearch')
 
 // Every denied name must exist in the global view, or restrict() would reject the filter.
-const known = new Set(GLOBAL_VIEW.map((s) => s.name))
-const unknown = [...denied].filter((n) => !known.has(n))
-check(unknown.length === 0, 'no unknown name in the deny list', unknown.join(','))
+const known = new Set(currentView.map((s) => s.name))
+const unknown = [...deniedAtAgent].filter((n) => !known.has(n))
+check(unknown.length === 0, 'no unknown name in the agent deny list', unknown.join(','))
+
+// A failing agent-time pass must not throw out of the handler.
+registryBroken = true
+let survived = true
+try {
+  handlers['agent/created']()
+} catch {
+  survived = false
+}
+check(survived, 'a failing agent-time pass never throws (agent creation must not break)')
 
 // The plugin writes its report beside itself. This test drives a FAKE registry, so the report it
 // produces would be misleading evidence: remove it, and say so.

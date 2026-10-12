@@ -103,8 +103,8 @@ docs/                  Chinese review aids and the frozen development log
   scope **inherits** — the global layer and every ancestor layer on its chain — and never its own
   layer. For an agent, the preset's own rows are an **ancestor contribution**, so an `allow` list of
   global names also masks the preset's own shell, filesystem, skill and subagent tools; the agent then
-  reports having no shell. Use `deny = (global view) − keep-list`, recomputed per activation (which
-  also covers a plugin installed later). `isolation-selftest.mjs` asserts the filter carries no
+  reports having no shell. Use `deny = (global view) − keep-list`, applied at activation, which is the guarantee (which
+  also covers a plugin that registers after activation, such as one waiting on a late service). `isolation-selftest.mjs` asserts the filter carries no
   `allow` list.
 
 ## Language

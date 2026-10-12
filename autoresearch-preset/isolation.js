@@ -18,9 +18,17 @@
 //
 //   deny = (every name in the global view) − KEEP
 //
-// This is equivalent to an allow list over globals (no global outside KEEP survives), it leaves the
-// preset's own tools untouched, and it stays future-proof: the list is recomputed on every
-// activation, so a plugin installed later is denied the next time this preset activates.
+// COVERAGE: THE FILTER IS APPLIED TWICE, AND RESTRICTIONS INTERSECT
+//
+//   1. On this row's activation, which covers every global tool registered *before* the preset
+//      activates.
+//   2. On every `agent/created`, when the global view is complete. A plugin that waits for a late
+//      service registers after (1): `config-manager` injects `settings` and `credentials`, so its
+//      five tools appeared only in the later view and leaked into research sessions.
+//
+// (1) is the guarantee. (2) is best-effort and was NOT observed to take effect: a listener
+// registered in this row's own scope did not receive `agent/created` in a user-visible check. The
+// handler stays wrapped so isolation can never fail an agent creation.
 //
 // `restrict()` rejects unknown names and scope-local names; building the list from the registry's
 // own global view means it can contain neither.
@@ -73,22 +81,49 @@ function writeReport(report) {
   }
 }
 
-export function apply(ctx) {
-  const globalNames = [...new Set(ctx.tools.schemas().map((schema) => schema.name))].sort()
-  const kept = globalNames.filter((toolName) => KEEP.includes(toolName))
-  const denied = globalNames.filter((toolName) => !KEEP.includes(toolName))
-
-  if (denied.length === 0) {
-    // Nothing global to remove: applying an empty filter is a no-op, so report and stop.
-    writeReport({ applied: false, reason: 'no global tool to deny', kept, denied })
-    console.log('[autoresearch-isolation] nothing to deny; restriction NOT applied')
-    return
+/** Split the registry's global view into what this preset keeps and what it denies. */
+function splitGlobalView(scope) {
+  const globalNames = [...new Set(scope.tools.schemas().map((schema) => schema.name))].sort()
+  return {
+    kept: globalNames.filter((toolName) => KEEP.includes(toolName)),
+    denied: globalNames.filter((toolName) => !KEEP.includes(toolName)),
   }
+}
 
-  // `deny` only rejects the names it lists, so the preset's own tools are unaffected.
-  ctx.tools.restrict({ deny: denied })
-  writeReport({ applied: true, kept, denied })
+export function apply(ctx) {
+  const atActivation = splitGlobalView(ctx)
+  if (atActivation.denied.length > 0) {
+    // `deny` only rejects the names it lists, so the preset's own tools are unaffected.
+    ctx.tools.restrict({ deny: atActivation.denied })
+  }
+  const report = {
+    applied: atActivation.denied.length > 0,
+    kept: atActivation.kept,
+    denied: atActivation.denied,
+  }
   console.log(
-    `[autoresearch-isolation] kept ${kept.length} global tool(s); denied ${denied.length}: ${denied.join(', ')}`,
+    `[autoresearch-isolation] at activation: kept ${atActivation.kept.length}, denied ${atActivation.denied.length}`,
   )
+
+  // Second pass, when the global view is complete. It restricts THIS row's scope on purpose: the
+  // listener's own scope does not carry the tools service, and it does not need to — a restriction
+  // on an ancestor layer reaches every agent below it.
+  ctx.on('agent/created', () => {
+    try {
+      const atAgent = splitGlobalView(ctx)
+      if (atAgent.denied.length > 0) ctx.tools.restrict({ deny: atAgent.denied })
+      report.agentKept = atAgent.kept
+      report.agentDenied = atAgent.denied
+      console.log(
+        `[autoresearch-isolation] at agent creation: kept ${atAgent.kept.length}, denied ${atAgent.denied.length}`,
+      )
+    } catch (error) {
+      // Isolation must never fail an agent creation.
+      report.agentError = String(error?.message ?? error)
+      console.log(`[autoresearch-isolation] agent scope could not be restricted: ${report.agentError}`)
+    }
+    writeReport(report)
+  })
+
+  writeReport(report)
 }

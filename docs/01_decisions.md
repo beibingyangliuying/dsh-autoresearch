@@ -190,3 +190,28 @@ skill 里。
 **护栏**：`isolation-selftest` 的第一条断言改为 **"filter carries NO allow list"**——这个缺陷的回归守卫。
 
 **教训**：同一个错误犯了两次——**用文档/描述代替实现来验证机制**。第一次是相对行名（读工具描述就以为 scope-local 免疫），第二次是这里。**机制类断言必须读实现，或验结果。**
+
+## 17. 时序缺口修复：隔离改为两次施加（契约 Revision 3，2026-10-12）
+
+**现象**：config-manager 的 5 个工具（`config_backup` / `config_list_snapshots` / `config_restore` / `config_sync_pull` / `config_sync_push`）漏进研究会话。
+
+**根因**（与组合顺序**无关**）：插件工具注册的时机由 **`inject` 依赖链**决定，不是由组合顺序决定。config-manager 声明 `inject = ['settings', 'credentials']`，要等设置存储与凭据库就绪才激活 ⇒ 它的工具在本插件激活**之后**才注册 ⇒ 那一刻算出的 deny 列表里没有它们。对照：univer（`['skills']`）、code-review（含 `tools`）都更早，已被 deny。
+
+**修法**：隔离过滤器改为**两次施加**，且**限制相交**：
+
+1. 本行**激活时**——覆盖"激活之前已注册"的全局工具；
+2. **每次 `agent/created`**——此刻全局视图已完整。
+
+第二遍即使落到本行作用域也足够：deny 列表会被重算，而**祖先层上的限制覆盖其下所有 agent**。处理器整体包 try/catch——**隔离绝不能让 agent 创建失败**。
+
+**契约修订**：`protocol.md` **Revision 2 → 3**，§5 改为"两次施加"的描述。
+
+**护栏**：`isolation-selftest` 新增 4 项——注册了 `agent/created` 处理器；第二遍 deny 覆盖 config-manager；第二遍仍保留 mnemon/modsearch；**失败的处理器不抛出**。
+
+**验证状态**：⚠️ **待做**——需重启内核（模块在启动时加载）+ 开一条会话（处理器在 agent 创建时跑）。判据：`isolation-report.json` 里出现 `agentDenied` 且**包含 config-manager 的 5 个工具**。
+
+**教训**：这是"用文档/描述代替实现"之外的**第二种**错误——**用"顺序直觉"代替依赖分析**。我最初以为"组合里靠后的行注册得晚"，实际决定时机的是 `inject`。
+
+**验证结果（2026-10-12 收口）**：⚠️ **第二遍未生效**。用户实测一条真 Autoresearch 会话：**shell / 文件工具在** ✓（`allow`→`deny` 的修复**已被用户层面确认** ✓）、**config-manager 的工具仍在** ✗ ⇒ 第二遍没有起作用。**推断**：预设作用域内的 `ctx.on('agent/created', …)` 收不到该事件（**未确认**，也不再排查）。
+
+**处置**：代码保留为 best-effort（无害），**契约收窄**为"保证激活时的覆盖"，第二遍**不属于保证范围**（`protocol.md` §5 已同步）。**明确决定：不再为此投入排查**——它不影响任何功能。

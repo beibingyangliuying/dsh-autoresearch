@@ -1,9 +1,9 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 2.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 3.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
+independent of any package version. Revision 3 recorded a second, best-effort pass applied on every agent creation for plugins that register after the preset activates, and narrowed the guarantee to activation-time coverage, because that pass has not been confirmed to take effect at runtime. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
 
 ## 1. Notation and units
 
@@ -143,16 +143,21 @@ is a correctness requirement rather than a style choice:
   chain — and never what that scope's **own** layer registers. For an agent, the preset's own rows are
   an **ancestor contribution**, so an allow list naming only global tools also masks every tool the
   preset declares itself: the agent ends up with no shell and no file tools.
-- The deny list is `(every name in the global view) − keep-list`, recomputed on every activation. It
-  therefore removes exactly the globals outside the keep-list — including a tool belonging to a plugin
-  installed later — and it cannot touch the preset's own tools.
+- The deny list is `(every name in the global view) − keep-list`, and it removes exactly the
+  globals outside the keep-list without touching the preset's own tools. **The guarantee is
+  activation-time coverage.**
+- A second pass also runs on every agent creation, where the global view is complete, as a
+  **best-effort** measure against a plugin that registers late. It is deliberately **not** part of
+  the guarantee: it depends on the event reaching a listener registered in the preset's own scope,
+  and that has not been confirmed at runtime.
 
-The filter is applied only when there is something to deny:
+The filter is applied only when there is something to deny. It is applied at preset activation — the
+guarantee — and again on every agent creation as a best-effort second pass:
 
 ```text
-deny = { n ∈ global view : n ∉ keep-list }
-if deny is empty:  do not restrict; report the omission
-else:              restrict to deny
+at preset activation:    deny = { n ∈ global view : n ∉ keep-list }   # the guarantee
+at every agent creation: deny = { n ∈ global view : n ∉ keep-list }   # best effort, unverified
+restrictions intersect, so the two passes compose; an empty pass is skipped
 ```
 
 This is a deliberate failure mode. A filter naming an unregistered or scope-local tool is rejected by
