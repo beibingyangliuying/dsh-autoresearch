@@ -1,13 +1,18 @@
 // Client half: the Autoresearch page inside the settings panel.
 //
-// A real form, not a wall of text: the contact address is an input bound to this bundle's own Config
-// through `ctx.remote.settings` - the same channel the built-in settings pages use, so no host half is
-// needed. Every remote call answers `{ ok: true, value }` or `{ ok: false, error: { message } }`, and a
-// write carries the revision it was based on, which is how a stale write is refused instead of quietly
-// clobbering a concurrent edit.
+// A form, not a wall of text. Fields are declared as data and written together by ONE Apply at the
+// foot of the page, so adding a setting means adding an entry to FIELDS rather than another control
+// with its own button.
 //
-// The namespace is not hard-coded: `describe()` answers every namespace, so the page finds the one that
-// actually carries `mailto`. A rename on the host side degrades this page rather than breaking it.
+// The channel is `ctx.remote.settings`, the same one the built-in settings pages use. Both service
+// keys matter: `remote` is the namespace root and `remote.settings` its generated sub-namespace -
+// injecting only the latter raises `cannot get property "remote" without inject` on first use. Every
+// call answers `{ ok, value }` or `{ ok: false, error }`, and a write carries the revision it was
+// based on, so a stale write is refused instead of clobbering a concurrent edit.
+//
+// The namespace is found rather than hard-coded: `describe()` answers every namespace and the page
+// picks the one carrying the fields it edits, so a host-side rename degrades the page instead of
+// breaking it.
 //
 // UI rules from the reference: the factory is side-effect free, React comes from the browser module
 // table, no Harness Client package is imported, colour is inherited rather than literal, and the only
@@ -18,44 +23,66 @@ window.__ModuleLoader__.load({
     const React = require('react')
     const h = React.createElement
 
+    /** Every setting this page edits. Add an entry here; the form and the Apply write follow. */
+    const FIELDS = [
+      {
+        key: 'mailto',
+        label: 'Contact address',
+        placeholder: 'you@example.org',
+        hint: 'Sent as &mailto= on OpenAlex and Crossref requests, and passed to the reference-library writer. Identifying yourself gets faster service and gentler rate limits. Leave it empty to send no contact - everything still works.',
+      },
+    ]
+
     const muted = { margin: '0 0 6px', lineHeight: 1.6, opacity: 0.8 }
     const heading = { margin: '22px 0 8px', fontSize: '0.95em', fontWeight: 600, opacity: 0.9 }
     const card = { border: '1px solid currentColor', borderRadius: 10, padding: '14px 16px', marginBottom: 12, opacity: 0.95 }
-    const row = { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }
+    const field = { marginBottom: 18 }
+    const label = { display: 'block', fontWeight: 600, marginBottom: 6 }
     const input = {
-      flex: '1 1 22em', minWidth: '14em', padding: '7px 10px', font: 'inherit', color: 'inherit',
-      background: 'transparent', border: '1px solid currentColor', borderRadius: 6, opacity: 0.95,
+      display: 'block', width: '100%', boxSizing: 'border-box', padding: '7px 10px', font: 'inherit',
+      color: 'inherit', background: 'transparent', border: '1px solid currentColor', borderRadius: 6, opacity: 0.95,
+    }
+    const hint = { margin: '6px 0 0', fontSize: '0.9em', lineHeight: 1.55, opacity: 0.7 }
+    const bar = {
+      display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid currentColor',
+      paddingTop: 14, marginTop: 4, opacity: 0.95,
     }
     const button = {
-      padding: '7px 16px', font: 'inherit', color: 'inherit', background: 'transparent',
+      padding: '7px 20px', font: 'inherit', color: 'inherit', background: 'transparent',
       border: '1px solid currentColor', borderRadius: 6, cursor: 'pointer', opacity: 0.9,
     }
-    const label = { display: 'block', fontWeight: 600, marginBottom: 4 }
-    const hint = { margin: '6px 0 0', fontSize: '0.9em', lineHeight: 1.55, opacity: 0.7 }
-    const code = {
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '0.92em',
-      padding: '1px 5px', border: '1px solid currentColor', borderRadius: 4, opacity: 0.85,
-    }
+    const disabled = { ...button, cursor: 'default', opacity: 0.45 }
+    const status = { fontSize: '0.9em', opacity: 0.75 }
 
-    // The component below outlives the apply call, so the context it calls through is held here
-    // instead of being closed over from apply's parameter, which the component cannot see.
+    // The component outlives the apply call, so the context it calls through is held at factory
+    // level; closing over apply's parameter would throw at runtime while still parsing.
     let pluginCtx
-    /** Find the namespace that carries the contact address, whatever the host calls it. */
-    function findNamespace(view) {
+
+    /** Collect the values this page edits, from whichever namespace carries them. */
+    function readNamespaces(view) {
       const namespaces = view?.settings ?? view?.forms ?? view?.namespaces ?? view
-      if (namespaces === null || typeof namespaces !== 'object') return undefined
-      for (const [key, entry] of Object.entries(namespaces)) {
-        const value = entry?.value ?? entry
-        if (value !== null && typeof value === 'object' && 'mailto' in value) {
-          return { ns: entry?.ns ?? key, value, revision: entry?.revision }
-        }
-      }
-      return undefined
+      if (namespaces === null || typeof namespaces !== 'object') return []
+      return Object.entries(namespaces).map(([key, entry]) => ({
+        ns: entry?.ns ?? key,
+        value: entry?.value ?? entry,
+        revision: entry?.revision,
+      }))
     }
 
-    function ContactAddress() {
+    function findTarget(view) {
+      // "any of the fields", not "all of them": a field added to FIELDS is not in the stored value yet,
+      // so requiring every key would make the page announce that its namespace is missing.
+      return readNamespaces(view).find(
+        (candidate) =>
+          candidate.value !== null &&
+          typeof candidate.value === 'object' &&
+          FIELDS.some((field) => field.key in candidate.value),
+      )
+    }
+
+    function AutoresearchSettings() {
       const [state, setState] = React.useState({ status: 'loading' })
-      const [draft, setDraft] = React.useState('')
+      const [draft, setDraft] = React.useState({})
 
       const load = React.useCallback(async () => {
         setState({ status: 'loading' })
@@ -65,13 +92,15 @@ window.__ModuleLoader__.load({
             setState({ status: 'error', message: response.error.message })
             return
           }
-          const found = findNamespace(response.value)
-          if (found === undefined) {
+          const target = findTarget(response.value)
+          if (target === undefined) {
             setState({ status: 'missing' })
             return
           }
-          setState({ status: 'ready', ...found })
-          setDraft(String(found.value.mailto ?? ''))
+          const values = {}
+          for (const f of FIELDS) values[f.key] = String(target.value[f.key] ?? '')
+          setState({ status: 'ready', ns: target.ns, revision: target.revision, baseline: values })
+          setDraft(values)
         } catch (error) {
           setState({ status: 'error', message: error instanceof Error ? error.message : String(error) })
         }
@@ -81,21 +110,24 @@ window.__ModuleLoader__.load({
         load()
       }, [load])
 
-      const save = React.useCallback(async () => {
-        if (state.status !== 'ready' && state.status !== 'saving') return
-        const base = state
+      const apply = React.useCallback(async () => {
+        if (state.status !== 'ready' && state.status !== 'error') return
+        const base = state.status === 'ready' ? state : state.previous
+        if (base === undefined) return
         setState({ ...base, status: 'saving' })
         try {
-          const response = await pluginCtx.remote.settings.update(base.ns, { mailto: draft }, base.revision)
+          const response = await pluginCtx.remote.settings.update(base.ns, { ...draft }, base.revision)
           if (!response.ok) {
-            setState({ ...base, status: 'error', message: response.error.message })
+            setState({ ...base, status: 'ready', error: response.error.message, previous: base })
             return
           }
-          const found = findNamespace(response.value) ?? { ns: base.ns, value: { mailto: draft } }
-          setState({ status: 'ready', ...found, saved: true })
-          setDraft(String(found.value?.mailto ?? draft))
+          const target = findTarget(response.value)
+          setState({
+            status: 'ready', ns: base.ns, revision: target?.revision ?? base.revision,
+            baseline: { ...draft }, saved: true, previous: base,
+          })
         } catch (error) {
-          setState({ ...base, status: 'error', message: error instanceof Error ? error.message : String(error) })
+          setState({ ...base, status: 'ready', error: error instanceof Error ? error.message : String(error), previous: base })
         }
       }, [state, draft])
 
@@ -104,69 +136,52 @@ window.__ModuleLoader__.load({
         return h(
           'p',
           { style: muted },
-          'The contact-address field is not in the running composition. Configure this bundle from its ',
-          'own page under Built-in plugins until it is.',
+          'No namespace in this deployment carries the fields this page edits. Configure this bundle from ',
+          'its own page under Built-in plugins until one does.',
         )
       }
 
       const busy = state.status === 'saving'
+      const dirty = FIELDS.some((f) => (draft[f.key] ?? '') !== (state.baseline?.[f.key] ?? ''))
+
       return h(
         'div',
         null,
-        h('label', { style: label, htmlFor: 'autoresearch-mailto' }, 'Contact address'),
-        h(
-          'div',
-          { style: row },
-          h('input', {
-            id: 'autoresearch-mailto', style: input, type: 'text', value: draft, spellCheck: false,
-            placeholder: 'you@example.org', disabled: busy,
-            onChange: (event) => setDraft(event.target.value),
-          }),
-          h('button', { style: button, type: 'button', disabled: busy, onClick: save }, busy ? 'Saving...' : 'Save'),
-        ),
-        h(
-          'p',
-          { style: hint },
-          'Sent as ',
-          h('code', { style: code }, '&mailto='),
-          ' on OpenAlex and Crossref requests, and passed to the reference-library writer. Identifying ',
-          'yourself gets faster service and gentler rate limits. Leave it empty to send no contact - ',
-          'everything still works.',
-        ),
-        state.status === 'error' ? h('p', { style: { ...hint, opacity: 0.95 } }, 'Not saved: ', state.message) : null,
-        state.saved ? h('p', { style: hint }, 'Saved. A new agent picks it up; a running one keeps its own prompt.') : null,
-      )
-    }
+        h('div', { style: card }, FIELDS.map((f) =>
+          h('div', { key: f.key, style: field },
+            h('label', { style: label, htmlFor: 'autoresearch-' + f.key }, f.label),
+            h('input', {
+              id: 'autoresearch-' + f.key, style: input, type: 'text', spellCheck: false,
+              placeholder: f.placeholder, value: draft[f.key] ?? '', disabled: busy,
+              onChange: (event) => setDraft({ ...draft, [f.key]: event.target.value }),
+            }),
+            h('p', { style: hint }, f.hint),
+          ))),
 
-    function AutoresearchSettings() {
-      return h(
-        'div',
-        { style: { maxWidth: '48em', paddingTop: 4 } },
-        h(
-          'p',
-          { style: muted },
-          'A domain-neutral research workbench: an agent preset, eight on-demand research disciplines ',
-          'that ship inside this bundle, two external evidence channels, and a scaffold for one study.',
+        h('div', { style: bar },
+          h('button', {
+            style: busy || !dirty ? disabled : button, type: 'button',
+            disabled: busy || !dirty, onClick: apply,
+          }, busy ? 'Applying...' : 'Apply'),
+          h('span', { style: status },
+            state.error ? 'Not applied: ' + state.error
+              : state.saved && !dirty ? 'Applied. A new agent picks it up; a running one keeps its own prompt.'
+                : dirty ? 'Unsaved changes.'
+                  : ''),
         ),
-
-        h('h3', { style: heading }, 'Configuration'),
-        h('div', { style: card }, h(ContactAddress)),
 
         h('h3', { style: heading }, 'Starting a research session'),
-        h(
-          'p',
-          { style: muted },
-          'Select ',
-          h('strong', null, 'Autoresearch'),
+        h('p', { style: muted },
+          'Select ', h('strong', null, 'Autoresearch'),
           ' where the new session is created - a session is created with the default preset and keeps the ',
           'preset it was created with, so switching it later leaves your first message with the default ',
-          'agent. Restart the host and resume the session (or spawn a subagent) to get a new agent.',
-        ),
+          'agent. Restart the host and resume the session (or spawn a subagent) to get a new agent.'),
       )
     }
 
     return {
-      inject: ['slots', 'remote.settings'],
+      // Both keys are required: `remote` is the namespace root, `remote.settings` its sub-namespace.
+      inject: ['slots', 'remote', 'remote.settings'],
       apply(ctx) {
         pluginCtx = ctx
         ctx.slots.inject('settings.section', () =>
