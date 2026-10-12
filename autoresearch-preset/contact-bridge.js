@@ -32,8 +32,12 @@ const SECTION_ORDER = 62
  * Editable per profile. Empty by default, and an empty value registers nothing at all — the preset
  * behaves exactly as before until someone fills the field in.
  */
-export const Config = schema
-  ? schema.object({
+// The loader validates whatever this holds, so an unavailable schema must yield `undefined` - the
+// ordinary "this plugin has no config" case - and never a look-alike object: exporting a plain
+// object fails the mount, which marks the WHOLE preset broken and hides it from the roster.
+export const Config = schema === undefined
+  ? undefined
+  : schema.object({
       mailto: schema
         .string()
         .default('')
@@ -41,7 +45,6 @@ export const Config = schema
           'Contact address for the metadata APIs (the "polite pool"). OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact; leave empty to send none.',
         ),
     })
-  : { mailto: '' }
 
 /** The single prompt line, or undefined when there is nothing configured to announce. */
 export function contactLine(mailto) {

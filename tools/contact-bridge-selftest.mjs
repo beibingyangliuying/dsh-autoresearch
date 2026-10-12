@@ -5,7 +5,7 @@
 // It drives `apply()` with a fake prompt registry and asserts what gets registered. The point of the
 // row is that an unconfigured preset behaves exactly as before, so "registers nothing when empty" is
 // the load-bearing check.
-import { apply, contactLine } from '../autoresearch-preset/contact-bridge.js'
+import { apply, contactLine, Config } from '../autoresearch-preset/contact-bridge.js'
 
 const sections = []
 const fake = {
@@ -50,5 +50,14 @@ check(text.includes('mailto='), 'section text tells the agent how to use it')
 // The address must never be invented when nothing is configured.
 check(!String(textOf({ text: contactLine(undefined) ?? '' })).includes('@'), 'no address appears when none is set')
 
+// The loader validates whatever `Config` holds. Exporting a look-alike object (which is what a missing
+// schema used to fall back to) fails the mount and marks the WHOLE preset broken, so that contract is
+// checked here rather than discovered from a red badge in the settings page.
+check(
+  Config === undefined || typeof Config?.['~standard']?.validate === 'function',
+  'Config is a schema (Standard Schema) or undefined, never a look-alike object',
+  typeof Config,
+)
+check(Config !== undefined, 'the schema resolves in this environment (a missing one drops the settings form)')
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
