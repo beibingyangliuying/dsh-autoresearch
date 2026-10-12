@@ -14,12 +14,19 @@
 export const name = 'autoresearch-contact'
 
 /** The host services this row reads and contributes through. */
-export const inject = ['settings', 'systemPrompt']
+// systemPrompt is a hard dependency; settings is NOT injected on purpose. It is read through the\n// service registry's optional access (ctx.get), because a hard inject blocks activation wherever the\n// service is absent - a preset trial mount is one such place - and one row that never starts marks the\n// WHOLE preset broken and hides it from the new-session roster.\nexport const inject = ['systemPrompt']
 
 /** Section placement. Any finite order is accepted; duplicate section NAMES are what throw. */
 const SECTION_ORDER = 62
 
-/** The address as the bundle row currently holds it; empty when unset or unreadable. */
+/** The settings service if this mount has it, else undefined; never throws. */
+export function optionalSettings(ctx) {
+  try {
+    return ctx?.get?.('settings') ?? ctx?.settings
+  } catch {
+    return undefined
+  }
+}
 export function readContactAddress(settings) {
   try {
     const entries = settings?.describe?.() ?? []
@@ -51,6 +58,6 @@ export function apply(ctx) {
   ctx.systemPrompt.section({
     name: 'autoresearch-contact',
     order: SECTION_ORDER,
-    text: () => contactLine(readContactAddress(ctx.settings)) ?? '',
+    text: () => contactLine(readContactAddress(optionalSettings(ctx))) ?? '',
   })
 }
