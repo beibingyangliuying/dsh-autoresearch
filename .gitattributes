@@ -1,0 +1,3 @@
+# The repository stores text with LF. Without this, Git on Windows rewrites the working copy to
+# CRLF, which churns every diff and makes line-anchored editing noisier for no benefit.
+* text=auto eol=lf
