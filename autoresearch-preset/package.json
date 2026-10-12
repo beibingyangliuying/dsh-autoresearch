@@ -1,0 +1,9 @@
+{
+  "name": "@local/dsh-autoresearch-preset",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A domain-neutral research workbench for DSH: an agent preset, eight on-demand research disciplines, an academic MCP pair, and a study scaffold.",
+  "license": "MIT",
+  "type": "module",
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

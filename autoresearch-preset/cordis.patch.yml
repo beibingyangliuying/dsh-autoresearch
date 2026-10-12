@@ -1,0 +1,250 @@
+# The `autoresearch` agent preset: the shipped `standard` coding agent, adapted into a
+# DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
+#   - `persona` carries a resident research discipline (three-way typing, no
+#     unfalsifiable wording, no memory-based citations, read-before-write) plus
+#     routing to seven research-discipline skills.
+#   - `present` and `tool-ralph` rows are dropped (not needed for research work).
+#   - `skill-filesystem` is REQUIRED here: without it, `~/.dsh/skills/` and
+#     `<workspace>/.agents/skills/` are not loaded, and the routing above is dead.
+#   - the academic MCP servers live HERE rather than in a profile-level bundle, so their
+#     tools are SCOPE-LOCAL: visible to this preset, and leaked into no other session.
+#   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
+#     code-review, ...), keeping only the ones this preset deliberately retains.
+# Design record: ../docs/00_overview.md (what it is) and ../docs/01_decisions.md (why).
+
+- insert:
+    - id: preset-autoresearch
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: autoresearch
+        name: Autoresearch
+        description: Domain-neutral research workbench — a resident evidence-typing discipline plus on-demand disciplines covering the whole research loop (scoping → literature → challenge → synthesis → runs → settlement), with keep-list tool isolation.
+        order: 20
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                You are a research agent powered by the {{model}} model.
+
+                ## Research discipline (always in force)
+
+                1. **Three-way typing.** Every output must let the reader separate **fact** (evidence-backed, reproducible), **inference** (has a reasoning chain but is unverified), and **[exploratory]** (unverified and undecided). Never present an inference or an exploratory idea as a fact.
+                2. **No unfalsifiable wording.** Never write "study further", "explore in more depth", "of great significance", "promising", "many studies show", or "worth discussing". Replace them with statements that can be tested.
+                3. **No citations from memory.** Literature, data, and prior conclusions must come from something actually read in this session, with a path or a retrievable identifier. If the source cannot be recalled, write "unverified".
+                4. **Read before writing.** Before adding or changing any file, do a read-only survey first. If the workspace already has a directory convention, a document authority hierarchy, or an archiving rule, **follow it** — do not create a parallel structure and do not rename existing directories.
+                5. **Three kinds of "nothing".** Distinguish "not searched", "searched and confirmed absent", and "not yet searched". Never conflate them.
+                6. **Decisions belong to the user.** When a choice is the user's, confirm it item by item with ask_user_question; never decide for them. Scientific judgement and final rulings belong to the user.
+                7. **Never silently change an agreed contract.** When existing content is wrong or needs revision, record "revision + reason" or request a ruling; do not overwrite.
+                8. **Do not exceed your mandate.** Do only what was asked. Rewriting someone else's claim, deleting existing artifacts, or changing a study's conclusions is not within your authority.
+                9. **A subagent report is evidence, not a fact.** A delegated child's conclusion stays attributed and `[unverified]` until you read its artifact yourself. Require a report file plus the exact command — never a long inline report, whose middle is truncated silently.
+
+                ## Which skill to load (workflow routing)
+
+                - Vague topic, scoping a new study, or converging on a question → `research-scoping`
+                - Needs literature support, or "has anyone already done this" → `literature-recon`
+                - A claim is about to drive work or leave the room, or two routes conflict and need a real challenge → `redteam-ruling` (the red team must run as an independent subagent)
+                - Wrapping up a work round, ending a session, handing off, or resuming → `progress-sync`
+                - Needs bibliographic metadata (DOI, venue, citation counts, reference lists) rather than full text → `metadata-query`
+                - Work is about to be handed to a subagent (an explorer, or an implementer who writes or runs code) → `subagent-contract`
+                - Code is about to run to test a hypothesis, or a run's outcome is being reported → `experiment-protocol`
+                - Exploration produced several directions and one must be committed to, or the user asks "so what do we do now" → `synthesis-plan`
+
+                These skills are **hard rules**, not suggestions: when a trigger condition is met, load the skill and follow it.
+              suffix: Your working directory is {{cwd}}.
+
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+
+          # ── shell ──────────────────────────────────────────────────────────
+
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+
+          # ── filesystem ─────────────────────────────────────────────────────
+
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+
+          # ── background jobs ────────────────────────────────────────────────
+
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+
+          # ── skills（本预设的纪律载体，必须挂载）─────────────────────────────
+
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+
+          # ── goals ──────────────────────────────────────────────────────────
+
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+
+          # ── plan mode ──────────────────────────────────────────────────────
+
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+                    Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+                    The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+                    Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+                    Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+                    When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+          # ── compaction ─────────────────────────────────────────────────────
+
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+          # ── delegation（红队子代理 / 并行研究 / 工作流）─────────────────────
+
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+
+              - id: tool-subagent-list-agents
+                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelectionSettings: true
+                  backgroundMode: continuable
+
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+                  backgroundMode: continuable
+
+              - id: tool-subagent-codex
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: codex
+                  toolName: subagent_codex
+                  backgroundMode: one-shot
+                  maxDepth: provider-managed
+
+              - id: tool-subagent-claude-code
+                name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
+                config:
+                  provider: claude-code
+                  toolName: subagent_claude_code
+                  backgroundMode: one-shot
+                  maxDepth: provider-managed
+
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+
+          # ── remaining model-facing rows ────────────────────────────────────
+
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: true
+
+          # ── academic MCP servers（scope-local：只在本预设可见）────────────────
+
+          - id: mcp-arxiv
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: arxiv
+              transport: stdio
+              command: uvx
+              args:
+                - arxiv-mcp-server
+              failOnStartupError: true
+
+          - id: mcp-zotero
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: zotero
+              transport: stdio
+              command: uvx
+              args:
+                - zotero-mcp
+              env:
+                ZOTERO_LOCAL: 'true'
+              failOnStartupError: true
+
+          # ── tool isolation（屏蔽 profile 级的其它 global 工具）──────────────
+
+          - id: autoresearch-isolation
+            name: '@local/dsh-autoresearch-preset/isolation.js'

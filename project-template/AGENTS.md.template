@@ -1,0 +1,71 @@
+# TODO <study name> — project instructions
+
+> This file carries **domain** constraints for one study. The general research discipline
+> (three-way typing, no unfalsifiable wording, no citations from memory, the four discipline
+> skills) comes from the Autoresearch preset and must **not** be repeated here.
+
+## 1. What this study is
+
+TODO — one paragraph: the physical or mathematical object, the question family, and the decision
+this study is meant to inform. Keep it short; the full scoping lives in `research/00_scoping.md`.
+
+## 2. Domain invariants (never violate)
+
+TODO — write them as checkable "never" rules, each with its reason. These are what make this
+domain's results trustworthy, and the agent treats them as hard constraints.
+
+<!-- EXAMPLE:BEGIN — invariants from a cross-scale risk study. Delete this block. -->
+- **The baseline is read-only.** Never mutate, migrate, overwrite, or vacuum an original run database
+  or its manifest. New material goes to a new output namespace, disclosed in the run report.
+  *Why*: published numbers must stay reproducible.
+- **No physics drift.** Do not alter the simulation core, the fragility model, or the baseline
+  observables of an existing series under this task.
+- **No invented science.** Do not introduce a new weight, threshold, dominant-mechanism class,
+  selection criterion, or cost function as if it were agreed. Proposals must be labelled
+  `[exploratory]`.
+- **No identity collapse.** Preserve scenario, root, generation, lineage, and model-action identity.
+  Counts over event-tree descendants are not independent samples.
+- **No NA coercion.** Absent, zero, not-testable, undecidable, missing, and unexamined must remain
+  distinguishable.
+- **No result-conditioned denominator.** Fix the reference population before looking at outcomes.
+- **`DESIGN PENDING` is a stop sign**, not a blank for the implementation agent to fill.
+<!-- EXAMPLE:END -->
+
+## 3. Document hierarchy and authority
+
+TODO — either accept the convention below, or declare this study's existing one and delete
+`research/` from the scaffold.
+
+Authority, highest first:
+
+1. `AGENTS.md` — this file: domain constraints.
+2. `research/00_scoping.md` — question, boundary, non-goals, decidability.
+3. `research/literature/**` — **non-normative**; never grounds an experiment on its own.
+4. `research/rulings/**` — challenges and their rulings.
+5. `research/journal/**` — a record of what happened, never a conclusion.
+6. `research/experiments/**` — experiment cards: re-runnable evidence, not conclusions.
+7. `research/pitfalls/**` — operational record; nothing here grounds a scientific claim.
+8. `research/literature/refs/**` — the digest index: derived from the library, rebuildable, never the only copy of a digest.
+
+TODO — add where execution protocols live, if the study has them, and state explicitly that any
+`notes/`-style directory is exploratory and not runnable.
+
+## 4. Notation
+
+TODO — name the path of the notation table, and restate the rule: **a new concept gets a new
+symbol; an old symbol is never reused for a new meaning.**
+
+## 5. Non-goals for the current stage
+
+TODO — at least three, each with "why not now". A study without declared non-goals absorbs every
+interesting tangent.
+
+## 6. Environment
+
+TODO — the commands that actually work here: interpreter or virtual-environment activation, how to
+run the test suite, where the data lives. Keep general workflow rules out of this section.
+
+<!-- EXAMPLE:BEGIN -->
+- Activate the environment first: `& .\activate_venv.ps1`
+- Data root: `D:\...\data` (read-only)
+<!-- EXAMPLE:END -->
