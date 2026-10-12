@@ -4,8 +4,7 @@
 #     unfalsifiable wording, no memory-based citations, read-before-write) plus
 #     routing to seven research-discipline skills.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
-#   - `skill-filesystem` is REQUIRED here: without it, `~/.dsh/skills/` and
-#     `<workspace>/.agents/skills/` are not loaded, and the routing above is dead.
+#   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
 #   - the academic MCP servers live HERE rather than in a profile-level bundle, so their
 #     tools are SCOPE-LOCAL: visible to this preset, and leaked into no other session.
 #   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
@@ -248,3 +247,13 @@
 
           - id: autoresearch-isolation
             name: '@local/dsh-autoresearch-preset/isolation.js'
+
+          # ── configurable values → system prompt（empty config registers nothing）──
+
+          - id: autoresearch-contact
+            name: '@local/dsh-autoresearch-preset/contact-bridge.js'
+
+          # ── ship the disciplines inside the preset (visible only to this preset) ──
+
+          - id: autoresearch-skills
+            name: '@local/dsh-autoresearch-preset/skills.js'

@@ -1,7 +1,7 @@
 # Autoresearch public surface — concept ↔ symbol
 
 **Status: non-normative index.** The contract is [`protocol.md`](protocol.md), which wins on any
-conflict. The authoritative lists are the discipline front-matter under `skills/*/SKILL.md` and the
+conflict. The authoritative lists are the discipline front-matter under `autoresearch-preset/skills/*/SKILL.md` and the
 `serverName` fields of the preset composition. This file answers one question only — *which name
 implements which concept*.
 

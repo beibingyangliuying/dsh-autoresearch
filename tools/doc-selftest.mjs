@@ -16,7 +16,7 @@ const ROOT = process.cwd()
 const PROTOCOL = join(ROOT, 'protocol.md')
 const SURFACE = join(ROOT, 'surface.md')
 const README = join(ROOT, 'README.md')
-const SKILLS_DIR = join(ROOT, 'skills')
+const SKILLS_DIR = join(ROOT, 'autoresearch-preset', 'skills')
 const PATCH = join(ROOT, 'autoresearch-preset', 'cordis.patch.yml')
 
 const MIN_STRUCTURED_BLOCKS = 8
@@ -24,11 +24,16 @@ const MIN_MERMAID_DIAGRAMS = 2
 
 /** Authoritative public symbols: discipline names + MCP server names. */
 function authoritativeSymbols() {
-  const skills = readdirSync(SKILLS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const text = readFileSync(join(SKILLS_DIR, entry.name, 'SKILL.md'), 'utf8')
-      return text.match(/^name:\s*([\w-]+)\s*$/m)?.[1] ?? null
+  // Deliberately not `Dirent.isDirectory()`: on Windows a reparse point (OneDrive placeholder, a
+  // junction) reports false there while still holding files, which silently emptied this list.
+  const skills = readdirSync(SKILLS_DIR)
+    .map((name) => {
+      try {
+        const text = readFileSync(join(SKILLS_DIR, name, 'SKILL.md'), 'utf8')
+        return text.match(/^name:\s*([\w-]+)\s*$/m)?.[1] ?? null
+      } catch {
+        return null
+      }
     })
     .filter(Boolean)
   const servers = [...readFileSync(PATCH, 'utf8').matchAll(/^\s*serverName:\s*'?"?([\w-]+)'?"?\s*$/gm)].map(

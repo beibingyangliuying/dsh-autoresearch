@@ -40,7 +40,7 @@ break.
 | Filter by year/type | `&filter=publication_year:2024,type:article` |
 | One work, with references | `https://api.openalex.org/works/doi:10.xxxx/yyyy` |
 
-Add `&mailto=<contact-address>` (the contact address configured in the preset settings, if any) to join the polite pool. Useful response fields: `id`, `doi`, `title`,
+Add `&mailto=<contact-address>` (the address this preset announces in your system prompt; omit the parameter entirely if none is announced) to join the polite pool. Useful response fields: `id`, `doi`, `title`,
 `publication_year`, `primary_location`, `authorships`, `cited_by_count`, `referenced_works`.
 
 **Gotcha**: OpenAlex has no plain `abstract` field. It ships `abstract_inverted_index`, an
@@ -54,7 +54,7 @@ report an abstract you did not reconstruct.
 | Search | `?query=<terms>&rows=<n>` |
 | Resolve a DOI | `https://api.crossref.org/works/<doi>` |
 
-Add `&mailto=<contact-address>` (the contact address configured in the preset settings, if any) for the polite pool. Useful response fields: `DOI`, `title`,
+Add `&mailto=<contact-address>` (the address this preset announces in your system prompt; omit the parameter entirely if none is announced) for the polite pool. Useful response fields: `DOI`, `title`,
 `container-title`, `issued`, `author`, `is-referenced-by-count`, `reference`.
 
 ## 4. Do vs don't

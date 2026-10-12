@@ -215,3 +215,22 @@ skill 里。
 **验证结果（2026-10-12 收口）**：⚠️ **第二遍未生效**。用户实测一条真 Autoresearch 会话：**shell / 文件工具在** ✓（`allow`→`deny` 的修复**已被用户层面确认** ✓）、**config-manager 的工具仍在** ✗ ⇒ 第二遍没有起作用。**推断**：预设作用域内的 `ctx.on('agent/created', …)` 收不到该事件（**未确认**，也不再排查）。
 
 **处置**：代码保留为 best-effort（无害），**契约收窄**为"保证激活时的覆盖"，第二遍**不属于保证范围**（`protocol.md` §5 已同步）。**明确决定：不再为此投入排查**——它不影响任何功能。
+
+## 18. 配置化（A2）与技能随包（A3）：两项都找到了比原计划更对的机制（2026-10-12）
+
+**A2 配置化 —— 桥用 `ctx.systemPrompt.section()`，既不是事件也不是消息注入**
+
+- 可调值在**设置页里填** ✓（`settings` 服务把 Config schema 投影成表单、`autoGenerate` 默认 true ⇒ **零前端工作** ✓）
+- ⚠️ 原计划的"挂 `system-prompt/assemble`"**不可行**：它与 `agent/created` 同属 scoped 事件家族，而**预设作用域收不到 `agent/created`**（它在 agent 建好、作用域链接上**之前**派发）——这正是隔离第二遍无效的机理 ✓
+- 查 `systemPrompt` 服务后找到**正规扩展点** `section({name, order, text})` ✓ ⇒ 新行 `autoresearch-contact`（`contact-bridge.js`）：**空配置什么都不注册** ✓，填了才注册一行提示 ✓
+- skill 侧只改一处措辞（"用系统提示里宣告的地址"✓），仓库里再无个人邮箱 ✓
+
+**A3 技能随包 —— 用 `ctx.skills.register()`，比 `bundledSkillDir` 更对**
+
+- `skills` 服务自述：注册**落在调用作用域的层**，而**由预设常驻组合挂载的插件落在该预设的层** ✓ ⇒ 我们的技能**只对这个预设的 agent 可见** ✓（拷进 `~/.dsh/skills/` 会污染 profile 里**所有**会话 ✗）
+- 因此把 `skills/` **移进包内**（`git mv` 需**逐个目录**做：整目录一次会 Permission denied ✗）——插件用 `import.meta.url` 定位 ✓，无需任何路径配置 ✓，也绕开了 `bundledSkillDir` 走 `path.resolve` 的陷阱 ✓
+- 新行 `autoresearch-skills` + 新自测 `tools/skills-selftest.mjs` ✓
+
+**新发现的 Windows 陷阱（两个自测同时踩到）**：OneDrive 同步的目录带 **`ReparsePoint`** 属性，`Dirent.isDirectory()` 对它们返回 **false** ✗，尽管里面有文件 ✓ ⇒ 技能读取与文档权威清单都**静默变空** ✗。修法：**不要依赖 `isDirectory()`**，直接探测 `SKILL.md`（或 try 读取）✓。
+
+**教训**：两项功能都是"**先查服务的自述，再选机制**"的产物 ✓（对比上一轮"凭印象指认机制"✗）；而两次静默变空都是**自测**发现的 ✓ —— 自测在本项目已是第 5、6 次兜住错误 ✓。

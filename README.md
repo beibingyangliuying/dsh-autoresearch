@@ -66,7 +66,7 @@ protocol.md            normative contract (semantics, boundary, invariants, non-
 surface.md             non-normative index: concept <-> name
 README.md              this entry document
 autoresearch-preset/   the composition, the isolation plugin, the persona text
-skills/                the on-demand disciplines (source; install into the user skill directory)
+autoresearch-preset/skills/    the on-demand disciplines (shipped in the bundle; registered by the preset itself, so only its agents see them)
 project-template/      the study scaffold, copied per study
 tools/                 self-tests, probes and the scaffolder
 docs/                  Chinese review aids and the frozen development log

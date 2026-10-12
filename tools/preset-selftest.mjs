@@ -100,7 +100,7 @@ if (!existsSync(composedFile)) {
     'tool-ask-user',
     'mcp-arxiv',
     'mcp-zotero',
-    'autoresearch-isolation',
+    'autoresearch-isolation', 'autoresearch-contact', 'autoresearch-skills',
   ]) {
     ok(rowIds.includes(id), `required row: ${id}`)
   }
@@ -124,7 +124,7 @@ if (!existsSync(composedFile)) {
   const topLevelRows = composed
     .filter((line) => /^- id: /.test(line))
     .map((line) => line.replace(/^- id: /, '').trim())
-  for (const id of ['mcp-arxiv', 'mcp-zotero', 'autoresearch-isolation']) {
+  for (const id of ['mcp-arxiv', 'mcp-zotero', 'autoresearch-isolation', 'autoresearch-contact', 'autoresearch-skills']) {
     ok(!topLevelRows.includes(id), `leak guard: ${id} is not a profile-level row`)
   }
 
