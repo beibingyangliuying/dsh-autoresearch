@@ -11,6 +11,8 @@
 // Why a prompt section and not `agent/created`: a listener registered in this row's scope never
 // receives `agent/created` (it is dispatched before an agent is linked to its scope), while
 // `ctx.systemPrompt.section()` is the prompt registry's own scoped extension point.
+export const inject = ['systemPrompt']
+
 export const name = 'autoresearch-contact'
 
 /** The host services this row reads and contributes through. */
