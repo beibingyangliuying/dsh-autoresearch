@@ -262,3 +262,22 @@ skill 里。
 **教训（两条，同一类错误的两个新变种）**：
 1. **"文件存在"不等于"模块可解析"** —— 断言必须打在实际的机制上，而不是它邻近的一个易查事实；
 2. **验证所依据的快照本身也需要被验证** —— 我反复强调"看结果不看文本"，但这次的"结果"是**八小时前的结果**。陈旧输入给出的是**看起来同样确定的错误结论** ✗。
+
+## 20. 设置页没有输入框的真因：字段必须标 `volatile()`（2026-10-12）
+
+**现象**：预设恢复可用后，设置 → Autoresearch 页面仍没有输入框（只有我加的结构诊断）。
+
+**根因**：DSH 设置层有一道我**从未读到**的过滤 —— `volatileForm(schema)`：**只有 `meta.volatile === true` 的字段算 "live"** ✗，一个都没有时它返回 `undefined` ⇒ `describe()` 里 `if (form === void 0) return []` ⇒ **整条条目静默消失** ✗。而我把 `mailto` 写成了 `schema.string().default('').description(...)` —— **少了 `.volatile()`** ✗。写入侧是同一把锁：`write()` 直接抛 `Plugin entry "..." has no volatile fields` ✗。
+
+**我先后猜错了三个方向，全部被证据推翻**：① "bundle 插入的行层级上不可见" ✗ —— `pwsh-sandbox`/`session-log-deepseek` 同样来自 bundle patch（`dsh-base/cordis.patch.yml`）却能出现在设置页 ✓；② "`entries()` 范围/唯一性把它滤掉了" ✗ —— 探针显示它在 `configEditor.entries()` 里 ✓；③ "fiber 没激活" ✗ —— `fiberState=2`、`runtime.Config` 带 `toJSON` ✓。
+
+**决定性的一步是"问运行中的组合"，不是继续读代码或猜** ✓：写一个探针行，用 `--patch` 临时挂上，`--port 0` 起**第二个宿主**（不抢端口、不干扰你那个），让它在真实启动里打印 `loader.entries()` / `configEditor.entries()` / `settings.describe()`。一次就把范围缩到唯一一处：前三道条件全过，`describe()` 里**就是没有它** ✗。⇒ 只能是我没读完的那个函数。
+
+**修法**：`.volatile()`（保留 `description()`）✓；新护栏断言"Config 至少有一个 volatile 字段"+"contact 字段带说明"✓，并做了**负向对照**（去掉 `.volatile()` ⇒ 两项 FAIL ✓，恢复后**哈希一致** ✓）。
+
+**端到端验证（我自己做完，不需要你操作）**：
+- `settings.describe()` 出现 `autoresearch-bundle(auto=true)`、`value={"mailto":""}` ✓
+- **写入路径实测**：profile patch 里生成 `- id: autoresearch-bundle / config: {mailto: ""}` ✓ ⇒ 测完**已还原**（哈希与备份一致 ✓）
+- 远程 `update()` 写完后重新 `describe` 并 `return namespaceView(descriptor)` ✓ ⇒ 页面用 `response.value`/`.revision` 是对的
+
+**教训（比上一节更深一层）**：**"服务返回空"不等于"没有这个条目"** —— `describe()` 是**过滤后的投影**，它同时受三层条件限制（`entries()` 范围、fiber 状态、volatile 表单），而这三层里**只有一层是我读代码时看懂的** ✗。⇒ **"读实现"也有深浅：读到自己以为懂了就停，与凭印象猜是同一个错** ✓。正确的做法是**在那个对的上下文里直接问它**（探针能起第二个宿主、`--port 0` 不抢端口，这条技术以后可复用 ✓）。

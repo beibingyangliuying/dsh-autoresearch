@@ -186,6 +186,12 @@ that property. `preset-selftest.mjs` asserts the link is still a link.
   global names also masks the preset's own shell, filesystem, skill and subagent tools, and the agent
   reports having no shell. Use `deny = (global view) − keep-list`. That single pass at activation is
   the guarantee; `isolation-selftest.mjs` asserts the filter carries no `allow` list.
+- **The settings panel projects only fields marked `volatile()`.** A Config field without it makes the
+  settings layer's form projection return nothing for the entry, and the entry is then dropped from
+  `describe()` **without a word**: the panel renders no form, and the remote surface cannot even write
+  it — a write is refused with "has no volatile fields". The row keeps its Config the whole time; only
+  the surface disappears, which is why the schema looks correct in every other check. Mark every field
+  meant to be editable, and give it a `description()`: that text is what the form renders beside it.
 
 ## Language
 
