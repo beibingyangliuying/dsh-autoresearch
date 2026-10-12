@@ -23,6 +23,11 @@ export const Config = schema === undefined
       mailto: schema
         .string()
         .default('')
+        // The settings layer projects ONLY fields marked volatile: `volatileForm(schema)` returns
+        // undefined for a field that needs a remount, and `describe()` then drops the WHOLE entry
+        // without a word. Without this call the row keeps its Config and stays invisible in the
+        // settings panel and to `ctx.remote.settings`, which is exactly how it behaved.
+        .volatile()
         .description(
           'Contact address for the metadata APIs (the "polite pool"): OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact. It is also passed to the reference-library writer. Leave empty to send none.',
         ),

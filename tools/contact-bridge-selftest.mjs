@@ -82,6 +82,30 @@ check(
   typeof Config,
 )
 check(Config !== undefined, 'the schema resolves here (a missing one drops the settings form)')
+
+// The settings layer projects ONLY fields whose nearest volatile ancestor is marked, and drops the
+// whole entry - not just the field - when there is none: `volatileForm(schema)` returns undefined and
+// `describe()` skips the entry without a word, so the panel shows nothing and even a write is refused
+// with "has no volatile fields". Assert the shape that rule needs.
+const hasVolatileField = (node) => {
+  if (node?.meta?.volatile === true) return true
+  if (node?.type !== 'object') return false
+  return Object.values(node.dict ?? {}).some(hasVolatileField)
+}
+check(
+  hasVolatileField(Config),
+  'the Config carries a volatile field (without one the entry is invisible AND unwritable)',
+)
+const mailtoField = Config?.dict?.mailto
+check(
+  mailtoField?.meta?.volatile === true,
+  'the contact field is marked volatile',
+  `meta=${JSON.stringify(mailtoField?.meta ?? null)}`,
+)
+check(
+  typeof mailtoField?.meta?.description === 'string' && mailtoField.meta.description.length > 40,
+  'the contact field explains itself in the form',
+)
 check(typeof bundle.apply === 'function', 'the bundle row exports apply')
 
 // --- the export and access contract ---------------------------------------------------------------
