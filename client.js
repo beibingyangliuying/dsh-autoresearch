@@ -80,6 +80,22 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /** What describe() actually returned, compact enough to read and paste. */
+    function describeShape(view) {
+      const entries = readNamespaces(view)
+      return JSON.stringify(
+        {
+          topLevelKeys: view !== null && typeof view === 'object' ? Object.keys(view) : typeof view,
+          namespaces: entries.map((entry) => ({
+            ns: entry.ns,
+            valueKeys:
+              entry.value !== null && typeof entry.value === 'object' ? Object.keys(entry.value) : typeof entry.value,
+          })),
+        },
+        null,
+        2,
+      )
+    }
     function AutoresearchSettings() {
       const [state, setState] = React.useState({ status: 'loading' })
       const [draft, setDraft] = React.useState({})
@@ -94,7 +110,7 @@ window.__ModuleLoader__.load({
           }
           const target = findTarget(response.value)
           if (target === undefined) {
-            setState({ status: 'missing' })
+            setState({ status: 'missing', shape: describeShape(response.value) })
             return
           }
           const values = {}
@@ -134,10 +150,11 @@ window.__ModuleLoader__.load({
       if (state.status === 'loading') return h('p', { style: muted }, 'Reading configuration...')
       if (state.status === 'missing') {
         return h(
-          'p',
-          { style: muted },
-          'No namespace in this deployment carries the fields this page edits. Configure this bundle from ',
-          'its own page under Built-in plugins until one does.',
+          'div',
+          null,
+          h('p', { style: muted },
+            'No namespace in this deployment carries the fields this page edits. What describe() answered:'),
+          h('pre', { style: { ...hint, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, String(state.shape)),
         )
       }
 
