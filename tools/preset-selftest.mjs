@@ -18,15 +18,15 @@ import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync } from 
 import { join, resolve } from 'node:path'
 
 const composedFile = process.argv[2] ?? '.tmp/composed-web.txt'
-const patchFile = 'autoresearch-preset/cordis.patch.yml'
-const workspaceDir = resolve('autoresearch-preset')
+const patchFile = 'cordis.patch.yml'
+const workspaceDir = resolve('.')
 const profileEntry = join(
   process.env.USERPROFILE ?? '',
   '.dsh',
   'profiles',
   'web',
   'node_modules',
-  '@local',
+  '@beibingyangliuying',
   'dsh-autoresearch-preset',
 )
 
@@ -119,7 +119,7 @@ if (!existsSync(composedFile)) {
   // The other half of the same failure: a row that names a subpath of THIS bundle must point at a
   // file that exists. A rename that misses the row leaves it unresolvable, which marks the whole
   // preset broken and hides it from the roster exactly like a relative name does.
-  const bundleDir = patchFile.replace(/[\\/][^\\/]+$/, '')
+  const bundleDir = /[\\/]/.test(patchFile) ? patchFile.replace(/[\\/][^\\/]+$/, '') : '.'
   const bundleName = JSON.parse(readFileSync(`${bundleDir}/package.json`, 'utf8')).name
   const unresolved = block
     .map((l) => /^\s*name:\s*['"]?([^'"\s]+)['"]?\s*$/.exec(l)?.[1])

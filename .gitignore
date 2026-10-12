@@ -1,6 +1,5 @@
 .mnemon/
 .tmp/
 # runtime artifact: rewritten on every preset activation
-autoresearch-preset/isolation-report.json
+isolation-report.json
 node_modules/
-autoresearch-preset/node_modules/

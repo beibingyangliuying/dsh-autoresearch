@@ -5,7 +5,7 @@
 // It drives `apply()` with a fake prompt registry and asserts what gets registered. The point of the
 // row is that an unconfigured preset behaves exactly as before, so "registers nothing when empty" is
 // the load-bearing check.
-import { apply, contactLine, Config } from '../autoresearch-preset/contact-bridge.js'
+import { apply, contactLine, Config } from '../contact-bridge.js'
 
 const sections = []
 const fake = {

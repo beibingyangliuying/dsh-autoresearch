@@ -7,7 +7,7 @@
 //      providers, so a typo would remove a whole discipline with no visible error;
 //   2. registration goes through `ctx.skills.register()` for every skill, which is how these reach
 //      agents of this preset (and only this preset) without any manual copy step.
-import { apply, parseSkill, readSkills } from '../autoresearch-preset/skills.js'
+import { apply, parseSkill, readSkills } from '../skills.js'
 
 let failures = 0
 const check = (condition, label, detail = '') => {

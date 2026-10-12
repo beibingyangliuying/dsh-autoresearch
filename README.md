@@ -16,12 +16,12 @@ The preset is a DSH bundle: a package whose `package.json` points at a compositi
 the package registers the preset.
 
 ```powershell
-# from GitHub (expected to work: the bundle needs no build step)
-dsh plugin --profile web add github:<user>/<repo>
+# from GitHub: the repository root IS the bundle, and it needs no build step
+dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch
 
 # or, while developing against a checkout, install it as a bundle whose entry is a LINK to the
 # checkout, so edits here are live for new sessions
-dsh plugin --profile web add <path-to-checkout>/autoresearch-preset
+dsh plugin --profile web add <path-to-checkout>
 ```
 
 Confirm it registered — the composition should carry the preset row:
@@ -90,8 +90,12 @@ elsewhere; the layout is the same.
 protocol.md            normative contract (semantics, boundary, invariants, non-goals)
 surface.md             non-normative index: concept <-> name
 README.md              this entry document
-autoresearch-preset/   the composition, the preset's own plugin rows, the persona text
-autoresearch-preset/skills/   the on-demand disciplines (shipped in the bundle; registered by the preset itself)
+package.json           the bundle manifest: name, the composition patch, the one dependency
+ cordis.patch.yml       the composition: the preset declaration and its rows
+ isolation.js           tool isolation (a deny list over the global view)
+ contact-bridge.js      configurable values -> system prompt
+ skills.js              registers the shipped disciplines into this preset's layer
+skills/                the on-demand disciplines, one <name>/SKILL.md each
 project-template/      the study scaffold, copied per study
 tools/                 self-tests, probes and the scaffolder
 docs/                  Chinese review aids and the frozen development log

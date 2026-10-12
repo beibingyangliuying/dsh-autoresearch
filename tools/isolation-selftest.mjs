@@ -17,7 +17,7 @@
 // An earlier version fabricated a listener `this` that carried `tools`; the test passed while the
 // real handler failed on `this.tools === undefined`. A fake must not be more capable than reality.
 import { rmSync } from 'node:fs'
-import { apply } from '../autoresearch-preset/isolation.js'
+import { apply } from '../isolation.js'
 
 /** The global view at activation: nothing from a late-registering plugin yet. */
 const VIEW_AT_ACTIVATION = [
@@ -118,7 +118,7 @@ check(survived, 'a failing agent-time pass never throws (agent creation must not
 
 // The plugin writes its report beside itself. This test drives a FAKE registry, so the report it
 // produces would be misleading evidence: remove it, and say so.
-const REPORT = new URL('../autoresearch-preset/isolation-report.json', import.meta.url)
+const REPORT = new URL('../isolation-report.json', import.meta.url)
 try {
   rmSync(REPORT, { force: true })
   console.log('\n(removed the report this test produced — only a real composition activation writes a trustworthy one)')

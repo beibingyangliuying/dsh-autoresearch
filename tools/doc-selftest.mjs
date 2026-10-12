@@ -16,8 +16,8 @@ const ROOT = process.cwd()
 const PROTOCOL = join(ROOT, 'protocol.md')
 const SURFACE = join(ROOT, 'surface.md')
 const README = join(ROOT, 'README.md')
-const SKILLS_DIR = join(ROOT, 'autoresearch-preset', 'skills')
-const PATCH = join(ROOT, 'autoresearch-preset', 'cordis.patch.yml')
+const SKILLS_DIR = join(ROOT, 'skills')
+const PATCH = join(ROOT, 'cordis.patch.yml')
 
 const MIN_STRUCTURED_BLOCKS = 8
 const MIN_MERMAID_DIAGRAMS = 2
