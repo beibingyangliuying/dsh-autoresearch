@@ -92,10 +92,12 @@ protocol.md            normative contract (semantics, boundary, invariants, non-
 surface.md             non-normative index: concept <-> name
 README.md              this entry document
 package.json           the bundle manifest: name, the composition patch, the one dependency
- cordis.patch.yml       the composition: the preset declaration and its rows
- isolation.js           tool isolation (a deny list over the global view)
- contact-bridge.js      configurable values -> system prompt
- skills.js              registers the shipped disciplines into this preset's layer
+index.js               the bundle's own row: it carries the editable configuration
+client.js              the settings page for that configuration (browser half)
+cordis.patch.yml       the composition: the preset declaration and its rows
+isolation.js           tool isolation (a deny list over the global view)
+contact-bridge.js      configurable values -> system prompt
+skills.js              registers the shipped disciplines into this preset's layer
 skills/                the on-demand disciplines, one <name>/SKILL.md each
 project-template/      the study scaffold, copied per study
 tools/                 self-tests, probes and the scaffolder
@@ -125,6 +127,21 @@ $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs uvx zotero-mcp
 node tools\zotero-write.mjs --arxiv 1706.03762
 node tools\zotero-write.mjs --arxiv 1706.03762 --write
 ```
+
+### Session diagnostics
+
+```powershell
+# which preset each session was CREATED with (a later switch does not rewrite it)
+node tools\dump-session.mjs --scan %USERPROFILE%\.dsh\sessions
+node tools\dump-session.mjs <sessionDir> [outFile]        # decompress one transcript
+node tools\session-shape.mjs <session.jsonl>             # structural shape, bounded output
+node tools\probe-session.mjs <session.jsonl> <needle>    # record census + context around a needle
+node tools\list-tools.mjs <session.jsonl>                # tool names its request header carried
+```
+
+These read the transcripts alone, and together they answer "which preset did that session really run,
+and what tools did its agent see". That pair of questions settled two investigations here, so reach for
+these before asking for another restart.
 
 **Do not re-run `install_bundle` on the preset.** The bundle entry is a link to this directory, so
 editing the composition file here is already live for new sessions; re-installing has been observed
