@@ -8,7 +8,7 @@
 // is absent, must leave the preset working rather than take it down.
 import { readFileSync } from 'node:fs'
 import * as contact from '../contact-bridge.js'
-import { apply, contactLine, readContactAddress } from '../contact-bridge.js'
+import { apply, attachmentLine, contactLine, readAttachmentPolicy, readContactAddress } from '../contact-bridge.js'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
@@ -36,6 +36,36 @@ check(
 check(
   readContactAddress({ describe: () => [{ ns: 'x', value: { mailto: ' a@b.c ' } }] }) === 'a@b.c',
   'a matching entry is trimmed',
+)
+
+check(readAttachmentPolicy(undefined).auto === false, 'a missing settings service means the switch is off')
+check(
+  readAttachmentPolicy({ describe: throwing }).storePath === '',
+  'a failing settings read yields an empty store path, not a throw',
+)
+check(
+  readAttachmentPolicy({ describe: () => [{ ns: 'x', value: { other: 1 } }] }).auto === false,
+  'an entry without the switch does not match',
+)
+const policy = readAttachmentPolicy({
+  describe: () => [{ ns: 'x', value: { autoLinkAttachments: true, attachmentStorePath: ' D:\\Store ' } }],
+})
+check(policy.auto === true && policy.storePath === 'D:\\Store', 'a matching entry yields a trimmed policy')
+check(
+  readAttachmentPolicy({ describe: () => [{ ns: 'x', value: { autoLinkAttachments: 'true' } }] }).auto === false,
+  'only a real boolean turns the switch on',
+)
+
+check(attachmentLine(undefined) === undefined, 'attachmentLine(undefined) has nothing to announce')
+check(attachmentLine({ auto: false, storePath: 'D:\\Store' }) === undefined, 'a disabled switch announces nothing')
+check(attachmentLine({ auto: true, storePath: '  ' }) === undefined, 'an enabled switch with no directory announces nothing')
+check(
+  String(attachmentLine({ auto: true, storePath: 'D:\\Store' })).includes('D:\\Store'),
+  'an enabled switch announces where files go',
+)
+check(
+  String(attachmentLine({ auto: true, storePath: 'D:\\Store' })).includes('zotero-link-attachments.mjs'),
+  'the line names the tool that does the work',
 )
 
 // --- the registration and its freshness ---------------------------------------------------------
@@ -67,6 +97,27 @@ check(textOf().includes('first@example.org'), 'the first assembly announces the 
 described = [{ ns: 'include:autoresearch-bundle', value: { mailto: 'second@example.org' }, revision: 2 }]
 check(textOf().includes('second@example.org'), 'a later assembly picks up a settings edit with no listener')
 check(!textOf().includes('first@example.org'), 'the stale address is gone', textOf().slice(0, 60))
+
+// The second value on the same section: announced only when it is actionable.
+described = [
+  {
+    ns: 'include:autoresearch-bundle',
+    value: { mailto: 'third@example.org', autoLinkAttachments: true, attachmentStorePath: 'D:\\Store' },
+    revision: 3,
+  },
+]
+check(textOf().includes('third@example.org'), 'the address rides along with the policy')
+check(textOf().includes('D:\\Store'), 'an enabled policy announces its directory')
+
+described = [
+  {
+    ns: 'include:autoresearch-bundle',
+    value: { mailto: 'third@example.org', autoLinkAttachments: false, attachmentStorePath: 'D:\\Store' },
+    revision: 4,
+  },
+]
+check(!textOf().includes('D:\\Store'), 'a disabled switch announces no directory')
+check(textOf().includes('third@example.org'), 'the address survives the switch being off')
 
 // And an unreadable configuration is announced as nothing rather than as an error.
 described = []
@@ -105,6 +156,20 @@ check(
 check(
   typeof mailtoField?.meta?.description === 'string' && mailtoField.meta.description.length > 40,
   'the contact field explains itself in the form',
+)
+// Each new field needs the same three properties as the contact field, or it is invisible in the form.
+for (const key of ['autoLinkAttachments', 'attachmentStorePath']) {
+  const field = Config?.dict?.[key]
+  check(field?.meta?.volatile === true, `${key} is marked volatile`, `meta=${JSON.stringify(field?.meta ?? null)}`)
+  check(
+    typeof field?.meta?.description === 'string' && field.meta.description.length > 40,
+    `${key} explains itself in the form`,
+  )
+}
+check(
+  Config?.dict?.autoLinkAttachments?.type === 'boolean',
+  'the switch is a boolean, so the page can render it as a checkbox',
+  String(Config?.dict?.autoLinkAttachments?.type),
 )
 check(typeof bundle.apply === 'function', 'the bundle row exports apply')
 

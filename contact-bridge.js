@@ -1,5 +1,9 @@
 // Preset-scoped half: reads the bundle row's configuration and states it in the system prompt.
 //
+// Two values travel through here: the contact address, and the stored-PDF conversion policy. They are
+// announced through ONE section on purpose - a second section would cost every prompt for a line that
+// is usually empty, and the settings row is the same row for both.
+//
 // A discipline skill is static Markdown, so it cannot read a value the user typed into the settings
 // page. This row bridges it: the value lives in the bundle's own top-level row (the only place the
 // settings layer can see), and this row announces it to the agents of THIS preset.
@@ -58,10 +62,50 @@ export function contactLine(mailto) {
   ].join(' ')
 }
 
+/**
+ * The stored-PDF conversion policy, defaulting to "off" for anything unreadable.
+ *
+ * @param {object|undefined} settings The settings service, if this mount has one.
+ * @returns {{auto: boolean, storePath: string}} Whether conversion is on, and where files go.
+ */
+export function readAttachmentPolicy(settings) {
+  try {
+    const entries = settings?.describe?.() ?? []
+    for (const entry of entries) {
+      const value = entry?.value
+      if (value !== null && typeof value === 'object' && 'autoLinkAttachments' in value) {
+        return {
+          auto: value.autoLinkAttachments === true,
+          storePath: String(value.attachmentStorePath ?? '').trim(),
+        }
+      }
+    }
+  } catch {
+    // Same rule as the contact read: an unreadable policy is announced as nothing, never as a throw.
+  }
+  return { auto: false, storePath: '' }
+}
+
+/** The conversion line, or undefined when the switch is off or no directory was configured. */
+export function attachmentLine(policy) {
+  if (policy?.auto !== true || String(policy.storePath ?? '').trim() === '') return undefined
+  return [
+    `Stored-PDF conversion is on for this preset, with the attachment store directory ${policy.storePath}.`,
+    'When a literature round finds PDFs the reference library stores rather than links, report the list to the',
+    'owner first; once the owner agrees, run `node tools/zotero-link-attachments.mjs --target <directory>` as a',
+    'dry run and then with `--write`. Every write still needs the owner\u2019s approval in the reference manager.',
+  ].join(' ')
+}
+
 export function apply(ctx) {
   ctx.systemPrompt.section({
     name: 'autoresearch-contact',
     order: SECTION_ORDER,
-    text: () => contactLine(readContactAddress(optionalSettings(ctx))) ?? '',
+    text: () => {
+      const settings = optionalSettings(ctx)
+      return [contactLine(readContactAddress(settings)), attachmentLine(readAttachmentPolicy(settings))]
+        .filter((line) => line !== undefined)
+        .join(' ')
+    },
   })
 }
