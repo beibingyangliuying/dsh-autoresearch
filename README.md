@@ -137,6 +137,7 @@ node tools\preset-selftest.mjs .tmp\composed-web.txt
 node tools\isolation-selftest.mjs        # tool isolation
 node tools\contact-bridge-selftest.mjs   # configurable values -> prompt
 node tools\skills-selftest.mjs           # shipped disciplines parse and register
+node tools\client-selftest.mjs           # the browser half parses, loads and registers
 
 # documentation structure (contract/index split)
 node tools\doc-selftest.mjs
