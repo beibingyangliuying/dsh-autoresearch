@@ -31,6 +31,18 @@ window.__ModuleLoader__.load({
         placeholder: 'you@example.org',
         hint: 'Sent as &mailto= on OpenAlex and Crossref requests, and passed to the reference-library writer. Identifying yourself gets faster service and gentler rate limits. Leave it empty to send no contact - everything still works.',
       },
+      {
+        type: 'checkbox',
+        key: 'autoLinkAttachments',
+        label: 'Convert new stored PDFs into linked files',
+        hint: 'When on, a literature round that finds PDFs the library stores offers to convert them: the file is copied to the store directory below, and the library keeps only a link. The agent lists what it would convert first, and every write still needs your approval in the reference manager. Off by default.',
+      },
+      {
+        key: 'attachmentStorePath',
+        label: 'Attachment store directory',
+        placeholder: 'D:\\OneDrive\\Zotero',
+        hint: 'Where converted PDFs are kept. Use the same directory the reference manager uses as its linked-attachment base: a file under it is recorded as a relative path and survives moving to another machine, while any other directory is recorded as an absolute path. Leave it empty and the conversion stays disabled.',
+      },
     ]
 
     const muted = { margin: '0 0 6px', lineHeight: 1.6, opacity: 0.8 }
@@ -114,7 +126,11 @@ window.__ModuleLoader__.load({
             return
           }
           const values = {}
-          for (const f of FIELDS) values[f.key] = String(target.value[f.key] ?? '')
+          for (const f of FIELDS) {
+            // The draft holds the real type, not a string: a boolean field written back as "true"
+            // fails the schema on the next write.
+            values[f.key] = target.value[f.key] ?? (f.type === 'checkbox' ? false : '')
+          }
           setState({ status: 'ready', ns: target.ns, revision: target.revision, baseline: values })
           setDraft(values)
         } catch (error) {
@@ -159,7 +175,7 @@ window.__ModuleLoader__.load({
       }
 
       const busy = state.status === 'saving'
-      const dirty = FIELDS.some((f) => (draft[f.key] ?? '') !== (state.baseline?.[f.key] ?? ''))
+      const dirty = FIELDS.some((f) => draft[f.key] !== state.baseline?.[f.key])
 
       return h(
         'div',
@@ -167,10 +183,17 @@ window.__ModuleLoader__.load({
         h('div', { style: card }, FIELDS.map((f) =>
           h('div', { key: f.key, style: field },
             h('label', { style: label, htmlFor: 'autoresearch-' + f.key }, f.label),
-            h('input', {
-              id: 'autoresearch-' + f.key, style: input, type: 'text', spellCheck: false,
-              placeholder: f.placeholder, value: draft[f.key] ?? '', disabled: busy,
-              onChange: (event) => setDraft({ ...draft, [f.key]: event.target.value }),
+            f.type === 'checkbox'
+              ? h('input', {
+                id: 'autoresearch-' + f.key, style: { ...input, width: '18px', height: '18px', padding: '0' },
+                type: 'checkbox', checked: draft[f.key] === true, disabled: busy,
+                onChange: (event) => setDraft({ ...draft, [f.key]: event.target.checked }),
+              })
+              : h('input', {
+                id: 'autoresearch-' + f.key, style: input, type: 'text', spellCheck: false,
+                placeholder: f.placeholder, value: String(draft[f.key] ?? ''), disabled: busy,
+                onChange: (event) => setDraft({ ...draft, [f.key]: event.target.value }),
+              }),
             }),
             h('p', { style: hint }, f.hint),
           ))),

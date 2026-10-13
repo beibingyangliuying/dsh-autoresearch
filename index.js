@@ -39,6 +39,22 @@ export const Config = schema === undefined
         .description(
           'Contact address for the metadata APIs (the "polite pool"): OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact. It is also passed to the reference-library writer. Leave empty to send none.',
         ),
+      // Off by default: turning this on leads to writes in the reference library, and every one of
+      // them still passes that application's own per-write authorization dialog.
+      autoLinkAttachments: schema
+        .boolean()
+        .default(false)
+        .volatile()
+        .description(
+          'When on, a literature round offers to convert PDFs that the reference library stores into linked files under the directory below: the file is copied out, and the library keeps only a link to it. The agent reports the list first, and every write still needs your approval.',
+        ),
+      attachmentStorePath: schema
+        .string()
+        .default('')
+        .volatile()
+        .description(
+          'Directory the converted PDFs are stored in. Use the linked-attachment base directory configured in the reference manager: a file under it is recorded as a relative path and survives moving to another machine, while a file elsewhere is recorded as an absolute path. Empty disables the conversion.',
+        ),
     })
 
 export function apply() {
