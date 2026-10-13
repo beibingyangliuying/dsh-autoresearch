@@ -12,6 +12,9 @@ This skill does exactly one thing: make "what this round did, what it found, wha
 - A work round has come to a stop (not after every single step)
 - The session is about to end, or context is approaching compaction
 - A direction has been rejected or shelved
+- **A contract changed in this round**: a normative document, an invariant, a ruling, or an agreed
+  convention was revised. Do not wait for the round to end — the next session reads the record, not
+  the diff, and an unrecorded revision is invisible to it.
 - Work must be handed to the next session or to another person
 
 **Not applicable**: nothing conclusive was produced yet (then write the log only; the full flow of this skill is unnecessary).
@@ -35,6 +38,8 @@ Write the result up as a "ruler" list.
 | Ruling outcomes (from `redteam-ruling`) | **mnemon Documents** | Decision grounds must be traceable |
 | The few cross-session essentials (notation conventions, current main line, user rulings) | **runtime memory** | Needed every round, but **size-capped** |
 | Round-by-round log, literature notes, ruling-request originals | **workspace Markdown** | Diffable and replayable; must not enter memory |
+| **The reason a contract changed**: what was wrong, what was rejected, on what grounds | **mnemon Documents** | The reason survives the change; it is what stops the same dead end being walked again |
+| A description of the state **before** a change that has already landed (a pending list, an "awaiting ruling" inventory) | workspace Markdown, marked superseded — or left unwritten | It is false the moment the change lands, and kept unmarked it reads as current fact |
 
 ### 3.1 Every record must carry
 
@@ -69,6 +74,7 @@ If any direction was rejected this round, **you must** record "what was rejected
 | It conflicts with existing Documents | **Never overwrite silently**; record "revision + reason", or request a ruling. |
 | It exceeds the runtime-memory cap | Push it down into Documents; **never** squeeze or truncate it into an unreadable line. |
 | It is long prose intended for runtime memory | Refuse; put it in Documents or a workspace file instead. |
+| A document only describes the state before a change that has already landed | Mark it superseded, or leave it out. It is a record, not a conclusion. |
 
 ## 5. Wording discipline
 
@@ -114,6 +120,8 @@ Only the few facts needed across sessions; each self-contained and not duplicati
 - [ ] Conflicts with existing content are recorded as "revision + reason"
 - [ ] Runtime memory is within its caps
 - [ ] Every "done" in the log carries an artifact path
+- [ ] A contract, invariant or ruling revised this round is recorded now, not only at close-out
+- [ ] Change **reasons** are recorded; pre-change state descriptions are marked superseded
 
 ## 9. Don't
 

@@ -72,6 +72,21 @@ never deleted to make a record look clean.
 Check the card index first. Re-running something already recorded, to get a nicer number, is not
 allowed.
 
+### 3.6 A consequence of the construction is not a measurement
+
+Before a number enters the card as an observation, name the rule it follows from. If it follows from
+how the object was built — a fixed step size, an identity that must hold by definition, a bound that
+cannot be otherwise — record it as a property of the definition, not as a result, and let no verdict
+rest on it. Such a number is the most convincing kind of wrong: it is exact, it reproduces, and it
+says nothing about the world.
+
+### 3.7 A declared variant set is closed
+
+When the protocol declares variants — sensitivity arms, strata, comparators — the set is fixed before
+the run. Run all of them, or record the unrun ones as open items in the card **before** reporting.
+An arm declared and then silently dropped is not a smaller experiment; it is a missing check, and it
+is disproportionately often the one that would have tested the load-bearing confound.
+
 ## 4. Do vs don't
 
 ### 4.1 Do
@@ -91,6 +106,8 @@ allowed.
 | "It works" with no number | Not a result. Ask for the number and the path. |
 | The hypothesis was written after the result | Not a test. Relabel it exploration. |
 | The run produced nothing usable (empty / all-missing) | That is a finding about the setup, not a null result. Record it as such. |
+| A reported number follows from how the object was constructed | It is a property of the definition. Relabel it; let no verdict rest on it. |
+| A variant the protocol declared was not run | Run it, or record the omission as an open item **before** reporting. Do not drop it silently. |
 
 ## 5. Wording discipline
 
@@ -127,6 +144,8 @@ rejected path and why.
 - [ ] Negative result recorded rather than deleted
 - [ ] Read-only inputs untouched
 - [ ] Budget declared and respected
+- [ ] No reported number is a consequence of the construction
+- [ ] Every variant the protocol declared was run, or its omission is recorded
 
 ## 9. Don't
 
@@ -135,3 +154,5 @@ rejected path and why.
 - Do not delete failed runs
 - Do not present a single run as a trend
 - Do not report a subagent's result as your own verified fact
+- Do not report a number that follows from how the object was built as if it were measured
+- Do not drop a declared variant silently
