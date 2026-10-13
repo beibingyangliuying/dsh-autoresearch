@@ -1,9 +1,9 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 4.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 5.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 4 added `INV-ROW-1`, which requires every row name this preset declares to resolve through the host's module resolver from the profile's base URL: a package that declares `exports` seals its own subpaths, so a subpath the map omits makes the whole preset unusable while the file sits on disk. Revision 3 recorded a second, best-effort pass applied on every agent creation for plugins that register after the preset activates, and narrowed the guarantee to activation-time coverage, because that pass has not been confirmed to take effect at runtime. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
+independent of any package version. Revision 5 records the owner's local reference library as a **full-text channel** and not a title index: a library searched only through bibliographic metadata reports an absence that is not an absence for the paywalled work it already holds. Revision 4 added `INV-ROW-1`, which requires every row name this preset declares to resolve through the host's module resolver from the profile's base URL: a package that declares `exports` seals its own subpaths, so a subpath the map omits makes the whole preset unusable while the file sits on disk. Revision 3 recorded a second, best-effort pass applied on every agent creation for plugins that register after the preset activates, and narrowed the guarantee to activation-time coverage, because that pass has not been confirmed to take effect at runtime. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
 
 ## 1. Notation and units
 
@@ -175,16 +175,20 @@ The preset reaches literature through three kinds of channel, and they are not i
 
 ```text
 preprint index        search and full text of preprints; no credentials
-local reference lib   the study owner's own library, including full text of paywalled works
+local reference lib   the study owner's own library, searchable by attachment full text; includes the
+                      full text of paywalled works
 bibliographic REST    identifiers, venues, years, counts — metadata only, never evidence
 ```
 
-Two rules bound their use:
+Three rules bound their use:
 
 - **Full text and metadata are different evidence classes.** A record obtained from a bibliographic
   REST source can never be the strongest grade; only text actually read can.
 - **A channel that answers `HTTP/1.0` or rate-limits without a credential must be handled as a
   known constraint**, not retried in a loop. Rate limiting is a finding about the channel.
+- **The owner's library is searched by full text, not only by metadata.** A library read as a title
+  index turns work it already holds into a false absence, and that absence is a statement about the
+  query rather than about the library.
 
 The channels are reached through the preset's own rows, never through a profile-level mount, so that
 enabling a research channel cannot change what an unrelated session can do.
