@@ -6,9 +6,17 @@
 // that consumes it lives in a preset-scoped row.
 //
 // The client half (client.js) is the settings page; this half has no other behaviour.
-const schema = await import('@deepseek-ai/schemastery')
-  .then((module) => module.default)
-  .catch(() => undefined)
+const schemastery = await import('@deepseek-ai/schemastery').catch((error) => {
+  // An unreachable schema must degrade to "this plugin has no config" rather than to a look-alike
+  // object, which would fail validation and mark the whole preset broken. But it must not degrade
+  // SILENTLY: a missing schema and a schema without volatile fields look identical from the settings
+  // panel - no form at all - and the second one cost a long investigation. Report it where it happens.
+  console.log(
+    `[autoresearch-bundle] the configuration schema is unavailable (${error?.code ?? error?.message ?? error}); the contact-address form will not appear. Install the bundle with its dependencies.`,
+  )
+  return undefined
+})
+const schema = schemastery?.default
 
 export const name = 'autoresearch-bundle'
 
