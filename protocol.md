@@ -1,9 +1,14 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 5.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 6.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 5 records the owner's local reference library as a **full-text channel** and not a title index: a library searched only through bibliographic metadata reports an absence that is not an absence for the paywalled work it already holds. Revision 4 added `INV-ROW-1`, which requires every row name this preset declares to resolve through the host's module resolver from the profile's base URL: a package that declares `exports` seals its own subpaths, so a subpath the map omits makes the whole preset unusable while the file sits on disk. Revision 3 recorded a second, best-effort pass applied on every agent creation for plugins that register after the preset activates, and narrowed the guarantee to activation-time coverage, because that pass has not been confirmed to take effect at runtime. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
+independent of any package version. Revision 6 records two resident rules added for failure modes
+observed in the field — an absence claim must carry the targeted check, the scope and the hit count
+that make it an absence, and a number that follows from how an object was constructed is not a
+measurement — together with a re-anchoring rule that keeps the round's original request visible; it
+also states the exact scope of the isolation guarantee in §5 as **tools only**, because the skill
+catalog merges every layer and the registry exposes no restriction call for it. Revision 5 records the owner's local reference library as a **full-text channel** and not a title index: a library searched only through bibliographic metadata reports an absence that is not an absence for the paywalled work it already holds. Revision 4 added `INV-ROW-1`, which requires every row name this preset declares to resolve through the host's module resolver from the profile's base URL: a package that declares `exports` seals its own subpaths, so a subpath the map omits makes the whole preset unusable while the file sits on disk. Revision 3 recorded a second, best-effort pass applied on every agent creation for plugins that register after the preset activates, and narrowed the guarantee to activation-time coverage, because that pass has not been confirmed to take effect at runtime. Revision 2 corrected the tool-isolation section: the filter is a deny list over the global view, because a restriction also filters ancestor contributions — the preset's own rows — and an allow list therefore masked the preset's own tools. The concept-to-name index is [`surface.md`](surface.md).
 
 ## 1. Notation and units
 
@@ -75,11 +80,16 @@ be **decidable**: a reader must be able to say whether it was violated.
 2  no unfalsifiable wording  no "study further", "promising", "many studies show"
 3  no citations from memory  every source actually read, with a path or an identifier
 4  read before writing       survey first; follow an existing hierarchy
-5  three kinds of "nothing"  not searched | searched and absent | not yet searched
+5  three kinds of "nothing"  not searched | searched and absent | not yet searched; an absence
+                             claim carries its targeted check, its scope and its hit count
 6  decisions belong to the user
 7  no silent contract change  revision + reason, or request a ruling
 8  no exceeding the mandate
 9  a subagent report is evidence, not a fact
+10 a construction is not a   a number that follows from how the object was built is a property
+   measurement               of the definition, not a finding
+11 re-anchor to the request  the requested items are tracked as delivered or outstanding, and a
+                             new branch names the outstanding item it serves
 ```
 
 ```text
@@ -91,6 +101,11 @@ inference     my reading of it, together with the reasoning chain
 Rules 3 and 9 are the same idea at two scales: nothing enters the record because it was said.
 Rule 9 exists because a handoff is where an unchecked claim most easily becomes the parent's own
 voice.
+
+Rule 10 guards the opposite failure: a number that is exact and reproducible yet was never a
+measurement, because it follows from how the object was built rather than from the world. Rule 11 is
+the only rule aimed at the shape of a session rather than at a statement — it keeps a round's
+original request visible, so that a chain of individually justified steps cannot quietly replace it.
 
 The resident discipline also carries **routing**: each on-demand discipline states the situation
 that triggers it. Routing is a hard rule, not a suggestion — a trigger that is met without the
@@ -168,6 +183,14 @@ degrades the isolation instead of breaking the preset — reported, not silent.
 The keep-list exists because the preset's own disciplines depend on some global tools. The memory
 disciplines are the clearest case: the settlement discipline records conclusions and rejected
 directions through them, so masking them would leave a written discipline with no instrument.
+
+**The scope of this guarantee is tools, and the word is exact.** The skill catalog is not isolated by
+any mechanism this preset can reach. A preset's own disciplines are registered into its own layer,
+but a catalog read merges the global layer with the viewing scope's chain, and the skill registry
+exposes no restriction call that a row could apply to it — so a profile carrying other bundles
+contributes their skills to this preset's catalog as well. That is a boundary of the artifact rather
+than a defect a row can correct, and the resident discipline states how an entry outside the routing
+list is to be treated. Everything above about tool visibility is unaffected.
 
 ## 6. External evidence channels
 
