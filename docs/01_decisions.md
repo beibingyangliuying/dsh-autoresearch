@@ -307,3 +307,27 @@ skill 里。
 
 **顺带否掉**：不给 `tools/zotero-write.mjs` 加 `--attach <pdf>`。本地 API 确实支持三阶段文件上传（[官方文档](https://www.zotero.org/support/dev/web_api/v3/local_api) ✓），但入库路径已由 Connector + 链接附件覆盖，这条自动化没有用户。
 
+## 22. 存储型附件 → 链接附件：增量走 API，存量走 in-app（2026-10-13）
+
+**决策**：不做插件、不做爬虫式批量。按**增量 / 存量**分工：**增量**（每轮新入库的 PDF）由 agent 通过本地 API 逐次授权完成（`tools/zotero-link-attachments.mjs`，默认 dry-run）；**存量**（整库搬迁，主要是 200 个 HTML 快照）由**所有者本人在应用内**粘贴 `tools/zotero-link-snippet.js` 执行。两侧共享两个设置字段：`autoLinkAttachments`（开关）+ `attachmentStorePath`（目标目录）。
+
+**为何必须分两半**（契约决定，不是偏好）：`protocol.md` §9 写死 *never as a background, bulk, or assumed-standing action*，而 API 每次写入要一次授权弹窗 ⇒ 400 次写入的批量迁移在契约上违规、在体验上不可行。in-app snippet 的执行者是**所有者本人**、在应用内、无 API 授权 ⇒ 契约完全不涉。
+
+**先验前提（本轮实测，四条）**：
+
+1. **本地 API 能直接建 `linked_file` 附件** ✓：探针 1 实测 `linkMode` 正确、父条目挂上、`/file/view/url` 200；给**绝对路径**时 Zotero 会**自动规范化**为 `attachments:` 相对形式 ⇒ 链接路径天然跨机器可迁移。
+2. **API 建的附件不会自动进全文索引** ✗：索引排空器只在“启动时发现有活”才注册（`fulltext.js` L1852：`if (!stalled && … getAttachmentExtractionQueueCount() > 0) registerQueueDrainObserver()`），本会话早已排空并停止 ⇒ 探针 2 观察 **360 秒**仍是 404。我先前据源码推断“会自动补上”，**被实测否定**。
+3. **写一条笔记就能唤醒它** ✓：`item.js` 保存笔记时调 `flagNoteStale`，其末句就是 `registerQueueDrainObserver()`（`fulltext.js` L2341）；探针 3 实测 **15 秒**内入库 17,794 字符、17/17 页。工具与 snippet 因此都在收尾时保存/更新一条固定标记的笔记。
+4. **空间账**：storage 518 MB 中 **438 MB 是 200 个单文件 HTML 快照**；PDF 早已搬完（396 个里 392 是 linked_file、0 个 imported_file）；回收站还压着 **53 MB**（清空即释放）；链接附件的 `.zotero-ft-cache` 另占 ~23 MB——**这部分不可省**，它就是全文检索的成本。快照 200 个中 **165 个同条目另有 PDF、35 个只有快照**（删掉即失去独占的可检索全文）⇒ 因此选“**搬走**”而不是“删除”。
+
+**坑（本轮踩到并修掉的）**：
+
+- **布尔字段写成字符串会被 schema 直接拒绝**（实测 `expected boolean but got true`）⇒ 设置页 draft 必须保持真类型，不能一律 `String()`。
+- **`OS` 不是 Run JavaScript 上下文的全局**（item.js 里能用是模块级导入）⇒ snippet 不能依赖 `OS.Path.join`，改用显式分隔符。
+- **样本选择会制造假因果**：探针挑“最小 PDF”，我一度误判为“该文件抽不出文字”；真因是排空器休眠。
+- dry-run 抓到一个真 bug：候选对象漏带 `contentType`，目标扩展名会变成 `.html`（把 PDF 存成 html）。
+
+**顺带否掉**：Zotero 插件路线（ZotMoov / Attanger：能自动转，但需验证 Zotero 10.0.6 兼容性，且把“我的库怎么组织”交给第三方代码）；Sci-Hub 类；通用爬虫（见 §21）。
+
+**落在何处**：[`index.js`](../index.js)（两个 volatile 字段）· [`client.js`](../client.js)（FIELDS + checkbox 渲染 + 类型化 draft）· [`contact-bridge.js`](../contact-bridge.js)（同一 section 增一条策略行）· [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) + 其自检 · [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。**`protocol.md` 不动**——这正是分工方案的目的。
+

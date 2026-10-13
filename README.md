@@ -68,6 +68,28 @@ requires hand-editing a YAML file:
 - **Contact address** (`mailto`) — identifying yourself to the free metadata APIs gets faster service
   and gentler rate limits. Leave it empty and no contact is sent; the preset behaves exactly as it
   does with no configuration at all.
+- **Convert new stored PDFs** (`autoLinkAttachments`) — off by default. When on, a literature round
+  offers to convert PDFs the reference library *stores* into linked files under the directory below:
+  the file is copied out, and the library keeps only a link to it. The agent reports the list first,
+  and every write still needs your approval in the reference manager.
+- **Attachment store directory** (`attachmentStorePath`) — where those converted PDFs go. Use the same
+  directory the reference manager uses as its linked-attachment base: a file under it is recorded as a
+  relative path and survives moving to another machine, while a file elsewhere is recorded as an
+  absolute path. Empty disables the conversion.
+
+The conversion ships in two halves, and the split is deliberate: a bulk run through the local API
+would need one authorization dialog per write, and the contract forbids an unattended or bulk
+write-back into the reference library ([`protocol.md`](protocol.md) §9). So the increment goes through
+the API, and the bulk migration runs inside the application, at your keyboard.
+
+```powershell
+# increment: a few new stored PDFs per round. Dry run unless --write is given.
+node tools\zotero-link-attachments.mjs --target D:\OneDrive\Zotero
+node tools\zotero-link-attachments.mjs --target D:\OneDrive\Zotero --write
+
+# bulk migration: paste the file below into the reference manager's Run JavaScript window.
+tools\zotero-link-snippet.js
+```
 
 Two channels need setup outside this repository:
 
