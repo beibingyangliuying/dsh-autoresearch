@@ -232,6 +232,17 @@ that property. `preset-selftest.mjs` asserts the link is still a link.
   it — a write is refused with "has no volatile fields". The row keeps its Config the whole time; only
   the surface disappears, which is why the schema looks correct in every other check. Mark every field
   meant to be editable, and give it a `description()`: that text is what the form renders beside it.
+- **A preset cannot mask the skill catalog.** Tool isolation is a deny list over the global view, but
+  the skill registry exposes no equivalent restriction: a catalog read merges the global layer with
+  the viewing scope's chain, and the preset's own registrations win only on a duplicate name. A
+  preset session therefore sees every skill the profile carries. This was measured rather than
+  assumed, on two sessions created with this preset: each received a **20-entry** catalog, of which
+  **8** were the preset's shipped disciplines and **12** came from the profile, the foreign entries
+  taking **3,367 of the catalog's 6,971 characters**. Both available levers are unusable —
+  `includeDefaultRoots: false` would also drop each study's project-level skill directory, and
+  shadowing a foreign name replaces its description without removing the entry. Treat the catalog as
+  untrusted breadth: the resident discipline says a listed skill outside the routing list is not this
+  preset's method.
 
 ## Language
 
