@@ -69,3 +69,14 @@ run the test suite, where the data lives. Keep general workflow rules out of thi
 - Activate the environment first: `& .\activate_venv.ps1`
 - Data root: `D:\...\data` (read-only)
 <!-- EXAMPLE:END -->
+
+## 7. Recording conventions
+
+TODO — either accept the convention below, or declare this study's existing one and delete this
+section. These rules are about how records are shared with people who were not in the session; the
+preset takes no position on which version-control system or branching model a study uses.
+
+- **One concern per commit.** Split by dependency layer or by concern rather than landing one large
+  change. A reviewer must be able to revert one concern without losing another.
+- **A commit message covers every change in that commit.** Read the staged diff before committing;
+  a change the message does not mention is a change nobody signed off on.
