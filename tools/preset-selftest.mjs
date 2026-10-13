@@ -195,7 +195,7 @@ if (!existsSync(composedFile)) {
 
     console.log('\n[4] discipline rules and routing bullets')
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
-    ok(rules.length === 9, 'nine numbered discipline rules', `found ${rules.length}`)
+    ok(rules.length === 11, 'eleven numbered discipline rules', `found ${rules.length}`)
     const flatPersona = composedPersona.replace(/\s+/g, '')
     const bullets = ['research-scoping', 'literature-recon', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
       (n) => flatPersona.includes(`→\`${n}\``),
