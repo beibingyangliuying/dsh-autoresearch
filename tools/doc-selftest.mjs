@@ -69,6 +69,51 @@ function indexedSymbols(text) {
   return [...symbols].sort()
 }
 
+// Names this repository retired. The reader-facing documents describe the artifact as it is now, so
+// naming a retired location there sends a reader to something that no longer exists; the Chinese
+// review aids and the frozen development log may of course keep their historical references.
+const RETIRED_REFERENCES = ['autoresearch-preset/', '@local/dsh-autoresearch-preset']
+
+/** Every repo-relative path a document names in inline code, e.g. `tools/preset-selftest.mjs`. */
+function pathTokens(text) {
+  return [...text.matchAll(/`([A-Za-z0-9_./*-]+\.(?:md|js|mjs|yml|json|ps1))`/g)]
+    .map((match) => match[1])
+    .filter((token) => token.includes('/') && !token.startsWith('/'))
+}
+
+/**
+ * Whether a documented path exists, where `*` matches exactly one path segment.
+ *
+ * It walks segment by segment and never asks whether an entry is a directory: on Windows a reparse
+ * point (a OneDrive placeholder, a junction) answers false to that question while still holding files,
+ * and the trap has silently emptied a list in this repository once already. Matching a file where a
+ * directory was expected is harmless, because the next segment simply does not exist under it.
+ */
+function documentedPathExists(token) {
+  const segments = token.split('/').filter((segment) => segment !== '' && segment !== '.')
+  let frontier = [ROOT]
+  for (const segment of segments) {
+    if (segment.includes('*') && segment !== '*') return false
+    const next = []
+    for (const base of frontier) {
+      if (segment !== '*') {
+        next.push(join(base, segment))
+        continue
+      }
+      try {
+        // `readdirSync` yields names, not Dirents: asking for `withFileTypes` here would re-introduce
+        // the reparse-point trap this walk avoids on purpose.
+        for (const name of readdirSync(base)) next.push(join(base, name))
+      } catch {
+        // Not a directory, so it has no children to match.
+      }
+    }
+    frontier = next.filter((candidate) => existsSync(candidate))
+    if (frontier.length === 0) return false
+  }
+  return frontier.length > 0
+}
+
 const files = {
   protocol: existsSync(PROTOCOL) ? readFileSync(PROTOCOL, 'utf8') : null,
   surface: existsSync(SURFACE) ? readFileSync(SURFACE, 'utf8') : null,
@@ -139,6 +184,47 @@ const checks = [
       return repeated.length === 0 ? null : `entry repeats symbols in prose: ${repeated.join(', ')}`
     },
   },
+  {
+    id: 'DOC-7',
+    label: 'no reader-facing document names the retired bundle layout',
+    run: ({ protocol, surface, readme }) => {
+      const hits = RETIRED_REFERENCES.flatMap((token) =>
+        [
+          ['protocol.md', protocol],
+          ['surface.md', surface],
+          ['README.md', readme],
+        ]
+          .filter(([, text]) => text.includes(token))
+          .map(([name]) => `${name}: ${token}`),
+      )
+      return hits.length === 0 ? null : `retired layout still referenced by ${hits.join('; ')}`
+    },
+  },
+  {
+    id: 'DOC-8',
+    label: 'every path in reader-facing prose still exists',
+    run: ({ protocol, surface, readme }) => {
+      const rootEntries = new Set(readdirSync(ROOT))
+      const stale = []
+      for (const [name, text] of [
+        ['protocol.md', protocol],
+        ['surface.md', surface],
+        ['README.md', readme],
+      ]) {
+        for (const token of pathTokens(text)) {
+          const head = token.split('/')[0]
+          // Only judge a path whose head is a root entry today, or a relative prefix. A path under a
+          // package outside this repository is not a claim about this repository's layout, and the
+          // documents legitimately name those. The limitation is real and stated rather than hidden:
+          // this cannot catch a directory that was RENAMED away, because the old name is no longer a
+          // root entry. Catching that case is what DOC-7 is for.
+          if (head !== '.' && head !== '..' && !rootEntries.has(head)) continue
+          if (!documentedPathExists(token)) stale.push(`${name}: ${token}`)
+        }
+      }
+      return stale.length === 0 ? null : `stale path in ${stale.join('; ')}`
+    },
+  },
 ]
 
 function runChecks(input) {
@@ -191,6 +277,20 @@ const mutations = [
   {
     label: 'the normative precedence word removed from the contract header',
     apply: (input) => ({ ...input, protocol: input.protocol.replace(/\*\*this file wins\*\*/i, '**see below**') }),
+  },
+  {
+    label: 'the retired bundle directory restored in the index',
+    apply: (input) => ({
+      ...input,
+      surface: input.surface.replace('`skills/*/SKILL.md`', '`autoresearch-preset/skills/*/SKILL.md`'),
+    }),
+  },
+  {
+    label: 'a documented path renamed to something that does not exist',
+    apply: (input) => ({
+      ...input,
+      surface: input.surface.replace('`skills/*/SKILL.md`', '`skills/*/NOTES.md`'),
+    }),
   },
 ]
 
