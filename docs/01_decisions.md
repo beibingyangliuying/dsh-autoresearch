@@ -281,3 +281,29 @@ skill 里。
 - 远程 `update()` 写完后重新 `describe` 并 `return namespaceView(descriptor)` ✓ ⇒ 页面用 `response.value`/`.revision` 是对的
 
 **教训（比上一节更深一层）**：**"服务返回空"不等于"没有这个条目"** —— `describe()` 是**过滤后的投影**，它同时受三层条件限制（`entries()` 范围、fiber 状态、volatile 表单），而这三层里**只有一层是我读代码时看懂的** ✗。⇒ **"读实现"也有深浅：读到自己以为懂了就停，与凭印象猜是同一个错** ✓。正确的做法是**在那个对的上下文里直接问它**（探针能起第二个宿主、`--port 0` 不抢端口，这条技术以后可复用 ✓）。
+
+## 21. 付费全文：取不到的是"取得"，不是"检索"（契约 Revision 5，2026-10-13）
+
+**决策**：**不建爬虫**。付费全文的获取改成三级阶梯并写进纪律——**库内全文检索 → 免费 OA 回退 → 向所有者提 PDF 请求单**。库写入的闸门不变（Zotero 原生逐次授权）。
+
+**先验前提（本轮实测，不是推断）**——三条，其中两条推翻了"搜不到付费文献"这个说法：
+
+1. **付费文献的元数据一直可检索** ✓：`api.openalex.org/works/doi:10.1038/nature14539`（Nature 付费）返回完整记录。被墙的从来不是"检索"，而是"**取得不在库里的全文**"。
+2. **链接附件同样进全文索引，也同样能被全文检索** ✓：`/items/HG4TFJF4/fulltext` = 62,188 字符 / 11 页；`zotero_search_items("contingencies", qmode='everything')` 命中该 key。所有者的库已是 `linked_file` 为主（392/618 个附件，path 为 `attachments:` 相对形式 ⇒ 基目录已配，实测解析到 `D:\OneDrive\Zotero\`）⇒ **省空间的链接附件方案不牺牲 agent 的读取能力** ✓。
+3. **库搜索默认只搜标题 / 作者 / 年份** ✗：必须显式 `qmode='everything'` 才搜摘要、笔记与附件全文。实测同一个词 `inoperative`：默认模式 **0** 命中，全文模式 **4** 命中（含那篇付费论文的 PDF）。而**纪律里一个字都没写它** ✗ ⇒ 库内的付费全文此前等于不存在——**能力早就装好了，只是没被写下来**。
+
+**为什么不做爬虫**（三堵墙，且代价归属不在 agent）：
+
+- 机构订阅绑在 **IP 段 / SSO 会话**上，agent 进程两者都没有；`read_page` 又走**云端 Firecrawl**（无法、也不应携带机构凭证）✗。
+- 出版商 ToS 禁止系统性下载，且有反爬；触发后的代价落在**你的账号与机构 IP** 上。
+- 本机 profile **没有任何浏览器工具**（`isolation-report.json` 的 kept 只有 `read_page` / `x_search`）✗ ⇒ 上爬虫等于新增一条工具通道，而不是"用现成能力"。
+- 唯一合法的自动化是机构 TDM API（Elsevier / Wiley / Springer），需**所有者注册**，本轮不做。
+
+**为什么"人取机读"够用**：所有者已在用 Zotero Connector 一键入库 ⇒ 取件这一步本来就有人的环节，缺的只是把"我需要它"变成**一张有约束的请求**。请求单六字段：`identifier` / `what it settles` / `level needed` / `already tried` / `budget` / `state`（`requested → received → read`）。两条约束防止它退化成购物清单：**免费阶梯没走完并报告之前不许问**；**收到文件不等于允许入库，也不等于读过**。
+
+**闸门范围（本轮裁定）**：**维持现状**——只有"写入参考库"需要逐次授权（`INV-EVID-3` + §9 非目标，本来就是硬不变式）；引用**已在库、已读**的文献，或向证据表追加行，不需要逐次点头。OA 发现只是线索，自动取回的副本要入库同样走逐次授权。
+
+**落在何处**：`skills/literature-recon/SKILL.md` §2（检索阶梯 4 级）+ §7（全文检索纪律、PDF 请求单**子小节**——不新增顶层章节，因为 §4 规定了纪律的 fixed sections）；`skills/metadata-query/SKILL.md` §3（OA 回退小节）；`protocol.md` §6 升 **Revision 5**（所有者库是全文通道，不是标题索引）。
+
+**顺带否掉**：不给 `tools/zotero-write.mjs` 加 `--attach <pdf>`。本地 API 确实支持三阶段文件上传（[官方文档](https://www.zotero.org/support/dev/web_api/v3/local_api) ✓），但入库路径已由 Connector + 链接附件覆盖，这条自动化没有用户。
+

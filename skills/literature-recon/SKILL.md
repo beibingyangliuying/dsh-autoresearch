@@ -29,18 +29,23 @@ Write the result up as a **"ruler" list** — it is the input to §3.
 **Search order is part of the ruler.** Check these in order, and say which step produced each source:
 
 ```text
-1. the study owner's own library   curated, already read, and the only place holding full text
-                                   of paywalled work that cannot be fetched again
+1. the owner's local library       curated, already read, and the only channel holding full text of
+                                   paywalled work — searched in FULL-TEXT mode, never by title alone
 2. the preprint index              newest work — nothing is in a library the day it appears
-3. bibliographic REST              identifiers, venues, counts: metadata, never evidence
+3. open-access fallback            a free copy of a paywalled work: repository copy, accepted version,
+                                   author copy — still only a lead until it is actually retrieved
+4. bibliographic REST              identifiers, venues, counts: metadata, never evidence
 ```
 
-Two consequences must be stated rather than assumed:
+Three consequences must be stated rather than assumed:
 
 - **A local library is not current.** A hit there is not evidence that nothing newer exists.
 - **A local search returning nothing is not evidence of absence.** Local search is keyword-matched,
   so a synonym or a different spelling looks like a miss. Distinguish "not searched" from "searched
   and absent" (resident discipline, rule 5).
+- **A library search is not a full-text search unless it is run as one.** The default mode matches
+  titles, creators and years, so a paywalled paper the owner already holds looks absent. Full-text mode
+  also reaches abstracts, notes and attachment full text — stored and linked attachments alike.
 
 > **Forbidden**: writing any literature entry before actually searching and reading. **A citation generated from model memory counts as fabricated.**
 
@@ -109,6 +114,11 @@ Fixed sections:
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - Search with `web_search` / `read_page` / `x_search`; prefer an academic MCP once one is available.
+- **Search the library in full-text mode.** `zotero_search_items(query, qmode='everything')` looks in
+  abstracts, notes and **attachment full text**; the default mode searches titles, creators and years
+  only, so a paywalled full text already in the library looks like it does not exist. Measured: a word
+  that occurred only in a paper's body returned `Matched in: attachment full text <key>` for both a
+  stored and a linked PDF. A hit gives the parent item key — then climb the reading ladder below.
 - **A source may enter the evidence table only if a page or abstract was actually retrieved.** Literature from memory does not count.
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
 - **Reading a long full text without destroying the context.** `zotero_item_fulltext` has no
@@ -155,6 +165,39 @@ Fixed sections:
 - **After reading, leave a digest behind.** Write the durable digest as a **note on the library item** (a child item, so it travels with the library and shows up in the library's own UI), tag the item with its read state, and append one line to the digest index. Without this step the next round pays the same reading cost again.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.
 - Do not fill in unread passages to make the note look complete.
+
+### When no free channel produces the full text (owner-in-the-loop)
+
+Climb these rungs in order and stop at the first one that answers:
+
+```text
+1. the local library, full-text mode   already paid for, already on disk        costs nothing
+2. the preprint index / OA fallback    a free copy of the same work             costs a lookup
+3. the owner's authenticated browser   the only channel holding an institutional
+                                       session, and the only one that may use it costs the owner's time
+```
+
+Rung 3 is the last resort, and what it produces is a **request, never an instruction**:
+
+| Field | Content |
+|---|---|
+| identifier | DOI / preprint id / landing URL — enough to fetch it without searching again |
+| what it settles | the exact claim this source would support, and what stays undecidable without it |
+| level needed | abstract · one named section · full text — ask for the cheapest level that settles the claim |
+| already tried | which free channels were tried, and what each answered |
+| budget | at most N items in one request |
+| state | `requested` → `received` → `read` — a file that arrived is not a paper that was read |
+
+Two rules bound rung 3:
+
+- **Do not ask before the free rungs are exhausted and reported.** "I could not get it" with no record
+  of what was tried is an instruction with extra steps.
+- **Receiving a file is not permission to store it.** Adding it to the library stays a per-write
+  authorization from the owner, and a file that arrived but was not read appears in neither the evidence
+  table nor the digest index.
+
+The lookup mechanics for rung 2 belong to `metadata-query`; retrieving and reading a copy belongs to the
+reading channels above. This skill decides which rung is reachable, and records what each answered.
 
 ## 8. Acceptance checklist
 

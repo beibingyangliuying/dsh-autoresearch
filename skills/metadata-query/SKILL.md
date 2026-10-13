@@ -57,6 +57,26 @@ report an abstract you did not reconstruct.
 Add `&mailto=<contact-address>` (the address this preset announces in your system prompt; omit the parameter entirely if none is announced) for the polite pool. Useful response fields: `DOI`, `title`,
 `container-title`, `issued`, `author`, `is-referenced-by-count`, `reference`.
 
+### Open-access fallback — before a full text is fetched by hand
+
+A paywalled record is not a reason to stop: the same work is often free somewhere. This section owns the
+lookup; `literature-recon` owns the ladder it feeds.
+
+| Question | Where the answer is |
+|---|---|
+| Is any version free, and where? | the work record's `open_access.oa_status`, `open_access.oa_url`, `best_oa_location`, and `locations[].is_oa` (OpenAlex) |
+| Where is the free file itself? | `https://api.unpaywall.org/v2/<doi>?email=<contact-address>` — a **real** address is required; placeholder domains are rejected with `422` |
+| Is there a preprint or accepted version? | the preprint index; the repository entries in `locations` |
+
+`oa_status` reads `gold` / `green` / `hybrid` / `bronze` / `closed`; `green` means a repository copy of a
+paywalled paper exists — measured on a paywalled journal article whose free copy sat in an institutional
+repository. Record the location that was actually retrieved, never the status field alone.
+
+**A listed free copy is a lead, not a retrieval.** Write "a free copy is listed at <url>" only after that
+URL was actually fetched, and report a dead or wrong-version link as a failed lead instead of dropping it
+silently. Retrieving a copy does not raise a source's grade: the grade still follows what was read.
+Whether a copy is fetched and read is the reading channels' business, not this skill's.
+
 ## 4. Do vs don't
 
 ### 4.1 Do
