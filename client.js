@@ -194,7 +194,6 @@ window.__ModuleLoader__.load({
                 placeholder: f.placeholder, value: String(draft[f.key] ?? ''), disabled: busy,
                 onChange: (event) => setDraft({ ...draft, [f.key]: event.target.value }),
               }),
-            }),
             h('p', { style: hint }, f.hint),
           ))),
 
