@@ -33,8 +33,8 @@ flowchart TD
   P --> D[预设声明]
   D --> A[本预设的 agent 作用域]
   A --> L[作用域内注册 = 永远可见]
-  G -.->|"仅白名单"| A
-  G -.->|"其余全部"| M[被屏蔽]
+  G -.->|"keep-list 里的"| A
+  G -.->|"deny = 其余全局工具"| M[被屏蔽]
 ```
 
 **② 研究闭环**
@@ -65,12 +65,19 @@ flowchart LR
 
 ```powershell
 dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本
-node tools\isolation-selftest.mjs                      # 隔离白名单语义
+node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + MCP 行 pin/toolset
+node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
+node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
+node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
 node tools\doc-selftest.mjs                            # 契约/索引 的分工是否还成立
 ```
 
 ## 一条最容易被误解的设计
 
-**屏蔽是"保留制"而不是"拉黑制"。** 白名单里没列到的全局工具一律不可见——所以将来装任何新插件，
-它的工具都**不会**自动溜进这个预设。这是刻意的：拉黑制会随着新插件出现而失效。
+**屏蔽是"拉黑制"，不是"保留制"。** 过滤写成 `deny =（全局视图 − keep-list）`，而不是"只保留白名单里列出的"。原因是语义级的：`restrict()` 过滤的是**该作用域继承来的东西**，而预设自己声明的行对 agent 而言是**祖先层贡献**——若用白名单只列全局工具，会把预设自己的 shell、文件与 skill 工具一并屏蔽掉（症状就是"agent 没有 shell"）。所以将来装任何新插件，它的工具是否可见取决于它是否落在 keep-list 里：不在 keep-list 的全局工具一律 deny，无需逐个登记。
+
+三条边界必须一起记住：
+
+1. 这个保证是**工具层面**的，且只覆盖**激活时刻**；随 agent 创建还有一次 best-effort 补刀，但**未证实生效**（见 [`01_decisions.md`](01_decisions.md) §17）。
+2. **skill 目录不受此机制保护**——注册表不提供限制调用，profile 里别的 bundle 的 skill 会一起出现在本预设的目录里；预设只能靠常驻纪律说明"目录里但不在路由表里的条目怎么对待"。
+3. 反过来，**预设自己行注册的工具永远屏蔽不掉**——包括它自带的**写工具**。所以参考库的写入门禁不能靠隔离，只能由契约（`INV-EVID-3`／§9 的逐次授权）与常驻纪律承担，见 [`01_decisions.md`](01_decisions.md) §24。
