@@ -97,6 +97,15 @@ Two channels need setup outside this repository:
   API enabled (Settings → Advanced → allow other applications on this computer to communicate with it);
 - the preprint channel needs no credentials.
 
+**What the reference-library channel can do.** Its server exposes collection management (create,
+rename, nest, delete), item add and update, notes, annotations and bibliography export, alongside
+search and full-text reading — and it reports that it cannot write at all until you authorize a write
+in the reference manager's own dialog. That dialog is the gate the contract names: each write needs its
+own approval, "Always Allow" is refused, and the rule is stated in the agent's prompt because a tool
+this preset's own row registers cannot be masked by the isolation filter. The row is pinned to one
+server version with its optional tool groups off, so the surface an agent sees cannot drift under a
+settings edit; [`docs/01_decisions.md`](docs/01_decisions.md) records the measurements behind both choices.
+
 ## Start a study
 
 ```powershell
@@ -119,6 +128,7 @@ client.js              the settings page for that configuration (browser half)
 cordis.patch.yml       the composition: the preset declaration and its rows
 isolation.js           tool isolation (a deny list over the global view)
 contact-bridge.js      configurable values -> system prompt
+preset-paths.js        where this package's own helper programs live, as an absolute path
 skills.js              registers the shipped disciplines into this preset's layer
 skills/                the on-demand disciplines, one <name>/SKILL.md each
 project-template/      the study scaffold, copied per study
@@ -143,13 +153,18 @@ node tools\client-selftest.mjs           # the browser half parses, loads and re
 node tools\doc-selftest.mjs
 
 # MCP servers, without DSH
-node tools\mcp-probe.mjs uvx arxiv-mcp-server
-$env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs uvx zotero-mcp
+node tools\mcp-probe.mjs -- uvx arxiv-mcp-server
+$env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # reference library writes: dry run first; --write makes Zotero ask you to Allow
 node tools\zotero-write.mjs --arxiv 1706.03762
 node tools\zotero-write.mjs --arxiv 1706.03762 --write
 ```
+
+**The preset's helper programs are addressed absolutely, on purpose.** An agent of this preset works in
+a study workspace, which carries no copy of them, so the prompt announces this package's helper
+directory and the shipped disciplines name those programs through a token that `skills.js` fills in when
+it registers them. A path relative to this repository names nothing where the agent actually runs.
 
 ### Session diagnostics
 

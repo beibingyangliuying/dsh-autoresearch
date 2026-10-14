@@ -1,9 +1,14 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 6.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 7.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 6 records two resident rules added for failure modes
+independent of any package version. Revision 7 adds `INV-HELPER-1`: a path this preset hands an agent
+for its own helper programs must resolve from the agent's working directory, because a study workspace
+carries no copy of them and a path relative to this repository therefore names nothing there. It also
+records that the reference-library channel now serves write-capable tools; their use stays bounded by
+`INV-EVID-3`'s per-write authorization and by a resident policy line rather than by masking, because §5
+shows that a tool a row of this preset registers cannot be hidden. Revision 6 records two resident rules added for failure modes
 observed in the field — an absence claim must carry the targeted check, the scope and the hit count
 that make it an absence, and a number that follows from how an object was constructed is not a
 measurement — together with a re-anchoring rule that keeps the round's original request visible; it
@@ -192,6 +197,14 @@ contributes their skills to this preset's catalog as well. That is a boundary of
 than a defect a row can correct, and the resident discipline states how an entry outside the routing
 list is to be treated. Everything above about tool visibility is unaffected.
 
+**A consequence of the same rule: a capability this preset ships cannot be masked.** Because masking
+never reaches a tool registered by a row of this preset, a write-capable tool vector shipped by such a
+row is reachable by every agent of this preset, and no restriction call can remove it — the filter is
+the wrong instrument for that job and is not the one the contract relies on. The bound on such a tool is
+the contract itself: a write into the reference library needs `INV-EVID-3`'s authorization for that
+specific write, §9 forbids an assumed-standing one, and the preset states that policy in the agent's
+prompt rather than depending on the tool's absence.
+
 ## 6. External evidence channels
 
 The preset reaches literature through three kinds of channel, and they are not interchangeable:
@@ -212,6 +225,10 @@ Three rules bound their use:
 - **The owner's library is searched by full text, not only by metadata.** A library read as a title
   index turns work it already holds into a false absence, and that absence is a statement about the
   query rather than about the library.
+- **The reference-library channel also carries write tools, and they are bounded by the same gate.**
+  Adding, editing, filing or deleting a record is a write, so it needs `INV-EVID-3`'s authorization for
+  that specific write and its read-back before it is reported; a standing authorization is outside the
+  contract. Which library operations exist is a property of the channel, not a permission.
 
 The channels are reached through the preset's own rows, never through a profile-level mount, so that
 enabling a research channel cannot change what an unrelated session can do.
@@ -249,6 +266,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-SCOPE-3` | When the keep-list intersects the global registry to nothing, masking is not applied and the omission is reported. | The failure mode must be "no isolation, loudly", never "the preset does not load". |
 | `INV-SCOPE-4` | No row of this preset is mounted at profile level. | A profile-level mount leaks into every unrelated session, in both directions. |
 | `INV-ROW-1` | Every row name this preset declares resolves, through the host's module resolver and from the profile's base URL, to the module that row intends. | A name that resolves while the composition is built but not during the registry's trial mount marks the whole preset unusable, and the roster hides such a preset instead of reporting it. |
+| `INV-HELPER-1` | Every path this preset gives an agent for one of its own helper programs resolves from the agent's working directory. | A study workspace carries no copy of those programs, so a path relative to this repository names nothing there: the discipline reads as actionable while the tool it names is unreachable. |
 | `INV-DISC-1` | Every resident rule is decidable by a reader. | An undecidable rule cannot be enforced, so it is decorative. |
 | `INV-DISC-2` | Every statement is classed as evidence-backed, inference, or undecided, and is presented as no more than its class. | This is what separates a research record from a plausible narrative. |
 | `INV-DISC-3` | A delegated conclusion is not the parent's fact until the parent has read the artifact itself. | Verification and attribution must not collapse into one act. |
