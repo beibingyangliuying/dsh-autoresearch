@@ -368,5 +368,5 @@ skill 里。
 
 **顺带否掉**：并存两个 MCP 行（常驻 ≈19.9k token，收益只是"旧行为逐字可复现"）；`ZOTERO_LOCAL_WRITE=false` 硬只读（那等于回到"我们自己写 collections 子命令"，而本轮选择是直接用上游写工具 + 门禁纪律）；把 `tools/` 复制进脚手架（见 §23）。
 
-**顺带发现（未处理，待裁定）**：profile 里有一条**死 Junction** —— `~\.dsh\profiles\web\node_modules\@local\dsh-autoresearch-preset` → `D:\OneDrive\Desktop\dsh-autoresearch\autoresearch-preset`（该子目录 2026-10-12 已上移，目标不存在）。今天**无害**（没有任何行引用 `@local/...`），建议清掉；该清理动作在 profile 侧，不在本仓库。
+**顺带清理（已执行，2026-10-14）**：profile 里有**两条同类的死 Junction** —— `@local/dsh-autoresearch-preset` → 已于 2026-10-12 上移掉的 `autoresearch-preset/`，以及 `@local/dsh-autoresearch-mcp` → 已卸载的 `mcp-academic/`。两条都实测为 `LinkType=Junction`、**目标不存在**、通过链接可见 **0** 条目、且 profile 自身文件**零引用**（`@local/` 下已无其它条目）⇒ 用 `cmd /c rmdir` 逐个删除（**只删链接，不触及目标**），清空后的 `@local/` 目录一并移除；健全的 `@beibingyangliuying/dsh-autoresearch-preset` → 本仓库经复核仍为 Junction 且目标存在 ✓。该清理在 profile 侧，不在本仓库。**教训**：`docs/00_overview.md` 曾把隔离写成"保留制"、这两条死链也曾长期存在——都是"旧布局的痕迹留在文档与 profile 里"，靠一次通读核不出来，只能靠"每次动作都复核目标是否存在"逐个发现。
 
