@@ -177,6 +177,17 @@ if (!existsSync(composedFile)) {
     ok(!topLevelRows.includes(id), `leak guard: ${id} is not a profile-level row`)
   }
 
+  // Guard the Zotero MCP row's two deliberate choices. An UNPINNED `uvx` spec re-resolves on every
+  // start and the surface really does drift - the project's own README still advertises 38 tools /
+  // 13.4k tokens for what 0.14.1 exposes as 41 / 18.8k. Losing the toolset value silently restores
+  // six read-only tools this preset does not use, at ~2.2k tokens per request.
+  const blockText = block.join('\n')
+  ok(/^\s*- zotero-mcp-server==\d+\.\d+\.\d+\s*$/m.test(blockText), 'mcp-zotero pins its server version')
+  ok(
+    /^\s*ZOTERO_MCP_TOOLSETS:\s*['"]?none['"]?\s*$/m.test(blockText),
+    'mcp-zotero trims the optional tool groups',
+  )
+
   console.log('\n[3] source persona survives into the composed tree')
   const sourcePersona = extractBlockScalar(readFileSync(patchFile, 'utf8').split('\n'), /^\s+prefix: [|>]-/)
   const composedPersona = extractBlockScalar(composed, /^\s+prefix: [|>]-/)

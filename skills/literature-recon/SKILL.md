@@ -121,10 +121,14 @@ Fixed sections:
   stored and a linked PDF. A hit gives the parent item key — then climb the reading ladder below.
 - **A source may enter the evidence table only if a page or abstract was actually retrieved.** Literature from memory does not count.
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
-- **Reading a long full text without destroying the context.** `zotero_item_fulltext` has no
-  pagination: a real paper measured ~80k characters, and the tool-result pruner then keeps only its
-  head and tail, silently dropping the middle. For anything long, pull the text to a file through
-  Zotero's local API and read it by offset (recipe verified 2026-10-11):
+- **Reading a long full text without destroying the context.** `zotero_get_item_fulltext` still returns
+  more than a prompt should hold: measured on the pinned server, one real paper came back as **54,443**
+  characters (~13k tokens; the response caps at 10 pages by default), against 79,900 characters from the
+  previous server for the same item. Both are far above this preset's tool-result pruner threshold
+  (8,192 characters), which keeps only the head and tail and silently drops the middle. The server's own
+  header suggests `zotero_semantic_search`; that does **not** apply here — the `[semantic]` extra is not
+  installed, so the tool only reports the missing dependency. For anything long, pull the text to a file
+  through Zotero's local API and read it by offset (recipe verified 2026-10-11):
 
   ```powershell
   # 1. find the attachment key: data.itemType=attachment, data.contentType=application/pdf

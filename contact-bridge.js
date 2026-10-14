@@ -118,6 +118,24 @@ export function helpersLine() {
   ].join(' ')
 }
 
+/**
+ * The reference-library write gate. Always present, because the tools it governs are always present.
+ *
+ * The mounted Zotero server exposes write tools that this preset CANNOT mask: they are registered by
+ * a row the preset itself declares, so they are scope-local, and `restrict({ deny })` only filters
+ * what a scope inherits. Its "Always Allow" answer would also store a reusable, unscoped key on disk
+ * instead of asking per write, which is the opposite of the gate every other write path here uses.
+ *
+ * @returns {string} One sentence stating how a write to the reference library may be authorized.
+ */
+export function writeGateLine() {
+  return [
+    'Reference-library writes are gated by the owner: each write needs its own approval in the',
+    'reference manager dialog. State what you will write before asking for it, and never request or',
+    'choose "Always Allow".',
+  ].join(' ')
+}
+
 export function apply(ctx) {
   ctx.systemPrompt.section({
     name: 'autoresearch-contact',
@@ -126,6 +144,7 @@ export function apply(ctx) {
       const settings = optionalSettings(ctx)
       return [
         helpersLine(),
+        writeGateLine(),
         contactLine(readContactAddress(settings)),
         attachmentLine(readAttachmentPolicy(settings)),
       ]

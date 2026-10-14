@@ -15,6 +15,7 @@ import {
   helpersLine,
   readAttachmentPolicy,
   readContactAddress,
+  writeGateLine,
 } from '../contact-bridge.js'
 import { cliToolsDir } from '../preset-paths.js'
 
@@ -86,6 +87,12 @@ check(
   'the announced directory really holds the helpers (a moved tools/ makes the line a lie)',
 )
 
+// The reference-library write gate: the mounted Zotero server's write tools cannot be masked by the
+// isolation filter (they are scope-local), so the prompt carries the rule instead.
+check(String(writeGateLine()).includes('Always Allow'), 'the write gate names the answer it forbids')
+check(/never/i.test(String(writeGateLine())), 'the write gate forbids it in so many words')
+check(/approval/i.test(String(writeGateLine())), 'the write gate states that each write needs approval')
+
 // --- the registration and its freshness ---------------------------------------------------------
 
 const sections = []
@@ -147,6 +154,11 @@ check(
 )
 check(!textOf().includes('@'), 'an unreadable configuration invents no contact address', JSON.stringify(textOf()))
 check(!textOf().includes('--mailto'), 'an unreadable configuration announces no contact instruction')
+check(
+  textOf().includes('Always Allow'),
+  'the write gate survives an unreadable configuration',
+  JSON.stringify(textOf().slice(0, 60)),
+)
 check(
   !textOf().includes('zotero-link-attachments'),
   'an unreadable configuration announces no attachment policy',
