@@ -7,6 +7,8 @@
 //      providers, so a typo would remove a whole discipline with no visible error;
 //   2. registration goes through `ctx.skills.register()` for every skill, which is how these reach
 //      agents of this preset (and only this preset) without any manual copy step.
+import { existsSync } from 'node:fs'
+import { TOOLS_TOKEN, cliToolsDir } from '../preset-paths.js'
 import { apply, parseSkill, readSkills } from '../skills.js'
 
 let failures = 0
@@ -60,6 +62,28 @@ for (const expected of [
   check(names.has(expected), `shipped: ${expected}`)
 }
 
+// --- helper paths named by the shipped bodies ----------------------------------------------------
+// A shipped body is static Markdown, so it names this preset's own CLI helpers through the
+// `{{presetTools}}` token and `apply()` fills in the absolute directory. Two failures are silent
+// otherwise: a relative `tools/...` path resolves against the AGENT's working directory (a study
+// workspace, which the scaffold gives no `tools/`) and finds nothing, and a token naming no shipped
+// file ships a command that cannot run.
+
+const relativeHelperPath = /(?<![\w/.-])tools\/[a-z0-9-]+\.(?:mjs|ps1|js)\b/
+for (const skill of skills) {
+  check(!relativeHelperPath.test(skill.content), `no relative helper path in: ${skill.name}`)
+}
+
+const namedHelpers = [
+  ...new Set(
+    skills.flatMap((skill) => [...skill.content.matchAll(/\{\{presetTools\}\}\/([a-z0-9-]+\.mjs)/g)].map((m) => m[1])),
+  ),
+]
+check(namedHelpers.length > 0, 'a shipped body names a helper through the token', namedHelpers.join(', '))
+for (const helper of namedHelpers) {
+  check(existsSync(new URL(`../tools/${helper}`, import.meta.url)), `the token names a helper that exists: ${helper}`)
+}
+
 // --- registration ------------------------------------------------------------------------------
 
 const registered = []
@@ -76,6 +100,19 @@ check(registered.length === skills.length, 'apply() registers every shipped skil
 check(
   registered.every((skill) => typeof skill.content === 'string' && skill.content.length > 0),
   'every registration carries its body',
+)
+check(
+  registered.every((skill) => !skill.content.includes(TOOLS_TOKEN)),
+  'every registration has its helper token filled in',
+)
+check(
+  registered.every((skill) => !relativeHelperPath.test(skill.content)),
+  'no registration carries a relative helper path',
+)
+check(
+  registered.some((skill) => skill.content.includes(cliToolsDir)),
+  'the substituted body carries the absolute helper directory',
+  cliToolsDir,
 )
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)

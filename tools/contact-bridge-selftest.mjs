@@ -6,9 +6,17 @@
 // row's configuration on every prompt assembly, so a settings edit reaches the next agent with no
 // listener and no staleness window. The second is safety: a settings read that fails, or a value that
 // is absent, must leave the preset working rather than take it down.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import * as contact from '../contact-bridge.js'
-import { apply, attachmentLine, contactLine, readAttachmentPolicy, readContactAddress } from '../contact-bridge.js'
+import {
+  apply,
+  attachmentLine,
+  contactLine,
+  helpersLine,
+  readAttachmentPolicy,
+  readContactAddress,
+} from '../contact-bridge.js'
+import { cliToolsDir } from '../preset-paths.js'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
@@ -68,6 +76,16 @@ check(
   'the line names the tool that does the work',
 )
 
+// The helper directory is announced whether or not anything is configured: an agent working in a
+// study workspace has no other way to find this preset's scripts.
+check(String(helpersLine()).includes(cliToolsDir), 'the helper line names the absolute helper directory', cliToolsDir)
+check(!String(helpersLine()).includes('\\'), 'the announced directory needs no escaping in a shell command')
+check(/\/tools$/.test(cliToolsDir), 'the announced directory is the package tools directory', cliToolsDir)
+check(
+  existsSync(new URL('../tools/zotero-write.mjs', import.meta.url)),
+  'the announced directory really holds the helpers (a moved tools/ makes the line a lie)',
+)
+
 // --- the registration and its freshness ---------------------------------------------------------
 
 const sections = []
@@ -119,9 +137,21 @@ described = [
 check(!textOf().includes('D:\\Store'), 'a disabled switch announces no directory')
 check(textOf().includes('third@example.org'), 'the address survives the switch being off')
 
-// And an unreadable configuration is announced as nothing rather than as an error.
+// And an unreadable configuration is announced as nothing rather than as an error - except for the
+// helper directory, which is not configuration and is therefore always stated.
 described = []
-check(textOf() === '', 'an unreadable configuration yields empty text, not a broken section', JSON.stringify(textOf()))
+check(
+  textOf().includes(cliToolsDir),
+  'the helper directory survives an unreadable configuration',
+  JSON.stringify(textOf().slice(0, 60)),
+)
+check(!textOf().includes('@'), 'an unreadable configuration invents no contact address', JSON.stringify(textOf()))
+check(!textOf().includes('--mailto'), 'an unreadable configuration announces no contact instruction')
+check(
+  !textOf().includes('zotero-link-attachments'),
+  'an unreadable configuration announces no attachment policy',
+  JSON.stringify(textOf()),
+)
 
 // --- the bundle row's Config contract -----------------------------------------------------------
 

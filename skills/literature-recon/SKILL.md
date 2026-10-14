@@ -143,11 +143,11 @@ Fixed sections:
   curl.exe -sL -o paper.pdf "https://arxiv.org/pdf/<arxivId>"
   # verify, or it is not a download: content-type application/pdf, a size in MB, magic bytes %PDF
   ```
-- **Adding a reference to the owner's library.** Use `tools/zotero-write.mjs`. It is a **dry run unless `--write` is given**, it refuses to create a duplicate of something already in the library, and it **never stores a key**: each write makes Zotero itself show the owner an Allow/Deny dialog. Propose the addition and let the owner approve it — never treat the approval as standing permission for the next one.
+- **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, it refuses to create a duplicate of something already in the library, and it **never stores a key**: each write makes Zotero itself show the owner an Allow/Deny dialog. Propose the addition and let the owner approve it — never treat the approval as standing permission for the next one.
 
   ```powershell
-  node tools/zotero-write.mjs --arxiv 1706.03762          # dry run: resolve, build, print
-  node tools/zotero-write.mjs --doi 10.xxxx/yyyy --write  # owner clicks Allow in Zotero
+  node "{{presetTools}}/zotero-write.mjs" --arxiv 1706.03762          # dry run: resolve, build, print
+  node "{{presetTools}}/zotero-write.mjs" --doi 10.xxxx/yyyy --write  # owner clicks Allow in Zotero
   ```
 
   The write is only accepted once a **read-back** of the created item matches the title, DOI and creator count. Never report "added" from the POST response alone.

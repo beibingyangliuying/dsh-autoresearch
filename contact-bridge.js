@@ -1,8 +1,13 @@
 // Preset-scoped half: reads the bundle row's configuration and states it in the system prompt.
 //
-// Two values travel through here: the contact address, and the stored-PDF conversion policy. They are
-// announced through ONE section on purpose - a second section would cost every prompt for a line that
-// is usually empty, and the settings row is the same row for both.
+// Three things travel through here: the contact address, the stored-PDF conversion policy, and the
+// absolute directory of this preset's own command-line helpers. They are announced through ONE section
+// on purpose - a second section would cost every prompt for lines that are usually empty, and the
+// settings row is the same row for both configured values.
+//
+// The helper directory is announced UNCONDITIONALLY, unlike the two configured values: an agent whose
+// working directory is a study workspace has no other way to learn where this preset's scripts live,
+// and a relative `tools/...` path resolves to nothing there.
 //
 // A discipline skill is static Markdown, so it cannot read a value the user typed into the settings
 // page. This row bridges it: the value lives in the bundle's own top-level row (the only place the
@@ -15,6 +20,8 @@
 // Why a prompt section and not `agent/created`: a listener registered in this row's scope never
 // receives `agent/created` (it is dispatched before an agent is linked to its scope), while
 // `ctx.systemPrompt.section()` is the prompt registry's own scoped extension point.
+import { cliToolsDir } from './preset-paths.js'
+
 export const name = 'autoresearch-contact'
 
 /** The host services this row reads and contributes through. */
@@ -97,13 +104,31 @@ export function attachmentLine(policy) {
   ].join(' ')
 }
 
+/**
+ * The helper-directory line, or nothing when the directory cannot be resolved.
+ *
+ * @returns {string|undefined} One sentence naming the absolute directory of this preset's own CLI helpers.
+ */
+export function helpersLine() {
+  const dir = String(cliToolsDir ?? '').trim()
+  if (dir === '') return undefined
+  return [
+    `This preset's own command-line helpers live in ${dir}; invoke them by absolute path`,
+    '(a relative `tools/...` path does not resolve in a study workspace).',
+  ].join(' ')
+}
+
 export function apply(ctx) {
   ctx.systemPrompt.section({
     name: 'autoresearch-contact',
     order: SECTION_ORDER,
     text: () => {
       const settings = optionalSettings(ctx)
-      return [contactLine(readContactAddress(settings)), attachmentLine(readAttachmentPolicy(settings))]
+      return [
+        helpersLine(),
+        contactLine(readContactAddress(settings)),
+        attachmentLine(readAttachmentPolicy(settings)),
+      ]
         .filter((line) => line !== undefined)
         .join(' ')
     },
