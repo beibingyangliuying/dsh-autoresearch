@@ -156,6 +156,12 @@ node tools\doc-selftest.mjs
 node tools\mcp-probe.mjs -- uvx arxiv-mcp-server
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
+# what a server's tool schema costs per request, and which version answered
+node tools\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
+
+# call one tool and keep the FULL result (mcp-probe truncates a result at 1500 characters)
+$env:ZOTERO_LOCAL='true'; node tools\mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
+
 # reference library writes: dry run first; --write makes Zotero ask you to Allow
 node tools\zotero-write.mjs --arxiv 1706.03762
 node tools\zotero-write.mjs --arxiv 1706.03762 --write
