@@ -364,7 +364,7 @@ skill 里。
 
 **写入门禁为何写进 prompt 而不是靠隔离**：这些写工具由**预设自己声明的行**注册 ⇒ scope-local；`restrict({deny})` 只过滤**继承来的**全局工具，且**拒绝 scope-local 名字**（契约 §5）⇒ **隔离在原理上管不住它们**。因此门禁只能由契约与常驻纪律承担：`INV-EVID-3` 与 §9 要求**逐次授权**，而 "Always Allow" 会把可复用、不分作用域的 key 落到 `~/.config/zotero-mcp/config.json` ⇒ 与"逐次授权"直接冲突，故在 prompt 里写死禁止，并要求"先说要写什么再请求授权"。成本：该行 ~200 字符/请求（≈55 token）。
 
-**落在何处**：[`cordis.patch.yml`](../cordis.patch.yml)（`mcp-zotero` 行 + 行内实测注释）· [`contact-bridge.js`](../contact-bridge.js)（写入门禁行）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（工具改名 + 体积实测 + 语义检索无效）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（pin 与 toolset 两条护栏，静默回退即 FAIL）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`README.md`](../README.md) · `protocol.md` §5 / §6（Revision 7）。
+**落在何处**：[`cordis.patch.yml`](../cordis.patch.yml)（`mcp-zotero` 行 + 行内实测注释）· [`contact-bridge.js`](../contact-bridge.js)（写入门禁行）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（工具改名 + 体积实测 + 语义检索无效）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（pin 与 toolset 两条护栏，静默回退即 FAIL）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`README.md`](../README.md) · `protocol.md` §5 / §6（Revision 7）。**另**：本轮把两个一次性探针从 `.tmp/` 转正为 [`tools/mcp-call.mjs`](../tools/mcp-call.mjs)（跑单个工具并**保完整输出**——`mcp-probe.mjs` 会把结果截到 1500 字符，正是它让"只 1 个分类"的假象得以出现）与 [`tools/mcp-toolsize.mjs`](../tools/mcp-toolsize.mjs)（按 `tools/list` 全文量常驻成本）⇒ 上游一升级就能一键复核是否漂移。
 
 **顺带否掉**：并存两个 MCP 行（常驻 ≈19.9k token，收益只是"旧行为逐字可复现"）；`ZOTERO_LOCAL_WRITE=false` 硬只读（那等于回到"我们自己写 collections 子命令"，而本轮选择是直接用上游写工具 + 门禁纪律）；把 `tools/` 复制进脚手架（见 §23）。
 
