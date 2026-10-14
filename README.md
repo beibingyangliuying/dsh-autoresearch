@@ -20,7 +20,8 @@ the package registers the preset.
 dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch
 
 # or, while developing against a checkout, install it as a bundle whose entry is a LINK to the
-# checkout, so edits here are live for new sessions
+# checkout: no re-install is needed after an edit, but the edit reaches a session only after the host
+# process restarts (the preset registry mounts the definition it parsed at startup)
 dsh plugin --profile web add <path-to-checkout>
 ```
 
@@ -187,10 +188,19 @@ These read the transcripts alone, and together they answer "which preset did tha
 and what tools did its agent see". That pair of questions settled two investigations here, so reach for
 these before asking for another restart.
 
-**Do not re-run `install_bundle` on the preset.** The bundle entry is a link to this directory, so
-editing the composition file here is already live for new sessions; re-installing has been observed
-to fail with a source-mismatch and risks replacing the link with a copy, which would silently break
-that property. `preset-selftest.mjs` asserts the link is still a link.
+**Do not re-run `install_bundle` on the preset.** The bundle entry is a link to this directory, so an
+edit needs no re-install; re-installing has been observed to fail with a source-mismatch and risks
+replacing the link with a copy, which would silently break that property. `preset-selftest.mjs`
+asserts the link is still a link.
+
+**An edit here reaches a session only after the HOST restarts — not at the next session.** The preset
+registry stores the definition it parsed when the host started and mounts that stored definition for
+every new session, and the host process's module cache keeps the plugin code from the same moment. A
+session created after an edit therefore still runs the previous composition: verified on 2026-10-14,
+where a session opened after the edit reported the old server's tools and a prompt without the new
+lines, while the host process had started 90 minutes before the edit. `--dump-config` and the
+self-tests above describe what the NEXT start will mount, so they can pass in full while a running
+session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_decisions.md) §25.
 
 ## Known constraints
 

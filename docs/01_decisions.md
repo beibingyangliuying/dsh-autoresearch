@@ -370,3 +370,20 @@ skill 里。
 
 **顺带清理（已执行，2026-10-14）**：profile 里有**两条同类的死 Junction** —— `@local/dsh-autoresearch-preset` → 已于 2026-10-12 上移掉的 `autoresearch-preset/`，以及 `@local/dsh-autoresearch-mcp` → 已卸载的 `mcp-academic/`。两条都实测为 `LinkType=Junction`、**目标不存在**、通过链接可见 **0** 条目、且 profile 自身文件**零引用**（`@local/` 下已无其它条目）⇒ 用 `cmd /c rmdir` 逐个删除（**只删链接，不触及目标**），清空后的 `@local/` 目录一并移除；健全的 `@beibingyangliuying/dsh-autoresearch-preset` → 本仓库经复核仍为 Junction 且目标存在 ✓。该清理在 profile 侧，不在本仓库。**教训**：`docs/00_overview.md` 曾把隔离写成"保留制"、这两条死链也曾长期存在——都是"旧布局的痕迹留在文档与 profile 里"，靠一次通读核不出来，只能靠"每次动作都复核目标是否存在"逐个发现。
 
+## 25. 预设源改动只有宿主重启才生效——"开新会话验证"是个陷阱（2026-10-14）
+
+**怎么发现的**：按验证清单开了一条 autoresearch 新会话做验收，它的工具表里参考库只有 **3** 个工具、而且是**旧名**（`zotero_item_metadata` / `zotero_item_fulltext`，无 `get_`），系统提示里也没有本轮新增的 helper 目录行与写入门禁行——但这三件事在磁盘上都已改好。该会话没有停在"没生效"，而是取证到了根因（进程命令行 + 包版本 + 描述字符串逐字比对）。
+
+**证据一（实测时间线）**：宿主 `dsh web`（pid 2612）起于 **20:53:40**；它拉起的 MCP 子进程 `uvx zotero-mcp`（**未 pin**）与 `uvx arxiv-mcp-server` 分别起于 **20:54:13 / 20:54:18**；本轮改动落盘于 **22:12:33 / 22:18:48 / 22:23:24**；改动之后**没有**任何按新 pin 规格启动的 zotero MCP 进程 ⇒ 会话里那 3 个旧工具来自宿主启动时拉起的那一个进程。
+
+**证据二（实现，不靠推断）**：`dsh-agent-preset-registry` 的 `register(definition)` 把**解析后的行表**存进内存 Map（`lib/index.js:476`、`500-509`），`mount()` 挂载的是 `record.config.plugins`（同文件 `534`、`693`）⇒ 新会话挂的是**宿主启动时那份定义**，而不是重读 patch；该文件自己的注释也写明 *"In-memory Loader tree; only the profile configuration editor persists definitions."*。插件代码另有宿主进程的 **ESM 模块缓存**，同一进程内 `import` 不会重读磁盘。
+
+**结论（已写进 README）**：改 `cordis.patch.yml` 或任何一个宿主侧插件 `.js` 之后，**必须重启宿主**；刷新页面、开新会话都不够。`--dump-config` 与全套 selftest 描述的是**下次启动将要挂载的东西**——所以它们可以在"运行中的会话仍是旧面"时全部 PASS，两者不矛盾。
+
+**附带结清两个历史开放项**（PLAN.md 冻结不改，结论记在这里）：
+
+- PLAN.md 13.8 的"仍待确认：`mcp__arxiv__*` / `mcp__zotero__*` 是否出现在预设会话工具表" ⇒ **确认出现** ✓：该会话实测 `mcp__arxiv__*` **19** 个、`mcp__zotero__*` **3** 个（旧服务器）。
+- PLAN.md 13.9 的"运行中的 DSH 是否会在不重启的情况下重新组合预设声明" ⇒ **不会**。当时的判定方法是"看 `isolation-report.json` 是否重新出现"；本轮用更直接的证据（子进程命令行 + 注册表实现）给出了答案。
+
+**方法论教训**：验收必须在**正确的进程**里做。"开了新会话"不等于"改了的东西在跑"——先比较宿主启动时间与改动时间，否则测的是旧配置。这与 §15 / §19 那两次"预设消失"是同一类错误的另一面：那两次是"改了源但没生效"，本次是"**以为新会话就等于生效**"。
+
