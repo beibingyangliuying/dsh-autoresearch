@@ -35,11 +35,11 @@ TODO — undecided questions, all marked `[exploratory]`.
 <!-- EXAMPLE:BEGIN — a filled candidate question. Delete this block. -->
 ### Example: candidate question 2
 
-**Statement** (fact: it is a question, not a result) — Under which post-earthquake stress
-conditions does a local reduction in seismic vulnerability change regional cascade consequences?
+**Statement** (fact: it is a question, not a result) — Under which conditions does a change localised
+to one component change an outcome measured over the whole system?
 
-**Falsification condition** — A paired evaluation in which local vulnerability is reduced while the
-terminal loss distribution is unchanged across every stratum would falsify the claim that the
+**Falsification condition** — A paired evaluation in which the local change is applied while the
+system-wide outcome distribution is unchanged across every stratum would falsify the claim that the
 change propagates at all.
 
 **Counts as answered** — A paired-response estimate per stratum, with the reference population

@@ -43,5 +43,5 @@ is a pitfall nobody will maintain.
 - **Fix / workaround**: use `curl.exe` instead — it returns `200` for the same URL.
 - **Applies to**: Zotero 7 local API on Windows — 2026-10-11
 - **Verified by**: `curl.exe -s -D - -o NUL "http://127.0.0.1:23119/api/users/0/items?limit=1"`
-  returned `HTTP/1.0 200 OK` with `Total-Results: 1582`.
+  returned `HTTP/1.0 200 OK` with a `Total-Results` header — the status line is the finding, not the count.
 <!-- EXAMPLE:END -->

@@ -3,8 +3,9 @@
 // Usage: node tools/zotero-read-selftest.mjs
 //
 // The fixtures are the SHAPES the library actually answered on 2026-10-15 (Zotero 10.0.6), reduced to
-// the fields under test. They are here because every one of them broke a reasonable-looking first
-// design:
+// the fields under test. Keys, titles and texts are synthetic: the SHAPES are what these tests are
+// about, and a real library's contents are not this repository's to publish. They are here because
+// every one of them broke a reasonable-looking first design:
 //
 //   * a full-text search answers with a MIX of rows - attachments, notes with empty titles, and real
 //     records - so the rows have to be collapsed onto the records they belong to;
@@ -45,15 +46,15 @@ console.log('reference-library reader self-test')
 
 /** Six rows from one `qmode=everything` search: three attachment rows, two notes, one record. */
 const SEARCH_ROWS = [
-  { key: '89IR5DP6', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'MXZ5D9T6', title: 'New network sensitivity-based approach' } },
-  { key: 'XDZBJ3WU', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'WV4GY4UQ', title: 'Cascading Failure Mitigation via Transmission Switching' } },
-  { key: '73WSQ4DD', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: '2UHDKBMJ', title: 'AI-Driven Stabilization in Power Grids' } },
-  { key: 'WFYYMUXQ', data: { itemType: 'conferencePaper', title: 'Cascading power outages propagate locally', date: '2017-06-01' } },
+  { key: '89IR5DP6', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'MXZ5D9T6', title: 'Example study alpha' } },
+  { key: 'XDZBJ3WU', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'WV4GY4UQ', title: 'Example study beta' } },
+  { key: '73WSQ4DD', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: '2UHDKBMJ', title: 'Example study gamma' } },
+  { key: 'WFYYMUXQ', data: { itemType: 'conferencePaper', title: 'Example study delta', date: '2017-06-01' } },
   { key: 'VK2AN4SR', data: { itemType: 'note', parentItem: 'WFYYMUXQ', title: '' } },
   { key: 'SVYKIBWU', data: { itemType: 'note', parentItem: 'WFYYMUXQ', title: '' } },
 ]
 
-/** The real children of 85ZCTB6Z: a note, a linked PDF, and an imported HTML snapshot. */
+/** The children fixture: a note, a linked PDF, and an imported HTML snapshot. */
 const CHILDREN = [
   { key: 'V3USIF2E', data: { itemType: 'note', title: '' } },
   { key: '2PPY7UFW', data: { itemType: 'attachment', contentType: 'application/pdf', linkMode: 'linked_file', title: 'Full Text PDF' } },
@@ -65,21 +66,21 @@ const MULTI_GET_ROWS = [
   { key: '89IR5DP6', data: { itemType: 'attachment', parentItem: 'MXZ5D9T6' } },
   { key: 'XDZBJ3WU', data: { itemType: 'attachment', parentItem: 'WV4GY4UQ' } },
   { key: 'JCK7898M', data: { itemType: 'note', parentItem: 'WV4GY4UQ' } },
-  { key: 'WV4GY4UQ', data: { itemType: 'preprint', title: 'Cascading Failure Mitigation via Transmission Switching' } },
+  { key: 'WV4GY4UQ', data: { itemType: 'preprint', title: 'Example study beta' } },
   { key: 'JDRS7968', data: { itemType: 'note', parentItem: 'MXZ5D9T6' } },
-  { key: 'MXZ5D9T6', data: { itemType: 'journalArticle', title: 'New network sensitivity-based approach' } },
+  { key: 'MXZ5D9T6', data: { itemType: 'journalArticle', title: 'Example study alpha' } },
 ]
 
-/** Real collection rows, plus one whose parent is missing (marked) to pin the orphan rule. */
+/** Collection rows in the measured shape, plus one whose parent is missing (marked) to pin the orphan rule. */
 const COLLECTIONS = [
-  { key: 'UCXUZ6J9', data: { name: '电气设备抗震性能' }, meta: { numItems: 18 } },
-  { key: '6NC7A7ZU', data: { name: '变压器', parentCollection: 'UCXUZ6J9' }, meta: { numItems: 13 } },
-  { key: '6EXX6Z4X', data: { name: '阀塔阀厅', parentCollection: 'UCXUZ6J9' }, meta: { numItems: 9 } },
-  { key: 'W3UJBL4F', data: { name: '磕盐过程论文参考' }, meta: { numItems: 0 } },
+  { key: 'COLROOT1', data: { name: 'Example root' }, meta: { numItems: 18 } },
+  { key: 'COLCHLD2', data: { name: 'Example child', parentCollection: 'COLROOT1' }, meta: { numItems: 13 } },
+  { key: 'COLCHLD3', data: { name: 'Example child two', parentCollection: 'COLROOT1' }, meta: { numItems: 9 } },
+  { key: 'COLNOTE4', data: { name: 'Example root two' }, meta: { numItems: 0 } },
   { key: 'ORPHAN01', data: { name: 'child of a collection that is not in this page', parentCollection: 'GONE0000' }, meta: { numItems: 1 } },
 ]
 
-const FULLTEXT = 'Seismic performance assessment of power systems. Seismic demand and component capacity are correlated. '
+const FULLTEXT = 'A sample text for the reader. Another sample line follows it. '
 
 // --- what a row is ------------------------------------------------------------------------------
 
@@ -144,7 +145,7 @@ check(
 
 console.log('\n[5] the shapes that are sometimes one thing and sometimes many')
 
-check(JSON.stringify(normalizeCollections('9B8XWBPV')) === '["9B8XWBPV"]', 'one collection arrives as a bare string')
+check(JSON.stringify(normalizeCollections('COLONLY1')) === '["COLONLY1"]', 'one collection arrives as a bare string')
 check(normalizeCollections(['a', 'b']).length === 2, 'several arrive as an array')
 check(normalizeCollections('').length === 0 && normalizeCollections(undefined).length === 0, 'none is none')
 check(JSON.stringify(normalizeTags([{ tag: '/done' }])) === '["/done"]', 'tags are objects with a tag key')
@@ -168,7 +169,7 @@ console.log('\n[7] collections become a tree')
 
 const tree = buildCollectionTree(COLLECTIONS)
 check(tree.length === 3, 'three roots: two real ones and the orphan', `${tree.length}`)
-check(tree[0].key === 'UCXUZ6J9' && tree[0].children.length === 2, 'a root keeps its children', `${tree[0].children.length}`)
+check(tree[0].key === 'COLROOT1' && tree[0].children.length === 2, 'a root keeps its children', `${tree[0].children.length}`)
 check(tree[0].count === 18, 'the item count is carried')
 check(tree.some((node) => node.key === 'ORPHAN01'), 'a collection whose parent is missing becomes a root instead of vanishing')
 check(buildCollectionTree([]).length === 0, 'no collections is an empty tree')
@@ -189,20 +190,20 @@ check(sliceText('', {}).total === 0 && sliceText('', {}).nextOffset === null, 'a
 
 console.log('\n[9] passages are found, with their offsets')
 
-const passages = findPassages(FULLTEXT, 'seismic demand')
+const passages = findPassages(FULLTEXT, 'sample text')
 check(passages.length === 1, 'a term is found once', `${passages.length}`)
-check(passages[0].index === FULLTEXT.toLowerCase().indexOf('seismic demand'), 'the offset is the real one')
+check(passages[0].index === FULLTEXT.toLowerCase().indexOf('sample text'), 'the offset is the real one')
 // The window only means something on a text longer than it is, so that is what this measures.
-const LONG = `${'a'.repeat(500)}seismic demand${'b'.repeat(500)}`
-const windowed = findPassages(LONG, 'seismic demand', { window: 50 })
+const LONG = `${'a'.repeat(500)}sample text${'b'.repeat(500)}`
+const windowed = findPassages(LONG, 'sample text', { window: 50 })
 check(
-  windowed[0].excerpt.length === 50 + 'seismic demand'.length + 50,
+  windowed[0].excerpt.length === 50 + 'sample text'.length + 50,
   'the excerpt is the window on both sides and no more',
   `${windowed[0].excerpt.length} characters`,
 )
 check(windowed[0].excerpt.startsWith('a') && windowed[0].excerpt.endsWith('b'), 'the window is centred on the hit')
-check(findPassages(LONG, 'seismic demand').at(0).excerpt.length < LONG.length, 'the default window is still bounded')
-check(findPassages(FULLTEXT, 'SEISMIC').length === 2, 'the search is case-insensitive')
+check(findPassages(LONG, 'sample text').at(0).excerpt.length < LONG.length, 'the default window is still bounded')
+check(findPassages(FULLTEXT, 'SAMPLE').length === 2, 'the search is case-insensitive')
 check(findPassages(FULLTEXT, 'nothing here').length === 0, 'a term that does not occur yields no passage')
 check(findPassages(FULLTEXT, '').length === 0, 'an empty term yields no passage rather than every position')
 check(findPassages('a a a a a a a a a a', 'a', { max: 3 }).length === 3, 'the cap is honoured')

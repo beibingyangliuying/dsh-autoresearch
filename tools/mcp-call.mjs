@@ -8,7 +8,7 @@
 // Usage:
 //   node tools/mcp-call.mjs <tool> [json-args] -- <command> [args...]
 //   node tools/mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
-//   node tools/mcp-call.mjs zotero_search_items '{"query":"seismic","limit":3}' -- uvx zotero-mcp
+//   node tools/mcp-call.mjs zotero_search_items '{"query":"example","limit":3}' -- uvx zotero-mcp
 //   $env:ZOTERO_LOCAL='true'; node tools/mcp-call.mjs zotero_write_capabilities -- uvx --from '...' zotero-mcp
 //
 // The result lands in `.tmp/mcp-call-<tool>.txt` (gitignored). Exit code is 0 when the call returned.

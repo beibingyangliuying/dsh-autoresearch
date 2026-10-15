@@ -19,43 +19,44 @@ const check = (condition, label, detail = '') => {
 console.log('collection tool self-test')
 
 // The measured shape: a root answers `parentCollection: false`, not an omitted key and not null.
+// The keys and names are synthetic; the SHAPE is the one the library answered.
 const COLLECTIONS = [
-  { key: 'UCXUZ6J9', data: { name: '电气设备抗震性能', parentCollection: false }, meta: { numItems: 18 } },
-  { key: '6NC7A7ZU', data: { name: '变压器', parentCollection: 'UCXUZ6J9' }, meta: { numItems: 13 } },
-  { key: '6EXX6Z4X', data: { name: '阀塔阀厅', parentCollection: 'UCXUZ6J9' }, meta: { numItems: 9 } },
-  { key: 'W3UJBL4F', data: { name: '磕盐过程论文参考' }, meta: { numItems: 0 } },
+  { key: 'COLROOT1', data: { name: 'Example root', parentCollection: false }, meta: { numItems: 18 } },
+  { key: 'COLCHLD2', data: { name: 'Example child', parentCollection: 'COLROOT1' }, meta: { numItems: 13 } },
+  { key: 'COLCHLD3', data: { name: 'Example child two', parentCollection: 'COLROOT1' }, meta: { numItems: 9 } },
+  { key: 'COLNOTE4', data: { name: 'Example root two' }, meta: { numItems: 0 } },
 ]
 
 console.log('\n[1] a duplicate is a sibling with the same name')
 
 check(
-  siblingWithName(COLLECTIONS, { name: '变压器', parentKey: 'UCXUZ6J9' })?.key === '6NC7A7ZU',
+  siblingWithName(COLLECTIONS, { name: 'Example child', parentKey: 'COLROOT1' })?.key === 'COLCHLD2',
   'the same name under the same parent is a duplicate',
 )
 check(
-  siblingWithName(COLLECTIONS, { name: '变压器', parentKey: '6EXX6Z4X' }) === undefined,
+  siblingWithName(COLLECTIONS, { name: 'Example child', parentKey: 'COLCHLD3' }) === undefined,
   'the same name under a different parent is not',
 )
 check(
-  siblingWithName(COLLECTIONS, { name: '电气设备抗震性能' })?.key === 'UCXUZ6J9',
+  siblingWithName(COLLECTIONS, { name: 'Example root' })?.key === 'COLROOT1',
   'a root-level duplicate is found - the root answers false, and "no parent" must equal itself',
 )
 check(
-  siblingWithName(COLLECTIONS, { name: '磕盐过程论文参考' })?.key === 'W3UJBL4F',
+  siblingWithName(COLLECTIONS, { name: 'Example root two' })?.key === 'COLNOTE4',
   'a root whose parent field is absent altogether is found too',
 )
 check(
-  siblingWithName(COLLECTIONS, { name: '  变压器  ', parentKey: 'UCXUZ6J9' })?.key === '6NC7A7ZU',
+  siblingWithName(COLLECTIONS, { name: '  Example child  ', parentKey: 'COLROOT1' })?.key === 'COLCHLD2',
   'surrounding whitespace does not hide a duplicate',
 )
 check(
-  siblingWithName(COLLECTIONS, { name: 'seismic' }) === undefined,
+  siblingWithName(COLLECTIONS, { name: 'Example absent' }) === undefined,
   'a name that is not there is not a duplicate',
 )
 
 console.log('\n[2] filing is computed as a whole list')
 
-check(JSON.stringify(nextCollections([], '9B8XWBPV').next) === '["9B8XWBPV"]', 'filing into nothing yields that one')
+check(JSON.stringify(nextCollections([], 'COLONLY1').next) === '["COLONLY1"]', 'filing into nothing yields that one')
 check(
   JSON.stringify(nextCollections(['A'], 'B').next) === '["A","B"]',
   'a second collection is added after the first',

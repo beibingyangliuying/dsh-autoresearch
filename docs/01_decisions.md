@@ -106,7 +106,7 @@ skill 里。
 | 注册语义检索的 API key | 不注册 | 该源在无 key 时限流；改用两个无需 key 的元数据源 |
 | 保留表格/看板、配置管理、代码审查三类工具 | 屏蔽 | 研究场景用不上，且它们是全局工具，会稀释预设的工具面 |
 | 给工作区上 git | 不上 | 项目所有者 的选择；进度由文件 + mnemon 承担 |
-| 让 Zotero 集成支持写回 | **已实现**（闸门由 Zotero 原生强制） | 工具 `tools/zotero-write.mjs`；**每次写入都由 Zotero 弹出授权对话框**，项目所有者 点 Allow 才生效；key 单次有效且**不落盘**，agent 只能提议。2026-10-12 首次真实写入成功（`Attention Is All You Need` → key `3WJ27F2C`，条目数 1582→1583） |
+| 让 Zotero 集成支持写回 | **已实现**（闸门由 Zotero 原生强制） | 工具 `tools/zotero-write.mjs`；**每次写入都由 Zotero 弹出授权对话框**，项目所有者 点 Allow 才生效；key 单次有效且**不落盘**，agent 只能提议。2026-10-12 首次真实写入成功（以一篇真实预印本条目验收，条目数 1582→1583） |
 
 ## 12. 写入 Zotero：闸门由 Zotero 原生强制
 
@@ -125,7 +125,7 @@ skill 里。
 1. **等人类的请求不能用 `fetch`**：授权会挂起等你点击，而 fetch 的默认响应头超时把它变成一句无信息的 `fetch failed`。改用 `node:http` 且不设超时。
 2. **数组 POST 的返回是“已保存对象”而不是 key**：单个对象返回 `success: {"0": key}`，数组 POST 返回 `successful: {"0": {...}}`。按字符串取会得到 `[object Object]`，回读 URL 随即崩掉。
 
-**防重复**：写入前按标题 / DOI / archiveID 查库，命中则**拒绝创建**（`--force` 才覆盖）。已用真实条目验证（正确识别出 `3WJ27F2C`）。
+**防重复**：写入前按标题 / DOI / archiveID 查库，命中则**拒绝创建**（`--force` 才覆盖）。已用真实条目验证（正确识别出库中已有的一篇论文）。
 
 ## 13. 文献检索顺序：本地库优先，但“搜不到 ≠ 不存在”
 
@@ -289,7 +289,7 @@ skill 里。
 **先验前提（本轮实测，不是推断）**——三条，其中两条推翻了"搜不到付费文献"这个说法：
 
 1. **付费文献的元数据一直可检索** ✓：`api.openalex.org/works/doi:10.1038/nature14539`（Nature 付费）返回完整记录。被墙的从来不是"检索"，而是"**取得不在库里的全文**"。
-2. **链接附件同样进全文索引，也同样能被全文检索** ✓：`/items/HG4TFJF4/fulltext` = 62,188 字符 / 11 页；`zotero_search_items("contingencies", qmode='everything')` 命中该 key。所有者的库已是 `linked_file` 为主（392/618 个附件，path 为 `attachments:` 相对形式 ⇒ 基目录已配，实测解析到 `D:\OneDrive\Zotero\`）⇒ **省空间的链接附件方案不牺牲 agent 的读取能力** ✓。
+2. **链接附件同样进全文索引，也同样能被全文检索** ✓：`/api/users/0/items/<attachmentKey>/fulltext` = 62,188 字符 / 11 页；全文模式的一条查询命中该附件。所有者的库已是 `linked_file` 为主（path 为 `attachments:` 相对形式 ⇒ 基目录已配，实测解析到该基目录）⇒ **省空间的链接附件方案不牺牲 agent 的读取能力** ✓。
 3. **库搜索默认只搜标题 / 作者 / 年份** ✗：必须显式 `qmode='everything'` 才搜摘要、笔记与附件全文。实测同一个词 `inoperative`：默认模式 **0** 命中，全文模式 **4** 命中（含那篇付费论文的 PDF）。而**纪律里一个字都没写它** ✗ ⇒ 库内的付费全文此前等于不存在——**能力早就装好了，只是没被写下来**。
 
 **为什么不做爬虫**（三堵墙，且代价归属不在 agent）：
@@ -337,7 +337,7 @@ skill 里。
 
 **决策**：路径在运行时由 `import.meta.url` 推出（新模块 `preset-paths.js`），分两处呈现——(1) `contact-bridge.js` 的 section **常驻一行**绝对目录；(2) skill 正文改用 `{{presetTools}}` 占位符，由 `skills.js` 在**注册时**替换（读盘内容保持原样 ⇒ `skills/` 仍是唯一真源）。
 
-**先验前提（实测）**：`cliToolsDir` = `D:/OneDrive/Desktop/dsh-autoresearch/tools`（经 profile 的 Junction 加载时，`import.meta.url` 解析到真实路径）；正斜杠是刻意的，粘进 shell 命令无需转义。替换只放在 `apply()`、**不放在 `readSkills()`**——我第一版就放在 `readSkills()` 里，`skills-selftest` 立刻以 "a shipped body names a helper through the token" FAIL 抓到：那样读盘内容也已被替换，**"占位符存在"与"替换已发生"就无法同时断言**。
+**先验前提（实测）**：`cliToolsDir` = `<本仓库>/tools`（经 profile 的 Junction 加载时，`import.meta.url` 解析到真实路径）；正斜杠是刻意的，粘进 shell 命令无需转义。替换只放在 `apply()`、**不放在 `readSkills()`**——我第一版就放在 `readSkills()` 里，`skills-selftest` 立刻以 "a shipped body names a helper through the token" FAIL 抓到：那样读盘内容也已被替换，**"占位符存在"与"替换已发生"就无法同时断言**。
 
 **为何不采用"把 tools/ 复制进脚手架"**：会出现两份真相并各自漂移；而预设本就是链接安装，绝对路径天然可用、零配置。
 
@@ -351,13 +351,13 @@ skill 里。
 
 **先验前提（本轮实测，全部不是推断）**：
 
-1. **本地 API 能建 / 删分类** ✓：`POST /api/users/0/collections` → **200**（key `LEPNK6GR`、version 697），`DELETE …/collections/LEPNK6GR` → **204**，分类总数 **43 → 44 → 43**，无残留。官方文档原文：Zotero 10+ 的本地 API 支持 `POST/PUT/PATCH/DELETE` **用于 items、collections、saved searches**，另有 tag 删除、full-text 写入、文件上传；授权弹窗有 Allow / **Always Allow** / Deny，前者 key 单次有效，后者**可复用且不分作用域**，弹窗限 5 次/分钟。
-2. **新旧服务器读的是同一个库** ✓：新版列出 **43 个分类 key**，与本地 API 的 `Total-Results: 43` 逐一对上（5 个根：其他 / 韧性 / 傻逼东西 / 电气设备抗震性能 / 磕盐过程论文参考）；`My Library — 622 items`（本地 API 顶层条目 `Total-Results: 612`）；`seismic`、`contingencies`（`qmode=everything`）都返回真结果。**一条假警报已排除**：带 `limit=4` 时它只回 1 个根，看着像"读到了别的库"，实为 `limit` 语义怪异。
+1. **本地 API 能建 / 删分类** ✓：`POST /api/users/0/collections` → **200**（新建 key、version 697），`DELETE …/collections/<collectionKey>` → **204**，分类总数 **43 → 44 → 43**，无残留。官方文档原文：Zotero 10+ 的本地 API 支持 `POST/PUT/PATCH/DELETE` **用于 items、collections、saved searches**，另有 tag 删除、full-text 写入、文件上传；授权弹窗有 Allow / **Always Allow** / Deny，前者 key 单次有效，后者**可复用且不分作用域**，弹窗限 5 次/分钟。
+2. **新旧服务器读的是同一个库** ✓：新版列出 **43 个分类 key**，与本地 API 的 `Total-Results: 43` 逐一对上（5 个根分类，两侧逐一对应）；`My Library — 622 items`（本地 API 顶层条目 `Total-Results: 612`）；两个领域查询词（`qmode=everything`）都返回真结果。**一条假警报已排除**：带 `limit=4` 时它只回 1 个根，看着像"读到了别的库"，实为 `limit` 语义怪异。
 3. **工具面成本（按 `tools/list` 全文实测）**：旧 = **3 工具 / 3,849 字符**（≈1.07k token）；新默认 = **41 / 67,743**（≈18.8k）；`none` = **35 / 59,758**（≈16.6k）。⇒ 换源净增 **≈+15.5k token/请求**（而预设 persona 常驻仅 ~1.2k）。上游 README 自称 "38 工具 / 13.4k" —— 与实测不符，**这条是上游文档错了，不是我们测错**。
 4. **默认不可写** ✓：`zotero_write_capabilities` 返回 `Mode: none`（本地只读可用、无 key、无 web 凭据）。
 5. **`none` 砍掉的 6 个全是只读工具** ✓（pdf outline / page layout、语义库 status / update、list / switch libraries），**12 个写工具全部保留** ⇒ "裁 toolset"与"允许写"不冲突。
 6. **语义检索不可用** ✓：`[semantic]` 扩展未装，`zotero_get_search_database_status` 直接回 "install it with …"，而 `zotero_semantic_search` 仍在工具表里 ⇒ skill 必须写明"服务器自己建议的那个工具在这里无效"，否则 agent 会去调用一个只会报错的工具。
-7. **全文体积**：同一篇（key `85ZCTB6Z`）新版 **54,443 字符**（≈13k token；默认按 `fulltext_display_max_pages=10` 截页），旧版 79,900 ⇒ **仍远超** `tool-result-pruner` 阈值 8,192 ⇒ 老的"落文件 + 按 offset 读"绕法**必须保留**（我最初以为截页就解决了，实测否定）。
+7. **全文体积**：同一篇（一个真实条目）新版 **54,443 字符**（≈13k token；默认按 `fulltext_display_max_pages=10` 截页），旧版 79,900 ⇒ **仍远超** `tool-result-pruner` 阈值 8,192 ⇒ 老的"落文件 + 按 offset 读"绕法**必须保留**（我最初以为截页就解决了，实测否定）。
 8. **坑**：`zotero_get_collections(limit=4)` 只回 1 个根，语义未深究 ⇒ **别用 `limit` 列举分类**。
 
 **为何 pin 版本**：`uvx --from zotero-mcp-server zotero-mcp` 每次启动都重新解析"最新版"；上游 README 至今写 38 工具 / 13.4k，而 0.14.1 实测 41 / 18.8k ⇒ 不 pin 等于让**工具面随上游漂移**，且无网启动解析失败时该行 `failOnStartupError: true` 会把**整个预设**标记为坏、新会话入口静默过滤掉它。
@@ -463,7 +463,7 @@ skill 里。
 
 1. **顶层 await + 动态 import 自身自测 ＝ ESM 循环等待**：`--selftest` 让 `main()`（挂在顶层 `await` 上）去 import 一个**反过来静态 import 本文件**的模块 ⇒ 自测体根本不执行，Node 只打一句 *unsettled top-level await* 并以 **13** 退出，把真实结果吞掉。仓库其它工具用顶层 await 没事，因为它们从不 import 自己的自测。修法：入口改 `main().catch(...)`；自测被 import 时不 `process.exit`，导出 `failedChecks` 由调用方定退出码。
 2. **不要打印没发出去的参数**：scope 行曾写 `sort …/descending`，而没传 `--sort` 时 `sortOrder` 根本没发。改成只描述真正发出去的参数（`describeSort`），并加断言钉住。
-3. **OneDrive 会动 mtime**：本工作区在 OneDrive 下，编辑工具"读取后才允许改"的观察窗会莫名其妙失效（同一轮刚读过就报文件已变）⇒ 重读后**立刻**改，不要隔几步。
+3. **云同步会动 mtime**：本工作区在一个云同步目录下，编辑工具"读取后才允许改"的观察窗会莫名其妙失效（同一轮刚读过就报文件已变）⇒ 重读后**立刻**改，不要隔几步。
 
 ## 30. 参考库通道的范围裁定与写入门禁（2026-10-15，待实现）
 
@@ -518,11 +518,11 @@ skill 里。
 
 ## 32. 首次真实写入抓到：写成功回 204，而工具把它报成"被拒绝"（2026-10-15）
 
-**怎么发现的**：首次真写验收用的是"打标签再撤标签的往返"，目标 `3WJ27F2C`。第一步 `--write` 打印 `The library refused the write (HTTP 204)` 并**退 1**——**但那条写入其实成功了**：只读复核显示标签已在条目上、version 从 **567 变成 703**。
+**怎么发现的**：首次真写验收用的是"打标签再撤标签的往返"，目标一条真实条目（key 略）。第一步 `--write` 打印 `The library refused the write (HTTP 204)` 并**退 1**——**但那条写入其实成功了**：只读复核显示标签已在条目上、version 从 **567 变成 703**。
 
 **缺陷**：`applyPatch` 只把 **200** 当成功，而 Zotero 的 `PATCH` 成功时回 **204 No Content**（成功即无 body ⇒ "写后回读"才是唯一证据，这一点本仓库早就知道，`zotero-write.mjs` 的"绝不从 POST 响应就报告 added"就是这个道理）。对写工具来说这是**最坏的一类错**：它关于"你的库到底改了没有"说了假话。而这条知识其实**已经在仓库里**——`zotero-link-attachments.mjs` 的删除路径写着 `deletion.status !== 204`——只是它当时写在**工具特有函数**里，新 helper 没有继承。
 
-**修复**：共享层新增 `isWriteAccepted(status)`（**任何 2xx** 都算接受）并由 `applyPatch` 使用；成功路径不再假定有 body。第二次真写（撤标签）随即打印 `OK - 3WJ27F2C now reads back with every requested value (version 704)`，退 0。
+**修复**：共享层新增 `isWriteAccepted(status)`（**任何 2xx** 都算接受）并由 `applyPatch` 使用；成功路径不再假定有 body。第二次真写（撤标签）随即打印 `OK - <itemKey> now reads back with every requested value (version 704)`，退 0。
 
 **验收证据（两条真实写入、两次 Allow 弹窗，均为人工授权）**：写入前 `tags: none` / version 567 → 加标签后 `tags: /autoresearch-write-check` / version 703 → 撤标签后 `tags` 为空 / version 704。**库的内容与动手前完全一致**；只有版本计数器递增，那是库自己的记账，不是内容变化。
 
