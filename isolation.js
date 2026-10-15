@@ -18,17 +18,26 @@
 //
 //   deny = (every name in the global view) − KEEP
 //
-// COVERAGE: THE FILTER IS APPLIED TWICE, AND RESTRICTIONS INTERSECT
+// COVERAGE: THE FILTER IS RE-APPLIED WHENEVER THE TOOL SET CHANGES
 //
 //   1. On this row's activation, which covers every global tool registered *before* the preset
 //      activates.
-//   2. On every `agent/created`, when the global view is complete. A plugin that waits for a late
-//      service registers after (1): `config-manager` injects `settings` and `credentials`, so its
-//      five tools appeared only in the later view and leaked into research sessions.
+//   2. On every `tools/change`, which the registry emits when a tool is registered or unregistered or
+//      a scoped restriction changes. A plugin that waits for a late service registers after (1):
+//      `config-manager` reads the `tools` service through `ctx.get`, so its five tools - including
+//      `config_restore`, which overwrites the harness configuration - reached every research agent
+//      while this row listened for the wrong event.
 //
-// (1) is the guarantee. (2) is best-effort and was NOT observed to take effect: a listener
-// registered in this row's own scope did not receive `agent/created` in a user-visible check. The
-// handler stays wrapped so isolation can never fail an agent creation.
+// WHY NOT `agent/created`, WHICH THIS FILE USED TO LISTEN TO: measured 2026-10-15, that listener never
+// ran. The report it wrote carried no `agentKept`, no `agentDenied` and no `agentError` across
+// sessions, so the pass was decoration. `tools/change` is dispatched WITHOUT scope filtering on
+// purpose - "a scoped listener subscribing here sees every change" - which is the delivery this needs.
+// The deny computation itself was never the problem: the activation pass demonstrably removed its 15
+// names while the five late ones stayed.
+//
+// Re-entry is expected and handled: `restrict()` counts as a scoped restriction changing, so it
+// announces another `tools/change`. The applied signature is recorded BEFORE the call, so the nested
+// round computes the same set and returns.
 //
 // `restrict()` rejects unknown names and scope-local names; building the list from the registry's
 // own global view means it can contain neither.
@@ -91,39 +100,50 @@ function splitGlobalView(scope) {
 }
 
 export function apply(ctx) {
-  const atActivation = splitGlobalView(ctx)
-  if (atActivation.denied.length > 0) {
-    // `deny` only rejects the names it lists, so the preset's own tools are unaffected.
-    ctx.tools.restrict({ deny: atActivation.denied })
-  }
-  const report = {
-    applied: atActivation.denied.length > 0,
-    kept: atActivation.kept,
-    denied: atActivation.denied,
-  }
-  console.log(
-    `[autoresearch-isolation] at activation: kept ${atActivation.kept.length}, denied ${atActivation.denied.length}`,
-  )
+  let appliedSignature = null
+  const report = { applied: false, kept: [], denied: [], checks: 0, rounds: [] }
 
-  // Second pass, when the global view is complete. It restricts THIS row's scope on purpose: the
-  // listener's own scope does not carry the tools service, and it does not need to — a restriction
-  // on an ancestor layer reaches every agent below it.
-  ctx.on('agent/created', () => {
+  /**
+   * Recompute the deny list, and apply it when it differs from what is already applied.
+   *
+   * `appliedSignature` is set BEFORE `restrict()` on purpose: a restriction change is itself announced
+   * as `tools/change`, so the nested round must find the same set and return instead of recursing.
+   *
+   * @param {string} when How this round was triggered, recorded in the report.
+   * @param {{always?: boolean}} [options] `always` writes a round at activation even when nothing is
+   *   denied, so the report exists even on a profile with nothing to mask.
+   */
+  const applyRestriction = (when, { always = false } = {}) => {
     try {
-      const atAgent = splitGlobalView(ctx)
-      if (atAgent.denied.length > 0) ctx.tools.restrict({ deny: atAgent.denied })
-      report.agentKept = atAgent.kept
-      report.agentDenied = atAgent.denied
-      console.log(
-        `[autoresearch-isolation] at agent creation: kept ${atAgent.kept.length}, denied ${atAgent.denied.length}`,
-      )
+      const view = splitGlobalView(ctx)
+      const signature = view.denied.join('\n')
+      if (signature === appliedSignature && !always) return
+      appliedSignature = signature
+      report.checks += 1
+      if (view.denied.length > 0) {
+        // `deny` only rejects the names it lists, so the preset's own tools are unaffected.
+        ctx.tools.restrict({ deny: view.denied })
+        // Recorded only when something was really applied: a round our own restriction triggered
+        // computes an empty deny list, and letting that overwrite the evidence would hide what was done.
+        report.applied = true
+        report.kept = view.kept
+        report.denied = view.denied
+        report.rounds = [...report.rounds.slice(-9), { when, kept: view.kept.length, denied: view.denied.length }]
+        console.log(`[autoresearch-isolation] ${when}: kept ${view.kept.length}, denied ${view.denied.length}`)
+      }
+      writeReport(report)
     } catch (error) {
-      // Isolation must never fail an agent creation.
-      report.agentError = String(error?.message ?? error)
-      console.log(`[autoresearch-isolation] agent scope could not be restricted: ${report.agentError}`)
+      // Isolation must never fail an agent creation or a tool registration.
+      report.error = String(error?.message ?? error)
+      console.log(`[autoresearch-isolation] ${when}: could not restrict - ${report.error}`)
+      writeReport(report)
     }
-    writeReport(report)
-  })
+  }
 
-  writeReport(report)
+  applyRestriction('at activation', { always: true })
+
+  // The registry's own announcement that the available tool set changed - possibly for one scope only,
+  // and possibly because a late plugin just registered. It is dispatched without scope filtering, so
+  // this listener sees every change rather than only its own scope's.
+  ctx.on('tools/change', () => applyRestriction('at a tool-set change'))
 }
