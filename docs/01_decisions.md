@@ -415,3 +415,22 @@ skill 里。
 
 **落在何处**：[`cordis.patch.yml`](../cordis.patch.yml)（`mcp-arxiv` 行 + 行内注释）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（逐行 pin 护栏）· [`README.md`](../README.md)（探针命令改用 pinned 规格）。
 
+## 28. MCP 行无法按工具名过滤——"裁工具面"只有两个杠杆（2026-10-15）
+
+**起因**：参考库行里 `zotero_semantic_search` 常驻但不可用（`[semantic]` 扩展未装，调用只回"请安装"）。于是问：**能不能只把这一个工具摘掉？**
+
+**结论（读 DSH 自身源码，不是文档推断）**：**不能。**
+
+- `@deepseek-ai/dsh-mcp-client` 的 stdio 行 Config 是**封闭字段清单**（`lib/index.js:780-790`）：`transport` / `serverName` / `command` / `args` / `env` / `cwd` / `toolCallTimeoutMs` / `failOnStartupError` / `maxInstructionBytes` / `reconnect` —— **没有** include / exclude / toolFilter 之类的字段。
+- 其 `syncTools()`（同文件 `127-141`）把服务器列出的**每一个**工具都注册进注册表，只在重名时抛错 ⇒ **客户端侧不存在过滤点**。
+- 预设侧同样不行：这些工具由**预设自己声明的行**注册 ⇒ scope-local，而 `restrict({deny})` 只过滤**继承来的**全局工具、且**拒绝 scope-local 名字**（契约 §5、本文件 §16）。
+
+**因此"裁工具面"只有两个杠杆**：
+
+1. **服务器自己的 toolset 组**（如 `ZOTERO_MCP_TOOLSETS=none`：41→35 工具、18.8k→16.6k 字符）；
+2. **不挂这一行**（代价是整个通道）。
+
+**裁定（2026-10-15）**：`zotero_semantic_search` **保持常驻**。理由：它误导 agent 的具体路径是全文返回头里那句 *"Consider using zotero_semantic_search to find specific content…"*，而全文读取发生在文献工作中——此时 `literature-recon` 按纪律**必须已加载**，且该 skill 已写明"服务器自己建议的那个工具在这里无效" ⇒ **误导路径恰好被覆盖**；而摘掉它要么装重依赖（chromadb + sentence-transformers + 嵌入模型），要么自建过滤代理 MCP（新增常驻进程与长期维护），为省 ~2.7k 字符（≈750 token，占该行 4.5%）性价比不成立。
+
+**通用教训**：想在 MCP 工具面上省钱，**先看服务器有没有分组开关**（它决定能省多少），不要指望 DSH 侧按名字裁——那条路不存在。改任何一条 MCP 行之前，先用 `tools/mcp-toolsize.mjs` 量出常驻成本（见 §24 / §27 的数字）。
+
