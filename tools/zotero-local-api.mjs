@@ -6,21 +6,27 @@
 // Three tools talk to this API today (add an item, convert stored PDFs into linked files, and read or
 // search the library), and two more are planned (a note writer, and a collection/field editor). The
 // transport and - above all - the WRITE GATE were duplicated in each tool: authorize, carry the
-// single-use key, send the per-write token. That gate is what the contract's per-write authorization
-// rule rests on, so five copies of it would be five places to drift apart.
+// key, send the per-write token. That gate is what the contract's authorization rule rests on, so
+// five copies of it would be five places to drift apart.
 //
 // TRANSPORT, and why this is not `fetch`: the local API answers HTTP/1.0, and an authorization request
 // BLOCKS until the owner answers a dialog in the reference manager. `fetch` aborts that on its default
 // headers timeout and reports the whole thing as a bare "fetch failed". These calls therefore use
 // node:http with NO timeout - a request that legitimately waits for a human must not be given one.
 //
-// Reads need no authorization. Every write does, and the key Zotero hands back is spent by its first
-// successful write. "Always Allow" is the owner's choice in that dialog, and when they make it the
-// gate reuses the key for the REST OF THIS RUN only, saying so through `onAuthorized`; nothing is ever
-// stored, so the next run asks again.
+// Reads need no authorization. Every write does, and the dialog that grants one is raised on EVERY
+// request for a key: the local API has no "this application is already trusted" path, so the owner's
+// "Always Allow" answer chooses the KIND of key issued and never whether they are asked again. What
+// ends the asking is keeping the lasting key, which is what the grant store below does. "Allow" covers
+// exactly one write and is never written down; a lasting grant is dropped the moment the library
+// rejects it, because the owner revokes grants in the reference manager and a revocation arrives as a
+// 401 rather than as a notification.
 
 import { randomUUID } from 'node:crypto'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { request } from 'node:http'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
 
 const HOST = '127.0.0.1'
 const PORT = 23119
@@ -214,21 +220,158 @@ export async function patchCollection({ gate, key, patch, apply }) {
 }
 
 /**
- * The per-run write gate.
+ * What the owner sees in the authorization dialog. ONE name for every helper, because the grant is
+ * kept per library rather than per tool: whichever helper happened to ask first would otherwise be
+ * the only name the owner ever saw, which would say less than the truth.
+ */
+export const APP_NAME = 'DSH autoresearch preset'
+
+/**
+ * Where a lasting grant is kept.
+ *
+ * @returns {string} The absolute path of the grant file, overridable for a test or a second profile.
+ */
+export function grantFilePath() {
+  const override = String(process.env.ZOTERO_LOCAL_KEY_STORE ?? '').trim()
+  if (override !== '') return override
+  const base =
+    process.platform === 'win32'
+      ? (process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'))
+      : (process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'))
+  return join(base, 'dsh-autoresearch', 'zotero-local-api-key.json')
+}
+
+/** A store holding no grants. Also what an unreadable or unrecognised file reads as. */
+export function emptyGrantStore() {
+  return { version: 1, grants: {} }
+}
+
+/**
+ * Parse a grant file. A corrupt file, an unknown version or a malformed entry all mean "no grant
+ * kept": the owner is asked again, which is the only safe direction for a credential.
+ *
+ * @param {string} text The file's contents, as read.
+ * @returns {object} The store, with only the entries that carry a usable key.
+ */
+export function parseGrantStore(text) {
+  try {
+    const data = JSON.parse(text)
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.version !== 1) return emptyGrantStore()
+    const grants = {}
+    for (const [serverId, entry] of Object.entries(data.grants ?? {})) {
+      if (typeof entry?.key !== 'string' || entry.key === '') continue
+      grants[serverId] = {
+        key: entry.key,
+        appName: String(entry.appName ?? ''),
+        createdAt: String(entry.createdAt ?? ''),
+      }
+    }
+    return { version: 1, grants }
+  } catch {
+    return emptyGrantStore()
+  }
+}
+
+/**
+ * The grant kept for one library, or null.
+ *
+ * Partitioned by server id because a key means nothing to the instance that did not issue it: the
+ * same address pointed at a different data directory must produce a fresh dialog rather than a
+ * string of incomprehensible 401s.
+ *
+ * @param {object} store A parsed grant store.
+ * @param {string} serverId The `Zotero-Server-ID` the grant was issued by.
+ * @returns {string|null} The key, or null when this library has no grant on file.
+ */
+export function keptGrant(store, serverId) {
+  return store?.grants?.[serverId]?.key ?? null
+}
+
+/**
+ * The store with one library's grant recorded. Pure: returns a new store.
+ *
+ * @param {object} store A parsed grant store.
+ * @param {string} serverId The instance the grant belongs to.
+ * @param {{key: string, appName: string, createdAt: string}} grant The grant to keep.
+ * @returns {object} A new store.
+ */
+export function withGrant(store, serverId, grant) {
+  const base = store ?? emptyGrantStore()
+  return { version: 1, grants: { ...base.grants, [serverId]: { ...grant } } }
+}
+
+/**
+ * The store with one library's grant dropped. Pure: returns a new store.
+ *
+ * @param {object} store A parsed grant store.
+ * @param {string} serverId The instance whose grant is being forgotten.
+ * @returns {object} A new store.
+ */
+export function withoutGrant(store, serverId) {
+  const base = store ?? emptyGrantStore()
+  const grants = { ...base.grants }
+  delete grants[serverId]
+  return { version: 1, grants }
+}
+
+/**
+ * The grant file as a store.
+ *
+ * A read that fails is "no grant kept" rather than an error - the owner is simply asked again - but a
+ * save that fails throws: a grant the owner believed they had given must never be lost in silence.
+ *
+ * @param {string} [path] The grant file; defaults to {@link grantFilePath}.
+ * @returns {{load: () => object, save: (store: object) => void}} The store.
+ */
+export function fileGrantStore(path = grantFilePath()) {
+  return {
+    load() {
+      try {
+        return parseGrantStore(readFileSync(path, 'utf8'))
+      } catch {
+        return emptyGrantStore()
+      }
+    },
+    save(store) {
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(path, `${JSON.stringify(store, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
+    },
+  }
+}
+
+/**
+ * The write gate.
  *
  * `open()` must be called first: the server id it returns is carried by every write, and a write
  * without it is refused by the reference manager.
  *
- * @param {{appName: string, onAuthorized?: (info: {remember: boolean}) => void}} options `appName` is
- *   what the owner sees in the authorization dialog, so it should name the tool that asked.
- * @returns {{open: () => Promise<{id: string, version: string}>, write: (method: string, path: string, body?: any, extraHeaders?: object) => Promise<{status: number, headers: object, text: string}>}}
+ * A grant the owner chose to make lasting is read from `store` and used without asking. "Allow" is
+ * never written down and covers exactly one write. A key the library rejects is discarded, and a
+ * lasting one leaves the store as well, so a grant the owner revoked in the reference manager recovers
+ * by itself instead of failing forever. One `write()` raises at most two dialogs: a third could only
+ * mean the library is issuing keys it then refuses.
+ *
+ * @param {{appName: string, store?: object, onAuthorized?: (info: {remember: boolean}) => void,
+ *   onGrantDropped?: (info: {serverId: string}) => void, transport?: object}} options `appName` is
+ *   what the owner sees in the dialog. `store` defaults to the grant file; `transport` is the seam the
+ *   self-test replaces, and production callers pass nothing.
+ * @returns {{open: () => Promise<{id: string, version: string, kept: boolean}>,
+ *   write: (method: string, path: string, body?: any, extraHeaders?: object) => Promise<{status: number, headers: object, text: string}>}}
  */
-export function createWriteGate({ appName, onAuthorized }) {
+export function createWriteGate({
+  appName,
+  store = fileGrantStore(),
+  onAuthorized,
+  onGrantDropped,
+  transport = { serverInfo, localRequest },
+}) {
   let serverId = null
-  let rememberedKey = null
+  let grants = emptyGrantStore()
+  let key = null
+  let lasting = false
 
   async function authorize() {
-    const res = await localRequest('POST', '/api/local/authorize', {
+    const res = await transport.localRequest('POST', '/api/local/authorize', {
       body: JSON.stringify({ appName }),
       headers: { 'Content-Type': 'application/json', 'Zotero-Server-ID': serverId },
     })
@@ -239,28 +382,51 @@ export function createWriteGate({ appName, onAuthorized }) {
     if (res.status !== 200) throw new Error(`authorize answered ${res.status}: ${res.text.slice(0, 200)}`)
     const body = JSON.parse(res.text)
     if (!body.key) throw new Error('authorize returned no key')
-    if (body.remember) rememberedKey = body.key
-    onAuthorized?.({ remember: Boolean(body.remember) })
+    lasting = Boolean(body.remember)
+    if (lasting) {
+      grants = withGrant(grants, serverId, { key: body.key, appName, createdAt: new Date().toISOString() })
+      store.save(grants)
+    }
+    onAuthorized?.({ remember: lasting })
     return body.key
+  }
+
+  /** Forget a rejected key. A lasting one leaves the store too, or every later run would retry it. */
+  function dropKey() {
+    if (lasting) {
+      grants = withoutGrant(grants, serverId)
+      store.save(grants)
+      onGrantDropped?.({ serverId })
+    }
+    key = null
+    lasting = false
   }
 
   return {
     async open() {
-      const info = await serverInfo()
+      const info = await transport.serverInfo()
       serverId = info.id
-      return info
+      grants = store.load()
+      key = keptGrant(grants, serverId)
+      lasting = key !== null
+      return { ...info, kept: lasting }
     },
 
     /**
-     * One authorized write. A single-use key is spent by its first successful write, so a 401 is
-     * answered by authorizing again and retrying - unless the owner chose Always Allow, whose key is
-     * reusable and whose failure is therefore a real failure.
+     * One authorized write. `Zotero-Write-Token` is fresh per attempt, and a key the library refuses
+     * is dropped rather than resent: the next attempt asks the owner instead of replaying it.
      */
     async write(method, path, body, extraHeaders = {}) {
       if (!serverId) throw new Error('the write gate was not opened: call open() before writing')
+      let dialogs = 0
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        const key = rememberedKey ?? (await authorize())
-        const res = await localRequest(method, path, {
+        if (key === null) {
+          if (dialogs === 2) break
+          dialogs += 1
+          key = await authorize()
+        }
+        const sentLasting = lasting
+        const res = await transport.localRequest(method, path, {
           body: body === undefined ? undefined : JSON.stringify(body),
           headers: {
             ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
@@ -270,10 +436,13 @@ export function createWriteGate({ appName, onAuthorized }) {
             ...extraHeaders,
           },
         })
-        if (res.status === 401 && !rememberedKey) continue
-        return res
+        // The library deletes a single-use key while validating the request that carried it, so it is
+        // never reused - whether that request went on to succeed or not.
+        if (!sentLasting) key = null
+        if (res.status !== 401) return res
+        dropKey()
       }
-      throw new Error('the write failed even after re-authorizing')
+      throw new Error('the write was still refused with 401 after re-authorizing twice')
     },
   }
 }

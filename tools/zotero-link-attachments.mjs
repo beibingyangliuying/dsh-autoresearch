@@ -14,7 +14,8 @@
 //     failed conversion leaves the library exactly as it was;
 //   * a destination that exists with different content is reported as a conflict and never
 //     overwritten;
-//   * no API key is stored: every write makes the reference manager show the owner a dialog.
+//   * no key is written down unless the owner answers "Always Allow", which keeps the grant for
+//     the library rather than for this run.
 //
 // The freed space is NOT freed by this tool: deleting the stored attachment moves it to the
 // library's trash, and the bytes leave the disk when the owner empties the trash.
@@ -31,10 +32,8 @@ import { createReadStream, existsSync, statSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { createWriteGate, getJson, localRequest } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, getJson, localRequest } from './zotero-local-api.mjs'
 
-/** What the owner sees in the authorization dialog, so it names the tool that asked. */
-const APP_NAME = 'DSH autoresearch link tool'
 /** The marker that identifies the note this tool touches to wake the index drain. */
 export const WAKE_NOTE_MARKER = 'Autoresearch index refresh'
 
@@ -120,15 +119,16 @@ export function summarize(results) {
 
 /**
  * The write gate for this tool. One conversion writes twice - it creates the link, then deletes the
- * stored copy - so a run over many candidates would otherwise ask the owner to click Allow once per
- * write. When they answer "Always Allow", the gate reuses that key for the rest of THIS RUN and this
- * line says so; nothing is stored, so the next run asks again.
+ * stored copy - and a run over many candidates would otherwise ask the owner once per write. "Always
+ * Allow" ends that for good: the grant is kept for this library, so the asking follows the library
+ * rather than the run.
  */
 const gate = createWriteGate({
   appName: APP_NAME,
   onAuthorized: ({ remember }) => {
-    if (remember) console.log('    (the owner chose Always Allow: later writes in this run reuse that key)')
+    if (remember) console.log('    (the owner chose Always Allow: the grant is kept for this library)')
   },
+  onGrantDropped: () => console.log('    (the kept authorization was refused — asking again)'),
 })
 
 /** The absolute path of an attachment's file, or undefined when the library cannot resolve it. */
@@ -317,8 +317,8 @@ async function main() {
   }
   if (!apply) {
     console.log('\nDRY RUN - nothing was written. Re-run with --write to convert.')
-    console.log('Each conversion writes twice (create the link, delete the stored copy); every write')
-    console.log('makes the reference manager show you an authorization dialog.')
+    console.log('Each conversion writes twice (create the link, delete the stored copy). The first write')
+    console.log('raises the owner\u2019s authorization dialog unless one is already on file for this library.')
     return
   }
 

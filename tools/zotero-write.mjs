@@ -4,8 +4,8 @@
 // Safety model:
 //   * the DEFAULT is a dry run — it resolves metadata, builds the payload and prints it;
 //   * `--write` is required to create anything;
-//   * no API key is ever stored: every write makes Zotero show the user an authorization
-//     dialog, which is the confirmation gate. Declining it is a normal outcome, not a bug.
+//   * no key is written down unless the owner answers "Always Allow": the reference manager's
+//     dialog is the gate, and declining it is a normal outcome rather than a bug.
 //
 // Transport and the write gate live in ./zotero-local-api.mjs, together with the reason these calls
 // go through node:http with no timeout instead of fetch.
@@ -15,10 +15,8 @@
 //   node tools/zotero-write.mjs --arxiv 1706.03762 --write
 //   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --write
 //   node tools/zotero-write.mjs --selftest                    # no writes, checks the seams
-import { createWriteGate, localRequest, readItem, serverInfo } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, localRequest, readItem, serverInfo } from './zotero-local-api.mjs'
 
-/** What the owner sees in the authorization dialog, so it names the tool that asked. */
-const APP_NAME = 'DSH autoresearch preset'
 // Optional polite-pool contact address for the metadata APIs. Set AUTORESEARCH_MAILTO in the
 // environment, or pass --mailto <address>; without one the requests are still valid, just
 // unpolite (slower, and more likely to be rate-limited).
@@ -130,7 +128,7 @@ function fillTemplate(template, source) {
   return { item, used, dropped }
 }
 
-/** Create one item. The gate owns authorization, the single-use key and the per-write token. */
+/** Create one item. The gate owns authorization, the key and the per-write token. */
 async function createItem(item, gate) {
   const res = await gate.write('POST', '/api/users/0/items', [item])
   if (res.status === 401) throw new Error('401 Unauthorized — the key was rejected; run again')
@@ -174,10 +172,16 @@ async function buildPayload(meta) {
 async function run() {
   const gate = createWriteGate({
     appName: APP_NAME,
-    onAuthorized: ({ remember }) => log(`    authorized (remember=${remember}; the key is not stored)`),
+    onAuthorized: ({ remember }) =>
+      log(
+        remember
+          ? '    authorized for this library: the grant is kept, so later writes need no dialog'
+          : '    authorized for this one write: the key is spent by it and is not written down',
+      ),
+    onGrantDropped: () => log('    the kept authorization was refused (revoked in the reference manager?) — forgotten'),
   })
-  const { id: serverId, version } = await gate.open()
-  log(`[1] Zotero ${version}, server id ${serverId}`)
+  const { id: serverId, version, kept } = await gate.open()
+  log(`[1] Zotero ${version}, server id ${serverId}${kept ? ' — a kept authorization is on file' : ''}`)
 
   const { source, meta } = await resolve()
   log(`[2] ${source} -> "${meta.title}" (${meta.creators.length} creators, ${meta.date || 'no date'})`)
@@ -202,8 +206,12 @@ async function run() {
     return
   }
 
-  log('\n[5] asking Zotero for authorization — a dialog will appear; click Allow')
-  log('    (this request waits for you; it has no timeout)')
+  log(
+    kept
+      ? '\n[5] writing under the authorization already on file — no dialog this time'
+      : '\n[5] asking the reference manager for authorization — its dialog will appear',
+  )
+  if (!kept) log('    (this request waits for you; it has no timeout)')
 
   const created = await createItem(item, gate)
   // An array POST answers with the saved object; a single-object POST answers with the key.

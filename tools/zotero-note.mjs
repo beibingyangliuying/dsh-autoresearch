@@ -30,7 +30,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { childrenOf, createWriteGate, patchItem, readItem } from './zotero-local-api.mjs'
+import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem } from './zotero-local-api.mjs'
 
 /** The marker that identifies this tool's digest note on a record. */
 export const DIGEST_MARKER = '<!-- autoresearch-digest -->'
@@ -116,7 +116,7 @@ async function main() {
     return
   }
 
-  const gate = createWriteGate({ appName: 'DSH autoresearch note tool' })
+  const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
 
   if (composed.mode === 'append') {

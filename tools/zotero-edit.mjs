@@ -23,7 +23,7 @@
 //   node tools/zotero-edit.mjs --item <itemKey> --add-tag /done --remove-tag /unread --write
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (conflict or a library error) | 2 usage.
-import { createWriteGate, normalizeTags, patchItem, readItem } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, normalizeTags, patchItem, readItem } from './zotero-local-api.mjs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -164,7 +164,7 @@ function printConflict(key, result, current) {
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   const fields = parseSetFlags(options.sets)
-  const gate = createWriteGate({ appName: 'DSH autoresearch edit tool' })
+  const gate = createWriteGate({ appName: APP_NAME })
   const info = await gate.open()
 
   const before = await readItem(options.key)

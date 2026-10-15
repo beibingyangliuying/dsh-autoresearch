@@ -35,6 +35,7 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  APP_NAME,
   createWriteGate,
   getJson,
   normalizeCollections,
@@ -180,7 +181,7 @@ async function runCreate(options) {
     console.log('ask you to Allow the write, and is asked once.')
     return
   }
-  const gate = createWriteGate({ appName: 'DSH autoresearch collection tool' })
+  const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
   const res = await gate.write('POST', '/api/users/0/collections', [
     { name: options.value, parentCollection: parentKey ?? false },
@@ -224,7 +225,7 @@ async function runRename(options) {
     console.log('\nDRY RUN - nothing was written. Re-run with --write to attempt it.')
     return
   }
-  const gate = createWriteGate({ appName: 'DSH autoresearch collection tool' })
+  const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
   const result = await patchCollection({ gate, key: options.value, patch: { name: options.name }, apply: true })
   if (result.conflict) {
@@ -264,7 +265,7 @@ async function runAssign(options) {
     console.log('ask you to Allow the write, and is asked once.')
     return
   }
-  const gate = createWriteGate({ appName: 'DSH autoresearch collection tool' })
+  const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
   const result = await patchItem({ gate, key: options.item, patch: { collections: next }, apply: true })
   if (result.conflict) {
