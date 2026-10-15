@@ -35,6 +35,25 @@ That GitHub path is verified end to end: the package lands in the profile as a r
 hoists the one dependency so the row's import resolves, and the composition then carries the preset and
 its three rows. The local-link path is for developing against a checkout.
 
+## Requirements
+
+**To install: nothing beyond DSH itself.** One dependency (`@deepseek-ai/schemastery`, published on
+npm), no build step, and no second toolchain — in particular the two external channels are Node
+programs this package ships, not servers installed and launched through `uvx`, so a Python
+environment is not part of using this preset.
+
+**The profile may be bare.** Four global toolsets are used when present and never required: the memory
+layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
+(`str_replace_editor`, `undo_last_edit`) and image reading (`read_image`). The keep-list retains those,
+every other global tool is denied, and the deny list is computed from the profile's own global view —
+so a profile without one of them needs no edit, and the name simply never appears. The consequence
+worth knowing runs the other way: a discipline step that names one of those tools has no instrument
+where the tool is absent, and nothing detects that for you. The memory layer is the load-bearing case,
+because conclusions, rejected directions and ruling outcomes are settled through it.
+
+**Outside this repository**, the reference manager must be running with its local API enabled, and the
+study scaffolder is PowerShell-only; both are stated under *Configure it* and *Start a study* below.
+
 ## Start a session with the preset
 
 **Select the preset where the new session is created.** This matters more than it looks:
@@ -287,8 +306,9 @@ session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_de
   `broken`, and the new-session roster **silently filters it out**. Name such a plugin by a resolvable
   package subpath (for example `@<scope>/<bundle>/isolation.js`) **that Node can actually resolve** —
   see the next entry, which is how that requirement is checked.
-  page: the card carries a red "failed to load" badge whose tooltip is the reason — and that page
-  reads a cached store, so refresh before concluding anything.
+- **A broken preset is diagnosed from the settings page.** The new-session roster hides it silently, so
+  the evidence is where the bundle is listed: the card carries a red "failed to load" badge whose
+  tooltip is the reason. That page reads a cached store, so refresh before concluding anything.
 - **A package that declares `exports` seals itself against its own row names.** Node resolves a row
   name written as a package subpath (`<bundle>/isolation.js`) through the package's `exports` map, so a
   subpath that map omits throws `ERR_PACKAGE_PATH_NOT_EXPORTED` **while the file sits right there on
