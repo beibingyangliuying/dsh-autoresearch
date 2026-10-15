@@ -7,20 +7,17 @@
 //   * no API key is ever stored: every write makes Zotero show the user an authorization
 //     dialog, which is the confirmation gate. Declining it is a normal outcome, not a bug.
 //
-// Transport: the local API speaks HTTP/1.0 and an authorization request blocks until the user
-// answers a dialog, so local calls use node:http with no timeout rather than fetch (whose
-// default headers timeout would abort a request that is legitimately waiting for a human).
+// Transport and the write gate live in ./zotero-local-api.mjs, together with the reason these calls
+// go through node:http with no timeout instead of fetch.
 //
 // Usage:
 //   node tools/zotero-write.mjs --arxiv 1706.03762            # dry run
 //   node tools/zotero-write.mjs --arxiv 1706.03762 --write
 //   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --write
 //   node tools/zotero-write.mjs --selftest                    # no writes, checks the seams
-import { randomUUID } from 'node:crypto'
-import { request } from 'node:http'
+import { createWriteGate, localRequest, readItem, serverInfo } from './zotero-local-api.mjs'
 
-const HOST = '127.0.0.1'
-const PORT = 23119
+/** What the owner sees in the authorization dialog, so it names the tool that asked. */
 const APP_NAME = 'DSH autoresearch preset'
 // Optional polite-pool contact address for the metadata APIs. Set AUTORESEARCH_MAILTO in the
 // environment, or pass --mailto <address>; without one the requests are still valid, just
@@ -35,44 +32,6 @@ const value = (name) => {
   return i === -1 ? null : (argv[i + 1] ?? null)
 }
 const log = (...parts) => console.log(...parts)
-
-/** One request to the local API. No timeout: an authorization waits for a human. */
-function localRequest(method, path, { body, headers = {} } = {}) {
-  return new Promise((resolve, reject) => {
-    const req = request(
-      {
-        host: HOST,
-        port: PORT,
-        path,
-        method,
-        headers: { ...headers, ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}) },
-      },
-      (res) => {
-        let text = ''
-        res.setEncoding('utf8')
-        res.on('data', (chunk) => {
-          text += chunk
-        })
-        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, text }))
-      },
-    )
-    req.on('error', reject)
-    req.setTimeout(0)
-    if (body) req.write(body)
-    req.end()
-  })
-}
-
-async function zoteroServerId() {
-  const res = await localRequest('GET', '/api/')
-  if (res.status !== 200) {
-    throw new Error(`local API answered ${res.status} — is it enabled in Settings → Advanced?`)
-  }
-  const id = res.headers['zotero-server-id']
-  const version = res.headers['x-zotero-version'] ?? '?'
-  if (!id) throw new Error('no Zotero-Server-ID header: writes need Zotero 10+')
-  return { id, version }
-}
 
 /** The local API has no /items/new template endpoint; ask it which fields the type accepts. */
 async function emptyItem(itemType) {
@@ -171,40 +130,12 @@ function fillTemplate(template, source) {
   return { item, used, dropped }
 }
 
-async function authorize(serverId) {
-  const res = await localRequest('POST', '/api/local/authorize', {
-    body: JSON.stringify({ appName: APP_NAME }),
-    headers: { 'Content-Type': 'application/json', 'Zotero-Server-ID': serverId },
-  })
-  if (res.status === 403) throw new Error('the authorization dialog was declined in Zotero')
-  if (res.status === 429) throw new Error('too many authorization dialogs (limit 5/min) — wait a minute')
-  if (res.status === 428) throw new Error('Zotero wants a Zotero-Server-ID header on this write')
-  if (res.status === 401) throw new Error('unauthorized: the key was rejected')
-  if (res.status !== 200) throw new Error(`authorize answered ${res.status}: ${res.text.slice(0, 200)}`)
-  const body = JSON.parse(res.text)
-  if (!body.key) throw new Error('authorize returned no key')
-  return body
-}
-
-async function createItem(item, { serverId, apiKey }) {
-  const res = await localRequest('POST', '/api/users/0/items', {
-    body: JSON.stringify([item]),
-    headers: {
-      'Content-Type': 'application/json',
-      'Zotero-Server-ID': serverId,
-      'Zotero-API-Key': apiKey,
-      'Zotero-Write-Token': randomUUID().replace(/-/g, ''),
-    },
-  })
-  if (res.status === 401) throw new Error('401 Unauthorized — the key was single-use and is spent; run again')
+/** Create one item. The gate owns authorization, the single-use key and the per-write token. */
+async function createItem(item, gate) {
+  const res = await gate.write('POST', '/api/users/0/items', [item])
+  if (res.status === 401) throw new Error('401 Unauthorized — the key was rejected; run again')
   if (res.status !== 200) throw new Error(`create answered ${res.status}: ${res.text.slice(0, 300)}`)
   return JSON.parse(res.text)
-}
-
-async function readItem(key) {
-  const res = await localRequest('GET', `/api/users/0/items/${key}`)
-  if (res.status !== 200) throw new Error(`read-back answered ${res.status}`)
-  return JSON.parse(res.text).data
 }
 
 /** Refuse to create a second copy of something already in the library. */
@@ -241,7 +172,11 @@ async function buildPayload(meta) {
 }
 
 async function run() {
-  const { id: serverId, version } = await zoteroServerId()
+  const gate = createWriteGate({
+    appName: APP_NAME,
+    onAuthorized: ({ remember }) => log(`    authorized (remember=${remember}; the key is not stored)`),
+  })
+  const { id: serverId, version } = await gate.open()
   log(`[1] Zotero ${version}, server id ${serverId}`)
 
   const { source, meta } = await resolve()
@@ -269,10 +204,8 @@ async function run() {
 
   log('\n[5] asking Zotero for authorization — a dialog will appear; click Allow')
   log('    (this request waits for you; it has no timeout)')
-  const { key, remember } = await authorize(serverId)
-  log(`    authorized (remember=${remember}; the key is not stored)`)
 
-  const created = await createItem(item, { serverId, apiKey: key })
+  const created = await createItem(item, gate)
   // An array POST answers with the saved object; a single-object POST answers with the key.
   const saved = created.successful?.['0'] ?? created.success?.['0']
   const itemKey = typeof saved === 'string' ? saved : saved?.key
@@ -300,7 +233,7 @@ async function selftest() {
 
   log('[1] local API and server id')
   try {
-    const info = await zoteroServerId()
+    const info = await serverInfo()
     ok(Boolean(info.id), 'server id readable', `Zotero ${info.version}`)
   } catch (error) {
     ok(false, 'server id readable', error.message)

@@ -19,23 +19,21 @@
 // The freed space is NOT freed by this tool: deleting the stored attachment moves it to the
 // library's trash, and the bytes leave the disk when the owner empties the trash.
 //
-// Transport: the local API speaks HTTP/1.0 and an authorization request blocks until the owner
-// answers a dialog, so local calls use node:http with no timeout rather than fetch.
+// Transport and the write gate live in ./zotero-local-api.mjs, together with the reason these calls
+// go through node:http with no timeout instead of fetch.
 //
 // Usage:
 //   node tools/zotero-link-attachments.mjs --target D:\Store            # dry run
 //   node tools/zotero-link-attachments.mjs --target D:\Store --write
 //   node tools/zotero-link-attachments.mjs --target D:\Store --write --limit 5
 //   node tools/zotero-link-attachments.mjs --target D:\Store --no-wake --write
-import { request } from 'node:http'
-import { randomUUID } from 'node:crypto'
 import { createReadStream, existsSync, statSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { createWriteGate, getJson, localRequest } from './zotero-local-api.mjs'
 
-const HOST = '127.0.0.1'
-const PORT = 23119
+/** What the owner sees in the authorization dialog, so it names the tool that asked. */
 const APP_NAME = 'DSH autoresearch link tool'
 /** The marker that identifies the note this tool touches to wake the index drain. */
 export const WAKE_NOTE_MARKER = 'Autoresearch index refresh'
@@ -120,74 +118,18 @@ export function summarize(results) {
   return counts
 }
 
-/** One request to the local API. No timeout: an authorization waits for a human. */
-function localRequest(method, path, { body, headers = {} } = {}) {
-  return new Promise((resolve, reject) => {
-    const req = request(
-      {
-        host: HOST,
-        port: PORT,
-        path,
-        method,
-        headers: { ...headers, ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}) },
-      },
-      (res) => {
-        let text = ''
-        res.setEncoding('utf8')
-        res.on('data', (chunk) => {
-          text += chunk
-        })
-        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, text }))
-      },
-    )
-    req.on('error', reject)
-    req.setTimeout(0)
-    if (body) req.write(body)
-    req.end()
-  })
-}
-
-const getJson = async (path) => JSON.parse((await localRequest('GET', path)).text)
-
-let serverId = null
-let rememberedKey = null
-
-async function authorize() {
-  const res = await localRequest('POST', '/api/local/authorize', {
-    body: JSON.stringify({ appName: APP_NAME }),
-    headers: { 'Content-Type': 'application/json', 'Zotero-Server-ID': serverId },
-  })
-  if (res.status === 403) throw new Error('the authorization dialog was declined')
-  if (res.status === 429) throw new Error('too many authorization dialogs (limit 5/min) - wait a minute')
-  if (res.status === 428) throw new Error('Zotero wants a Zotero-Server-ID header on this write')
-  if (res.status !== 200) throw new Error(`authorize answered ${res.status}: ${res.text.slice(0, 200)}`)
-  const body = JSON.parse(res.text)
-  if (body.remember) {
-    rememberedKey = body.key
-    console.log('    (the owner chose Always Allow: later writes reuse that key)')
-  }
-  return body.key
-}
-
-async function write(method, path, body, extraHeaders = {}) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const key = rememberedKey ?? (await authorize())
-    const res = await localRequest(method, path, {
-      body: body === undefined ? undefined : JSON.stringify(body),
-      headers: {
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        'Zotero-Server-ID': serverId,
-        'Zotero-API-Key': key,
-        'Zotero-Write-Token': randomUUID().replace(/-/g, ''),
-        ...extraHeaders,
-      },
-    })
-    // A single-use key is spent by its first successful write; authorize again and retry.
-    if (res.status === 401 && !rememberedKey) continue
-    return res
-  }
-  throw new Error('the write failed even after re-authorizing')
-}
+/**
+ * The write gate for this tool. One conversion writes twice - it creates the link, then deletes the
+ * stored copy - so a run over many candidates would otherwise ask the owner to click Allow once per
+ * write. When they answer "Always Allow", the gate reuses that key for the rest of THIS RUN and this
+ * line says so; nothing is stored, so the next run asks again.
+ */
+const gate = createWriteGate({
+  appName: APP_NAME,
+  onAuthorized: ({ remember }) => {
+    if (remember) console.log('    (the owner chose Always Allow: later writes in this run reuse that key)')
+  },
+})
 
 /** The absolute path of an attachment's file, or undefined when the library cannot resolve it. */
 async function resolveSourcePath(key) {
@@ -238,7 +180,7 @@ function readChunk(path, offset, length) {
 }
 
 async function createLinked(parentKey, absolutePath, contentType, title) {
-  const res = await write('POST', '/api/users/0/items', [
+  const res = await gate.write('POST', '/api/users/0/items', [
     { itemType: 'attachment', parentItem: parentKey, linkMode: 'linked_file', contentType, path: absolutePath, title },
   ])
   if (res.status !== 200) throw new Error(`create answered ${res.status}: ${res.text.slice(0, 300)}`)
@@ -259,7 +201,7 @@ async function verifyLink(key, { parentKey, contentType }) {
 
 async function deleteItem(key) {
   const item = await getJson(`/api/users/0/items/${key}`)
-  return write('DELETE', `/api/users/0/items/${key}`, undefined, {
+  return gate.write('DELETE', `/api/users/0/items/${key}`, undefined, {
     'If-Unmodified-Since-Version': String(item.version),
   })
 }
@@ -278,12 +220,12 @@ async function wakeIndexDrain() {
   const existing = notes.find((note) => String(note.data?.note ?? '').includes(WAKE_NOTE_MARKER))
   const body = `<p>${WAKE_NOTE_MARKER} - safe to delete; one save of a note is what makes the library index attachments it did not create itself. Updated ${new Date().toISOString()}.</p>`
   if (existing) {
-    const res = await write('PATCH', `/api/users/0/items/${existing.key}`, { note: body }, {
+    const res = await gate.write('PATCH', `/api/users/0/items/${existing.key}`, { note: body }, {
       'If-Unmodified-Since-Version': String(existing.version),
     })
     return { key: existing.key, created: false, status: res.status }
   }
-  const res = await write('POST', '/api/users/0/items', [{ itemType: 'note', note: body }])
+  const res = await gate.write('POST', '/api/users/0/items', [{ itemType: 'note', note: body }])
   if (res.status !== 200) return { key: null, created: false, status: res.status }
   const parsed = JSON.parse(res.text)
   const saved = parsed.successful?.['0'] ?? parsed.success?.['0']
@@ -348,11 +290,8 @@ async function main() {
     throw new Error(`the target directory does not exist: ${targetDir}`)
   }
 
-  const info = await localRequest('GET', '/api/')
-  serverId = info.headers['zotero-server-id']
-  const version = info.headers['x-zotero-version'] ?? '?'
-  if (!serverId) throw new Error('no Zotero-Server-ID header: writes need Zotero 10+')
-  console.log(`[1] Zotero ${version}, server ${serverId}, target ${targetDir}`)
+  const info = await gate.open()
+  console.log(`[1] Zotero ${info.version}, server ${info.id}, target ${targetDir}`)
 
   const { plans, skipped } = await planCandidates(targetDir)
   const pending = apply && limit > 0 ? plans.slice(0, limit) : plans
@@ -464,9 +403,8 @@ async function selftest() {
     console.log(`  ${condition ? 'OK  ' : 'FAIL'} ${label}${detail ? `  -> ${detail}` : ''}`)
   }
 
-  const info = await localRequest('GET', '/api/')
-  serverId = info.headers['zotero-server-id']
-  check(Boolean(serverId), 'the local API answers and identifies the library', `Zotero ${info.headers['x-zotero-version'] ?? '?'}`)
+  const info = await gate.open()
+  check(Boolean(info.id), 'the local API answers and identifies the library', `Zotero ${info.version}`)
 
   const { plans, skipped } = await planCandidates(value('target') ?? process.cwd())
   check(
