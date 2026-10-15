@@ -5,7 +5,7 @@
 //
 // Usage:
 //   node tools/dump-session.mjs <sessionDir> [outFile]   decompress one session
-//   node tools/dump-session.mjs --scan <sessionsRoot>     list each session's agentPreset
+//   node tools/dump-session.mjs --scan <sessionsRoot>     list each session's EFFECTIVE agent preset
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
@@ -67,6 +67,40 @@ function parseHeader(text) {
   }
 }
 
+/**
+ * The preset a session actually ran, next to the value its own record carries.
+ *
+ * A session record's `agentPreset` is the value at CREATION — normally the profile default,
+ * `standard` — while the choice itself is written as a separate `agent-preset/selected` record a
+ * moment later, and again on every switch. Reading the first record alone therefore reports
+ * `standard` for a session that plainly ran a preset, which is exactly the question this scan exists
+ * to answer (measured 2026-10-15: a session that ran `autoresearch`, selected 2 s after creation).
+ *
+ * Only lines that carry the marker are parsed: a transcript can hold tens of thousands of records,
+ * and a full parse of each one would make the scan quadratic in transcript size for no gain.
+ *
+ * @param {string} text The decompressed transcript.
+ * @returns {{created: string|undefined, selected: string|undefined, selections: number, effective: string|undefined}}
+ */
+function parsePresetFacts(text) {
+  const created = parseHeader(text)?.agentPreset
+  let selected
+  let selections = 0
+  for (const line of text.split('\n')) {
+    if (!line.includes('agent-preset/selected')) continue
+    try {
+      const name = JSON.parse(line)?.data?.agentPreset
+      if (typeof name === 'string' && name !== '') {
+        selected = name
+        selections += 1
+      }
+    } catch {
+      // A transcript line that does not parse is not evidence about the preset.
+    }
+  }
+  return { created, selected, selections, effective: selected ?? created }
+}
+
 const mode = process.argv[2]
 const arg = process.argv[3]
 
@@ -78,12 +112,14 @@ if (mode === '--scan') {
     try {
       const { file, full } = transcriptPath(dir)
       const { text, frames, failed } = decompressAll(readFileSync(full))
-      const header = parseHeader(text) ?? {}
+      const facts = parsePresetFacts(text)
       rows.push({
         session: entry.name,
-        preset: header.agentPreset ?? '(none)',
-        depth: header.delegationDepth ?? 0,
-        origin: header.origin ?? 'top',
+        preset: facts.effective ?? '(none)',
+        created: facts.created ?? '(none)',
+        selections: facts.selections,
+        depth: parseHeader(text)?.delegationDepth ?? 0,
+        origin: parseHeader(text)?.origin ?? 'top',
         mb: (statSync(full).size / 1048576).toFixed(2),
         frames,
         bad: failed.length,
@@ -95,8 +131,11 @@ if (mode === '--scan') {
   }
   rows.sort((a, b) => String(b.mtime ?? '').localeCompare(String(a.mtime ?? '')))
   for (const r of rows) {
+    // The creation-time value is shown only when it differs, so the column answers "which preset ran"
+    // first and keeps the trap visible without widening every row.
+    const preset = r.created !== undefined && r.preset !== r.created ? `${r.preset} (created ${r.created})` : r.preset
     console.log(
-      `${r.mtime ?? '?'}  ${String(r.preset).padEnd(16)} depth=${r.depth ?? '?'} ${String(r.origin ?? '').padEnd(5)} ${String(r.mb ?? '?').padStart(6)}MB frames=${r.frames ?? '?'} bad=${r.bad ?? '?'}  ${r.session}`,
+      `${r.mtime ?? '?'}  ${String(preset).padEnd(34)} depth=${r.depth ?? '?'} ${String(r.origin ?? '').padEnd(5)} ${String(r.mb ?? '?').padStart(6)}MB frames=${r.frames ?? '?'} bad=${r.bad ?? '?'}  ${r.session}`,
     )
   }
 } else {
@@ -126,4 +165,8 @@ if (mode === '--scan') {
   console.log(`census    : ${keywords.map((k) => `${k}=${text.split(k).length - 1}`).join('  ')}`)
   console.log('--- header ---')
   console.log(JSON.stringify(parseHeader(text)))
+  const facts = parsePresetFacts(text)
+  console.log(
+    `preset    : ran=${facts.effective ?? '(none)'} created=${facts.created ?? '(none)'} selection-records=${facts.selections}`,
+  )
 }
