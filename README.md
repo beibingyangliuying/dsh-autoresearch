@@ -104,10 +104,11 @@ the API, and the bulk migration runs inside the application, at your keyboard.
 
 ```powershell
 # increment: a few new stored PDFs per round. Dry run unless --write is given.
-node tools\zotero-link-attachments.mjs --target D:\OneDrive\Zotero
-node tools\zotero-link-attachments.mjs --target D:\OneDrive\Zotero --write
+node tools\zotero-link-attachments.mjs --target D:\Zotero
+node tools\zotero-link-attachments.mjs --target D:\Zotero --write
 
-# bulk migration: paste the file below into the reference manager's Run JavaScript window.
+# bulk migration: set CONFIG.targetDir in the file first, then paste the whole file into the
+# reference manager's Run JavaScript window.
 tools\zotero-link-snippet.js
 ```
 

@@ -23,8 +23,8 @@
 // at a Markdown conversion would silently change what is stored.
 //
 // Usage:
-//   node tools/zotero-note.mjs --item 3WJ27F2C --text "<p>Read: the attention section.</p>"   # dry run
-//   node tools/zotero-note.mjs --item 3WJ27F2C --file .tmp/digest.html --write
+//   node tools/zotero-note.mjs --item <itemKey> --text "<p>Read: the attention section.</p>"   # dry run
+//   node tools/zotero-note.mjs --item <itemKey> --file .tmp/digest.html --write
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (conflict or a library error) | 2 usage.
 import { readFileSync } from 'node:fs'

@@ -40,7 +40,7 @@ window.__ModuleLoader__.load({
       {
         key: 'attachmentStorePath',
         label: 'Attachment store directory',
-        placeholder: 'D:\\OneDrive\\Zotero',
+        placeholder: '<the linked-attachment base directory>',
         hint: 'Where converted PDFs are kept. Use the same directory the reference manager uses as its linked-attachment base: a file under it is recorded as a relative path and survives moving to another machine, while any other directory is recorded as an absolute path. Leave it empty and the conversion stays disabled.',
       },
     ]

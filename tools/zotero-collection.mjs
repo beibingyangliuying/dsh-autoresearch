@@ -25,11 +25,11 @@
 //
 // Usage:
 //   node tools/zotero-collection.mjs --list
-//   node tools/zotero-collection.mjs --create "Seismic demand" --parent UCXUZ6J9        # dry run
-//   node tools/zotero-collection.mjs --create "Seismic demand" --write
-//   node tools/zotero-collection.mjs --rename 6NC7A7ZU --name "Transformers" --write    # unverified
-//   node tools/zotero-collection.mjs --assign 3WJ27F2C --collection 9B8XWBPV --write
-//   node tools/zotero-collection.mjs --assign 3WJ27F2C --collection 9B8XWBPV --remove --write
+//   node tools/zotero-collection.mjs --create "Reading list" --parent <collectionKey>   # dry run
+//   node tools/zotero-collection.mjs --create "Reading list" --write
+//   node tools/zotero-collection.mjs --rename <collectionKey> --name "Archive" --write  # unverified
+//   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --write
+//   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --remove --write
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (conflict, duplicate, or a library error) | 2 usage.
 import { resolve } from 'node:path'

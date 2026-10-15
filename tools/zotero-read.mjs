@@ -38,11 +38,11 @@
 // Usage:
 //   node tools/zotero-read.mjs --search "contingencies" --limit 10
 //   node tools/zotero-read.mjs --search "retrieval" --qmode titleCreatorYear --tag /done
-//   node tools/zotero-read.mjs --item 85ZCTB6Z
-//   node tools/zotero-read.mjs --fulltext 85ZCTB6Z --offset 0 --limit 12000
-//   node tools/zotero-read.mjs --fulltext 85ZCTB6Z --grep "contingenc"
+//   node tools/zotero-read.mjs --item <itemKey>
+//   node tools/zotero-read.mjs --fulltext <itemKey> --offset 0 --limit 12000
+//   node tools/zotero-read.mjs --fulltext <itemKey> --grep "contingenc"
 //   node tools/zotero-read.mjs --collections
-//   node tools/zotero-read.mjs --collection 9B8XWBPV
+//   node tools/zotero-read.mjs --collection <collectionKey>
 //   node tools/zotero-read.mjs --tags
 //
 // Exit codes: 0 answered | 1 the library could not answer, or the record has no such text | 2 usage.

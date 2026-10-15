@@ -21,7 +21,7 @@ it said. It is derived data: if it is lost, rebuild it from the library.
 Example:
 
 ```
-3WJ27F2C | 2017 | A | transformer,attention,baseline | Self-attention replaces recurrence; 8 authors; no DOI on arXiv | note: zotero
+ABCD1234 | 2017 | A | transformer,attention,baseline | Self-attention replaces recurrence; 8 authors; no DOI on arXiv | note: zotero
 ```
 
 ## Rules

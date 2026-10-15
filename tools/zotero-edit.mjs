@@ -17,10 +17,10 @@
 // The library is the right place to change all of those, with the record in front of you.
 //
 // Usage:
-//   node tools/zotero-edit.mjs --item 3WJ27F2C --set title="A new title"           # dry run
-//   node tools/zotero-edit.mjs --item 3WJ27F2C --set DOI=10.xxxx/yyyy --write
-//   node tools/zotero-edit.mjs --item 3WJ27F2C --set DOI=                        # clear a field
-//   node tools/zotero-edit.mjs --item 3WJ27F2C --add-tag /done --remove-tag /unread --write
+//   node tools/zotero-edit.mjs --item <itemKey> --set title="A new title"           # dry run
+//   node tools/zotero-edit.mjs --item <itemKey> --set DOI=10.xxxx/yyyy --write
+//   node tools/zotero-edit.mjs --item <itemKey> --set DOI=                        # clear a field
+//   node tools/zotero-edit.mjs --item <itemKey> --add-tag /done --remove-tag /unread --write
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (conflict or a library error) | 2 usage.
 import { createWriteGate, normalizeTags, patchItem, readItem } from './zotero-local-api.mjs'

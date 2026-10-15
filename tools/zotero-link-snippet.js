@@ -7,11 +7,12 @@
 // keyboard, with no API authorization involved at all.
 //
 // HOW TO RUN
-//   1. Open the reference manager, then Tools -> Developer -> Run JavaScript.
-//   2. Paste this whole file and press Run (Ctrl+R).
-//   3. Leave CONFIG.dryRun = true for the first run: it prints exactly what it would do.
-//   4. Set CONFIG.dryRun = false and run it again to perform the moves.
-//   5. Empty the trash afterwards - deleting the stored attachment does not free the disk by itself.
+//   1. Set CONFIG.targetDir below to the reference manager's linked-attachment base directory.
+//   2. Open the reference manager, then Tools -> Developer -> Run JavaScript.
+//   3. Paste this whole file and press Run (Ctrl+R).
+//   4. Leave CONFIG.dryRun = true for the first run: it prints exactly what it would do.
+//   5. Set CONFIG.dryRun = false and run it again to perform the moves.
+//   6. Empty the trash afterwards - deleting the stored attachment does not free the disk by itself.
 //
 // WHAT IT DOES, per selected regular item (or the whole library when CONFIG.mode = 'library'):
 //   * takes every STORED attachment (a PDF, or a snapshot when CONFIG.includeSnapshots is on);
@@ -23,9 +24,10 @@
 // reclaimed as soon as the trash is emptied rather than after a second copy; and an item that
 // already links the same file is recognised, so no duplicate link is created.
 const CONFIG = {
-  // The same directory the reference manager uses as its linked-attachment base directory. A file
-  // under it is recorded as a relative path and survives moving to another machine.
-  targetDir: 'D:\\OneDrive\\Zotero',
+  // SET THIS FIRST. The same directory the reference manager uses as its linked-attachment base
+  // directory: a file under it is recorded as a relative path and survives moving to another machine.
+  // The placeholder below stops the run before it touches anything.
+  targetDir: '<the linked-attachment base directory>',
   // 'selected' converts the items selected in the main window; 'library' converts everything.
   mode: 'selected',
   // Snapshots are single self-contained .html files, so they move like any other payload.
@@ -101,6 +103,10 @@ async function moveFile(source, destination) {
 
 const counts = { converted: 0, recovered: 0, conflict: 0, redundant: 0, missing: 0, error: 0 }
 const lines = []
+
+if (String(CONFIG.targetDir).trim() === '' || String(CONFIG.targetDir).startsWith('<')) {
+  return 'Set CONFIG.targetDir to the reference manager\'s linked-attachment base directory first.'
+}
 
 if (!(await IOUtils.exists(CONFIG.targetDir))) {
   return `Target directory does not exist: ${CONFIG.targetDir}`

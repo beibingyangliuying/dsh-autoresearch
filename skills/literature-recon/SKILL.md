@@ -144,9 +144,9 @@ Fixed sections:
   and silently drops the middle). Read it in slices, and let the tool do the arithmetic:
 
   ```powershell
-  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --limit 12000
-  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --offset 12000    # the first slice names this
-  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --grep "seismic demand"
+  node "{{presetTools}}/zotero-read.mjs" --fulltext "<itemKey>" --limit 12000
+  node "{{presetTools}}/zotero-read.mjs" --fulltext "<itemKey>" --offset 12000    # the first slice names this
+  node "{{presetTools}}/zotero-read.mjs" --fulltext "<itemKey>" --grep "<search term>"
   ```
 
   Two facts it states rather than hides. Full text is keyed by the **attachment**, not by the record, so
@@ -195,9 +195,9 @@ Fixed sections:
   owner to Allow every write separately.
 
   ```powershell
-  node "{{presetTools}}/zotero-note.mjs" --item 85ZCTB6Z --text "<p>Read 3: the demand correlation is the load-bearing assumption.</p>"          # dry run
-  node "{{presetTools}}/zotero-note.mjs" --item 85ZCTB6Z --text "<p>Read 3: the demand correlation is the load-bearing assumption.</p>" --write
-  node "{{presetTools}}/zotero-edit.mjs" --item 85ZCTB6Z --add-tag /done --remove-tag /unread --write
+  node "{{presetTools}}/zotero-note.mjs" --item "<itemKey>" --text "<p>Read 3: the load-bearing assumption is named in the section read.</p>"          # dry run
+  node "{{presetTools}}/zotero-note.mjs" --item "<itemKey>" --text "<p>Read 3: the load-bearing assumption is named in the section read.</p>" --write
+  node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write
   ```
 
   The note tool appends to the one note on a record that carries its marker, and creates that note when
