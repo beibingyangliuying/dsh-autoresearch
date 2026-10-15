@@ -532,3 +532,34 @@ skill 里。
 
 **落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`isWriteAccepted`）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（新：2xx 判据 + "未 open 不许写"的门禁契约，后者在发请求前就抛，因此可离线测）· [`README.md`](../README.md) 与 [`docs/00_overview.md`](00_overview.md) 的自测清单。
 
+## 33. 隔离的第二次 pass 从未运行；改听 `tools/change` 后晚注册的 config-manager 被逐个挡下（2026-10-15）
+
+**起因**：验证 MCP 转换时**顺手照出**的——一条重启后的 autoresearch 会话手里有 5 个 `config_*` 工具（`config_backup` / `config_list_snapshots` / **`config_restore`** / `config_sync_pull` / `config_sync_push`），而 `isolation.js` 的 keep-list 里**没有**它们。其中 `config_restore` 会用快照**覆盖整个 DSH 配置**，属破坏性能力。
+
+**诊断（两端都有证据）**：
+
+1. **快照太早**：`config-manager` 的 `model-tools.js` 必须经 `ctx.get('tools')` 拿到 tools 服务才注册那 5 个工具（其注释明写"绝不能用 `ctx.tools` 属性访问"）。而激活时的报告只 deny 了 **15** 个（`dsh_code_review` + `univer_*`），**全文不含 `config_`**。
+2. **设计的补刀从不运行**：`agent/created` 那个监听器**一次都没被调用过**。证据是它自己写的报告——跨会话**缺** `agentKept`/`agentDenied`/`agentError` 三者任一（源码里只要被调用过，至少写其中一个）。§17 在 2026-10-12 观察到同一现象，当时只记为"未证实生效"。
+3. **`restrict()` 与 deny 计算都是无辜的**：激活那 15 个名字在会话工具表里**确实消失**（新会话无 `univer_*`、无 `dsh_code_review`），只有晚注册的 5 个漏进来 ⇒ 坏的是**触发时机**，不是权限也不是 API 能力。
+4. **`agent/created` 为何收不到——未查清，且刻意不追**：`dsh-scope` 的规则是"被标记的监听器，其 tag 是 dispatch key 本身或它的**祖先**时才被准入"⇒ 规则本身不是障碍。剩余候选（该 row 的 fiber 不是 agent 的祖先 / row 挂载晚于 agent 创建 / 事件在另一条 context 上派发）本轮不追：**修法不依赖它**，而报告现在会记录真实发生过的轮次，日后可凭证据回答而不是靠猜。
+
+**修复**：改听 **`tools/change`**——注册表在"工具注册/注销或 scoped 限制变化"时发出的事件。其文档明写它**故意不做 scope 过滤**（*"a scoped listener subscribing here sees every change"*），且语义正是"全局变化关系到每个 agent 的**下一次组装**"，恰是所需的窗口。
+
+- **防重入是重点**：`restrict()` 本身也算"限制变化"⇒ 会再触发 `tools/change` 并落回同一个 handler。做法是**在调用 `restrict()` 之前**就把"已施加集合的签名"落定，嵌套那一轮算出同一集合即直接返回。
+- 报告**只在真正施加时**记录 `denied`（免得被自己触发的空轮覆盖成空表）；`rounds` 限长 10；**只在集合变化时才重写报告**（`tools/change` 在 agent 注册工具时也会响，不能每次写盘）。
+
+**验收（宿主重启后；14 项离线自测 + 2 项现场只读全 PASS）**：
+
+- **报告**（宿主 **13:49:32** 启动 → 报告 **13:49:36**）出现 **5 轮 `at a tool-set change`**，`denied` 逐个增长 **15→16→17→18→19→20**，`kept` 全程恒为 **19** ⇒ **config-manager 的 5 个工具是逐个注册、逐个被挡下的**，且没有误伤；`rounds` 与 `denied` 里 `config_*` 五个齐全。
+- **新会话**（13:52:05，`ran=autoresearch`）工具表 **44** 个（修复前 **49**），差集**恰好是那 5 个 `config_*`、新增 0 个**；转写全文 `config_restore` 命中 **0**；`mcp__` 仍为 **0**。
+
+**顺带解掉一个此前未实测的语义**：`denied` 是**累积增长**而非每轮重置 ⇒ 注册表汇报的是**未被限制的全局集**（`restrict()` 为叠加语义，重复施加整表无害）。这个不确定性我在提交里把**两种可能都钉进了自测**（视图增长 / 视图因自身限制而缩小），现在知道真实的是前者。
+
+**落在何处**：[`isolation.js`](../isolation.js)（COVERAGE 注释 + `apply()`）· [`tools/isolation-selftest.mjs`](../tools/isolation-selftest.mjs)（驱动新事件；断言旧事件**未**注册；在 `restrict()` 内部**模拟重入**；钉住两种注册表视图形态；**断言报告内容**——因为验收取证的正是那个文件）。**另**：`isolation-report.json` 是 **gitignored 生成物**，而自测结尾**会删它**（其注释写明理由：假注册表产出的报告是误导性证据）⇒ **验收必须先读报告、再跑自测**，否则证据被自己删掉。
+
+**教训（三条）**：
+
+1. **"best-effort 补刀"在契约里躺了三天，实际从未运行过一次。** 而同一份文件里的另一条路径（`contact-bridge.js` 用 `ctx.systemPrompt.section()` 这个**服务 API**）一直正常——所以"预设 row 能用"**不能**用来证明"预设 row 收得到 scoped 事件"。**能用的是服务 API，不代表能用的是事件监听。**
+2. **测试可以替一个从不运行的机制当替身。** `isolation-selftest` 原先驱动的是**模拟的** `agent/created` 处理器，绿了很久，而真实投递从未发生 ⇒ **"测试驱动的是什么事件"本身就是需要被验证的假设**（§26 是同一族的另一面：诊断工具的输出也要被验收）。
+3. **新自测特意断言"旧事件未被注册"。** 只写替代品、不写被替代的错误，等于邀请下一个人把它加回来——而它当年就是这样静静躺着的。
+
