@@ -17,14 +17,13 @@ import {
   classifyHit,
   findPassages,
   groupHits,
-  normalizeCollections,
-  normalizeTags,
   parseArgs,
   pickAttachment,
   selectRequested,
   sliceText,
   yearOf,
 } from './zotero-read.mjs'
+import { normalizeCollections, normalizeTags } from './zotero-local-api.mjs'
 
 let failures = 0
 const check = (condition, label, detail = '') => {

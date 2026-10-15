@@ -110,6 +110,94 @@ export async function childrenOf(key) {
 }
 
 /**
+ * `collections` is a bare string when there is one and an array when there are several.
+ *
+ * Every falsy value means "none": the library does not omit the field, it answers `false` for a
+ * collection at the root, and `''`/`[]`/`null` appear in other shapes. Returning `[false]` for that
+ * would make "no parent" compare unequal to itself.
+ *
+ * @param {string|string[]|false|null|undefined} value The field as the library returns it.
+ * @returns {string[]} Always an array of keys.
+ */
+export function normalizeCollections(value) {
+  if (!value) return []
+  return Array.isArray(value) ? [...value] : [value]
+}
+
+/**
+ * `tags` arrives as `[{tag}]` on a record and as plain strings in some shapes.
+ *
+ * @param {Array<object|string>|undefined} value The field as the library returns it.
+ * @returns {string[]} The tag names, with nameless entries dropped rather than printed blank.
+ */
+export function normalizeTags(value) {
+  if (!Array.isArray(value)) return []
+  return value.map((tag) => (typeof tag === 'string' ? tag : (tag?.tag ?? ''))).filter(Boolean)
+}
+
+/**
+ * One collection's `data`.
+ *
+ * @param {string} key An 8-character collection key.
+ * @returns {Promise<object>} The collection data - `name`, `parentCollection`, `version`.
+ */
+export async function readCollection(key) {
+  return (await getJson(`/api/users/0/collections/${key}`)).data
+}
+
+/**
+ * Read, refuse a stale change, patch, read back.
+ *
+ * The staleness check is OURS rather than the library's: the change is refused when the record's
+ * version moved between the read the plan was built from and the write, so an edit made in the
+ * application while this ran is never overwritten. The version precondition is still sent as a second
+ * line of defence - a 412 re-reads and reports a conflict only when the version really did move,
+ * because in local mode the library overloads 401/412/428 and a 412 is not by itself proof that
+ * someone else edited the record.
+ *
+ * One call makes at most one write.
+ *
+ * @param {{gate: object, path: string, readCurrent: () => Promise<object>, patch: object, apply: boolean}} options
+ * @returns {Promise<{applied: boolean, conflict: boolean, status: number, detail: string, before: object, after: object|null}>}
+ *   `before` is what the plan was built from; on a conflict it is re-read and holds the library's
+ *   current state. `detail` carries the library's own words when it refused the write.
+ */
+async function applyPatch({ gate, path, readCurrent, patch, apply }) {
+  const before = await readCurrent()
+  if (!apply) return { applied: false, conflict: false, status: 0, detail: '', before, after: null }
+  const fresh = await readCurrent()
+  if (fresh.version !== before.version) {
+    return { applied: false, conflict: true, status: 0, detail: '', before: fresh, after: null }
+  }
+  const res = await gate.write('PATCH', path, patch, { 'If-Unmodified-Since-Version': String(fresh.version) })
+  if (res.status === 412) {
+    const current = await readCurrent()
+    return {
+      applied: false,
+      conflict: current.version !== fresh.version,
+      status: 412,
+      detail: res.text.slice(0, 300),
+      before: current,
+      after: null,
+    }
+  }
+  if (res.status !== 200) {
+    return { applied: false, conflict: false, status: res.status, detail: res.text.slice(0, 300), before: fresh, after: null }
+  }
+  return { applied: true, conflict: false, status: 200, detail: '', before, after: await readCurrent() }
+}
+
+/** One version-guarded change to one item. */
+export async function patchItem({ gate, key, patch, apply }) {
+  return applyPatch({ gate, path: `/api/users/0/items/${key}`, readCurrent: () => readItem(key), patch, apply })
+}
+
+/** One version-guarded change to one collection. */
+export async function patchCollection({ gate, key, patch, apply }) {
+  return applyPatch({ gate, path: `/api/users/0/collections/${key}`, readCurrent: () => readCollection(key), patch, apply })
+}
+
+/**
  * The per-run write gate.
  *
  * `open()` must be called first: the server id it returns is carried by every write, and a write

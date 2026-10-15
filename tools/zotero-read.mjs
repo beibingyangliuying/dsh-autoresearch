@@ -25,8 +25,8 @@
 //   * `itemKey=a,b` IS NOT A PLAIN MULTI-GET. Asked for two keys, the library answered with six rows:
 //     the two records AND their children. Every multi-get response is filtered back to the keys asked
 //     for, or a record would silently acquire other people's children.
-//   * `collections` IS A BARE STRING WHEN THERE IS ONE, and an array when there are several. `tags`
-//     is `[{tag: '...'}]`. Both are normalised here rather than at every call site.
+//   * `collections` IS A BARE STRING WHEN THERE IS ONE, AND `tags` IS `[{tag}]`. Both are normalised
+//     in ./zotero-local-api.mjs, which is where the other tools read the same shapes.
 //   * THE DEFAULT SEARCH MODE IS NOT FULL TEXT. `qmode=titleCreatorYear` searches titles, creators and
 //     years only, so a paywalled paper the owner already holds looks absent (measured: 178 hits in
 //     `everything` against 2 in the default). This tool therefore DEFAULTS TO `everything` and prints
@@ -48,7 +48,15 @@
 // Exit codes: 0 answered | 1 the library could not answer, or the record has no such text | 2 usage.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { childrenOf, getJson, localRequest, readItem, serverInfo } from './zotero-local-api.mjs'
+import {
+  childrenOf,
+  getJson,
+  localRequest,
+  normalizeCollections,
+  normalizeTags,
+  readItem,
+  serverInfo,
+} from './zotero-local-api.mjs'
 
 const QMODES = ['everything', 'titleCreatorYear']
 /** The library's own maximum page size for /items. */
@@ -141,18 +149,6 @@ export function pickAttachment(children, preference = ATTACHMENT_PREFERENCE) {
     }
   }
   return null
-}
-
-/** `collections` is a bare string when there is one and an array when there are several. */
-export function normalizeCollections(value) {
-  if (value === undefined || value === null || value === '') return []
-  return Array.isArray(value) ? [...value] : [value]
-}
-
-/** `tags` arrives as `[{tag}]`; older shapes carry plain strings. */
-export function normalizeTags(value) {
-  if (!Array.isArray(value)) return []
-  return value.map((tag) => (typeof tag === 'string' ? tag : (tag?.tag ?? ''))).filter(Boolean)
 }
 
 /**
