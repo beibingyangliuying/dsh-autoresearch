@@ -387,3 +387,19 @@ skill 里。
 
 **方法论教训**：验收必须在**正确的进程**里做。"开了新会话"不等于"改了的东西在跑"——先比较宿主启动时间与改动时间，否则测的是旧配置。这与 §15 / §19 那两次"预设消失"是同一类错误的另一面：那两次是"改了源但没生效"，本次是"**以为新会话就等于生效**"。
 
+## 26. 诊断工具的陷阱：`session` 记录里的 `agentPreset` 是"创建时默认值"（2026-10-15）
+
+**怎么发现的**：第二轮验收会话的输出完全正确（我逐条复核过），但用 `tools/dump-session.mjs` 单会话 dump 它的转写做交叉核对时，工具打出的第 1 行是 `"agentPreset":"standard"` —— 而这条会话手里明明有 35 个 `mcp__zotero__*` 工具、系统提示里也有预设那两句原文。矛盾不在会话，**在工具**。
+
+**事实（逐条有原始输出）**：
+
+- `session` 记录（第 1 行）里 `agentPreset: "standard"`；
+- 紧随其后的独立记录 `{"type":"agent-preset/selected","seq":3,"data":{"agentPreset":"autoresearch"}}`（创建后约 2 秒）——**这才是实际跑的预设**；
+- 该会话 `request/header` 的工具表：共 **101** 个工具，其中 `mcp__zotero__*` **35** 个、`mcp__arxiv__*` **19** 个，且这 35 个名字与 `ZOTERO_MCP_TOOLSETS=none` 档实测 payload 的 35 个名字**集合完全相等**（零差异）。
+
+**为何算真缺陷**：`--scan` 的 docstring 与 README 都把它当"这条会话真的跑了哪个预设"的入口，而它当时**只解析第 1 行**（`parseHeader` = `text.split('\n', 1)[0]`）⇒ 会把一条跑了本预设的会话报成 `standard`。这与 §15 / §25 是同一族错误：**读到一个看似权威的字段就当成结论**。
+
+**修复（已做）**：`--scan` 与单会话 dump 都改用 `parsePresetFacts()`——读**最后一条** `agent-preset/selected` 作为实际预设 `effective`，同时保留"创建时值"，两者不一致时把列打成形如 `autoresearch (created standard)`；单会话 dump 另打一行 `preset : ran=… created=… selection-records=…`。为控制成本，只解析含 `agent-preset/selected` 字样的行（转写可达数万条记录）。**修复后回测**：两条验证会话都正确显示 `autoresearch (created standard)`。
+
+**方法论教训**：**诊断工具的输出本身也要验收**。当"工具说 X"与"我手里有 Y 的直接证据"冲突时，先怀疑工具读的是**哪一条记录**。
+

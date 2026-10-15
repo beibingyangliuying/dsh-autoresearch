@@ -176,7 +176,7 @@ it registers them. A path relative to this repository names nothing where the ag
 ### Session diagnostics
 
 ```powershell
-# which preset each session was CREATED with (a later switch does not rewrite it)
+# which preset each session RAN: the last selection, with the creation-time value when they differ
 node tools\dump-session.mjs --scan %USERPROFILE%\.dsh\sessions
 node tools\dump-session.mjs <sessionDir> [outFile]        # decompress one transcript
 node tools\session-shape.mjs <session.jsonl>             # structural shape, bounded output
@@ -187,6 +187,13 @@ node tools\list-tools.mjs <session.jsonl>                # tool names its reques
 These read the transcripts alone, and together they answer "which preset did that session really run,
 and what tools did its agent see". That pair of questions settled two investigations here, so reach for
 these before asking for another restart.
+
+**A session record's own `agentPreset` is the value at creation**, normally the profile default, while
+the preset a session actually runs is recorded separately a moment later and again on every switch.
+`--scan` therefore reports the effective selection and shows the creation-time value beside it when the
+two differ; reading the first record alone reports the default for sessions that plainly ran a preset,
+which is what it did until 2026-10-15 ([`docs/01_decisions.md`](docs/01_decisions.md) §26). The tool
+names inside `request/header` remain the hard evidence for what an agent actually saw.
 
 **Do not re-run `install_bundle` on the preset.** The bundle entry is a link to this directory, so an
 edit needs no re-install; re-installing has been observed to fail with a source-mismatch and risks
