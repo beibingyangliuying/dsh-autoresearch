@@ -516,3 +516,19 @@ skill 里。
 2. **两处缺陷是在"运行前重读自己刚写的代码"时抓到的**：`zotero-edit` 新建了一个 write gate 却从未 `open()`（每次 `--write` 都会失败）；`zotero-read` 用 `export { … } from` 转发归一化函数——**这种方式不会把符号绑进本地作用域**，而它正在调用它们，运行时必然是 `undefined`。写代码的最后一分钟重读一遍，比任何自测都便宜。
 3. **`Select-Object -First N` 会掐断管道**，PowerShell 会把被终止的进程的退出码报成 **0**。本轮我因此一度把"用法错误应退 2"读成 0，差点当成 bug 报出去。**给退出码取证时不要截断管道。**
 
+## 32. 首次真实写入抓到：写成功回 204，而工具把它报成"被拒绝"（2026-10-15）
+
+**怎么发现的**：首次真写验收用的是"打标签再撤标签的往返"，目标 `3WJ27F2C`。第一步 `--write` 打印 `The library refused the write (HTTP 204)` 并**退 1**——**但那条写入其实成功了**：只读复核显示标签已在条目上、version 从 **567 变成 703**。
+
+**缺陷**：`applyPatch` 只把 **200** 当成功，而 Zotero 的 `PATCH` 成功时回 **204 No Content**（成功即无 body ⇒ "写后回读"才是唯一证据，这一点本仓库早就知道，`zotero-write.mjs` 的"绝不从 POST 响应就报告 added"就是这个道理）。对写工具来说这是**最坏的一类错**：它关于"你的库到底改了没有"说了假话。而这条知识其实**已经在仓库里**——`zotero-link-attachments.mjs` 的删除路径写着 `deletion.status !== 204`——只是它当时写在**工具特有函数**里，新 helper 没有继承。
+
+**修复**：共享层新增 `isWriteAccepted(status)`（**任何 2xx** 都算接受）并由 `applyPatch` 使用；成功路径不再假定有 body。第二次真写（撤标签）随即打印 `OK - 3WJ27F2C now reads back with every requested value (version 704)`，退 0。
+
+**验收证据（两条真实写入、两次 Allow 弹窗，均为人工授权）**：写入前 `tags: none` / version 567 → 加标签后 `tags: /autoresearch-write-check` / version 703 → 撤标签后 `tags` 为空 / version 704。**库的内容与动手前完全一致**；只有版本计数器递增，那是库自己的记账，不是内容变化。
+
+**保留的边界（不是同一条缺陷）**：`zotero-write.mjs`、`zotero-note.mjs` 的新建路径、`zotero-collection.mjs` 的建分类仍要求 **200**，因为它们都要**解析响应体**取新建对象的 key，204 意味着没有 key 可报。实测这类调用返回 200。
+
+**教训**：① 写工具的成功判据是"**任何 2xx + 回读**"，不是某一个状态码；② 这类**状态码知识必须住在共享层**——它曾经住在工具特有逻辑里，于是新路径没有继承，而 §31 抽公共模块正是为了让这种知识只存在一份；③ **"先做一次真实写入验收"这个决定本身抓到了缺陷**：四个 helper 的 dry-run 全绿、14 项自测全绿，只有真写才暴露了它。
+
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`isWriteAccepted`）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（新：2xx 判据 + "未 open 不许写"的门禁契约，后者在发请求前就抛，因此可离线测）· [`README.md`](../README.md) 与 [`docs/00_overview.md`](00_overview.md) 的自测清单。
+
