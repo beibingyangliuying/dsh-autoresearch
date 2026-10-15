@@ -5,11 +5,13 @@
 #     routing to seven research-discipline skills.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
-#   - the reference library's MCP row lives HERE rather than in a profile-level bundle, so its
-#     tools are SCOPE-LOCAL: visible to this preset, and leaked into no other session. It is pinned
-#     and its optional tool groups are off; its own comment carries the measurements. The preprint
-#     channel is NOT an MCP row any more - it ships as tools/arxiv.mjs instead, see #29 of
-#     docs/01_decisions.md.
+#   - NO MCP server is mounted. Both external channels ship as command-line helpers named by the
+#     disciplines (tools/arxiv.mjs and tools/zotero-*.mjs), which cost nothing on a request that does
+#     not use them. The two rows they replaced cost 21,551 tokens of prompt on EVERY request for 54
+#     tools, of which the disciplines called a handful; the DSH MCP client has no field that filters
+#     a server's tool list, so the only lever was not mounting the row. See #29 and #31 of
+#     docs/01_decisions.md, and do not add either row back - the preset's own self-test fails if one
+#     reappears.
 #   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
 #     code-review, ...), keeping only the ones this preset deliberately retains.
 # Design record: ../docs/00_overview.md (what it is) and ../docs/01_decisions.md (why).
@@ -226,35 +228,22 @@
             name: '@deepseek-ai/dsh-plugin-manager/tools'
             disabled: true
 
-          # ── the reference library MCP row（scope-local：只在本预设可见）─────────
-          # The preprint channel deliberately has NO row here any more. `mcp-arxiv` cost 17,828
-          # characters (~4.95k tokens) of prompt on EVERY request for 19 tools, and the disciplines
-          # used two of them; it is now tools/arxiv.mjs, named directly by the literature discipline,
-          # at zero resident cost. Do not add the row back: the preset's own self-test fails if it
-          # reappears (docs/01_decisions.md #29).
-
-          - id: mcp-zotero
-            name: '@deepseek-ai/dsh-mcp-client'
-            config:
-              serverName: zotero
-              transport: stdio
-              command: uvx
-              # PINNED, and the optional tool groups are OFF. Measured on 0.14.1: the default surface
-              # is 41 tools / 67,743 characters (~18.8k tokens per request), `none` is 35 / 59,758
-              # (~16.6k), and the six tools `none` drops are read-only ones this preset does not use
-              # (pdf outline/page layout, the semantic-index pair, library switching). The pin matters
-              # because an unpinned spec re-resolves on every start: the project's own README still
-              # advertises 38 tools / 13.4k tokens for the surface we measured at 41 / 18.8k.
-              # Writes arrive DISABLED (write capabilities report "none" until someone authorizes);
-              # how a write may be authorized is stated by autoresearch-contact, not here.
-              args:
-                - '--from'
-                - 'zotero-mcp-server==0.14.1'
-                - zotero-mcp
-              env:
-                ZOTERO_LOCAL: 'true'
-                ZOTERO_MCP_TOOLSETS: 'none'
-              failOnStartupError: true
+          # ── no MCP server is mounted（两个外部通道都是自带 CLI helper）──────────
+          # Both academic rows are gone on purpose. `mcp-arxiv` cost 17,828 characters (~4.95k tokens)
+          # of prompt on EVERY request for 19 tools; `mcp-zotero`, with its optional tool groups
+          # already off, cost 59,758 (~16.6k) for 35. Together 21,551 tokens per request, for a
+          # handful of tools the disciplines actually call. The surface could not be trimmed - the MCP
+          # client's Config is a closed field list with no include/exclude, and `syncTools` registers
+          # every tool a server lists - so the only lever was not mounting the row.
+          #
+          # The channels are now tools/arxiv.mjs and tools/zotero-read.mjs / -write.mjs / -note.mjs /
+          # -edit.mjs / -collection.mjs / -link-attachments.mjs: zero resident cost, one write per
+          # invocation, and a dry run unless --write is given. Reference-library writes still pass
+          # through the reference manager's own Allow dialog, one per write, which is the gate
+          # protocol.md names; how a write may be authorized is stated by autoresearch-contact.
+          #
+          # Do NOT add either row back: tools/preset-selftest.mjs fails when one reappears. See #29
+          # (preprint) and #31 (reference library) of docs/01_decisions.md for the measurements.
 
           # ── tool isolation（屏蔽 profile 级的其它 global 工具）──────────────
 

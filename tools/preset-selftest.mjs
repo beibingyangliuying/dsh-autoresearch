@@ -116,7 +116,6 @@ if (!existsSync(composedFile)) {
     'tool-web',
     'tool-subagent',
     'tool-ask-user',
-    'mcp-zotero',
     'autoresearch-isolation', 'autoresearch-contact', 'autoresearch-skills',
   ]) {
     ok(rowIds.includes(id), `required row: ${id}`)
@@ -166,33 +165,30 @@ if (!existsSync(composedFile)) {
   for (const id of ['present', 'tool-ralph']) {
     ok(!rowIds.includes(id), `removed by decision: ${id} absent`)
   }
-  // Leak guard: the reference-library MCP row and the isolation plugin must be nested INSIDE the
-  // preset. If someone moves them back into a profile-level bundle they leak into every
-  // other session in the profile (and the isolation filter would then mask them here).
+  // Leak guard: the preset's own plugin rows must be nested INSIDE the preset. If someone moves them
+  // back into a profile-level bundle they leak into every other session in the profile (and the
+  // isolation filter would then mask them here).
   const topLevelRows = composed
     .filter((line) => /^- id: /.test(line))
     .map((line) => line.replace(/^- id: /, '').trim())
-  for (const id of ['mcp-zotero', 'autoresearch-isolation', 'autoresearch-contact', 'autoresearch-skills']) {
+  for (const id of ['autoresearch-isolation', 'autoresearch-contact', 'autoresearch-skills']) {
     ok(!topLevelRows.includes(id), `leak guard: ${id} is not a profile-level row`)
   }
 
-  // Guard the remaining MCP row's deliberate choices. An UNPINNED `uvx` spec re-resolves on every
-  // start, and the surface really does drift - the reference-library project's own README still
-  // advertises 38 tools / 13.4k tokens for what 0.14.1 exposes as 41 / 18.8k. Losing the toolset
-  // value silently restores six read-only tools this preset does not use, at ~2.2k tokens per request.
+  // NEITHER EXTERNAL CHANNEL IS AN MCP ROW, and this fails if either comes back. `mcp-arxiv` cost
+  // 17,828 characters (~4.95k tokens) of prompt on EVERY request for 19 tools; `mcp-zotero` cost
+  // 59,758 (~16.6k) for 35. Together 21,551 tokens per request, for the handful of tools the
+  // disciplines actually call - and the MCP client has no field that filters a server's tool list, so
+  // a re-added row is a silent cost nobody would notice from a bill. Both channels are command-line
+  // helpers now, at zero resident cost. See docs/01_decisions.md #29 and #31 for the measurements.
   const blockText = block.join('\n')
-  ok(/^\s*- zotero-mcp-server==\d+\.\d+\.\d+\s*$/m.test(blockText), 'mcp-zotero pins its server version')
-  ok(
-    /^\s*ZOTERO_MCP_TOOLSETS:\s*['"]?none['"]?\s*$/m.test(blockText),
-    'mcp-zotero trims the optional tool groups',
-  )
-
-  // The preprint channel is deliberately NOT an MCP row any more. Its 19-tool surface cost 17,828
-  // characters (~4.95k tokens) on every request, and the disciplines used two of those tools; it
-  // ships as tools/arxiv.mjs instead, at zero resident cost. Re-adding the row would be a silent
-  // cost increase, so it fails here rather than being noticed from a bill one day.
-  ok(!/- id: mcp-arxiv/.test(blockText), 'the preprint channel is not mounted as an MCP row again')
-  ok(!/arxiv-mcp-server/.test(blockText), 'no preprint MCP server spec is named in the composition')
+  for (const [row, spec] of [
+    ['mcp-arxiv', 'arxiv-mcp-server'],
+    ['mcp-zotero', 'zotero-mcp-server'],
+  ]) {
+    ok(!blockText.includes(`- id: ${row}`), `${row} is not mounted as an MCP row again`)
+    ok(!blockText.includes(spec), `no ${spec} spec is named in the composition`)
+  }
 
   console.log('\n[3] source persona survives into the composed tree')
   const sourcePersona = extractBlockScalar(readFileSync(patchFile, 'utf8').split('\n'), /^\s+prefix: [|>]-/)
