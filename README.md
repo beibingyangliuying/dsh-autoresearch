@@ -166,9 +166,12 @@ node tools\doc-selftest.mjs
 # the preprint channel helper: the query url, Atom parsing and error feeds, without the network
 node tools\arxiv-selftest.mjs
 
-# the reference-library reader: hit collapsing, years, attachment choice and slicing, without a library
-node tools\zotero-read-selftest.mjs
-node tools\zotero-link-selftest.mjs      # the attachment-link planner, also without a library
+# the reference-library helpers: their pure halves run without a library, and write nothing
+node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing
+node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
+node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
+node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
+node tools\zotero-link-selftest.mjs       # the attachment-link planner
 
 # MCP servers, without DSH (the row is pinned in the composition; probe the same pinned spec)
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp

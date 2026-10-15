@@ -72,6 +72,9 @@ node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统
 node tools\doc-selftest.mjs                            # 契约/索引 的分工是否还成立
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
+node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
+node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）
+node tools\zotero-note-selftest.mjs                    # 笔记：哪条是我们的 / 追加不覆盖（不连库）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
 ```
 
