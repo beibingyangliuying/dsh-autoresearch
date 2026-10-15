@@ -87,8 +87,8 @@ check(
   'the announced directory really holds the helpers (a moved tools/ makes the line a lie)',
 )
 
-// The reference-library write gate: the mounted Zotero server's write tools cannot be masked by the
-// isolation filter (they are scope-local), so the prompt carries the rule instead.
+// The reference-library write gate: the write path ships with this preset's own helpers, so the
+// isolation filter cannot hide it (contract §5), and the prompt carries the rule instead.
 check(String(writeGateLine()).includes('Always Allow'), 'the write gate names the answer it forbids')
 check(/never/i.test(String(writeGateLine())), 'the write gate forbids it in so many words')
 check(/approval/i.test(String(writeGateLine())), 'the write gate states that each write needs approval')
