@@ -479,3 +479,40 @@ skill 里。
 
 **代价与边界**：删除类**故意不做**——误删在真实库里不可逆，所有者在应用里点两下比给 agent 一个删除按钮便宜。**待实现**：helper 集合（检索 / 阅读 / 笔记 / 分类 / 编辑）、纪律文本改写、删掉 `mcp-zotero` 行（届时 `preset-selftest` 的 pin 与 toolset 两条护栏要一并退役）、契约 Revision 8。
 
+## 31. 参考库通道改走自带 helper，两个 MCP 行全部退场（2026-10-15）
+
+**决策**：`mcp-zotero` 行**整个删掉**（不是 disable）。参考库改由 **7 个 helper** 承担：读取（`zotero-read.mjs`）、新增条目（`zotero-write.mjs`，已有）、笔记回写（`zotero-note.mjs`）、字段与标签（`zotero-edit.mjs`）、分类（`zotero-collection.mjs`）、附件链接（`zotero-link-attachments.mjs`，已有），外加共享的 `zotero-local-api.mjs`。常驻 **59,758 字符（≈16,599 tok）→ 0**；连同 §29 的预印本行，**21,551 tok/请求全部归零**。契约同日发 **Revision 8**。
+
+**先验前提（本轮实测，逐条都不是推断）**：
+
+1. **全文端点只认附件 key**：`/items/<父条目key>/fulltext` → **HTTP 404**（MCP 那个工具是自己在内部解析附件的）⇒ 读全文是两步，且**必须报告读了哪一个附件**——"读的是哪份文件"本身是证据。
+2. **全文检索回的是混合行**：同一 `qmode=everything` 查询 6 行 = 3 个 attachment（标题恰好是论文名）+ 2 个**标题为空**的 note + 1 个真条目 ⇒ 必须按父条目折叠，否则重复行与空标题。**且 API 没有任何"命中在哪"的字段**——skill 原先那句 `Matched in: attachment full text <key>` 是 **MCP 自己加的标注**，不是库说的话。
+3. **`?itemKey=a,b` 不是普通多取**：问 2 个 key，回 **6 行**（记录 + 它们的子条目）⇒ 响应必须按请求的 key 过滤，否则会把别人的子条目认成自己的。
+4. **全文没有分页**：一篇 17 页论文的正文 **76,908 字符**一次给完（MCP 版 54,443、旧版 79,900）⇒ 切片权必须在我们手里，否则必然被 pruner 掐头去尾丢中段。
+5. **写入门禁的粒度**：`authorize` 弹窗 → **单次** key + 一次性 `Zotero-Write-Token`，弹窗限 **5 次/分钟** ⇒ 每个 helper **一次调用最多一次写**。
+6. **分类的版本号几乎恒为 0**（实测：库里只有 §24 经 API 建的那个是 46，其余全 0；而条目是 567）⇒ **分类改名既无法用版本前置条件、也无法用复读比对来防并发**。`--rename` 因此**明说它没有陈旧保护**，而不是让输出暗示有一层不存在的保护；代价有界：该 patch 只发一个名字，不可能覆盖别的字段。
+7. **412 的语义不是靠写库试探出来的**：`zotero_mcp/_helpers.py:541` 写着 *"The item changed in Zotero since it was read (412)"*，而 `:539` 提醒**本地模式重载 401/412/428** ⇒ 所以设计成：**我们自己复读比版本**判定陈旧，412 只在版本**真的**变过时才报冲突。用"写一次试试"去验证写保护，正是会毁掉被保护对象的那个实验。
+8. **建分类的请求体取自同一份能工作的实现**：`[{"name": ..., "parentCollection": <key|false>}]`——**列表**形式，且**根分类必须显式 `false`**（不是省略、不是 null）。这种细节靠猜必错。
+9. **`note` 是可创建的 itemType**（`/api/itemTypes` 含 `note`），子笔记形状 `{itemType:'note', parentItem:<key>, note:<html>}`。
+10. **形状陷阱**：`collections` 单值时是**裸字符串**、根分类的 `parentCollection` 是 **`false`**（不是缺省）；`tags` 是 `[{tag}]`；`date` 是**自由文本**（`09/2019`，用 `slice(0,4)` 会得到 `09/2`）。
+
+**设计要点（三条都是"让未知变得无关"）**：
+
+- **`tags` 与 `collections` 一律发送整表**（先读现值 → 算目标全集 → 发全集）。补丁语义是**替换还是合并，本仓库没有实测**，而发整表在两种语义下都正确。
+- **陈旧判定用我们自己的复读比对**，版本前置条件只作第二道防线；这样"412 到底叫什么"不影响正确性。
+- **写后回读**并逐字段比对（标签按归一化后比），再报告成功——与 `zotero-write.mjs` 的既有约定一致。
+
+**代价与边界**：按 §30 的裁定，**丢掉** annotations 全套、`read_pdf_pages`、`export_bibliography`（CSL 格式化）、`get_recent`、BetterBibTeX key 查、`set_item_parent`、`advanced_search`；**删除类不做**。阅读阶梯的 "targeted passage" 一级改由 `--grep` 承担，并**已写进纪律文本**——§29 刚修过一次"点名一级却没有仪器"，不能在这里再犯。
+
+**契约（Revision 8）**：§6 两处纠正（预印本通道不提供全文；通道经**自带 helper** 到达而非经**行**），§5 的例子从"这样的行注册的写工具"收窄为"这样的行提供的写能力"。
+
+**护栏**：`preset-selftest` 的 `required row: mcp-zotero`、pin 断言、toolset 断言**三条退役**，换成**对两个通道的反向护栏**（`mcp-arxiv`/`mcp-zotero` 都不得再作为 MCP 行、组合里都不得再出现对应 server 规格）。`surface.md` 的 `zotero` 符号同样退场（权威符号集现在只有 8 个纪律），Notes 里两条通道说明合并成一条通则。
+
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs) · [`zotero-read.mjs`](../tools/zotero-read.mjs) · [`zotero-note.mjs`](../tools/zotero-note.mjs) · [`zotero-edit.mjs`](../tools/zotero-edit.mjs) · [`zotero-collection.mjs`](../tools/zotero-collection.mjs)（+ 各自 selftest）· 回改 [`zotero-write.mjs`](../tools/zotero-write.mjs) 与 [`zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) · [`cordis.patch.yml`](../cordis.patch.yml)（删行）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（检索／全文／阶梯／digest 四处点名 helper）· [`README.md`](../README.md) · [`surface.md`](../surface.md) · [`package.json`](../package.json) · `protocol.md`（Revision 8）。
+
+**教训（三条，都是可复用的）**：
+
+1. **不要用"写一次库"去验证"写保护"**。412 的语义是从一个能工作的实现源码里读到的；拿真实库去试，一旦前置条件不被执行就会**改掉正要保护的那条记录**。
+2. **两处缺陷是在"运行前重读自己刚写的代码"时抓到的**：`zotero-edit` 新建了一个 write gate 却从未 `open()`（每次 `--write` 都会失败）；`zotero-read` 用 `export { … } from` 转发归一化函数——**这种方式不会把符号绑进本地作用域**，而它正在调用它们，运行时必然是 `undefined`。写代码的最后一分钟重读一遍，比任何自测都便宜。
+3. **`Select-Object -First N` 会掐断管道**，PowerShell 会把被终止的进程的退出码报成 **0**。本轮我因此一度把"用法错误应退 2"读成 0，差点当成 bug 报出去。**给退出码取证时不要截断管道。**
+
