@@ -434,3 +434,48 @@ skill 里。
 
 **通用教训**：想在 MCP 工具面上省钱，**先看服务器有没有分组开关**（它决定能省多少），不要指望 DSH 侧按名字裁——那条路不存在。改任何一条 MCP 行之前，先用 `tools/mcp-toolsize.mjs` 量出常驻成本（见 §24 / §27 的数字）。
 
+## 29. 预印本通道改走自带 CLI helper，MCP 行不挂（2026-10-15）
+
+**决策**：`mcp-arxiv` 行**整个删掉**（不是 disable），该通道改由 [`tools/arxiv.mjs`](../tools/arxiv.mjs) 承担，纪律文本直接点名这个 helper。常驻成本从 **17,828 字符（≈4,952 token）/请求降到 0**。两条 MCP 行合计的 21,551 token/请求里，本轮兑现其中的 4,952；参考库行的 16,599 留待 Zotero 一轮。
+
+**先验前提（本轮实测，全部不是推断）**：
+
+1. **DSH 侧确实没有过滤点**（§28 复核）：`dsh-mcp-client` 里 grep `toolFilter|includeTools|excludeTools|enabledTools` → **0 命中**。所以"只留两个工具"在 MCP 路线上做不到，只能整行不挂。
+2. **上游 schema 贵得不成比例**：arXiv 19 工具 17,828 字符；参考库 35 工具 59,758 字符（平均 1,707 字符/工具）。按纪律文本圈出"真的会用"的 8 个参考库工具，**照抄上游 schema 仍要 17,272 字符（≈4.8k）**⇒ "瘦 MCP"若不重写描述，省不动。只有 CLI（常驻 0）是数量级的答案。
+3. **承重能力不在 MCP 里**：arXiv 官方 Atom API 直接可用（`cat:cs.CL AND abs:"retrieval augmented"` → **3,779** 命中，摘要与作者齐全）；Zotero 本地 API 自己就支持全文模式（`qmode=everything` **178** vs `titleCreatorYear` **2**）。
+4. **编码等价**：`URLSearchParams` 把 `:` 编成 `%3A`，返回 `total` 与字面冒号那次**同为 3779** ⇒ 不需要手搓 query string。
+5. **错误响应的形状（关键）**：无效查询回 **HTTP 400**、`max_results=40000` 回 **HTTP 500**（手册 3.1.1.2 写的是 400——上游文档第二次错），两种 body 都是 Atom feed、`totalResults=1`、**恰好一个哨兵 `<entry>`**（`<id>https://arxiv.org/api/errors</id>`，甚至带 `<author>arXiv api core</author>`）。⇒ 判错只能按**响应形状**，且任何"读第一个 `<entry>`"的解析都会**把故障打印成一篇论文**。
+6. **空结果 ≠ 失败**：`id_list=9999.99999` 回 HTTP 200 / `totalResults` 0 / **零个 entry**，必须与故障分开报。
+7. **静默改写**：`abs:"unclosed quote` **不报错**，被改写成 `abs:unclosed OR all:quote` 并照常返回结果（改写只在 feed 标题里可见）⇒ 回显 canonical query 是唯一能发现它的入口。
+8. **限流是成文的**：ToU 写明"每三秒一次请求、单连接"；helper 每次运行恰好发一个请求，多个 id 走一次 `id_list`。
+
+**代价与边界（不许被"省了 4.9k"盖住）**：
+
+- **失去预印本全文读取**：LaTeX 源（`get_paper_latex*`）与分段精读族（`get_paper_outline` / `read_paper_section` / `search_paper_text`）随行消失——从未被纪律使用，但那是唯一能"按章节精读而不烧上下文"的现成能力。⇒ **`protocol.md` §6 的 "preprint index — search and full text of preprints" 现在不成立**，契约轮（Revision 8）要改成 search + records。本轮**不动契约**，所以这处不一致是**已知且已登记**的，不是漏掉。
+- **失去 MCP 结果自带的 `content_warning`**（外部内容标记为不可信数据的机器标注）⇒ 改由常驻纪律 + skill 文本承担。
+- **顺带去掉一个失败模式**：`failOnStartupError: true` 下 uvx 解析失败会把**整个预设**标坏、新会话入口静默过滤掉它；CLI 路线没有这个模式。
+
+**顺带修掉一个此前就存在的假陈述**：阅读阶梯里 "structure / outline" 那一级**两个通道都没有仪器**——arXiv 的 outline 族随本轮消失，而参考库的 pdf outline 工具早在 §24 就被 `ZOTERO_MCP_TOOLSETS=none` 砍掉（实测 35 个工具名里没有 outline）。阶梯因此改成三级（metadata / targeted passage / full text）并写明为何缺这一级。**教训**：成文纪律点名的一级能力，也要回头核对它今天还有没有仪器。
+
+**落在何处**：[`tools/arxiv.mjs`](../tools/arxiv.mjs)（新）· [`tools/arxiv-selftest.mjs`](../tools/arxiv-selftest.mjs)（新，fixture 是逐字实测响应）· [`cordis.patch.yml`](../cordis.patch.yml)（删行，原地留"不要再加回来"的说明）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（**两条反向护栏**：不得再挂为 MCP 行、组合里不得再出现该 server 规格）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`package.json`](../package.json)（描述里的 "academic MCP pair" 不再成立）· [`surface.md`](../surface.md)（`arxiv` 不再是权威符号——权威集＝skill 名 + MCP `serverName`——改为"该通道不贡献符号"并说明原因）。
+
+**踩到的坑（可复用教训）**：
+
+1. **顶层 await + 动态 import 自身自测 ＝ ESM 循环等待**：`--selftest` 让 `main()`（挂在顶层 `await` 上）去 import 一个**反过来静态 import 本文件**的模块 ⇒ 自测体根本不执行，Node 只打一句 *unsettled top-level await* 并以 **13** 退出，把真实结果吞掉。仓库其它工具用顶层 await 没事，因为它们从不 import 自己的自测。修法：入口改 `main().catch(...)`；自测被 import 时不 `process.exit`，导出 `failedChecks` 由调用方定退出码。
+2. **不要打印没发出去的参数**：scope 行曾写 `sort …/descending`，而没传 `--sort` 时 `sortOrder` 根本没发。改成只描述真正发出去的参数（`describeSort`），并加断言钉住。
+3. **OneDrive 会动 mtime**：本工作区在 OneDrive 下，编辑工具"读取后才允许改"的观察窗会莫名其妙失效（同一轮刚读过就报文件已变）⇒ 重读后**立刻**改，不要隔几步。
+
+## 30. 参考库通道的范围裁定与写入门禁（2026-10-15，待实现）
+
+**决策**：参考库换成自带 helper 时做**五项**——检索（全文模式 + 分类/标签）、阅读（元数据 + children 找附件 + **我们自己切片**的全文）、笔记回写、新增/改名分类与归入分类、编辑条目字段与标签；**不做删除类**（条目/分类）。**全部写操作默认 dry-run**（与 `zotero-write.mjs` 一致），真写须显式 `--write`；编辑条目必须**读 version + `If-Unmodified-Since-Version`，冲突即整条拒绝**，不得静默覆盖。
+
+**先验前提（本轮实测）**：
+
+1. **全文端点没有分页**：`/items/<key>/fulltext` 回 `{content, indexedPages, totalPages}`，实测一篇 17 页论文正文 **76,908 字符**一次给完（旧服务器 79,900、MCP 的 `zotero_get_item_fulltext` 54,443）⇒ 切片权必须在我们手里，否则一定被 pruner 掐头去尾丢中段。
+2. **全文检索可用**：同一查询 `qmode=everything` **178** 命中 vs `qmode=titleCreatorYear` **2** 命中。
+3. **`note` 是可创建的 itemType** ✓（`/api/itemTypes` 含 `note`）⇒ 笔记回写可行。**这一项不是可选项**：`literature-recon` §7 要求"读完把 digest 写成条目上的笔记"，而今天唯一能做这件事的仪器是 MCP 的 `zotero_manage_note`——摘掉参考库行却不补这个 helper，会让一条成文纪律没有仪器。
+4. **版本前置条件两边都有**：本地 API 接受 `If-Unmodified-Since-Version`（**本仓库 `zotero-link-attachments.mjs:263/282` 已在用并实测通过**），而 MCP 那边也用了同一个头（`zotero_mcp/_helpers.py:390`）。⇒ **不能说 helper "更安全地写入"**；helper 的真实优势只有**默认 dry-run** 与**写后回读**两条。
+5. **形状**：分类 `{key,name,parentCollection,relations,version}`；条目读回带 `version` 字段与 `Last-Modified-Version` 响应头（实测 567 / 699）。
+
+**代价与边界**：删除类**故意不做**——误删在真实库里不可逆，所有者在应用里点两下比给 agent 一个删除按钮便宜。**待实现**：helper 集合（检索 / 阅读 / 笔记 / 分类 / 编辑）、纪律文本改写、删掉 `mcp-zotero` 行（届时 `preset-selftest` 的 pin 与 toolset 两条护栏要一并退役）、契约 Revision 8。
+
