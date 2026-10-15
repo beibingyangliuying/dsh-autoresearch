@@ -113,7 +113,21 @@ Fixed sections:
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
-- Search with `web_search` / `read_page` / `x_search`; prefer an academic MCP once one is available.
+- **Search the preprint index** with `{{presetTools}}/arxiv.mjs` — an absolute path, because this preset
+  ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. Give it
+  a query with `--search` (the index's own syntax: `ti:` `au:` `abs:` `cat:`, `AND` / `OR`, quoted
+  phrases) or identifiers with `--id`, and use `web_search` / `read_page` / `x_search` for everything
+  that is not a preprint record. Four properties of it are load-bearing:
+  - it makes **one** request per run, and the index allows one request every three seconds — never loop
+    it. Several ids ride one request: `--id 1706.03762 --id 2610.19549`.
+  - it sorts by **relevance** by default, which is **not** the web interface's date order. Pass
+    `--sort submittedDate` when recency is what you mean.
+  - **read the query it echoes back.** The index silently rewrites some malformed input — a measured
+    stray quote turned `abs:"unclosed` into `abs:unclosed OR all:quote`, a wider and different search
+    that still returned results. The echoed line is the only place that rewrite is visible.
+  - its output states `total` beside what it showed, so "10 shown" is never read as "10 exist". A
+    printed row is always a real record, because an upstream failure is refused rather than printed;
+    and `0 results` means the query was answered and matched nothing — a finding, not a failure.
 - **Search the library in full-text mode.** `zotero_search_items(query, qmode='everything')` looks in
   abstracts, notes and **attachment full text**; the default mode searches titles, creators and years
   only, so a paywalled full text already in the library looks like it does not exist. Measured: a word
@@ -139,14 +153,18 @@ Fixed sections:
 
   Then `read` `paper.json` with `offset`/`limit`, or `grep` it for a term. Use **`curl.exe`**, not
   `Invoke-WebRequest` — Zotero answers `HTTP/1.0` and the latter fails on it.
-- **Getting the actual PDF.** `download_paper` is misleadingly named: it does **not** save a PDF. It
-  fetches the paper's HTML text into the server's own store (measured: 38,255 characters, truncated
-  at 12,000 with a `next_start` cursor) and leaves no file behind. To keep the PDF itself:
+- **Getting a preprint's own text.** The preprint channel returns metadata and abstracts only — it has no
+  full-text reader. When a claim needs the body, take it from the cheapest source that actually has it:
+  the owner's library first, whose full-text search reaches a stored copy, then a free copy by URL. To
+  keep the PDF itself:
 
   ```powershell
   curl.exe -sL -o paper.pdf "https://arxiv.org/pdf/<arxivId>"
   # verify, or it is not a download: content-type application/pdf, a size in MB, magic bytes %PDF
   ```
+
+  The index's terms of use forbid serving its e-prints from our own servers; retrieving a copy in order
+  to read it is allowed, and that copy stays a local working file this preset never republishes.
 - **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, it refuses to create a duplicate of something already in the library, and it **never stores a key**: each write makes Zotero itself show the owner an Allow/Deny dialog. Propose the addition and let the owner approve it — never treat the approval as standing permission for the next one.
 
   ```powershell
@@ -158,11 +176,14 @@ Fixed sections:
 - **Read at the cheapest level that can answer the question.** Never load a full text to find one fact. The channels offer a ladder, and the discipline is to climb it in order:
 
   ```text
-  metadata / abstract   the item's metadata · the preprint abstract   the default starting point
-  structure / outline   the paper's outline                         locate the section
-  targeted passage      passage search · section read              take only what is needed
-  full text (last)      pull to a file, read by offset              only when reading through
+  metadata / abstract   the item's metadata · the preprint abstract      the default starting point
+  targeted passage      a page-range read of the item's attachment       take only what is needed
+  full text (last)      pull the whole text to a file, read by offset    only when reading through
   ```
+
+  Every rung here is backed by an instrument that exists. An outline/section rung is deliberately absent:
+  the tools that offered it left with the preprint MCP row, and the reference-library row's own outline
+  tools are off in its toolset configuration, so naming that rung would name something nothing can do.
 
   A full text pulled for one paragraph is context spent for nothing.
 - **Check the digest index before reading anything.** `research/literature/refs/` holds one line per reference already read (key · year · grade · tags · one-line digest). A hit means the reading is already done; a `B` line means only the abstract was read and the full text is still owed.

@@ -5,9 +5,11 @@
 #     routing to seven research-discipline skills.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
-#   - the academic MCP servers live HERE rather than in a profile-level bundle, so their
-#     tools are SCOPE-LOCAL: visible to this preset, and leaked into no other session. The Zotero
-#     row is pinned and its optional tool groups are off; its own comment carries the measurements.
+#   - the reference library's MCP row lives HERE rather than in a profile-level bundle, so its
+#     tools are SCOPE-LOCAL: visible to this preset, and leaked into no other session. It is pinned
+#     and its optional tool groups are off; its own comment carries the measurements. The preprint
+#     channel is NOT an MCP row any more - it ships as tools/arxiv.mjs instead, see #29 of
+#     docs/01_decisions.md.
 #   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
 #     code-review, ...), keeping only the ones this preset deliberately retains.
 # Design record: ../docs/00_overview.md (what it is) and ../docs/01_decisions.md (why).
@@ -224,22 +226,12 @@
             name: '@deepseek-ai/dsh-plugin-manager/tools'
             disabled: true
 
-          # ── academic MCP servers（scope-local：只在本预设可见）────────────────
-
-          - id: mcp-arxiv
-            name: '@deepseek-ai/dsh-mcp-client'
-            config:
-              serverName: arxiv
-              transport: stdio
-              command: uvx
-              # PINNED for the same reason the row below is: an unpinned `uvx` spec re-resolves on every
-              # start, so the surface an agent sees can change without anyone editing a setting. Measured
-              # 2026-10-15: 0.8.2 exposes 19 tools, the count recorded when this channel was chosen.
-              args:
-                - '--from'
-                - 'arxiv-mcp-server==0.8.2'
-                - arxiv-mcp-server
-              failOnStartupError: true
+          # ── the reference library MCP row（scope-local：只在本预设可见）─────────
+          # The preprint channel deliberately has NO row here any more. `mcp-arxiv` cost 17,828
+          # characters (~4.95k tokens) of prompt on EVERY request for 19 tools, and the disciplines
+          # used two of them; it is now tools/arxiv.mjs, named directly by the literature discipline,
+          # at zero resident cost. Do not add the row back: the preset's own self-test fails if it
+          # reappears (docs/01_decisions.md #29).
 
           - id: mcp-zotero
             name: '@deepseek-ai/dsh-mcp-client'
