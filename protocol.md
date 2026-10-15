@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 9.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 10.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 9 records how the filter covers a plugin that registers
+independent of any package version. Revision 10 records what authorizes a write into the reference
+library. The reference manager raises its dialog on every request for a key — the local API has no
+"this application is already trusted" path, so the answer "Always Allow" chooses the kind of key issued
+and never whether the owner is asked again — and this preset then discarded that lasting key when the
+process ended, so every run asked again. Measured on the owner's own profile: one helper's 26 lasting
+authorizations were 26 dialogs, 25 of them after the first "Always Allow". What was wrong was the
+discard, not the dialog. Revision 10 therefore records that a key the owner chose to make lasting is
+kept, partitioned by the server id it was granted for; that "Allow" covers exactly one write and is
+never written down; that a revocation reaches the tools as a rejected key and is answered by asking
+again; and it restates §5, §6, §8 and §9 accordingly, superseding the "per-write authorization" wording
+of Revision 7. Revision 9 records how the filter covers a plugin that registers
 after the preset activates: it is re-applied on every `tools/change`, the registry's own announcement
 that the available tool set changed. The pass it replaces listened on `agent/created`, which — measured
 against a real session — never reached this preset's row at all, so five tools of the configuration
@@ -214,9 +224,10 @@ list is to be treated. Everything above about tool visibility is unaffected.
 never reaches a tool registered by a row of this preset, a write-capable capability shipped by such a
 row is reachable by every agent of this preset, and no restriction call can remove it — the filter is
 the wrong instrument for that job and is not the one the contract relies on. The bound on such a
-capability is the contract itself: a write into the reference library needs `INV-EVID-3`'s authorization
-for that specific write, §9 forbids an assumed-standing one, and the preset states that policy in the
-agent's prompt rather than depending on the capability's absence.
+capability is the contract itself: a write into the reference library needs `INV-EVID-3`'s
+authorization, which the owner grants in the reference manager's own dialog and can revoke there, §9
+forbids an unattended or assumed one, and the preset states that policy in the agent's prompt rather
+than depending on the capability's absence.
 
 ## 6. External evidence channels
 
@@ -239,9 +250,13 @@ Three rules bound their use:
   index turns work it already holds into a false absence, and that absence is a statement about the
   query rather than about the library.
 - **The reference-library channel also carries writes, and they are bounded by the same gate.**
-  Adding, editing, filing or removing a record is a write, so it needs `INV-EVID-3`'s authorization for
-  that specific write and its read-back before it is reported; a standing authorization is outside the
-  contract. Which library operations exist is a property of the channel, not a permission.
+  Adding, editing, filing or removing a record is a write, so it needs `INV-EVID-3`'s authorization and
+  its read-back before it is reported. The authorization is the reference manager's, not this preset's:
+  "Allow" covers the one write and is spent by it, while "Always Allow" is a grant the tools keep for the
+  library it was given for, so the owner answers once per library rather than once per write, and revokes
+  it there when they want the asking back. A revoked grant reaches the tools as a rejected key, and they
+  ask again rather than retry a credential they no longer hold. Which library operations exist is a
+  property of the channel, not a permission.
 - **A read must say which file it read.** Full text is keyed by an attachment rather than by the record,
   and a record may carry several, so a reading states which one answered and what was not read. A
   channel that returns an empty text for an unindexed attachment, or a failure as if it were a record,
@@ -291,7 +306,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-DISC-3` | A delegated conclusion is not the parent's fact until the parent has read the artifact itself. | Verification and attribution must not collapse into one act. |
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
-| `INV-EVID-3` | A write into the reference library happens only after the owner authorizes that specific write, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
+| `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
 | `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper levels of the reading ladder cannot answer the question. | Context is the scarce resource of a research session; loading it is a spending decision, not a default. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
@@ -303,8 +318,11 @@ Every row must be falsifiable: a check must exist that can fail.
 - No resident, self-organizing band of agents with consensus voting. The preset is a workbench, not
   a research group simulation.
 - No automatic experiment orchestration: the preset provides the record, not a scheduler.
-- No unattended write-back into the reference library. A write happens only under a per-write
-  authorization from the owner, never as a background, bulk, or assumed-standing action.
+- No unattended write-back into the reference library: nothing writes while the owner is not the one who
+  asked for it. A write happens only under an authorization they granted in the reference manager — the
+  single write their "Allow" covers, or their standing grant for that library — never as a background
+  action, and never on the strength of a grant that was refused or has been revoked. A whole-library
+  migration is not a write this preset performs at all.
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.
