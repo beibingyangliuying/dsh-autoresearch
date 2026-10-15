@@ -70,6 +70,9 @@ node tools\isolation-selftest.mjs                      # 隔离的 deny 语义�
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
 node tools\doc-selftest.mjs                            # 契约/索引 的分工是否还成立
+node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
+node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
+node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
 ```
 
 ## 一条最容易被误解的设计
