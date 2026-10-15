@@ -182,6 +182,10 @@ node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the fil
 node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 
+# the session dumper: the scan descends to where transcripts live, and reads the preset a session
+# RAN rather than the value its own record carries (docs/01_decisions.md #26)
+node tools\dump-session-selftest.mjs
+
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
 # candidate's surface gets measured before anyone mounts it, and how the two rows were measured
 # before they were dropped (docs/01_decisions.md #24, #29, #31).

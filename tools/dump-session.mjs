@@ -5,9 +5,13 @@
 //
 // Usage:
 //   node tools/dump-session.mjs <sessionDir> [outFile]   decompress one session
-//   node tools/dump-session.mjs --scan <sessionsRoot>     list each session's EFFECTIVE agent preset
+//   node tools/dump-session.mjs --scan <sessionsRoot>     list each session's EFFECTIVE agent preset,
+//                                                        newest first. The root's children are
+//                                                        WORKSPACES and their sessions live one level
+//                                                        below them; the scan descends.
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { zstdDecompressSync } from 'node:zlib'
 
 const MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd])
@@ -46,6 +50,46 @@ function decompressAll(raw) {
   return { text: parts.join(''), frames: parts.length, failed }
 }
 
+/** Whether a directory holds a session transcript. */
+function hasTranscript(dir) {
+  try {
+    return readdirSync(dir).some((name) => name.endsWith('.zstd'))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * The session directories under a sessions root.
+ *
+ * A sessions root's children are WORKSPACE directories, and each of those holds one directory per
+ * session, which is where the transcript actually is. A scan that looked only at the root's own
+ * children therefore found nothing and printed `ERROR no .zstd transcript` for every workspace, which
+ * is what this did until 2026-10-15 - and the entry point the documents name for "which preset did
+ * each session run" is this scan. A workspace carrying a transcript itself is also accepted, so a
+ * layout that changes again degrades to "found fewer" rather than "found none".
+ *
+ * @param {string} root The sessions root, or one workspace directory under it.
+ * @returns {Array<{workspace: string, session: string, dir: string}>} Directories holding a transcript.
+ */
+export function sessionDirs(root) {
+  const found = []
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const dir = join(root, entry.name)
+    if (hasTranscript(dir)) {
+      found.push({ workspace: entry.name, session: entry.name, dir })
+      continue
+    }
+    for (const inner of readdirSync(dir, { withFileTypes: true })) {
+      if (inner.isDirectory() && hasTranscript(join(dir, inner.name))) {
+        found.push({ workspace: entry.name, session: inner.name, dir: join(dir, inner.name) })
+      }
+    }
+  }
+  return found
+}
+
 function transcriptPath(sessionDir) {
   const file = readdirSync(sessionDir).find((n) => n.endsWith('.zstd'))
   if (!file) throw new Error(`no .zstd transcript in ${sessionDir}`)
@@ -82,7 +126,7 @@ function parseHeader(text) {
  * @param {string} text The decompressed transcript.
  * @returns {{created: string|undefined, selected: string|undefined, selections: number, effective: string|undefined}}
  */
-function parsePresetFacts(text) {
+export function parsePresetFacts(text) {
   const created = parseHeader(text)?.agentPreset
   let selected
   let selections = 0
@@ -101,20 +145,18 @@ function parsePresetFacts(text) {
   return { created, selected, selections, effective: selected ?? created }
 }
 
-const mode = process.argv[2]
-const arg = process.argv[3]
-
-if (mode === '--scan') {
+/** List every session under a root, newest first, with the preset each one EFFECTIVELY ran. */
+function scan(root) {
   const rows = []
-  for (const entry of readdirSync(arg, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    const dir = join(arg, entry.name)
+  for (const { workspace, session, dir } of sessionDirs(root)) {
+    const label = `${workspace}/${session}`
     try {
-      const { file, full } = transcriptPath(dir)
+      const { full } = transcriptPath(dir)
       const { text, frames, failed } = decompressAll(readFileSync(full))
       const facts = parsePresetFacts(text)
+      const when = statSync(full).mtime
       rows.push({
-        session: entry.name,
+        session: label,
         preset: facts.effective ?? '(none)',
         created: facts.created ?? '(none)',
         selections: facts.selections,
@@ -123,29 +165,34 @@ if (mode === '--scan') {
         mb: (statSync(full).size / 1048576).toFixed(2),
         frames,
         bad: failed.length,
-        mtime: statSync(full).mtime.toISOString().slice(11, 19),
+        when,
+        at: `${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')} ${when.toTimeString().slice(0, 8)}`,
       })
     } catch (err) {
-      rows.push({ session: entry.name, preset: `ERROR ${err.message}` })
+      rows.push({ session: label, preset: `ERROR ${err.message}`, when: new Date(0), at: '?' })
     }
   }
-  rows.sort((a, b) => String(b.mtime ?? '').localeCompare(String(a.mtime ?? '')))
+  // Sorted on the real timestamp, not on the printed clock time: a scan spanning a day boundary would
+  // otherwise interleave days, which is how a stale session looks newer than a fresh one.
+  rows.sort((a, b) => b.when - a.when)
+  if (rows.length === 0) {
+    console.log(`no session transcript under ${root}`)
+    return
+  }
   for (const r of rows) {
     // The creation-time value is shown only when it differs, so the column answers "which preset ran"
     // first and keeps the trap visible without widening every row.
     const preset = r.created !== undefined && r.preset !== r.created ? `${r.preset} (created ${r.created})` : r.preset
     console.log(
-      `${r.mtime ?? '?'}  ${String(preset).padEnd(34)} depth=${r.depth ?? '?'} ${String(r.origin ?? '').padEnd(5)} ${String(r.mb ?? '?').padStart(6)}MB frames=${r.frames ?? '?'} bad=${r.bad ?? '?'}  ${r.session}`,
+      `${r.at}  ${String(preset).padEnd(34)} depth=${r.depth ?? '?'} ${String(r.origin ?? '').padEnd(5)} ${String(r.mb ?? '?').padStart(6)}MB frames=${r.frames ?? '?'} bad=${r.bad ?? '?'}  ${r.session}`,
     )
   }
-} else {
-  if (!mode || !existsSync(mode)) {
-    console.error('usage: node tools/dump-session.mjs <sessionDir> [outFile]')
-    console.error('       node tools/dump-session.mjs --scan <sessionsRoot>')
-    process.exit(2)
-  }
-  const { file, raw, text, frames, failed } = readTranscript(mode)
-  const target = arg ?? join(mode, 'decompressed.jsonl')
+}
+
+/** Decompress one session's transcript beside it, and report what it holds. */
+function dumpOne(sessionDir, outFile) {
+  const { file, raw, text, frames, failed } = readTranscript(sessionDir)
+  const target = outFile ?? join(sessionDir, 'decompressed.jsonl')
   writeFileSync(target, text, 'utf8')
 
   const keywords = [
@@ -169,4 +216,27 @@ if (mode === '--scan') {
   console.log(
     `preset    : ran=${facts.effective ?? '(none)'} created=${facts.created ?? '(none)'} selection-records=${facts.selections}`,
   )
+}
+
+// Only act when this file IS the command: the self-test imports `sessionDirs` and `parsePresetFacts`,
+// and an import must not scan or write anything.
+const isEntryPoint =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isEntryPoint) {
+  const mode = process.argv[2]
+  const arg = process.argv[3]
+  if (mode === '--scan') {
+    if (!arg || !existsSync(arg)) {
+      console.error('usage: node tools/dump-session.mjs --scan <sessionsRoot>')
+      process.exit(2)
+    }
+    scan(arg)
+  } else if (!mode || !existsSync(mode)) {
+    console.error('usage: node tools/dump-session.mjs <sessionDir> [outFile]')
+    console.error('       node tools/dump-session.mjs --scan <sessionsRoot>')
+    process.exit(2)
+  } else {
+    dumpOne(mode, arg)
+  }
 }
