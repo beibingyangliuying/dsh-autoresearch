@@ -614,3 +614,24 @@ skill 里。
 
 **落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。
 
+## 36. 发布 0.2.1，以及在发布复核里抓到的 checker 缺陷：一个通不过真路径的修法（2026-10-15）
+
+**发布内容**：契约 Revision 10 与随之的写闸门改动（见 §35）。版本 0.2.0 → **0.2.1**（独立提交 `776a4b7`），annotated tag **`v0.2.1`**（tag 对象 `18a2627`，其 `^{}` = `776a4b7`）。推送顺序照 §34：先推分支、再推 tag。
+
+**发布前按要求做的反向声明回扫抓到一处我自己写错的引用**：§35 把"脚本也不保存 key"记成 §11（实为 §12），并把 §21 列入"以逐写弹窗为前提"的条目（§21 的前提是闸门的**范围**，不是**粒度**）⇒ 单列提交 `2fee875` 修掉。一条指错地方的更正比没有更正更坏：下一位读者顺着它去找，发现旧话还立着，只会得出"更正本身错了"的结论。
+
+**从远端复核**（`release-check.mjs --tag v0.2.1`）：发布件声明 0.2.1 ✓、组合不挂任何 MCP 也不启动任何东西 ✓、两个通道所需 helper 全在发布包内 ✓。
+
+**本轮真正的教训：一个通过了自己自测的修法，在真实路径上什么也没修。**
+
+那次 `--tag` 打的是 `v0.2.1 -> 18a2627…`（**tag 对象**）对 `main -> 776a4b7…`，并据此打印 *"the branch head has moved past this tag"* —— 而 `refs/tags/v0.2.1^{}` 与 `refs/heads/main` 是**同一个 commit**。成因：`ls-remote` 对 annotated tag 回**两行**（tag 对象 + peeled commit），而代码 `.find()` 了第一行 ⇒ 拿**对象类型都不同**的两个 SHA 相比，annotated tag **永远**不可能相等 ⇒ **每逢 annotated 发布必然误报**。0.2.0 那次它"碰巧"说对了（main 后来确实前进），缺陷因此藏住；§34 记录的"手工核对"正是当年绕开它的方式。
+
+修的时候差点犯第二个错：只把"优先取 peeled 行"改好，离线自测**全绿**，而真实远端**照旧误报**——因为 `git ls-remote <remote> refs/tags/v0.2.1`（**精确 ref**）**根本不输出** peeled 行。⇒ 我那份夹具**比现实宽容**，把残废的修法放行了。补上第二半（查询显式加 `refs/tags/<t>^{}`）之后，两个方向都在真实远端验过：`v0.2.1`（tag 就是 main 头）不再报，`v0.2.0`（main 真的前进了）照报。
+
+**教训（两条）**：
+
+1. **比值之前先比对象类型。** 一个"绝不相等"的比较不会失败，它只会**一直说同一句话**——这种检查比没有检查更坏，因为它把谎话说成了证据。
+2. **夹具要比现实更苛刻，不能更宽容。** 只按"我希望命令给我什么"造夹具，就会漏掉"命令实际给什么"；这次的分界恰好在**查询本身**。⇒ 修检查时，先跑一次真命令，把它的实际输出抄下来当夹具。
+
+**落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（`tagRefQuery`／`taggedCommit`／`branchHead` 三个纯函数，修法为 `38e4529`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新增 [5] 八条，含"精确 ref 无 peeled 行"与"查询必须显式要 peeled"两条反向控制）· annotated tag `v0.2.1`。
+
