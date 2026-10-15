@@ -249,13 +249,17 @@ session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_de
 - **A preset's own rows are registered under the preset's scope.** A plugin mounted by a preset's
   standing composition contributes only to that preset — that is what lets the disciplines stay out
   of unrelated sessions, and it is also why some hooks behave differently here than in a host-level
-  plugin. Two observed cases: `agent/created` is dispatched before an agent is linked to its scope,
-  so a preset-scoped listener never receives it; `agent/pre-step`, `tools/result` and `session/event`
-  do arrive.
-- **A plugin that waits on a late service registers its tools after the preset activates.** The
-  isolation filter is computed at activation, so such a tool is not masked (the preset carries a
-  best-effort second pass, but it has not been observed to take effect). A plugin injecting
-  `settings` or `credentials` is the common case.
+  plugin. One observed case: a preset-scoped listener never receives `agent/created`, while
+  `agent/pre-step`, `tools/result` and `session/event` do arrive. Why that one is not delivered was
+  not established ([`docs/01_decisions.md`](docs/01_decisions.md) #33), so treat it as a measured
+  absence rather than as a statement about event ordering.
+- **A plugin that waits on a late service registers its tools after the preset activates.** That case
+  is covered: the filter is re-applied on every `tools/change`, the registry's own announcement that
+  the available tool set changed, so a tool registered after activation is masked as soon as it
+  appears. The configuration bundle is the measured instance — its five tools register one at a time,
+  and they were denied one by one, `config_restore` among them. Activation-time coverage is the
+  guarantee; the `tools/change` pass is what closes the late-registration window, and it runs only
+  when the deny set actually changes.
 - **Cloud sync breaks hash-anchored edits.** A sync client watching the workspace changes file
   timestamps underneath the editor, which the version guard reports as a stale read. Pause sync for
   the workspace.
