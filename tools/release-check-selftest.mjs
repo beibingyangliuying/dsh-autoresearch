@@ -11,11 +11,14 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  branchHead,
   bundleRowSpecs,
   codeLines,
   compositionProblems,
   documentedSelftests,
   exportProblems,
+  taggedCommit,
+  tagRefQuery,
   versionOfTag,
   versionProblems,
 } from './release-check.mjs'
@@ -95,6 +98,48 @@ check(
 check(
   documentedSelftests('node tools\\windows-selftest.mjs and node tools/posix-selftest.mjs', []).stale.length === 2,
   'both path separators are read',
+)
+
+console.log('\n[5] which commit a tag names')
+
+// The real shape of `git ls-remote origin refs/heads/main refs/tags/vX.Y.Z` for an ANNOTATED tag: the
+// tag object AND the commit it peels to. Comparing the first line that ends with the tag name put a tag
+// object's hash next to a branch head's commit hash, which never match - so the "main has moved past
+// this tag" note was printed one commit after v0.2.1 was published, when the two were the same commit.
+const tagObject = '18a2627ca7c23e26da31feefdccd5e750c00d09f'
+const released = '776a4b7041ab06d7dac17e4b5669f3e77d16b117'
+const movedOn = 'aaaabbbbccccddddeeeeffff0000111122223333'
+const refsFor = (branch, ...tagLines) => [`${branch}\trefs/heads/main`, ...tagLines].join('\n')
+const annotated = refsFor(released, `${tagObject}\trefs/tags/v0.2.1`, `${released}\trefs/tags/v0.2.1^{}`)
+const afterMovingOn = refsFor(movedOn, `${tagObject}\trefs/tags/v0.2.1`, `${released}\trefs/tags/v0.2.1^{}`)
+const lightweight = refsFor(released, `${released}\trefs/tags/v0.2.1`)
+
+check(
+  taggedCommit(annotated, 'v0.2.1') === branchHead(annotated),
+  'an annotated tag that names the branch head compares equal - this is what it got wrong',
+)
+check(taggedCommit(annotated, 'v0.2.1') !== tagObject, 'the tag OBJECT is not mistaken for the commit it names')
+check(taggedCommit(annotated, 'v0.2.1') === released, 'and it resolves to the peeled commit', String(taggedCommit(annotated, 'v0.2.1')))
+check(
+  taggedCommit(afterMovingOn, 'v0.2.1') !== branchHead(afterMovingOn),
+  'a branch that really did move past the tag is still reported - the check can fail',
+)
+check(taggedCommit(lightweight, 'v0.2.1') === branchHead(lightweight), 'a lightweight tag needs no peeling')
+check(taggedCommit('', 'v0.2.1') === undefined, 'output with no such ref yields nothing rather than throwing')
+
+// Why the query has to ASK for the peeled ref, rather than only prefer it when it happens to be there:
+// `git ls-remote <remote> refs/tags/v0.2.1` answers the tag object alone. A fixture that includes the
+// peeled line - as the one above does - certifies a fix that still fails on the real remote, which is
+// exactly what happened before this line existed.
+const exactRefOnly = refsFor(released, `${tagObject}\trefs/tags/v0.2.1`)
+check(
+  taggedCommit(exactRefOnly, 'v0.2.1') === tagObject,
+  'an exact-ref query carries no peeled line, so preferring one is not enough',
+)
+check(
+  tagRefQuery('v0.2.1').includes('refs/tags/v0.2.1^{}'),
+  'the ref query asks for the peeled commit - dropping it silently restores the false note',
+  tagRefQuery('v0.2.1').join(' '),
 )
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)

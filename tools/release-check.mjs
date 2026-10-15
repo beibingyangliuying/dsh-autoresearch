@@ -207,6 +207,60 @@ async function checkLocal() {
   return failures
 }
 
+/**
+ * The refs to ask `git ls-remote` for, in order to resolve a tag to its commit.
+ *
+ * The peeled form must be requested EXPLICITLY. `git ls-remote <remote> refs/tags/v0.2.1` answers only
+ * the tag object, so `taggedCommit` would fall back to a hash that can never equal a branch head - the
+ * false note would survive a fix that merely prefers the peeled line. Asking for `^{}` costs nothing:
+ * a lightweight tag simply has no such ref, and the fallback below covers it.
+ *
+ * @param {string} tag The tag name, e.g. `v0.2.1`.
+ * @returns {string[]} Arguments to hand `git ls-remote` after the remote name.
+ */
+export function tagRefQuery(tag) {
+  return ['refs/heads/main', `refs/tags/${tag}`, `refs/tags/${tag}^{}`]
+}
+
+/**
+ * The commit a tag names, out of `git ls-remote`'s output.
+ *
+ * An annotated tag answers TWO lines: the tag object, and the commit it peels to under `^{}`. Taking
+ * the first line that ends with the tag's own name therefore compared a tag object's hash against a
+ * branch head's commit hash - different kinds of object that can never be equal - so the note in
+ * `checkTag` fired on every annotated release, including one whose tag named the branch head exactly.
+ * It said the branch had moved past v0.2.1 while `refs/tags/v0.2.1^{}` and `refs/heads/main` were the
+ * same commit.
+ *
+ * @param {string} refs The stdout of `git ls-remote`, from a query that includes {@link tagRefQuery}'s.
+ * @param {string} tag The tag name, e.g. `v0.2.1`.
+ * @returns {string|undefined} The commit the tag names, or undefined when the output carries no such ref.
+ */
+export function taggedCommit(refs, tag) {
+  const hashAfter = (suffix) =>
+    String(refs)
+      .split('\n')
+      .filter(Boolean)
+      .find((line) => line.endsWith(suffix))
+      ?.split('\t')[0]
+  // A lightweight tag answers only the second form; an annotated one must be peeled to reach its commit.
+  return hashAfter(`refs/tags/${tag}^{}`) ?? hashAfter(`refs/tags/${tag}`)
+}
+
+/**
+ * The branch head commit out of the same `git ls-remote` output.
+ *
+ * @param {string} refs The stdout of `git ls-remote`.
+ * @returns {string|undefined} The commit `refs/heads/main` names.
+ */
+export function branchHead(refs) {
+  return String(refs)
+    .split('\n')
+    .filter(Boolean)
+    .find((line) => line.endsWith('refs/heads/main'))
+    ?.split('\t')[0]
+}
+
 async function checkTag(tag, repo) {
   console.log(`[${tag}] published package in ${repo}`)
   let failures = 0
@@ -238,10 +292,9 @@ async function checkTag(tag, repo) {
   }
   failures += report('every helper program the channels need is inside the published package', missing)
 
-  const refs = g(['ls-remote', 'origin', 'refs/heads/main', `refs/tags/${tag}`])
-  const lines = refs.split('\n').filter(Boolean)
-  const head = lines.find((line) => line.endsWith('refs/heads/main'))?.split('\t')[0]
-  const tagged = lines.find((line) => line.endsWith(`refs/tags/${tag}`))?.split('\t')[0]
+  const refs = g(['ls-remote', 'origin', ...tagRefQuery(tag)])
+  const head = branchHead(refs)
+  const tagged = taggedCommit(refs, tag)
   console.log(`  OK   ${tag} -> ${tagged ?? '(not fetched)'}, main -> ${head ?? '(not fetched)'}`)
   if (tagged !== undefined && head !== undefined && tagged !== head) {
     // Not a failure: main is allowed to move on after a release. It matters because "the fix is
