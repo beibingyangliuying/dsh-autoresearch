@@ -1,7 +1,7 @@
 {
   "name": "@beibingyangliuying/dsh-autoresearch-preset",
   "version": "0.1.0",
-  "description": "A domain-neutral research workbench for DSH: an agent preset, eight on-demand research disciplines, a reference-library MCP row plus a preprint-index helper, and a study scaffold.",
+  "description": "A domain-neutral research workbench for DSH: an agent preset, eight on-demand research disciplines, two external channels reached through shipped command-line helpers, and a study scaffold.",
   "license": "MIT",
   "dependencies": { "@deepseek-ai/schemastery": "^3.18.4" },
   "repository": { "type": "git", "url": "git+https://github.com/beibingyangliuying/dsh-autoresearch.git" },

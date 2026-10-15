@@ -2,8 +2,8 @@
 
 **Status: non-normative index.** The contract is [`protocol.md`](protocol.md), which wins on any
 conflict. The authoritative lists are the discipline front-matter under `skills/*/SKILL.md` and the
-`serverName` fields of the preset composition. This file answers one question only — *which name
-implements which concept*.
+`serverName` fields of the preset composition — of which there are currently none, because this preset
+mounts no MCP server. This file answers one question only — *which name implements which concept*.
 
 | Concept (protocol) | Symbol |
 | --- | --- |
@@ -16,16 +16,14 @@ implements which concept*.
 | Run discipline — a hypothesis becomes a card (§4) | `experiment-protocol` |
 | Synthesis discipline — several directions become one executable draft (§4) | `synthesis-plan` |
 | Preprint index — search the index, read one record by identifier (§6) | no symbol: a shipped helper program |
-| Local reference library — the owner's library, including paywalled full text (§6) | `zotero` |
+| Local reference library — the owner's library, including paywalled full text (§6) | no symbol: shipped helper programs |
 
 ## Notes
 
-- Each external channel reached through an **MCP row** exposes tools named `mcp__<server>__<tool>`; the
-  indexed symbol is the server name, and the prefix is derived from it.
-- A channel reached through a **shipped helper program** instead contributes no symbol, because this
-  index covers the names that exist in the tool namespace and the discipline names. The preprint index
-  is such a channel: the literature discipline names its helper directly, so there is no server to name
-  here. Which helper it is, is stated by that discipline rather than by this index.
+- **Both external channels are reached through shipped helper programs**, so neither contributes a
+  symbol: this index covers the names that exist in the tool namespace (`mcp__<server>__<tool>`) and the
+  discipline names. Which program implements which channel is stated by the disciplines that name them,
+  not here. A channel mounted as an MCP row would be indexed by its server name; this preset mounts none.
 - The composition's row identifiers are **not** part of this surface. They are internal wiring, they
   change for implementation reasons, and several of them are common English words that would collide
   with the contract's prose.

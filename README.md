@@ -108,14 +108,23 @@ rule is written into the helper and its self-test. It returns metadata and abstr
 the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
 ([`docs/01_decisions.md`](docs/01_decisions.md) #29).
 
-**What the reference-library channel can do.** Its server exposes collection management (create,
-rename, nest, delete), item add and update, notes, annotations and bibliography export, alongside
-search and full-text reading — and it reports that it cannot write at all until you authorize a write
-in the reference manager's own dialog. That dialog is the gate the contract names: each write needs its
-own approval, "Always Allow" is refused, and the rule is stated in the agent's prompt because a tool
-this preset's own row registers cannot be masked by the isolation filter. The row is pinned to one
-server version with its optional tool groups off, so the surface an agent sees cannot drift under a
-settings edit; [`docs/01_decisions.md`](docs/01_decisions.md) records the measurements behind both choices.
+**What the reference-library channel is.** Seven helper programs, not a server. `tools/zotero-read.mjs`
+reads — search, one record, an attachment's text in slices, the collection tree — and each kind of write
+has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest on one,
+`zotero-edit.mjs` changes its fields and tags, `zotero-collection.mjs` creates, renames and files,
+`zotero-link-attachments.mjs` turns stored PDFs into linked files. Together they replace an MCP row whose
+35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
+tools the disciplines call ([`docs/01_decisions.md`](docs/01_decisions.md) #31).
+
+Every write states the change first and is a **dry run until `--write` is given**; it carries the version
+the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
+wrote before reporting success. One invocation makes at most one write, because the reference manager's
+own dialog is the authorization — one per write, five a minute — and that dialog is the gate the contract
+names. "Always Allow" is the owner's choice there, never something the agent asks for, and no key is ever
+stored. Two things these tools say rather than hide: renaming a collection is attempted but was **not**
+measured to work through the local API, and a collection carries no usable version in this library, so a
+rename cannot be guarded the way an edit is. Deleting is deliberately not built — a mis-deletion in a real
+library is not reversible, and the application is two clicks away.
 
 ## Start a study
 
@@ -173,10 +182,12 @@ node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the fil
 node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 
-# MCP servers, without DSH (the row is pinned in the composition; probe the same pinned spec)
+# evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
+# candidate's surface gets measured before anyone mounts it, and how the two rows were measured
+# before they were dropped (docs/01_decisions.md #24, #29, #31).
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
-# what a server's tool schema costs per request, and which version answered
+# what a candidate server's tool schema would cost per request, and which version answered
 node tools\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # call one tool and keep the FULL result (mcp-probe truncates a result at 1500 characters)
