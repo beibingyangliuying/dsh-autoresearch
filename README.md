@@ -171,6 +171,9 @@ contact-bridge.js      configurable values -> system prompt
 preset-paths.js        where this package's own helper programs live, as an absolute path
 skills.js              registers the shipped disciplines into this preset's layer
 skills/                the on-demand disciplines, one <name>/SKILL.md each
+.agents/skills/        this repository's own maintenance skill: how to self-check and publish IT. It
+                       is not a discipline, it reaches only sessions opened in this checkout, and the
+                       preset's users never see it (skills.js reads skills/ alone)
 project-template/      the study scaffold, copied per study
 tools/                 self-tests, probes, the CLI helpers and the scaffolder
 docs/                  Chinese review aids and the frozen development log
@@ -206,6 +209,13 @@ node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
 # RAN rather than the value its own record carries (docs/01_decisions.md #26)
 node tools\dump-session-selftest.mjs
+
+# release check: what the working tree says, and what a NEW user would install. The second form reads
+# the PUBLISHED package at a tag - the local suite cannot see unpublished commits, which is how a
+# version that still mounted two MCP servers was publishable with everything green.
+node tools\release-check.mjs --local
+node tools\release-check.mjs --tag v0.2.0
+node tools\release-check-selftest.mjs      # its pure halves, offline, with negative controls
 
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
 # candidate's surface gets measured before anyone mounts it, and how the two rows were measured
