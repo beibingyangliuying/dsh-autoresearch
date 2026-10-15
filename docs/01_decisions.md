@@ -563,3 +563,21 @@ skill 里。
 2. **测试可以替一个从不运行的机制当替身。** `isolation-selftest` 原先驱动的是**模拟的** `agent/created` 处理器，绿了很久，而真实投递从未发生 ⇒ **"测试驱动的是什么事件"本身就是需要被验证的假设**（§26 是同一族的另一面：诊断工具的输出也要被验收）。
 3. **新自测特意断言"旧事件未被注册"。** 只写替代品、不写被替代的错误，等于邀请下一个人把它加回来——而它当年就是这样静静躺着的。
 
+## 34. 发布 0.2.0：本地全绿是关于工作树的断言，不是关于发布件的断言（2026-10-15）
+
+**背景**：[`README.md`](../README.md) 里那条 `dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch` 是给别人用的唯一安装入口，而 GitHub 上的 `main` 停在 `a800b9b`（2026-10-13），本地 HEAD 已领先 **47 个提交**。⇒ 那 47 个提交里的工作（两个通道改自带 helper、`preset-paths.js`、§32 与 §33 的修复）**对外都不存在**；照 README 安装的人拿到的仍是挂两个 `uvx` MCP 行、需要 Python 环境的旧版。**14 项本地自测全绿也看不见这件事**——它们读的都是工作树。
+
+**发布动作**：6 个提交（两处 P0 文档回扫修正、`contact-bridge.js` 的陈旧理由句、两轮去个人化、版本号独立提交）→ `package.json` 0.1.0→0.2.0 → annotated tag `v0.2.0` → 先推分支再推 tag。远端 head 与 tag 均已核对为同一提交。
+
+**从远端复核**（新增 [`tools/release-check.mjs --tag`](../tools/release-check.mjs)）：读 tag 上的 `package.json`（版本 0.2.0）、组合（`id: mcp-*` **0** 条、`command:` **0** 条、`uvx` **0** 次）、以及 5 个必需 helper 的状态（全 200）。**这是唯一能看见"别人到底装到什么"的检查**，因此它有一个 `--tag` 模式而不是只读本地。
+
+**代价与边界**：`--local` 把"工作树干净"当失败项——那是**打 tag 的前置条件**，不是开发每一步的条件；开发中途跑它会有这一条红，这是刻意的（一个永远绿的检查等于没有检查）。
+
+**教训（三条）**：
+
+1. **"本地全绿"是关于工作树的断言，不是关于发布件的断言。** 发布流程必须包含一次**从远端读**的检查，否则"我不知道远端落后多少"与"远端是对的"无法区分。
+2. **一个版本的"完成"包含它可被安装。** tag 与分支 head 不是一回事：发布后 main 继续前进是正常的，但"修复已经做了"与"该 release 含有此修复"是两句不同的话。
+3. **去个人化是发布动作的一部分。** 公开仓库里的测试 fixture、模板示例与设置页占位符都会泄露所有者的机器与领域；而 `docs/` 里**构成证据的量化值**（字符数、命中数、写入前后的 version）要留下——删了就把测量变成断言。
+
+**落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（新：`--local` / `--tag`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新：纯函数 + 反向对照，离线）· [`README.md`](../README.md)（Develop 的工具清单、Layout）· [`.agents/skills/preset-release/`](../.agents/skills/preset-release/SKILL.md)（新：本仓库自己的维护 skill——自检 → 发布 → 远端复核，**不进** `skills/`）· [`protocol.md`](../protocol.md)（Revision 3 条目补一句"被 Revision 9 取代"）
+
