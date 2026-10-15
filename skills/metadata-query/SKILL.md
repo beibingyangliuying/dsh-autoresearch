@@ -6,12 +6,14 @@ description: Look up bibliographic metadata — DOI, venue, year, authors, citat
 # metadata-query — bibliographic metadata over REST
 
 This skill does exactly one thing: turn "does this work exist, and what is its canonical record"
-into API-sourced facts. It is the cheap path for metadata, and it deliberately uses no MCP server:
+into API-sourced facts. It is the cheap path for metadata, and it deliberately uses no mounted server:
 OpenAlex and Crossref are plain REST APIs, so `web_fetch` is enough and there is one less process to
 break.
 
 **Scope boundary**: metadata is **not** full text and **not** evidence. Grading evidence is
-`literature-recon`'s job; reading full text is the arXiv or Zotero MCP's job.
+`literature-recon`'s job, and so is reading full text — through the helpers it names
+(`{{presetTools}}/arxiv.mjs` for the preprint index, `{{presetTools}}/zotero-read.mjs` for the owner's
+library). Neither is this skill's instrument.
 
 ## 1. When to use
 
@@ -133,7 +135,7 @@ If the study has its own convention, follow it.
 
 ## 9. Don't
 
-- Do not read or claim to read full text (arXiv MCP / Zotero own that)
+- Do not read or claim to read full text: the channel helpers named in §0 own that, not this skill
 - Do not assign evidence grades (that is `literature-recon`)
 - Do not cite a work you only saw in a search-result list
 - Do not build a citation graph beyond what the returned `referenced_works` / `reference` fields give

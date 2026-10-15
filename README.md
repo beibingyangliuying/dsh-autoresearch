@@ -55,9 +55,9 @@ subagent from it); the change applies to agents created after the switch, not to
 - **Disciplines on demand.** Eight written disciplines ship **inside the bundle** and the preset
   registers them itself, so they are available to its agents — and to no other session in the
   profile — with no copying step.
-- **Two external channels.** A preprint index (search, and a record by identifier — a helper program,
-  not a mounted server) and the owner's local reference library (including paywalled full text, through
-  a pinned MCP row). Both are optional; see [`protocol.md`](protocol.md) §6.
+- **Two external channels.** A preprint index and the owner's local reference library (including
+  paywalled full text). Both are **helper programs this preset ships**, not mounted servers, so an
+  unused channel costs nothing; see [`protocol.md`](protocol.md) §6.
 - **A study scaffold.** A per-study directory layout with the journals, pitfalls, rulings and
   literature indexes a study accumulates.
 
