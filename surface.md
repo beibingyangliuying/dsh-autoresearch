@@ -15,13 +15,17 @@ implements which concept*.
 | Handoff discipline — what a subagent must return (§4) | `subagent-contract` |
 | Run discipline — a hypothesis becomes a card (§4) | `experiment-protocol` |
 | Synthesis discipline — several directions become one executable draft (§4) | `synthesis-plan` |
-| Preprint index — search and full text of preprints (§6) | `arxiv` |
+| Preprint index — search the index, read one record by identifier (§6) | no symbol: a shipped helper program |
 | Local reference library — the owner's library, including paywalled full text (§6) | `zotero` |
 
 ## Notes
 
-- Each external channel exposes tools named `mcp__<server>__<tool>`; the indexed symbol is the
-  server name, and the prefix is derived from it.
+- Each external channel reached through an **MCP row** exposes tools named `mcp__<server>__<tool>`; the
+  indexed symbol is the server name, and the prefix is derived from it.
+- A channel reached through a **shipped helper program** instead contributes no symbol, because this
+  index covers the names that exist in the tool namespace and the discipline names. The preprint index
+  is such a channel: the literature discipline names its helper directly, so there is no server to name
+  here. Which helper it is, is stated by that discipline rather than by this index.
 - The composition's row identifiers are **not** part of this surface. They are internal wiring, they
   change for implementation reasons, and several of them are common English words that would collide
   with the contract's prose.

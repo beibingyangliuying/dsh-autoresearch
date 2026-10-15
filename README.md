@@ -55,9 +55,9 @@ subagent from it); the change applies to agents created after the switch, not to
 - **Disciplines on demand.** Eight written disciplines ship **inside the bundle** and the preset
   registers them itself, so they are available to its agents — and to no other session in the
   profile — with no copying step.
-- **Two external channels.** A preprint index (search plus full text, no credentials) and the
-  owner's local reference library (including paywalled full text). Both are optional; see
-  [`protocol.md`](protocol.md) §6.
+- **Two external channels.** A preprint index (search, and a record by identifier — a helper program,
+  not a mounted server) and the owner's local reference library (including paywalled full text, through
+  a pinned MCP row). Both are optional; see [`protocol.md`](protocol.md) §6.
 - **A study scaffold.** A per-study directory layout with the journals, pitfalls, rulings and
   literature indexes a study accumulates.
 
@@ -98,6 +98,16 @@ Two channels need setup outside this repository:
   API enabled (Settings → Advanced → allow other applications on this computer to communicate with it);
 - the preprint channel needs no credentials.
 
+**What the preprint channel is.** It is not a server this preset mounts. It is `tools/arxiv.mjs`, a
+read-only helper the literature discipline names directly, so it costs nothing on a request that does
+not use it: the 19-tool MCP row it replaced cost 17,828 characters (~4.95k tokens) of prompt on *every*
+request, and the disciplines called two of those tools. It searches the index, reads a record by
+identifier, holds the whole response to an abstract budget, and **refuses to print an upstream failure
+as if it were a record** — the API answers an error inside a normal-looking feed, which is why that
+rule is written into the helper and its self-test. It returns metadata and abstracts, not full text:
+the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
+([`docs/01_decisions.md`](docs/01_decisions.md) #29).
+
 **What the reference-library channel can do.** Its server exposes collection management (create,
 rename, nest, delete), item add and update, notes, annotations and bibliography export, alongside
 search and full-text reading — and it reports that it cannot write at all until you authorize a write
@@ -133,7 +143,7 @@ preset-paths.js        where this package's own helper programs live, as an abso
 skills.js              registers the shipped disciplines into this preset's layer
 skills/                the on-demand disciplines, one <name>/SKILL.md each
 project-template/      the study scaffold, copied per study
-tools/                 self-tests, probes and the scaffolder
+tools/                 self-tests, probes, the CLI helpers and the scaffolder
 docs/                  Chinese review aids and the frozen development log
 ```
 
@@ -153,8 +163,10 @@ node tools\client-selftest.mjs           # the browser half parses, loads and re
 # documentation structure (contract/index split)
 node tools\doc-selftest.mjs
 
-# MCP servers, without DSH (both rows are pinned in the composition; probe the same pinned spec)
-node tools\mcp-probe.mjs -- uvx --from 'arxiv-mcp-server==0.8.2' arxiv-mcp-server
+# the preprint channel helper: the query url, Atom parsing and error feeds, without the network
+node tools\arxiv-selftest.mjs
+
+# MCP servers, without DSH (the row is pinned in the composition; probe the same pinned spec)
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what a server's tool schema costs per request, and which version answered
