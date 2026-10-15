@@ -1,9 +1,14 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 8.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 9.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 8 records that the preset mounts **no MCP server at all**:
+independent of any package version. Revision 9 records how the filter covers a plugin that registers
+after the preset activates: it is re-applied on every `tools/change`, the registry's own announcement
+that the available tool set changed. The pass it replaces listened on `agent/created`, which — measured
+against a real session — never reached this preset's row at all, so five tools of the configuration
+bundle, one of them destructive, were reachable by every agent of this preset. §5 and its coverage
+block state the mechanism as it now is. Revision 8 records that the preset mounts **no MCP server at all**:
 both external channels are helper programs its own disciplines name, so a channel nobody uses costs
 nothing, and the surface an agent sees is no longer a function of someone else's tool list. It corrects
 §6 on two points — the preprint channel carries search and records rather than full text, and the
@@ -172,18 +177,20 @@ is a correctness requirement rather than a style choice:
 - The deny list is `(every name in the global view) − keep-list`, and it removes exactly the
   globals outside the keep-list without touching the preset's own tools. **The guarantee is
   activation-time coverage.**
-- A second pass also runs on every agent creation, where the global view is complete, as a
-  **best-effort** measure against a plugin that registers late. It is deliberately **not** part of
-  the guarantee: it depends on the event reaching a listener registered in the preset's own scope,
-  and that has not been confirmed at runtime.
+- A second pass runs on every `tools/change`: the registry announces a registration, an unregistration,
+  or a change to a scoped restriction, and the filter is recomputed and re-applied. It covers a plugin
+  that registers after the preset activates, which is the measured case — the configuration bundle
+  reads the `tools` service, so its five tools appear afterwards, one registration at a time. That
+  event is dispatched without scope filtering on purpose, which is what lets a listener here see it; a
+  pass tied to a scope-filtered event did not, and the coverage it appeared to give did not exist.
 
 The filter is applied only when there is something to deny. It is applied at preset activation — the
-guarantee — and again on every agent creation as a best-effort second pass:
+guarantee — and again whenever the registry announces that the tool set changed:
 
 ```text
-at preset activation:    deny = { n ∈ global view : n ∉ keep-list }   # the guarantee
-at every agent creation: deny = { n ∈ global view : n ∉ keep-list }   # best effort, unverified
-restrictions intersect, so the two passes compose; an empty pass is skipped
+at preset activation:   deny = { n ∈ global view : n ∉ keep-list }   # the guarantee
+at a tools/change:      deny = { n ∈ global view : n ∉ keep-list }   # covers a late registration
+restrictions intersect, so the passes compose; an unchanged set is not re-applied
 ```
 
 This is a deliberate failure mode. A filter naming an unregistered or scope-local tool is rejected by
