@@ -35,7 +35,7 @@ window.__ModuleLoader__.load({
         type: 'checkbox',
         key: 'autoLinkAttachments',
         label: 'Convert new stored PDFs into linked files',
-        hint: 'When on, a literature round that finds PDFs the library stores offers to convert them: the file is copied to the store directory below, and the library keeps only a link. The agent lists what it would convert first, and every write still needs your approval in the reference manager. Off by default.',
+        hint: 'When on, a literature round that finds PDFs the library stores offers to convert them: the file is copied to the store directory below, and the library keeps only a link. The agent lists what it would convert first, and those writes stay gated by your own authorization in the reference manager. Off by default.',
       },
       {
         key: 'attachmentStorePath',

@@ -100,7 +100,7 @@ export function attachmentLine(policy) {
     `Stored-PDF conversion is on for this preset, with the attachment store directory ${policy.storePath}.`,
     'When a literature round finds PDFs the reference library stores rather than links, report the list to the',
     'owner first; once the owner agrees, run `node tools/zotero-link-attachments.mjs --target <directory>` as a',
-    'dry run and then with `--write`. Every write still needs the owner\u2019s approval in the reference manager.',
+    'dry run and then with `--write`. Those writes are gated by the owner in the reference manager.',
   ].join(' ')
 }
 
@@ -123,18 +123,20 @@ export function helpersLine() {
  *
  * The write path belongs to helper programs this preset itself ships, and §5 of the contract states
  * why that matters: a capability a row of this preset provides cannot be hidden by the isolation
- * filter, so its bound is the contract rather than the capability's absence. The reference manager's
- * own authorization dialog is that bound, one per write, and its "Always Allow" answer would replace
- * it with a reusable, unscoped key stored on disk — the opposite of the gate every other write path
- * here uses.
+ * filter, so its bound is the contract rather than the capability's absence. §6 and Revision 10 state
+ * what that bound now is: the reference manager's dialog, answered once per library, and either answer
+ * is the owner's to give. The line below therefore tells the agent to state the change first and to
+ * leave the choice alone — asking for a lasting grant would be the agent campaigning for standing
+ * authority over the owner's curated evidence base, which §9 keeps out of this preset's scope.
  *
  * @returns {string} One sentence stating how a write to the reference library may be authorized.
  */
 export function writeGateLine() {
   return [
-    'Reference-library writes are gated by the owner: each write needs its own approval in the',
-    'reference manager dialog. State what you will write before asking for it, and never request or',
-    'choose "Always Allow".',
+    'Reference-library writes are gated by the owner: the reference manager asks once per library,',
+    '"Allow" covering that one write and "Always Allow" a grant this preset keeps for it, revocable',
+    'there — so a write may raise no dialog. Say what you will write before the dialog appears; never',
+    'ask for "Always Allow".',
   ].join(' ')
 }
 

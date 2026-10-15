@@ -237,10 +237,10 @@
           # every tool a server lists - so the only lever was not mounting the row.
           #
           # The channels are now tools/arxiv.mjs and tools/zotero-read.mjs / -write.mjs / -note.mjs /
-          # -edit.mjs / -collection.mjs / -link-attachments.mjs: zero resident cost, one write per
-          # invocation, and a dry run unless --write is given. Reference-library writes still pass
-          # through the reference manager's own Allow dialog, one per write, which is the gate
-          # protocol.md names; how a write may be authorized is stated by autoresearch-contact.
+          # -edit.mjs / -collection.mjs / -link-attachments.mjs: zero resident cost, one change per
+          # invocation, and a dry run unless --write is given. Reference-library writes are gated by
+          # the owner in the reference manager, once per library rather than once per write
+          # (protocol.md Revision 10); how a write may be authorized is stated by autoresearch-contact.
           #
           # Do NOT add either row back: tools/preset-selftest.mjs fails when one reappears. See #29
           # (preprint) and #31 (reference library) of docs/01_decisions.md for the measurements.

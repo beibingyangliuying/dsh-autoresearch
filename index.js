@@ -39,14 +39,14 @@ export const Config = schema === undefined
         .description(
           'Contact address for the metadata APIs (the "polite pool"): OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact. It is also passed to the reference-library writer. Leave empty to send none.',
         ),
-      // Off by default: turning this on leads to writes in the reference library, and every one of
-      // them still passes that application's own per-write authorization dialog.
+      // Off by default: turning this on leads to writes in the reference library, and they are gated
+      // by the owner in that application rather than by this preset.
       autoLinkAttachments: schema
         .boolean()
         .default(false)
         .volatile()
         .description(
-          'When on, a literature round offers to convert PDFs that the reference library stores into linked files under the directory below: the file is copied out, and the library keeps only a link to it. The agent reports the list first, and every write still needs your approval.',
+          'When on, a literature round offers to convert PDFs that the reference library stores into linked files under the directory below: the file is copied out, and the library keeps only a link to it. The agent reports the list first, and the writes stay gated by your own authorization in that application.',
         ),
       attachmentStorePath: schema
         .string()

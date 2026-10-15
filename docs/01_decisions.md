@@ -581,3 +581,36 @@ skill 里。
 
 **落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（新：`--local` / `--tag`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新：纯函数 + 反向对照，离线）· [`README.md`](../README.md)（Develop 的工具清单、Layout）· [`.agents/skills/preset-release/`](../.agents/skills/preset-release/SKILL.md)（新：本仓库自己的维护 skill——自检 → 发布 → 远端复核，**不进** `skills/`）· [`protocol.md`](../protocol.md)（Revision 3 条目补一句"被 Revision 9 取代"）
 
+## 35. Zotero 弹窗为什么"始终允许"也没用：留住授予是客户端的责任（契约 Revision 10，2026-10-15）
+
+**现象（junhan 提出）**：操作参考库的工具每次都要弹授权框；点了 **Always Allow** 之后照弹不误。
+
+**根因（两侧各一半，都取证到了）**：
+
+1. **Zotero 侧不记忆"这个应用已被信任"。** 上游 `server_localAPI.js` 的 `AuthorizeLocal._initInternal` 过完限流后**无条件**走 `_promptForAuthorization(appName)`（`:851`）；全文件里 `appName` 只出现在校验（`:837`）、弹窗（`:851`）、落档（`:860`）三处，**没有**"已授权过就跳过"的查询路径。⇒ `Always Allow` 改变的是**发哪种 key**（`remember: true` 的持久 key，见 `:1676` 与 `:171`），**不是**要不要弹窗。
+2. **本预设把持久 key 丢掉了。** [`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs) 的闸门把 key 放在闭包变量里（当时的注释明写 *nothing is ever stored, so the next run asks again*），而每个 helper 都是一次**新的 `node` 进程** ⇒ 进程一退 key 就丢 ⇒ 下次再问 ⇒ Zotero 只能再弹。
+
+**实测（所有者 profile 的 `localAPIKeys.json`）**：28 条、`remember=true` **27** 条；`DSH autoresearch collection tool` 一个 appName 就有 **26** 条且全为 `remember` ⇒ **26 次弹窗 = 26 次「始终允许」，其中 25 次发生在首次 Always Allow 之后**。所以"多点几次始终允许"不是收敛，而是**每点一次多攒一把永久、无作用域的写凭据**。
+
+**决策**：
+
+1. **持久 key 按 `Zotero-Server-ID` 保存并复用**（`%LOCALAPPDATA%\dsh-autoresearch\zotero-local-api-key.json`，`ZOTERO_LOCAL_KEY_STORE` 可覆盖）。分区是必须的：key 对别的实例毫无意义，换个数据目录应当重新弹窗，而不是报一串看不懂的 401。
+2. **`Allow` 仍然只覆盖一次写入、且绝不落盘**——所有者三个按钮的语义全部保留，工具不替他扩大授权。
+3. **撤销靠"发现"而不是"假定"**：被撤销或已消费的 key 由 Zotero 以 **401** 回绝（`:676-679`），闸门丢弃它并**重新问一次**，而不是抱着旧凭据失败到底。一次 `write()` 最多弹 **2** 次（第三次只可能意味着这个库在发它自己会拒的 key）。
+4. **五个 helper 统一 `appName`** 为 `DSH autoresearch preset`：授权是按**库**保存的一把，per-tool 名字只会让 Zotero 的清单显示"第一个恰好弹窗的工具"，比真相说得更少。
+5. **只靠 Zotero 的 Clear Write Authorizations 撤销**，不在工具里另做 `--forget`：后者不吊销 Zotero 侧那把，会留孤儿凭据。清理必须走那个按钮——Zotero 的 `_localAPIKeysCache` 在内存里，手删文件会被下一次 `_saveLocalAPIKeys()` 写回。
+
+**为何常驻行仍然写死"禁止索要 Always Allow"**：授权模型变了，但 **agent 索要常驻授权**仍然是把"所有者随时可收回的授权"变成"agent 争取到的权限"，§9 的 *no unattended write-back* 正是这个意思。常驻行因此改成**陈述新模型 + 要求先说明要写什么**，选择权留在所有者的对话框里。
+
+**否掉的替代方案**：
+
+- **读 Zotero 的 `localAPIKeys.json` 自取 key**：等于绕过闸门去偷凭据，无显式授权，还依赖别人的内部文件格式。
+- **会话级内存凭据**（不加常驻进程做不到）：独立 `node` 子进程拿不到父进程手里的 key，跨进程共享只有"落盘"或"加常驻 broker"两条路，后者与 §6「通道＝一个程序，不用就不花钱」冲突。
+- **把存量迁移也收进 API 侧**：常驻授权后批量在技术上可行了，但 §9 保留了"整库迁移不由本预设执行"——那是**另一个** revision 的事。
+
+**一并修掉的旧理由**：[`README.md`](../README.md) 原把"增量走 API／存量走 in-app"归因于"每次写入一个弹窗 + §9 禁止 bulk"；前者已不成立，归因改为只剩契约那条，**分工本身不变**。同族的陈旧表述还有 [`cordis.patch.yml`](../cordis.patch.yml)（"one per write"）、[`index.js`](../index.js)（"per-write authorization dialog"、"every write still needs your approval"）与 [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js)。
+
+**本条取代的旧前提**：§11（"脚本也不保存 key"）、§21／§22／§24（以"每次写入一个弹窗"为分工或禁止 Always Allow 的理由）——它们的**结论**多数仍然成立，但**前提**已由本条取代。
+
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。
+

@@ -1,10 +1,10 @@
 // In-app snippet: convert STORED attachments into linked files, run inside the reference manager.
 //
 // This is the bulk migration half. The agent-side tool (tools/zotero-link-attachments.mjs) covers
-// the increment - a few new PDFs per round - through the local API, where every write passes the
-// application's own authorization dialog. A bulk migration would need one dialog per write, which
-// is why this half exists: it runs in the application's own privileged context, at the owner's
-// keyboard, with no API authorization involved at all.
+// the increment - a few new PDFs per round - through the local API, under the owner's authorization.
+// A whole-library migration is not a write this preset performs at all (protocol.md section 9),
+// which is why this half exists: it runs in the application's own privileged context, at the
+// owner's keyboard, with no API authorization involved at all.
 //
 // HOW TO RUN
 //   1. Set CONFIG.targetDir below to the reference manager's linked-attachment base directory.

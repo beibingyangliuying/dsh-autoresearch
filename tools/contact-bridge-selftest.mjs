@@ -89,9 +89,11 @@ check(
 
 // The reference-library write gate: the write path ships with this preset's own helpers, so the
 // isolation filter cannot hide it (contract §5), and the prompt carries the rule instead.
-check(String(writeGateLine()).includes('Always Allow'), 'the write gate names the answer it forbids')
-check(/never/i.test(String(writeGateLine())), 'the write gate forbids it in so many words')
-check(/approval/i.test(String(writeGateLine())), 'the write gate states that each write needs approval')
+check(/gated by the owner/i.test(String(writeGateLine())), 'the write gate names the owner as the one who authorizes')
+check(/once per library/i.test(String(writeGateLine())), "the write gate states the grant's granularity, which is the library")
+check(/never\s+ask/i.test(String(writeGateLine())), 'the write gate forbids the agent asking for a standing grant')
+check(/Say what you will write/i.test(String(writeGateLine())), 'the write gate requires the change to be stated first')
+check(!/click Allow/i.test(String(writeGateLine())), 'the write gate does not steer the owner toward the single-write answer')
 
 // --- the registration and its freshness ---------------------------------------------------------
 

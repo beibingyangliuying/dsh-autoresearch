@@ -166,11 +166,11 @@ Fixed sections:
 
   The index's terms of use forbid serving its e-prints from our own servers; retrieving a copy in order
   to read it is allowed, and that copy stays a local working file this preset never republishes.
-- **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, it refuses to create a duplicate of something already in the library, and it **never stores a key**: each write makes Zotero itself show the owner an Allow/Deny dialog. Propose the addition and let the owner approve it — never treat the approval as standing permission for the next one.
+- **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, and it refuses to create a duplicate of something already in the library. Propose the addition and let the owner answer the reference manager's dialog: "Allow" covers that one write, and "Always Allow" is their standing grant for that library, which this preset keeps on their machine and they can revoke in the reference manager. Never ask for "Always Allow", and never treat a refused or revoked authorization as granted.
 
   ```powershell
   node "{{presetTools}}/zotero-write.mjs" --arxiv 1706.03762          # dry run: resolve, build, print
-  node "{{presetTools}}/zotero-write.mjs" --doi 10.xxxx/yyyy --write  # owner clicks Allow in Zotero
+  node "{{presetTools}}/zotero-write.mjs" --doi 10.xxxx/yyyy --write  # owner answers Zotero's dialog
   ```
 
   The write is only accepted once a **read-back** of the created item matches the title, DOI and creator count. Never report "added" from the POST response alone.
@@ -233,9 +233,9 @@ Two rules bound rung 3:
 
 - **Do not ask before the free rungs are exhausted and reported.** "I could not get it" with no record
   of what was tried is an instruction with extra steps.
-- **Receiving a file is not permission to store it.** Adding it to the library stays a per-write
-  authorization from the owner, and a file that arrived but was not read appears in neither the evidence
-  table nor the digest index.
+- **Receiving a file is not permission to store it.** Adding it to the library stays the owner's
+  authorization, given in the reference manager, and a file that arrived but was not read appears in
+  neither the evidence table nor the digest index.
 
 The lookup mechanics for rung 2 belong to `metadata-query`; retrieving and reading a copy belongs to the
 reading channels above. This skill decides which rung is reachable, and records what each answered.

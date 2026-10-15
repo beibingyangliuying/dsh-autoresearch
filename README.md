@@ -91,16 +91,16 @@ requires hand-editing a YAML file:
 - **Convert new stored PDFs** (`autoLinkAttachments`) — off by default. When on, a literature round
   offers to convert PDFs the reference library *stores* into linked files under the directory below:
   the file is copied out, and the library keeps only a link to it. The agent reports the list first,
-  and every write still needs your approval in the reference manager.
+  and those writes stay gated by your authorization in the reference manager.
 - **Attachment store directory** (`attachmentStorePath`) — where those converted PDFs go. Use the same
   directory the reference manager uses as its linked-attachment base: a file under it is recorded as a
   relative path and survives moving to another machine, while a file elsewhere is recorded as an
   absolute path. Empty disables the conversion.
 
-The conversion ships in two halves, and the split is deliberate: a bulk run through the local API
-would need one authorization dialog per write, and the contract forbids an unattended or bulk
-write-back into the reference library ([`protocol.md`](protocol.md) §9). So the increment goes through
-the API, and the bulk migration runs inside the application, at your keyboard.
+The conversion ships in two halves, and the split is deliberate: the contract forbids an unattended
+write-back into the reference library, and a whole-library migration is not a write this preset performs
+at all ([`protocol.md`](protocol.md) §9). So the increment goes through the API, where the owner
+authorizes it, and the bulk migration runs inside the application, at your keyboard.
 
 ```powershell
 # increment: a few new stored PDFs per round. Dry run unless --write is given.
@@ -115,7 +115,10 @@ tools\zotero-link-snippet.js
 Two channels need setup outside this repository:
 
 - the local reference library requires the desktop reference manager to be **running** with its local
-  API enabled (Settings → Advanced → allow other applications on this computer to communicate with it);
+  API enabled (Settings → Advanced → allow other applications on this computer to communicate with it).
+  The first write into a library raises that application's own authorization dialog, and answering
+  **Always Allow** keeps the grant for that library, so you are asked once rather than on every write —
+  the grant is stored under `%LOCALAPPDATA%\dsh-autoresearch` and is revoked from the same Settings pane;
 - the preprint channel needs no credentials.
 
 **What the preprint channel is.** It is not a server this preset mounts. It is `tools/arxiv.mjs`, a
@@ -138,10 +141,12 @@ tools the disciplines call ([`docs/01_decisions.md`](docs/01_decisions.md) #31).
 
 Every write states the change first and is a **dry run until `--write` is given**; it carries the version
 the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
-wrote before reporting success. One invocation makes at most one write, because the reference manager's
-own dialog is the authorization — one per write, five a minute — and that dialog is the gate the contract
-names. "Always Allow" is the owner's choice there, never something the agent asks for, and no key is ever
-stored. Two things these tools say rather than hide: renaming a collection is attempted but was **not**
+wrote before reporting success. One invocation states one change. The reference manager's own dialog is
+the gate the contract names: **"Allow"** authorizes that single write, and **"Always Allow"** is a
+standing grant this preset keeps for that library, so the asking follows the library rather than the
+write. The owner revokes a grant at any time in the reference manager's settings; a refused or revoked
+grant is never treated as granted; and the agent never asks for "Always Allow" — that answer is the
+owner's to give. Two things these tools say rather than hide: renaming a collection is attempted but was **not**
 measured to work through the local API, and a collection carries no usable version in this library, so a
 rename cannot be guarded the way an edit is. Deleting is deliberately not built — a mis-deletion in a real
 library is not reversible, and the application is two clicks away.
