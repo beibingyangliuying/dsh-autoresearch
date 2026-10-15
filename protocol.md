@@ -1,9 +1,15 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 7.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 8.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 7 adds `INV-HELPER-1`: a path this preset hands an agent
+independent of any package version. Revision 8 records that the preset mounts **no MCP server at all**:
+both external channels are helper programs its own disciplines name, so a channel nobody uses costs
+nothing, and the surface an agent sees is no longer a function of someone else's tool list. It corrects
+§6 on two points — the preprint channel carries search and records rather than full text, and the
+channels are reached through the preset's own helpers rather than through rows — and it narrows §5's
+example accordingly, since the capability it bounds is now shipped as a program rather than registered
+as a tool. Revision 7 adds `INV-HELPER-1`: a path this preset hands an agent
 for its own helper programs must resolve from the agent's working directory, because a study workspace
 carries no copy of them and a path relative to this repository therefore names nothing there. It also
 records that the reference-library channel now serves write-capable tools; their use stays bounded by
@@ -198,19 +204,19 @@ than a defect a row can correct, and the resident discipline states how an entry
 list is to be treated. Everything above about tool visibility is unaffected.
 
 **A consequence of the same rule: a capability this preset ships cannot be masked.** Because masking
-never reaches a tool registered by a row of this preset, a write-capable tool vector shipped by such a
+never reaches a tool registered by a row of this preset, a write-capable capability shipped by such a
 row is reachable by every agent of this preset, and no restriction call can remove it — the filter is
-the wrong instrument for that job and is not the one the contract relies on. The bound on such a tool is
-the contract itself: a write into the reference library needs `INV-EVID-3`'s authorization for that
-specific write, §9 forbids an assumed-standing one, and the preset states that policy in the agent's
-prompt rather than depending on the tool's absence.
+the wrong instrument for that job and is not the one the contract relies on. The bound on such a
+capability is the contract itself: a write into the reference library needs `INV-EVID-3`'s authorization
+for that specific write, §9 forbids an assumed-standing one, and the preset states that policy in the
+agent's prompt rather than depending on the capability's absence.
 
 ## 6. External evidence channels
 
 The preset reaches literature through three kinds of channel, and they are not interchangeable:
 
 ```text
-preprint index        search and full text of preprints; no credentials
+preprint index        search and records of preprints - metadata and abstracts; no credentials
 local reference lib   the study owner's own library, searchable by attachment full text; includes the
                       full text of paywalled works
 bibliographic REST    identifiers, venues, years, counts — metadata only, never evidence
@@ -225,13 +231,19 @@ Three rules bound their use:
 - **The owner's library is searched by full text, not only by metadata.** A library read as a title
   index turns work it already holds into a false absence, and that absence is a statement about the
   query rather than about the library.
-- **The reference-library channel also carries write tools, and they are bounded by the same gate.**
-  Adding, editing, filing or deleting a record is a write, so it needs `INV-EVID-3`'s authorization for
+- **The reference-library channel also carries writes, and they are bounded by the same gate.**
+  Adding, editing, filing or removing a record is a write, so it needs `INV-EVID-3`'s authorization for
   that specific write and its read-back before it is reported; a standing authorization is outside the
   contract. Which library operations exist is a property of the channel, not a permission.
+- **A read must say which file it read.** Full text is keyed by an attachment rather than by the record,
+  and a record may carry several, so a reading states which one answered and what was not read. A
+  channel that returns an empty text for an unindexed attachment, or a failure as if it were a record,
+  is reporting about itself rather than about the work.
 
-The channels are reached through the preset's own rows, never through a profile-level mount, so that
-enabling a research channel cannot change what an unrelated session can do.
+The channels are reached through **helper programs this preset itself ships and its disciplines name**,
+never through a profile-level mount, so that enabling a research channel cannot change what an unrelated
+session can do. A channel is therefore not a set of tools the harness registers on the preset's behalf:
+it is a program the agent runs, which is why an unused channel costs nothing on a request.
 
 ## 7. The study scaffold
 
