@@ -610,7 +610,7 @@ skill 里。
 
 **一并修掉的旧理由**：[`README.md`](../README.md) 原把"增量走 API／存量走 in-app"归因于"每次写入一个弹窗 + §9 禁止 bulk"；前者已不成立，归因改为只剩契约那条，**分工本身不变**。同族的陈旧表述还有 [`cordis.patch.yml`](../cordis.patch.yml)（"one per write"）、[`index.js`](../index.js)（"per-write authorization dialog"、"every write still needs your approval"）与 [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js)。
 
-**本条取代的旧前提**：§11（"脚本也不保存 key"）、§21／§22／§24（以"每次写入一个弹窗"为分工或禁止 Always Allow 的理由）——它们的**结论**多数仍然成立，但**前提**已由本条取代。
+**本条取代的旧前提**：§11 与 §12（“key 单次有效且不落盘”、“脚本也不保存 key”）、§21（“库写入的闸门不变：Zotero 原生逐次授权”）、§22（以“每次写入一个弹窗”为分工理由）、§24（以“逐次授权”为禁止 Always Allow 的理由）——它们的**结论**多数仍然成立，但**前提**已由本条取代。
 
 **落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。
 
