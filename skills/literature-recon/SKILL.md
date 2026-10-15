@@ -128,31 +128,32 @@ Fixed sections:
   - its output states `total` beside what it showed, so "10 shown" is never read as "10 exist". A
     printed row is always a real record, because an upstream failure is refused rather than printed;
     and `0 results` means the query was answered and matched nothing — a finding, not a failure.
-- **Search the library in full-text mode.** `zotero_search_items(query, qmode='everything')` looks in
-  abstracts, notes and **attachment full text**; the default mode searches titles, creators and years
-  only, so a paywalled full text already in the library looks like it does not exist. Measured: a word
-  that occurred only in a paper's body returned `Matched in: attachment full text <key>` for both a
-  stored and a linked PDF. A hit gives the parent item key — then climb the reading ladder below.
+- **Search the library in full-text mode.** `{{presetTools}}/zotero-read.mjs --search "<query>"` defaults
+  to the mode that matters: `qmode=everything` looks in abstracts, notes and **attachment full text**,
+  while the library's own default searches titles, creators and years only — so a paywalled paper the
+  owner already holds looks absent. Measured on one query: **177 hits under `everything` against 2**
+  under `titleCreatorYear`. The tool prints the mode it used, so a report can say which one answered.
+  Expect a MIX of rows: an attachment or a note that matched *inside* a record, and records that matched
+  by metadata. The tool collapses them onto the record and states what matched, so one paper is one line;
+  a hit gives the record key, and the ladder below says where to go from there.
 - **A source may enter the evidence table only if a page or abstract was actually retrieved.** Literature from memory does not count.
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
-- **Reading a long full text without destroying the context.** `zotero_get_item_fulltext` still returns
-  more than a prompt should hold: measured on the pinned server, one real paper came back as **54,443**
-  characters (~13k tokens; the response caps at 10 pages by default), against 79,900 characters from the
-  previous server for the same item. Both are far above this preset's tool-result pruner threshold
-  (8,192 characters), which keeps only the head and tail and silently drops the middle. The server's own
-  header suggests `zotero_semantic_search`; that does **not** apply here — the `[semantic]` extra is not
-  installed, so the tool only reports the missing dependency. For anything long, pull the text to a file
-  through Zotero's local API and read it by offset (recipe verified 2026-10-11):
+- **Reading a long full text without destroying the context.** The library answers with an attachment's
+  whole indexed text in one response — measured **76,908 characters** for a 17-page paper — which is far
+  above this preset's tool-result pruner threshold (8,192 characters, which keeps the head and the tail
+  and silently drops the middle). Read it in slices, and let the tool do the arithmetic:
 
   ```powershell
-  # 1. find the attachment key: data.itemType=attachment, data.contentType=application/pdf
-  curl.exe -s "http://127.0.0.1:23119/api/users/0/items/<parentKey>/children?format=json" -o children.json
-  # 2. save the full text; the JSON shape is {content, indexedPages, totalPages}
-  curl.exe -s "http://127.0.0.1:23119/api/users/0/items/<attachmentKey>/fulltext?format=json" -o paper.json
+  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --limit 12000
+  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --offset 12000    # the first slice names this
+  node "{{presetTools}}/zotero-read.mjs" --fulltext 85ZCTB6Z --grep "seismic demand"
   ```
 
-  Then `read` `paper.json` with `offset`/`limit`, or `grep` it for a term. Use **`curl.exe`**, not
-  `Invoke-WebRequest` — Zotero answers `HTTP/1.0` and the latter fails on it.
+  Two facts it states rather than hides. Full text is keyed by the **attachment**, not by the record, so
+  it lists the children, reads the PDF in preference to an HTML snapshot, and says **which** attachment
+  it read — because which file was read is part of the evidence. And a record whose attachment the
+  library has not indexed says so, rather than looking like a record with no text. If you ever call the
+  local API by hand instead, use `curl.exe`: it answers `HTTP/1.0`, and `Invoke-WebRequest` fails on it.
 - **Getting a preprint's own text.** The preprint channel returns metadata and abstracts only — it has no
   full-text reader. When a claim needs the body, take it from the cheapest source that actually has it:
   the owner's library first, whose full-text search reaches a stored copy, then a free copy by URL. To
@@ -181,13 +182,28 @@ Fixed sections:
   full text (last)      pull the whole text to a file, read by offset    only when reading through
   ```
 
-  Every rung here is backed by an instrument that exists. An outline/section rung is deliberately absent:
-  the tools that offered it left with the preprint MCP row, and the reference-library row's own outline
-  tools are off in its toolset configuration, so naming that rung would name something nothing can do.
+  Every rung here is backed by an instrument this preset ships. A **structure / outline** rung is
+  deliberately absent: nothing in the toolchain offers one, and naming a rung nothing can climb is how a
+  written discipline ends up with no instrument. The passage rung is reached by content instead —
+  `--grep` locates the term and the tool reports the passages around it.
 
   A full text pulled for one paragraph is context spent for nothing.
 - **Check the digest index before reading anything.** `research/literature/refs/` holds one line per reference already read (key · year · grade · tags · one-line digest). A hit means the reading is already done; a `B` line means only the abstract was read and the full text is still owed.
-- **After reading, leave a digest behind.** Write the durable digest as a **note on the library item** (a child item, so it travels with the library and shows up in the library's own UI), tag the item with its read state, and append one line to the digest index. Without this step the next round pays the same reading cost again.
+- **After reading, leave a digest behind.** Write the durable digest as a **note on the library item**, so
+  it travels with the library and appears in the library's own UI, and tag the item with its read state.
+  Both are one write each, and each is a dry run until you add `--write`; the reference manager asks the
+  owner to Allow every write separately.
+
+  ```powershell
+  node "{{presetTools}}/zotero-note.mjs" --item 85ZCTB6Z --text "<p>Read 3: the demand correlation is the load-bearing assumption.</p>"          # dry run
+  node "{{presetTools}}/zotero-note.mjs" --item 85ZCTB6Z --text "<p>Read 3: the demand correlation is the load-bearing assumption.</p>" --write
+  node "{{presetTools}}/zotero-edit.mjs" --item 85ZCTB6Z --add-tag /done --remove-tag /unread --write
+  ```
+
+  The note tool appends to the one note on a record that carries its marker, and creates that note when
+  there is none — a note **without** the marker is never touched, so someone else's note stays theirs.
+  Then append one line to the digest index. Without this step the next round pays the same reading cost
+  again.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.
 - Do not fill in unread passages to make the note look complete.
 
