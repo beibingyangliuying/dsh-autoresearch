@@ -232,7 +232,12 @@
               serverName: arxiv
               transport: stdio
               command: uvx
+              # PINNED for the same reason the row below is: an unpinned `uvx` spec re-resolves on every
+              # start, so the surface an agent sees can change without anyone editing a setting. Measured
+              # 2026-10-15: 0.8.2 exposes 19 tools, the count recorded when this channel was chosen.
               args:
+                - '--from'
+                - 'arxiv-mcp-server==0.8.2'
                 - arxiv-mcp-server
               failOnStartupError: true
 
