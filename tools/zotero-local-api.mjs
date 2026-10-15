@@ -146,6 +146,22 @@ export async function readCollection(key) {
 }
 
 /**
+ * Whether the library accepted a write.
+ *
+ * ANY 2xx is acceptance. A `PATCH` answers **204 No Content** when it succeeds - measured on the first
+ * real write this preset ever made, 2026-10-15 - and treating 200 as the only success reported a
+ * completed write as "the library refused it", which is the worst thing a write tool can say: a false
+ * statement about whether the owner's library changed. A success therefore carries no body and the
+ * read-back is what proves what happened.
+ *
+ * @param {number} status The HTTP status the library answered with.
+ * @returns {boolean} True for 2xx.
+ */
+export function isWriteAccepted(status) {
+  return status >= 200 && status < 300
+}
+
+/**
  * Read, refuse a stale change, patch, read back.
  *
  * The staleness check is OURS rather than the library's: the change is refused when the record's
@@ -181,10 +197,10 @@ async function applyPatch({ gate, path, readCurrent, patch, apply }) {
       after: null,
     }
   }
-  if (res.status !== 200) {
+  if (!isWriteAccepted(res.status)) {
     return { applied: false, conflict: false, status: res.status, detail: res.text.slice(0, 300), before: fresh, after: null }
   }
-  return { applied: true, conflict: false, status: 200, detail: '', before, after: await readCurrent() }
+  return { applied: true, conflict: false, status: res.status, detail: '', before, after: await readCurrent() }
 }
 
 /** One version-guarded change to one item. */

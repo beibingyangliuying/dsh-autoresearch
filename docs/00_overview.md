@@ -76,6 +76,7 @@ node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段�
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）
 node tools\zotero-note-selftest.mjs                    # 笔记：哪条是我们的 / 追加不覆盖（不连库）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
+node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写（不连库）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
 ```
 

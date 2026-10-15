@@ -181,6 +181,7 @@ node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, t
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
 node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
+node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
 # RAN rather than the value its own record carries (docs/01_decisions.md #26)
