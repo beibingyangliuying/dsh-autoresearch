@@ -153,8 +153,8 @@ node tools\client-selftest.mjs           # the browser half parses, loads and re
 # documentation structure (contract/index split)
 node tools\doc-selftest.mjs
 
-# MCP servers, without DSH
-node tools\mcp-probe.mjs -- uvx arxiv-mcp-server
+# MCP servers, without DSH (both rows are pinned in the composition; probe the same pinned spec)
+node tools\mcp-probe.mjs -- uvx --from 'arxiv-mcp-server==0.8.2' arxiv-mcp-server
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what a server's tool schema costs per request, and which version answered

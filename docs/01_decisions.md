@@ -403,3 +403,15 @@ skill 里。
 
 **方法论教训**：**诊断工具的输出本身也要验收**。当"工具说 X"与"我手里有 Y 的直接证据"冲突时，先怀疑工具读的是**哪一条记录**。
 
+## 27. 预印本通道同样 pin 版本（2026-10-15）
+
+**决策**：`mcp-arxiv` 从裸 `uvx arxiv-mcp-server` 改为 `uvx --from 'arxiv-mcp-server==0.8.2' arxiv-mcp-server`，与 §24 的参考库行一致；`preset-selftest` 的 pin 护栏从"只查 zotero 行"改为**逐行**检查两条 MCP 行。
+
+**先验前提（实测）**：正在运行的进程用的是缓存环境 `c0ArwNvW2cUEIUAH`，其中 `arxiv_mcp_server-0.8.2.dist-info` ⇒ 实际版本 **0.8.2**；另做一次全新 `uvx --from arxiv-mcp-server` 解析，结果同为 **0.8.2**（即上游当前最新版就是这个），且工具数 **19**，与当初选定该通道时记录的数字一致 ⇒ **今天没有漂移**，pin 是为了让明天的漂移不会静默发生。该行常驻成本实测 **17,828 字符 ≈ 5.0k token**（`tools/mcp-toolsize.mjs`）——它与参考库行的 ~16.6k 合起来，是本预设最大的两项常驻开销，改任何一条都必须先看这个数字。
+
+**理由（与 §24 同源）**：不 pin 的 `uvx` 规格**每次启动重新解析**，工具面会在没人改配置的情况下变化；而本预设的纪律文本按名字引用过具体工具，文档里的成本与工具数也都按实测写死。
+
+**代价与边界**：pin 之后不再自动获得上游新能力与新工具；升级必须是一次显式动作（改 pin 值 → 跑 `tools/mcp-toolsize.mjs` 复核工具面 → 同步纪律文本 → 重启宿主，见 §25）。两条 MCP 行共用同一条护栏，静默退回未 pin 会 FAIL。
+
+**落在何处**：[`cordis.patch.yml`](../cordis.patch.yml)（`mcp-arxiv` 行 + 行内注释）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（逐行 pin 护栏）· [`README.md`](../README.md)（探针命令改用 pinned 规格）。
+
