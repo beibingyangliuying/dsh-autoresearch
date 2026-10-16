@@ -131,11 +131,13 @@ rule is written into the helper and its self-test. It returns metadata and abstr
 the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
 ([`docs/01_decisions.md`](docs/01_decisions.md) #29).
 
-**What the reference-library channel is.** Seven helper programs, not a server. `tools/zotero-read.mjs`
-reads — search, one record, an attachment's text in slices, the collection tree — and each kind of write
-has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest on one,
-`zotero-edit.mjs` changes its fields and tags, `zotero-collection.mjs` creates, renames and files,
-`zotero-link-attachments.mjs` turns stored PDFs into linked files. Together they replace an MCP row whose
+**What the reference-library channel is.** Eight helper programs, not a server. `tools/zotero-read.mjs`
+reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
+each kind of write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
+on one, `zotero-section-note.mjs` leaves one explanation note per method section (and repairs an older
+note's damaged formula delimiters, mechanically and only), `zotero-edit.mjs` changes its fields and tags,
+`zotero-collection.mjs` creates, renames and files, `zotero-link-attachments.mjs` turns stored PDFs into
+linked files. Together they replace an MCP row whose
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
 tools the disciplines call ([`docs/01_decisions.md`](docs/01_decisions.md) #31).
 
@@ -208,6 +210,7 @@ node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment ch
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
 node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
+node tools\zotero-section-note-selftest.mjs  # the section a note claims, and the mechanical repair
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 

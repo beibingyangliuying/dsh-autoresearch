@@ -217,7 +217,7 @@ export function findPassages(content, term, { window = 200, max = 20 } = {}) {
 
 const USAGE =
   'usage: node tools/zotero-read.mjs --search "<query>" [--qmode everything|titleCreatorYear] [--limit N] [--tag TAG]\n' +
-  '       node tools/zotero-read.mjs --item <key>\n' +
+  '       node tools/zotero-read.mjs --item <key> [--offset N] [--limit N]   # a note prints its body\n' +
   '       node tools/zotero-read.mjs --fulltext <key> [--attachment <key>] [--offset N] [--limit N] [--grep TERM]\n' +
   '       node tools/zotero-read.mjs --collections | --collection <key> | --tags\n' +
   '       [--json]\n' +
@@ -305,7 +305,8 @@ export function parseArgs(argv) {
     }
   }
   if (!options.mode) throw new UsageError('pass --search, --item, --fulltext, --collections, --collection or --tags')
-  const reading = options.mode === 'fulltext'
+  // `--item` counts characters too, because a note's body is what an item read of a note returns.
+  const reading = options.mode === 'fulltext' || options.mode === 'item'
   options.limit = reading ? DEFAULT_READ_LIMIT : DEFAULT_LIMIT
   if (options.limitRaw !== undefined) {
     options.limit = integer('limit', options.limitRaw, { min: 1, max: reading ? MAX_READ_LIMIT : MAX_LIMIT })
@@ -452,6 +453,16 @@ async function runItem(options) {
     )
   }
   if (!picked && children.length > 0) console.log('  (no PDF, EPUB or HTML attachment: nothing here can be read as text)')
+  // A note IS its body. Printing only its metadata made an existing note unreadable, which left the
+  // section-note discipline naming a ruler it could not open.
+  if (data.itemType === 'note') {
+    const note = data.note ?? ''
+    const slice = sliceText(note, { offset: options.offset, limit: options.limit })
+    console.log(`note       : ${note.length} characters (HTML) · showing ${slice.from}-${slice.to}`)
+    if (slice.nextOffset !== null) console.log(`             next: --offset ${slice.nextOffset}`)
+    console.log('---')
+    console.log(slice.text)
+  }
 }
 
 async function runFulltext(options) {
