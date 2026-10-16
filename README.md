@@ -148,10 +148,14 @@ the gate the contract names: **"Allow"** authorizes that single write, and **"Al
 standing grant this preset keeps for that library, so the asking follows the library rather than the
 write. The owner revokes a grant at any time in the reference manager's settings; a refused or revoked
 grant is never treated as granted; and the agent never asks for "Always Allow" — that answer is the
-owner's to give. Two things these tools say rather than hide: renaming a collection is attempted but was **not**
-measured to work through the local API, and a collection carries no usable version in this library, so a
-rename cannot be guarded the way an edit is. Deleting is deliberately not built — a mis-deletion in a real
-library is not reversible, and the application is two clicks away.
+owner's to give. Two things these tools say rather than hide: renaming a collection **is** measured to work
+through the local API (2026-10-16: a collection renamed out and back, with the name read back through a
+second code path and the tree unchanged) — it is attempted rather than assumed, and a library that refuses
+it stops the tool instead of creating a key-changing replacement — and a collection's version is
+**unreliable rather than absent**: nearly every collection here reported version 0 on 2026-10-15, so the
+staleness guard the rename sends cannot bite on those, while the collection renamed on 2026-10-16 carried a
+real version and moved it. Deleting is deliberately not built — a mis-deletion in a real library is not
+reversible, and the application is two clicks away.
 
 ## Start a study
 

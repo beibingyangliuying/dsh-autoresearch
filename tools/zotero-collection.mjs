@@ -8,26 +8,33 @@
 // refuses to create a collection that already exists among its siblings, because a silently created
 // duplicate is invisible in the library's own tree.
 //
-// TWO THINGS THIS REPOSITORY HAS NOT MEASURED, AND HOW THE TOOL BEHAVES BECAUSE OF IT
+// WHAT THIS REPOSITORY HAS AND HAS NOT MEASURED, AND HOW THE TOOL BEHAVES BECAUSE OF IT
 //
-//   * Whether `PATCH /collections/<key>` is accepted at all. Creation and deletion were measured
-//     against Zotero 10.0.6; renaming was not. So `--rename` is attempted, and if the library refuses
-//     it the tool SAYS SO and stops - it does not fall back to "create a new one and move the items",
-//     which would quietly change the keys other documents may refer to. Renaming in the application
-//     is the fallback.
+//   * [MEASURED 2026-10-16 against Zotero 10.0.6, reproduced in one run] `PATCH /collections/<key>` IS
+//     accepted: `XBUY9SCY` was renamed "00 基础理论与综述" -> "00 基础理论与综述 (probe)" (version
+//     1125 -> 2178) and back (-> 2179), with the name read back through a SECOND code path, and the
+//     collection tree unchanged at 75 collections. An earlier run recorded the same outcome for
+//     `LZ6P7MSJ`, a collection that has since been deleted - which is why the measurement was redone
+//     rather than inherited. Creation and deletion were measured earlier still. `--rename` is still
+//     ATTEMPTED rather than assumed, and if a library refuses it the tool SAYS SO and stops - it does
+//     not fall back to "create a new one and move the items", which would quietly change the keys
+//     other documents may refer to. Renaming in the application remains the fallback for a library
+//     that refuses.
 //   * Whether a patch's `collections` list REPLACES or MERGES with the record's own. This tool reads
 //     the current list, computes the full next list and sends that, so the answer does not matter.
-//   * That a COLLECTION HAS NO USABLE VERSION. Measured: nearly every collection in this library
-//     reports version 0, so a rename cannot be guarded against a concurrent change the way an item's
-//     edit is. `--rename` therefore says so instead of implying a guard it does not have; the patch
-//     carries only a name, so no other field can be lost. Items DO carry real versions (567 where a
-//     collection said 0), which is why `--assign` is guarded normally.
+//   * That a collection's version is UNRELIABLE rather than absent. Measured 2026-10-15: nearly every
+//     collection in this library reported version 0, so a rename could not be guarded the way an item's
+//     edit is. Measured 2026-10-16: the collection renamed here reported a real version and moved it
+//     (1125 -> 2178 -> 2179), so the guard is sent and works WHERE THE LIBRARY KEEPS ONE. `--rename`
+//     states both cases rather than implying a guard it may not have; the patch carries only a name, so
+//     no other field can be lost. Items DO carry real versions (567 where a collection said 0), which
+//     is why `--assign` is guarded normally.
 //
 // Usage:
 //   node tools/zotero-collection.mjs --list
 //   node tools/zotero-collection.mjs --create "Reading list" --parent <collectionKey>   # dry run
 //   node tools/zotero-collection.mjs --create "Reading list" --write
-//   node tools/zotero-collection.mjs --rename <collectionKey> --name "Archive" --write  # unverified
+//   node tools/zotero-collection.mjs --rename <collectionKey> --name "Archive" --write  # measured 2026-10-16
 //   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --write
 //   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --remove --write
 //
@@ -210,12 +217,13 @@ async function runRename(options) {
   console.log(`name       : "${before.name}"`)
   console.log(`        -> : "${options.name}"`)
   console.log(`write      : PATCH /api/users/0/collections/${options.value}  If-Unmodified-Since-Version: ${before.version}`)
-  console.log('\nNOTE: whether this library accepts a collection rename through its local API has NOT been')
-  console.log('measured here (creation and deletion have been). If it refuses, this tool stops rather than')
-  console.log('creating a replacement, because a new collection would carry a new key.')
-  console.log(`NO STALENESS GUARD HERE: measured 2026-10-15, this library reports version 0 for nearly every`)
-  console.log(`collection (this one is ${before.version}), so neither the version precondition nor a re-read can`)
-  console.log('tell that it changed meanwhile. What that costs is bounded: this patch sends only a name, so')
+  console.log('\nNOTE: a rename through the local API WAS measured to work on Zotero 10.0.6 (2026-10-16:')
+  console.log('XBUY9SCY out and back, name read back through a second code path). If this library refuses it,')
+  console.log('the tool stops rather than creating a replacement, because a new collection would carry a new')
+  console.log('key.')
+  console.log(`THE STALENESS GUARD IS SENT, BUT WHETHER IT BITES DEPENDS ON THE LIBRARY: measured 2026-10-15,`)
+  console.log(`nearly every collection reported version 0 (this one is ${before.version}), and a version that never`)
+  console.log('moves cannot refuse anything. What that costs is bounded: this patch sends only a name, so')
   console.log('nothing else on the collection can be overwritten. Two renames at once resolve last-writer-wins.')
   if (before.name === options.name) {
     console.log('\nNo change: the collection already has that name.')

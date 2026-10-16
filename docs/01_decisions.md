@@ -684,3 +684,27 @@ skill 里。
 **同时修掉的仪器缺陷**：`--tidy` 的回读校验原本要求**逐字节**一致，而库会重写它碰过的笔记正文，于是对 `AQZTGMGQ` 报出 `READ-BACK MISMATCH`——**写成功了却说写失败**，是写工具最不该说的话。改成两条可判定的条件：**重跑修复已无改动**（收敛）＋**可见文字一致**（不丢内容）。
 
 **落在何处**：[`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)（`isApplicationWrapped`／`normalizeMath({lineBreaks})`／`visibleText`／`repairConverged`／`--title` 的尝试与回退）· 其 [自测](../tools/zotero-section-note-selftest.mjs)（新增 [4b] 段，含块状规则与"已收敛"的正反例）· [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（§3.2 公式形态与标题、§3.4 表格与"库拥有两件事"、验收清单）。**未做**：按 junhan 2026-10-16 的选择，"顺带整理旧笔记"那一轮**暂不执行**（`--tidy` 的写入路径本轮因修块状公式而首次跑通）。
+
+## 38. 一处继承来的"实测"不能被复核时：改名的可逆实测，以及 version 到底有没有（2026-10-16）
+
+**起因**：工作树里躺着一处不是本轮的未提交改动——`tools/zotero-collection.mjs` 的注释声称"PATCH 改集合名**已实测**可用（2026-10-15，`LZ6P7MSJ`，读回 version 1075）"，而 [`README.md`](../README.md) 同一件事写的是"**未**实测可用"。两者矛盾，junhan 裁定"核对后单独提交"。
+
+**核对的第一层结论是否定的**：这条"实测"**已经无法从库状态复核**——被改名的集合 `LZ6P7MSJ` 在后续清理中被删（全库集合数 **97 → 75**），库里只剩它**改名前**叫"宏观定义"的旧抓取（`.tmp/call-zotero_get_collections.txt`）；而那一轮自己的会话消息（`.tmp/cmsg-8/11/13`）把 `--rename` 写成 **UNMEASURED**，改动本身**没有留下任何原始输出**。⇒ 一条无法再复现的"实测"，在文档里与猜测等价：它既不能支持也不能反驳任何结论。**重做一次比修文字便宜。**
+
+**裁定（junhan 2026-10-16）**：做一次**可逆实测**。
+
+**实测**（同一次运行内完成，两次写入均带回读）：
+
+| 步骤 | 结果 |
+|---|---|
+| 读当前状态 | `XBUY9SCY` = 「00 基础理论与综述」，version **1125** |
+| 改名 | → 「00 基础理论与综述 (probe)」，读回 version **2178** |
+| 独立复核 | 用**另一条代码路径**（直接读 `/collections?limit=200` 列表）确认新名字与 version 2178 |
+| 改回 | → 「00 基础理论与综述」，读回 version **2179** |
+| 独立复核 | 同一路径确认名字已复原、version 2179，且集合总数仍为 **75** ⇒ 净变化为零 |
+
+⇒ **结论**：`PATCH /collections/<key>` 在这个库上确实被接受，且两次都用文件名之外的信息（version 移动 + 第二条读取路径）复核过，不是只看工具自己打印的 "OK"。
+
+**顺带修掉的第二处陈旧**：工具与 README 原写"集合**没有**可用 version、所以**没有**陈旧守卫"。实测这个集合的 version 真实存在并随写移动（1125 → 2178 → 2179）⇒ 口径改为"**不可靠而非不存在**：2026-10-15 实测几乎每个集合都报 0，守卫在那些集合上咬不住；本次这个是真的"，工具的输出也据此改写，并把 `--rename` 那行的"measured 2026-10-15"换成可复现的本次实测。
+
+**落在何处**：[`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs)（头部两条实测口径 + 运行时 NOTE）· [`README.md`](../README.md)（reference-library 那段的"renaming … was not measured"与"no usable version"两处）。**未做**：不删除、不新建任何集合；`--rename` 的"拒绝时停止、绝不新建替代集合"行为不变。
