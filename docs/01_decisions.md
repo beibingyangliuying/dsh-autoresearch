@@ -670,3 +670,17 @@ skill 里。
 
 **落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（九节骨架 + 选节表 + 模板 + 就地排除条件）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`--item` 读笔记正文，此前只能读到元数据——纪律点名了一把打不开的尺子）· [`cordis.patch.yml`](../cordis.patch.yml)（路由第 9 条）· `protocol.md`（Revision 11：§4／§6）· [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（8→9）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（路由 8→9）。
 
+
+### 37-补. 审阅一轮之后的收尾：行间公式改块状，以及"库会改写你的笔记"的三个后果（2026-10-16）
+
+**起因**：junhan 审阅通过这 5 条笔记的内容，只提一点——行间公式应写成 `$$` 单独成行的块状，而不是挤在一行。
+
+**这一轮实测到的三件事**（都改变了工具行为，不是润色）：
+
+1. **笔记标题在这个库写不进去**：对同一条笔记、同一把版本守卫，`{"tags":[…]}` → **204** 且读回生效（version 2160→2171），而 `{"title":"section 2 probe"}`（纯 ASCII，排除中文与 `§` 的干扰）→ **HTTP 500**，读回 `title=null`。⇒ 原计划"给笔记加标题、子笔记列表可辨"**前提不成立，退回不加**；节号只能靠正文首句与不可见 marker。
+2. **应用会剥掉不可见 marker**：junhan 在 Zotero 里打开审阅过的那条（`AQZTGMGQ`）已被应用规范化——多了 `<div data-schema-version="9">` 外壳、**marker 注释消失**；它仍被正确识别为 `§2 (opening)` ⇒ 当初"幂等判据必须能读开场句"的决定被真实数据验证：marker 只是提示，开场句才是键。
+3. **块状换行只在"裸笔记"上存得住**：API 直写的 4 条换行完整保留（`TS36N2CG` 的存储文本里可见 `<p>$$`⏎`t_k = \pm 1`⏎`$$</p>`，再次干跑即 `nothing to do`）；而被应用接管的那条，写入块状后**库把它折回一行**。⇒ 工具新增 `isApplicationWrapped`：对这类笔记**不尝试换行**并明说原因，避免"每次都想改、每次都改不动"——正是 §36 记下的"永远通不过的检查只会一直说同一句话"。
+
+**同时修掉的仪器缺陷**：`--tidy` 的回读校验原本要求**逐字节**一致，而库会重写它碰过的笔记正文，于是对 `AQZTGMGQ` 报出 `READ-BACK MISMATCH`——**写成功了却说写失败**，是写工具最不该说的话。改成两条可判定的条件：**重跑修复已无改动**（收敛）＋**可见文字一致**（不丢内容）。
+
+**落在何处**：[`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)（`isApplicationWrapped`／`normalizeMath({lineBreaks})`／`visibleText`／`repairConverged`／`--title` 的尝试与回退）· 其 [自测](../tools/zotero-section-note-selftest.mjs)（新增 [4b] 段，含块状规则与"已收敛"的正反例）· [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（§3.2 公式形态与标题、§3.4 表格与"库拥有两件事"、验收清单）。**未做**：按 junhan 2026-10-16 的选择，"顺带整理旧笔记"那一轮**暂不执行**（`--tidy` 的写入路径本轮因修块状公式而首次跑通）。
