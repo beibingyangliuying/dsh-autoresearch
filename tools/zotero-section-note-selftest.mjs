@@ -14,13 +14,16 @@ import { readFileSync } from 'node:fs'
 import {
   composeSectionNote,
   displayMathRegions,
+  isApplicationWrapped,
   looksLikeHtml,
   normalizeMath,
   normalizeSectionToken,
   readSectionMarker,
+  repairConverged,
   sectionClaim,
   sectionMarker,
   topLevelSpans,
+  visibleText,
 } from './zotero-section-note.mjs'
 
 let failures = 0
@@ -73,15 +76,36 @@ check(!looksLikeHtml('plain prose'), 'plain prose is refused')
 
 console.log('\n[4] the mechanical math repair, and its refusals')
 const bracket = normalizeMath('<p>[ \\alpha = a P^L_{ij} + b Q^L_{ij} ]</p>')
-same(bracket.html, '<p>$$ \\alpha = a P^L_{ij} + b Q^L_{ij} $$</p>', 'a bracket span with LaTeX becomes display math')
+same(
+  bracket.html,
+  '<p>$$\n\\alpha = a P^L_{ij} + b Q^L_{ij}\n$$</p>',
+  'a bracket span with LaTeX becomes display math, on lines of its own',
+)
 same(bracket.applied.filter((r) => r.rule === 'bracket-to-display-math')[0]?.count, 1, 'the rule is counted once')
-same(normalizeMath('<p>[ \\alpha = \\beta ]</p>').applied.length, 1, 'one rule applied, one entry')
+same(
+  bracket.applied.filter((r) => r.rule === 'display-math-on-its-own-lines')[0]?.count,
+  1,
+  'the block-form rule is counted too',
+)
+same(normalizeMath('<p>[ \\alpha = \\beta ]</p>').applied.length, 2, 'two rules applied, two entries')
 
 const nested = normalizeMath('<p>[ [\\Delta P; \\Delta Q] = M [\\Delta \\theta; \\Delta V] ]</p>')
 same(
   nested.html,
-  '<p>$$ [\\Delta P; \\Delta Q] = M [\\Delta \\theta; \\Delta V] $$</p>',
+  '<p>$$\n[\\Delta P; \\Delta Q] = M [\\Delta \\theta; \\Delta V]\n$$</p>',
   'nested brackets are one display span, not two',
+)
+
+// The block form is the whole point of the rule, and it must not move a note that already has it.
+const blockShaped = normalizeMath('<p>$$\n\\alpha = \\beta\n$$</p>')
+same(blockShaped.html, '<p>$$\n\\alpha = \\beta\n$$</p>', 'a note already in block form is untouched - idempotent')
+same(blockShaped.applied.length, 0, 'nothing is applied to a note already in block form')
+const twice = normalizeMath(normalizeMath('<p>[ \\alpha = \\beta ]</p>').html)
+same(twice.applied.length, 0, 'running the repair on its own output changes nothing')
+same(
+  normalizeMath('<p>行内 $x_i$ 与 $\\lambda$ 不动。</p>').html,
+  '<p>行内 $x_i$ 与 $\\lambda$ 不动。</p>',
+  'inline math is left inline - negative control',
 )
 
 const emphasis = normalizeMath("<p>P_i = -\\sum B'<em>{ij}\\theta_j + \\sum</em>{j\\in S_B} G_{ij}V_j</p>")
@@ -114,7 +138,7 @@ same(normalizeMath('<p>对一个 (A) 求逆。</p>').html, '<p>对一个 (A) 求
 
 // The parentheses stay outside the delimiters, because "(S^max)^2" and "$S^max$^2" differ.
 const power = normalizeMath('<p>[ (S_{mn}^{\\max,c})^2 \\le 1 ]</p>')
-same(power.html, '<p>$$ (S_{mn}^{\\max,c})^2 \\le 1 $$</p>', 'inside display math, parens stay parens')
+same(power.html, '<p>$$\n(S_{mn}^{\\max,c})^2 \\le 1\n$$</p>', 'inside display math, parens stay parens')
 check(
   normalizeMath('<p>取 (S_{mn}^{\\max})^2 为限值。</p>').html === '<p>取 ($S_{mn}^{\\max}$)^2 为限值。</p>',
   'a superscript applied to a parenthesised term keeps its parentheses',
@@ -134,6 +158,32 @@ same(pair.length, 1, 'only the outermost bracket pair is a span')
 same(pair[0].inner, 'a [b] c', 'the inner text keeps the nested pair')
 same(displayMathRegions('$$a$$ and $$b$$').length, 2, 'two display regions are found')
 same(displayMathRegions('no math here').length, 0, 'no delimiter means no region')
+
+// --- the read-back, which must not cry wolf ------------------------------------------------------
+
+console.log('\n[4b] a read-back that survives the application rewriting the note')
+same(
+  visibleText('<!-- autoresearch-section: 2 -->\n<p>文章<strong>第二节</strong>。</p>'),
+  '文章 第二节 。',
+  'tags and the invisible marker are not part of what a reader sees',
+)
+same(
+  visibleText('<div data-schema-version="9"><p>$$\nx\n$$</p></div>'),
+  visibleText('<p>$$\nx\n$$</p>'),
+  'the wrapper the application adds does not change the visible text',
+)
+check(repairConverged('<p>$$\nx\n$$</p>'), 'a repaired body has nothing left to do')
+check(!repairConverged('<p>$$x$$</p>'), 'a one-line display block is not converged - negative control')
+check(repairConverged('<p>行内 $x_i$ 不动。</p>'), 'a body with no display math is converged')
+check(
+  repairConverged('<div data-schema-version="9"><p>$$x$$</p></div>', { lineBreaks: false }),
+  'on a note the application owns, a one-line block IS converged - it is not asked for',
+)
+check(
+  isApplicationWrapped('<div data-schema-version="9"><p>x</p></div>'),
+  'the application wrapper is recognized',
+)
+check(!isApplicationWrapped('<p>x</p>'), 'a note written through the API alone is not wrapped - negative control')
 
 // --- the file itself ---------------------------------------------------------------------------
 

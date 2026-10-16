@@ -72,14 +72,25 @@ mode this skill exists to prevent.
 ### 3.2 What one note contains
 
 1. **A heading line** naming the section by ordinal **and** by the paper's own title, translated if the
-   note is not in the paper's language.
+   note is not in the paper's language. Where the library can carry a note title, the title carries the
+   same name — **attempted, never required**: measured here, a `title` patch on a note answers HTTP 500
+   while a `tags` patch on the same note answers 204, so the section is named by the first line and by
+   the marker, and the child-note list shows an untitled note. That is a property of the library; the
+   note is written either way.
 2. **The section's core, in two to four sentences**: what problem it solves, by what means, and what it
    establishes.
 3. **Subsections mirroring the paper's own numbering** — do not re-invent a structure the paper
    already has.
-4. **Every equation worth keeping**, as `$$ … $$` (display) or `$ … $` (inline), with the paper's own
-   equation number cited in prose where the paper gives one ("公式 (40)"). No equation is reproduced
-   without its symbols defined at first use.
+4. **Every equation worth keeping**, with the paper's own equation number cited in prose where the
+   paper gives one ("公式 (40)"). Inline math is `$ … $`. **Display math is `$$` alone on a line**, the
+   expression on its own line, and `$$` alone again — never all on one line:
+
+   ```html
+   <p>$$
+   \Delta Q = J_R\,\Delta V
+   $$</p>
+   ```
+   No equation is reproduced without its symbols defined at first use.
 5. **A closing summary** — its own small heading — naming the section's contribution and what it hands
    to the next section. A reader who stops here must still know why the section exists.
 
@@ -90,7 +101,11 @@ mode this skill exists to prevent.
 下面分&lt;小节/部分&gt;解释。</p>
 <hr>
 <h2>&lt;小节号&gt; &lt;小标题&gt;</h2>
-<p>…每个符号第一次出现时给出含义；公式用 $$ … $$，并引用原文的公式号…</p>
+<p>…每个符号第一次出现时给出含义…</p>
+<p>$$
+&lt;行间公式&gt;
+$$</p>
+<p>…引用原文的公式号，如「公式 (40)」…</p>
 <h2>小结</h2>
 <ol><li>…</li></ol>
 ```
@@ -107,19 +122,33 @@ below it, the section was probably not read.
 
 ### 3.4 Repairing an old note is mechanical, and only mechanical
 
-`--tidy` restores three things the copy damaged, and nothing else:
+`--tidy` restores what the copy damaged, and nothing else:
 
 | Damage | Repair |
 |---|---|
 | `<em>x</em>` where a Markdown underscore was eaten (`B'_{ij}` → `B'<em>{ij}`) | `_x_` |
-| `[ … ]` holding LaTeX | `$$ … $$` |
+| `[ … ]` holding LaTeX | `$$ … $$`, on lines of its own |
 | `( … )` holding LaTeX markup | `($ … $)` — the parentheses stay **outside**, because `(S^{max})^2` and `$S^{max}$^2` are different expressions |
+| Display math written all on one line | `$$` alone on a line, the expression on its own line, `$$` alone again — idempotent, so a note already in that shape never moves |
 
 A span is converted only when it carries LaTeX markup and sits inside one closed span of one text
 node. An unbalanced bracket, a span split across paragraphs, a parenthesised prose aside: all left
 exactly as they were and reported. **A repair that guesses at what a broken formula meant is a
 rewrite wearing a formatter's clothes** — if a section needs re-explaining, that is a new note or an
 explicit owner decision, never a tidy.
+
+**The library owns two things, and the repair must not fight them.** Measured here:
+
+- A note the **application** has written — its body opens with the application's own
+  `<div data-schema-version="…">` wrapper, and the invisible marker comment is gone — keeps its display
+  math on **one line**: this library stores such a note back on one line whatever is sent. The
+  line-break rule is therefore not attempted on it, and the run **says so** instead of writing the same
+  no-op on every run and reporting the same change forever.
+- A note written only through the API stays bare, and there the line breaks persist.
+
+A read-back is compared as **visible text**, never byte-for-byte, and a repaired note is accepted when
+re-running the repair would change nothing. Byte comparison would report a delivered write as failed,
+which is the one thing a write tool must never say about the owner's library.
 
 ## 4. Do vs don't
 
@@ -197,7 +226,7 @@ The artifact is the note itself, on the library record. The report is what a lat
 - [ ] The section list was reported before any write, each with note / skipped and a reason
 - [ ] No note was written for the abstract, the introduction, the case study, or the conclusions
 - [ ] Every note names its section by the paper's own ordinal and heading
-- [ ] Every equation is inside `$…$` or `$$…$$`, with no `$` nested in `$$`
+- [ ] Every equation is inside `$…$` or `$$…$$`, with display math on lines of its own and no `$` nested in `$$`
 - [ ] Every symbol used is defined at its first appearance
 - [ ] Each note ends with a summary naming its contribution and its hand-off to the next section
 - [ ] Each note is within the character budget

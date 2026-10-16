@@ -17,7 +17,14 @@
 //            coverage is also read from the note's own opening phrase ("文章第2节标题是 ...").
 //   tidy     a MECHANICAL repair of the math delimiters in one existing section note: the "<em>" that
 //            a Markdown underscore became, and "[ ... ]" / "( ... )" restored to "$$ ... $$" / "$...$".
-//            It never rewrites prose, never guesses, and reports every span it refused to touch.
+//            Display math also ends up on lines of its own ("$$\nx\n$$"), which is the shape the notes
+//            are read and edited in - and that rule is idempotent, so a note already in that shape is
+//            left byte-for-byte alone. It never rewrites prose, never guesses, and reports every span
+//            it refused to touch.
+//
+// A title is attempted, not required: measured on this library, a `title` field on a note is refused
+// with HTTP 500 (while a `tags` patch on the same note answers 204), so the create path tries the
+// title and writes the same note without it if the library says no. A refused POST created nothing.
 //
 // WHAT "TIDY" WILL NOT DO, AND WHY THAT IS THE POINT
 //
@@ -213,12 +220,14 @@ export function topLevelSpans(text, open, close) {
  * alone rather than guessed at.
  *
  * @param {string} html Note body as the library stores it.
+ * @param {{lineBreaks?: boolean}} [options] `lineBreaks: false` skips the block-form rule, for a note
+ *   whose body the application will store back on one line whatever this tool sends.
  * @returns {{html: string, applied: Array<{rule: string, count: number}>, changed: string[],
  *   skipped: number, leftAlone: string[]}} The repaired body, what was applied, the spans that were
  *   converted (so a reader can eyeball the heuristic), how many candidates were declined, and the
  *   declined spans worth naming.
  */
-export function normalizeMath(html) {
+export function normalizeMath(html, { lineBreaks = true } = {}) {
   const applied = new Map()
   const leftAlone = []
   const bump = (rule, count = 1) => applied.set(rule, (applied.get(rule) ?? 0) + count)
@@ -291,6 +300,18 @@ export function normalizeMath(html) {
     })
     .join('')
 
+  // Rule 4 - display math on lines of its own: "$$ x $$" becomes "$$\nx\n$$". This is how the note is
+  // read and edited, and it is idempotent, so a note written this way never changes again.
+  if (lineBreaks) {
+    current = current.replace(/\$\$([\s\S]*?)\$\$/g, (whole, inner) => {
+      const trimmed = inner.trim()
+      if (trimmed === '') return whole
+      const block = `$$\n${trimmed}\n$$`
+      if (whole !== block) bump('display-math-on-its-own-lines')
+      return block
+    })
+  }
+
   return {
     html: current,
     applied: [...applied].map(([rule, count]) => ({ rule, count })),
@@ -298,6 +319,49 @@ export function normalizeMath(html) {
     skipped,
     leftAlone: [...new Set(leftAlone)],
   }
+}
+
+/**
+ * The text a reader sees: tags and comments removed, whitespace collapsed.
+ *
+ * This is how a read-back is compared. A note body is NOT stored byte-for-byte as it was sent: the
+ * application normalizes one it has edited (measured: the note gained a `<div data-schema-version="9">`
+ * wrapper and LOST the invisible marker comment), so a byte comparison reports a mismatch on a write
+ * that in fact landed - a false alarm about the owner's library, which is the worst kind.
+ *
+ * @param {string} html Note body as the library stores it.
+ * @returns {string} Its visible text.
+ */
+export function visibleText(html) {
+  return stripTags(html)
+}
+
+/**
+ * Whether the repair has nothing left to do, i.e. re-running it would change nothing.
+ *
+ * @param {string} html Note body as the library stores it.
+ * @param {{lineBreaks?: boolean}} [options] Must match the options the repair was planned with.
+ * @returns {boolean} True when the body is already in the repaired shape.
+ */
+export function repairConverged(html, options = {}) {
+  return normalizeMath(html, options).html === html
+}
+
+/**
+ * Whether the APPLICATION has normalized this note already.
+ *
+ * Measured: a note the application has written carries its own `<div data-schema-version="...">`
+ * wrapper and no longer carries this tool's invisible marker comment, while a note written only
+ * through the local API stays bare. The difference matters for exactly one rule - the line breaks
+ * around display math: on a wrapped note the library stores the body back on one line, so a repair
+ * that kept asking for the break would write the same no-op on every run and report the same change
+ * forever. That is the failure mode this predicate exists to prevent.
+ *
+ * @param {string} html Note body as the library stores it.
+ * @returns {boolean} True when the body opens with the application's own wrapper.
+ */
+export function isApplicationWrapped(html) {
+  return /^\s*<div data-schema-version="\d+">/.test(String(html ?? ''))
 }
 
 /**
@@ -317,7 +381,7 @@ export function createWriteLine(itemKey) {
 }
 
 function parseArgs(argv) {
-  const options = { item: '', note: '', section: '', text: '', file: '', tidy: false, plan: false, write: false }
+  const options = { item: '', note: '', section: '', text: '', file: '', title: '', tidy: false, plan: false, write: false }
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     const next = argv[index + 1]
@@ -333,7 +397,7 @@ function parseArgs(argv) {
       options.plan = true
       continue
     }
-    if (!['--item', '--note', '--section', '--text', '--file'].includes(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
+    if (!['--item', '--note', '--section', '--text', '--file', '--title'].includes(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
     if (!next) throw new UsageError(`${flag} needs a value`)
     options[flag.slice(2)] = next
     index += 1
@@ -351,9 +415,12 @@ function parseArgs(argv) {
 
 const USAGE =
   'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan]\n' +
-  '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>) [--write]\n' +
+  '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
+  '                                       [--title "<title>"] [--write]\n' +
   '       node tools/zotero-section-note.mjs --tidy --note <noteKey> [--write]\n' +
-  '       node tools/zotero-section-note.mjs --item <recordKey> --tidy [--write]'
+  '       node tools/zotero-section-note.mjs --item <recordKey> --tidy [--write]\n' +
+  '       --title is attempted and, if the library refuses it (measured: a title patch on a note answers\n' +
+  '       HTTP 500 here), the same note is written WITHOUT it rather than not at all.'
 
 /** Every child note of a record, with the section it claims. */
 async function noteChildren(itemKey) {
@@ -402,6 +469,7 @@ async function runCreate(options) {
   console.log(`section : §${token}`)
   console.log(`notes   : ${notes.length} child note(s); covered: ${notes.filter((note) => note.claim.token).map((note) => `§${note.claim.token}`).join(' · ') || 'none'}`)
   console.log(`body    : ${body.length} characters -> ${composed.length} with the marker`)
+  if (options.title) console.log(`title   : "${options.title}" (attempted; the note is written without it if refused)`)
   console.log(`write   : ${createWriteLine(options.item)}`)
 
   if (covering) {
@@ -417,7 +485,15 @@ async function runCreate(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
-  const res = await gate.write('POST', '/api/users/0/items', [{ itemType: 'note', parentItem: options.item, note: composed }])
+  const withTitle = { itemType: 'note', parentItem: options.item, note: composed }
+  if (options.title) withTitle.title = options.title
+  let res = await gate.write('POST', '/api/users/0/items', [withTitle])
+  // A title this library refuses must cost the note, not the note's existence: a refused POST created
+  // nothing, so the same note is written again without it and the refusal is reported.
+  if (res.status !== 200 && options.title) {
+    console.log(`\nThe library refused the title (HTTP ${res.status}); writing the same note without it.`)
+    res = await gate.write('POST', '/api/users/0/items', [{ itemType: 'note', parentItem: options.item, note: composed }])
+  }
   if (res.status !== 200) {
     console.error(`\nThe library refused the write (HTTP ${res.status}): ${res.text.slice(0, 300)}`)
     process.exitCode = 1
@@ -432,8 +508,10 @@ async function runCreate(options) {
     return
   }
   const back = await readItem(noteKey)
-  if (!(back.note ?? '').includes(body.trim())) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the body that was sent.`)
+  // Compared as TEXT, not bytes: the application rewrites a note it touches (wrapper added, marker
+  // comment dropped), so a byte comparison would call a delivered note undelivered.
+  if (!visibleText(back.note ?? '').includes(visibleText(body))) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the text that was sent.`)
     process.exitCode = 1
     return
   }
@@ -446,9 +524,17 @@ async function tidyOne({ noteKey, gate, write }) {
   if (note.itemType !== 'note') throw new UsageError(`${noteKey} is a ${note.itemType}, not a note`)
   const claim = sectionClaim(note.note ?? '')
   const before = note.note ?? ''
-  const repaired = normalizeMath(before)
+  // A note the application has already written keeps its display math on one line whatever is sent:
+  // the block-form rule is therefore not attempted on it, and that is SAID rather than silently
+  // skipped or retried forever.
+  const appOwned = isApplicationWrapped(before)
+  const repaired = normalizeMath(before, { lineBreaks: !appOwned })
   console.log(`\nnote    : ${noteKey}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
   console.log(`claim   : ${claim.token ? `§${claim.token} (${claim.by})` : 'NOT a section note - refusing to touch it'}`)
+  if (appOwned) {
+    console.log('          the application has normalized this note already; the display-math line break')
+    console.log('          is NOT attempted on it (measured: this library stores such a note back on one line)')
+  }
   console.log(`size    : ${before.length} -> ${repaired.html.length} characters`)
   for (const rule of repaired.applied) console.log(`  applied: ${rule.rule} x${rule.count}`)
   console.log(`  spans   : ${repaired.changed.length} converted, ${repaired.skipped} left as they were`)
@@ -481,8 +567,17 @@ async function tidyOne({ noteKey, gate, write }) {
     process.exitCode = 1
     return 0
   }
-  if ((result.after.note ?? '') !== repaired.html) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back byte-for-byte with the repair.`)
+  const readBack = result.after.note ?? ''
+  // Two conditions, because the application normalizes a note it rewrites (measured: a
+  // `<div data-schema-version="9">` wrapper appears and the invisible marker comment disappears), so a
+  // byte comparison would report a delivered repair as failed.
+  if (!repairConverged(readBack, { lineBreaks: !isApplicationWrapped(readBack) })) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} still has spans the repair would change.`)
+    process.exitCode = 1
+    return 0
+  }
+  if (visibleText(readBack) !== visibleText(repaired.html)) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the same visible text.`)
     process.exitCode = 1
     return 0
   }
