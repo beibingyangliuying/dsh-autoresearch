@@ -81,6 +81,10 @@ export function normalizeSectionToken(value) {
     .replace(/^文?章?第/, '')
     .replace(/节$/, '')
     .trim()
+  // A dotted ordinal is a section's own number carried down to its subsections (3.1, 2.1.3), which a
+  // section whose method content exceeds the note budget is split by. It is matched exactly as written
+  // because it comes from the paper, not from this tool.
+  if (/^\d+(\.\d+)*$/.test(text)) return text
   const digits = /^(\d+)$/.exec(text)
   if (digits) return digits[1]
   const chinese = /^([一二三四五六七八九十]+)$/.exec(text)
@@ -131,7 +135,7 @@ export function readSectionMarker(noteHtml) {
  */
 export function readSectionFromOpening(noteHtml) {
   const opening = stripTags(noteHtml).slice(0, 120)
-  const match = /^文?章?第\s*([0-9]+|[一二三四五六七八九十]+)\s*节/.exec(opening)
+  const match = /^文?章?第\s*(\d+(?:\.\d+)*|[一二三四五六七八九十]+)\s*节/.exec(opening)
   return match ? normalizeSectionToken(match[1]) : ''
 }
 

@@ -119,6 +119,11 @@ below it, the section was probably not read.
   before this tool existed, whose claim is read from its own opening line. **Do not work around a
   refusal**; report it.
 - Notes are created in section order, so the record reads in the order the paper reads.
+- **A section whose method content exceeds the budget is split by the paper's OWN subsection numbers**
+  (`3.1`, `3.2`, one note each, keyed by that number). Measured on the first paper this happened to: one
+  section's method text was 10.4k characters against a 5k budget, and one oversized note serves nobody.
+  The subsection number is the paper's, so the key stays exact and a later run still cannot duplicate
+  it; a subsection note names its own number in the first line like any other.
 
 ### 3.4 Repairing an old note is mechanical, and only mechanical
 
