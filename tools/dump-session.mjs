@@ -199,6 +199,7 @@ function dumpOne(sessionDir, outFile) {
     'autoresearch',
     'research-scoping',
     'literature-recon',
+    'section-notes',
     'redteam-ruling',
     'progress-sync',
     'skill-filesystem',

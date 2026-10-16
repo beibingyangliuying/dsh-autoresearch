@@ -1,9 +1,17 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 10.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 11.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 10 records what authorizes a write into the reference
+independent of any package version. Revision 11 adds the ninth on-demand discipline: a paper already
+chosen for study becomes **one explanation note per method section**, attached to its reference-library
+record, with background, case study and conclusion sections deliberately not written. It records three
+things that discipline is built on rather than leaving them to its own text: the note is a different
+artifact from the digest `INV-EVID-4` speaks of, and neither replaces the other; a section the record
+already covers is never written twice, including coverage recorded only in a note's own opening line;
+and repairing an older note's damaged formula delimiters is **mechanical only** — a repair that guesses
+at what a broken formula meant is a rewrite, and a rewrite is not a repair. §4 and §6 are restated
+accordingly. Revision 10 records what authorizes a write into the reference
 library. The reference manager raises its dialog on every request for a key — the local API has no
 "this application is already trusted" path, so the answer "Always Allow" chooses the kind of key issued
 and never whether the owner is asked again — and this preset then discarded that lasting key when the
@@ -147,6 +155,10 @@ the load-bearing part: they say when to stop rather than to make something work.
 ```text
 scoping      a vague topic becomes a decidable question; pseudo-questions are sent back
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
+sections     a paper already chosen for study becomes one explanation note per method section,
+             attached to its library record; background, case study and conclusion sections are
+             not written, an already-covered section is never written twice, and an older note is
+             repaired mechanically or not at all
 challenge    a claim is opposed with a counterexample, contradicting evidence, or a
              falsification path — or the challenge reports that it cannot challenge
 settlement   conclusions, rejected directions and rulings are settled into three layers
@@ -261,6 +273,14 @@ Three rules bound their use:
   and a record may carry several, so a reading states which one answered and what was not read. A
   channel that returns an empty text for an unindexed attachment, or a failure as if it were a record,
   is reporting about itself rather than about the work.
+- **A note written onto a record stays the owner's.** The channel's note writes are additive or
+  mechanical. A section a record already covers is refused rather than written twice — coverage counts
+  whether it is recorded by this preset's own marker or only by the note's opening line, because the
+  notes an owner wrote by hand carry no marker. A note this preset did not identify as a section note
+  is never modified. Repairing delimiters is content-preserving by construction: a span is converted
+  only when it carries LaTeX markup and sits inside one closed span of one text node, and every span
+  declined is reported. A change to a note's prose is a rewrite, and a rewrite is the owner's decision,
+  never a formatter's.
 
 The channels are reached through **helper programs this preset itself ships and its disciplines name**,
 never through a profile-level mount, so that enabling a research channel cannot change what an unrelated

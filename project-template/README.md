@@ -3,8 +3,8 @@
 This directory is a template for **one study**, not a preset. The division of labour:
 
 - the **preset** owns *how to research* — three-way typing, no unfalsifiable wording, no citations
-  from memory, and the four discipline skills (`research-scoping`, `literature-recon`,
-  `redteam-ruling`, `progress-sync`);
+  from memory, and the discipline skills it ships on demand (the roster lives in the preset's
+  `surface.md`, so this file does not repeat it);
 - this **scaffold** owns *what is being researched* — domain invariants, document authority, notation.
 
 ## Use it
