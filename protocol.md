@@ -1,9 +1,15 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 11.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 12.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 11 adds the ninth on-demand discipline: a paper already
+independent of any package version. Revision 12 states the boundary this preset measured rather than
+assumed: **it performs no deletion in the reference library.** Deleting through the library's local API is
+permanent — measured 2026-10-16, a `204` and the record is a `404` afterwards, while the library's trash
+neither grows nor holds the key — whereas the owner deleting in the application moves the item into that
+trash and can be undone. The asymmetry is the point: what an agent cannot undo is not something an agent
+should be able to do at scale, so removal stays the owner's act and this preset hands over a list rather
+than a button. §9 states it. Revision 11 adds the ninth on-demand discipline: a paper already
 chosen for study becomes **one explanation note per method section**, attached to its reference-library
 record, with background, case study and conclusion sections deliberately not written. It records three
 things that discipline is built on rather than leaving them to its own text: the note is a different
@@ -343,6 +349,11 @@ Every row must be falsifiable: a check must exist that can fail.
   single write their "Allow" covers, or their standing grant for that library — never as a background
   action, and never on the strength of a grant that was refused or has been revoked. A whole-library
   migration is not a write this preset performs at all.
+- No deletion in the reference library. Measured 2026-10-16: a `DELETE` through the library's local API
+  is permanent — the record answers `404` afterwards and the trash neither grows nor keeps the key —
+  while a deletion made in the application goes into that trash and is recoverable. Removal therefore
+  stays the owner's act in the application, and this preset's answer to "delete these" is a list, not a
+  capability.
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.

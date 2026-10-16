@@ -739,4 +739,4 @@ skill 里。
 
 一节的方法内容超过 5000 字符预算时，按**论文自己的子节号**分条（`3.1`、`3.2` 各一条），键就用该子节号。首例是 `7ZGICNQY` 第 3 节：单节方法内容 10.4k 字符，硬并成一条会超预算、砍掉两条会丢方法。工具已支持小数点节号（`c9f8958`），纪律正文同步写明。
 
-**落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（分条规则）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs)（小数点节号）· 只读清单 `.tmp/notes-to-delete.md`（工作区临时产物，不在版本控制内）。**未做**：删除工具、全库清理清单、第 2 组入库、批量其余 24 篇。
+**落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（分条规则）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs)（小数点节号）· 只读清单 `.tmp/notes-to-delete.md`（工作区临时产物，不在版本控制内）。**补记（同日收口后）**：junhan 裁定把"不做删除"写进契约 §9 非目标，契约升 **Revision 12**（依据即 39.2 的实测），README 同步。**未做**：删除工具、全库清理清单、第 2 组入库、批量其余 24 篇。

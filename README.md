@@ -154,8 +154,11 @@ second code path and the tree unchanged) — it is attempted rather than assumed
 it stops the tool instead of creating a key-changing replacement — and a collection's version is
 **unreliable rather than absent**: nearly every collection here reported version 0 on 2026-10-15, so the
 staleness guard the rename sends cannot bite on those, while the collection renamed on 2026-10-16 carried a
-real version and moved it. Deleting is deliberately not built — a mis-deletion in a real library is not
-reversible, and the application is two clicks away.
+real version and moved it. Deleting is deliberately not built, and that is now a measured boundary rather than a preference: a
+`DELETE` through this library's local API is permanent (2026-10-16 — the record answers `404` afterwards
+and the library's trash neither grows nor keeps the key), while a deletion made in the application goes
+into that trash and can be undone. What an agent cannot undo is not something it should be able to do at
+scale, so the preset hands over a list instead — and the application stays two clicks away.
 
 ## Start a study
 
