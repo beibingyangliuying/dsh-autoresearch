@@ -635,3 +635,38 @@ skill 里。
 
 **落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（`tagRefQuery`／`taggedCommit`／`branchHead` 三个纯函数，修法为 `38e4529`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新增 [5] 八条，含"精确 ref 无 peeled 行"与"查询必须显式要 peeled"两条反向控制）· annotated tag `v0.2.1`。
 
+## 37. 逐节笔记成为第九条纪律：先验是"库里已有的手写笔记全都没有标记"，而现有写笔记的工具在语义上做不了它（2026-10-16）
+
+**起因**：junhan 提出"读过一篇参考文献后应生成逐节文档"——只写方法论关键章节，**掐头去尾**，风格与他用网页版 DeepSeek"解释文章的第 xx 节"得到的笔记类似。他并问：这事该由 agent 自己做，还是交给 subagent。
+
+**先验前提（本轮实测，不是推断）**：
+
+1. **语料实测**：他指认的范文 `D566Q7D3 Fast calculation of a voltage stability index` 已挂两条子笔记（§2 奇异值分解、§3 算法）；集合 `05-1 潮流灵敏度与安全分析`（`8WP7NI3F`）5 篇共 **14** 条；新分类树 343 篇里按代理判据约 **20** 篇已做（下界——"第三节题为"这类写法会被漏计）；全库全文检索 `文章第` 命中 **42 行**，说明这个模式早就在用，远不止 05 树。
+2. **形态实测**（全部来自他现有笔记）：开场句有三种写法（`文章第X节标题是`／`第三节题为`／`第二节标题是`）；小标题镜像论文自己的小节号；公式引用原文编号；结尾必有 `小结`/`总结`；单条 1.8k–5.0k 字符；**无 marker、无笔记标题**；创建顺序＝节序。
+3. **选节口径实测**：`D566Q7D3` 的节序是 Abstract / INTRODUCTION / SINGULAR VALUE DECOMPOSITION / ALGORITHM / NUMERICAL RESULTS / CONCLUSIONS，他做的恰好是中段两节 ⇒ "掐头去尾"＝去掉前置的背景/综述节与后置的算例/结论节，只留推导与方法。
+4. **现有工具做不了**：`zotero-note.mjs` 的语义是"**唯一**带 marker 的 digest 笔记 + 追加"，而语料里的笔记**全都没有 marker** ⇒ 它既做不出"每节一条"，重跑时也没有判断"这一节是否已覆盖"的依据（只能重复创建）。
+5. **必须有"无全文"这一路**：`297FISBF` 的 children 为空（无任何附件）⇒ 该项任务必须能报"缺可读文本"，而不是从摘要编出内容。
+
+**决策**：
+
+1. **新增第九条按需纪律 `section-notes`**，不并进 `literature-recon`：触发条件不同（本纪律不评证据等级），且后者已 258 行。契约升 **Revision 11**（§4 清单 + §6 补一条"写进条目的笔记始终属于所有者"）。
+2. **产物＝条目上的子笔记，每节一条**；公式用 **`$` / `$$`**（junhan 2026-10-16 裁定），并保留原文公式号；节笔记**不等于** digest（`INV-EVID-4` 的阅读记录仍是 `literature-recon` 那条 marker 笔记），两条纪律不抢同一个产物。
+3. **新写入口 `tools/zotero-section-note.mjs`**：创建（**幂等**——marker 与开场句都算已覆盖，命中即**拒绝**并给出 exit 1）+ `--tidy` 机械整理 + 无参 `--item` 出覆盖计划。
+4. **整理只做可判定的机械修复**（junhan 2026-10-16 明确选择）：`<em>…</em>`→`_…_`（markdown 下划线被渲染成斜体所致）、`[…]`→`$$…$$`、`(…)`→`($…$)`（**括号留在定界符外**，因为 `(S^{\max})^2` 与 `$S^{\max}$^2` 不是同一个式子）。只在该文本节点括号配对、且跨度含 LaTeX 标记时转换；未闭合节点**整节点不动**并列入"left alone"。**绝不重写散文**——会猜的修复就是重写。
+5. **执行者分规模**：单篇 inline；**≥3 篇**才一篇一子代理，且子代理**只起草到工作区文件**，入库与回读一律留在父代理（库改动是受门控、可审计的动作，放一处才查得清"没重复、没覆盖"）。
+
+**试点实测（05-2 未做的两篇，全部真写入）**：
+
+- `ASAQH5A3 The continuation power flow` → 3 条：`QE78EVJR`(§2, 2053) · `TS36N2CG`(§3, 2922) · `MYSL4ABF`(§4, 1711)；选节为"潮流方程重构／预测–校正求解／由切向量的灵敏度信息"，跳过引言、算例与结论。
+- `VZC2PQLB Voltage stability evaluation using modal analysis` → 2 条：`AQZTGMGQ`(§2, 4548) · `HM4A8AJC`(§3, 2622)；选节为"模态分析方法／设备建模"，跳过引言、应用算例、结论与讨论。
+- **反向控制**：写完后对 `ASAQH5A3` 再写一次 §2 → `REFUSED: §2 is already covered by note QE78EVJR (read from its marker)`，**exit 1**，条目笔记数仍为 3（未新增）。
+- `297FISBF` → 计划即报 `NO PDF/EPUB/HTML ATTACHMENT`，未写任何东西。
+- **一个实测约束**：本库把笔记正文**逐字存储**，不替我们补 `<div data-schema-version="9">` 外壳（他手写的旧笔记有那层外壳，是编辑器加上的）。工具因此不猜那层外壳。
+- **一处实测的读数困难**：`ASAQH5A3` 是扫描件 OCR，节标题被识别成 `P SOLUTIOCN`、`-P IZATION AND THE CORRECTOR`，编号不可读 ⇒ 本纪律要求"把据以切分的标题行原文写进报告"，两条相应笔记末尾也注明了"该式按同节符号定义复原，逐字核对请回 PDF"。
+
+**否掉的替代方案**：并进 `literature-recon`（零契约变更，但把两件事塞进一份契约，且该文件已 258 行）· 只加常驻纪律（与 §2"纪律放 skill、persona 只留指针"相反，判据表也无处安放）· 复用 `zotero-note.mjs` 的 marker 语义（重跑即重复）· 直接覆盖旧笔记做"风格整理"（那是重写而不是整理）· 沿用现有裸 `[ ]` 公式（实测那是复制损坏，不是风格）。
+
+**本轮未做／未测（明确登记）**：`--tidy` 的**写入**路径本轮未执行（junhan 选择"先只做新笔记"，整理另行开轮）——其干跑路径已在真实笔记 `HUBAWKBF` 上验证（3574→3672 字符，19 处 `[]` + 36 处 `()` 转换，0 处 left alone）；05-2 的 `297FISBF` 缺附件无法做；批量 fan-out（≥3 篇）未跑；`ASAQH5A3` 的节号是**数顶层标题得来**的（原文编号不可读），若日后拿到带编号的版本需复核。
+
+**落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（九节骨架 + 选节表 + 模板 + 就地排除条件）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`--item` 读笔记正文，此前只能读到元数据——纪律点名了一把打不开的尺子）· [`cordis.patch.yml`](../cordis.patch.yml)（路由第 9 条）· `protocol.md`（Revision 11：§4／§6）· [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（8→9）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（路由 8→9）。
+
