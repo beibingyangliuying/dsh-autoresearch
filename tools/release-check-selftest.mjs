@@ -82,9 +82,10 @@ check(
   'a manifest with no matching key at all is reported',
 )
 
-console.log('\n[4] the README against the self-tests that exist')
+console.log('\n[4] the README and the release procedure against the self-tests that exist')
 
-const tests = documentedSelftests(readme, readdirSync(join(ROOT, 'tools')))
+const tools = readdirSync(join(ROOT, 'tools'))
+const tests = documentedSelftests(readme, tools)
 check(tests.undocumented.length === 0, 'every self-test in tools/ is documented', tests.undocumented.join(', '))
 check(tests.stale.length === 0, 'the README names no self-test that is gone', tests.stale.join(', '))
 check(
@@ -99,6 +100,21 @@ check(
   documentedSelftests('node tools\\windows-selftest.mjs and node tools/posix-selftest.mjs', []).stale.length === 2,
   'both path separators are read',
 )
+
+// The release procedure carries its own ordered copy of the suite, and that copy was prose with no
+// instrument behind it. It drifted twice: a section-note test and the scaffold guard were both added
+// without it, so a release could have run "the whole suite" and skipped them. Same instrument, second
+// list - and the check is driven with a block that names one test, which must report the rest.
+const suiteBlock =
+  read('.agents/skills/preset-release/SKILL.md').match(/```powershell\r?\n([\s\S]*?)```/)?.[1] ?? ''
+const suite = documentedSelftests(suiteBlock, tools)
+check(suiteBlock !== '', 'the release procedure still carries a runnable suite block')
+check(suite.undocumented.length === 0, 'the release procedure names every self-test', suite.undocumented.join(', '))
+check(
+  documentedSelftests('node tools\\preset-selftest.mjs', tools).undocumented.length > 0,
+  'a self-test missing from the release procedure would be reported - this check can fail',
+)
+
 
 console.log('\n[5] which commit a tag names')
 
