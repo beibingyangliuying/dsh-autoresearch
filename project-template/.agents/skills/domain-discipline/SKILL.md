@@ -8,7 +8,7 @@ description: TODO — one sentence naming the trigger: when this study's domain 
 Rename this directory to the discipline's real name (for example `storage-audit`, `fragility-review`)
 and rewrite this file. Delete it if the study needs no domain-specific discipline.
 
-This file follows the same nine-section shape as the preset's four skills, so that a reader who
+This file follows the same nine-section shape as the preset's shipped disciplines, so that a reader who
 knows one knows all of them. Keep that shape.
 
 ## 1. When to use

@@ -20,8 +20,9 @@ phases, and one rule that catches more defects than either.
 flow to answer a documentation question.
 
 **Do not move this skill into `skills/`.** That directory is the preset's shipped disciplines: it is the
-authoritative symbol source for `doc-selftest`, and `preset-selftest` asserts exactly eight routing
-names. A maintenance skill belongs to this checkout, where only sessions opened here can see it.
+authoritative symbol source for `doc-selftest`, and `preset-selftest` asserts one routing bullet per
+shipped discipline. A maintenance skill belongs to this checkout, where only sessions opened here can
+see it.
 
 ## 2. The rule that catches the most: re-scan for the OPPOSITE claim
 
