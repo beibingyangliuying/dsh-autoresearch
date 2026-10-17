@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 14.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 15.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 14 fixes the unit a section note is counted in, and says
+independent of any package version. Revision 15 adds the tenth on-demand discipline: a paper the study
+has read becomes a **ruled ledger of what it may lend**, one verdict per borrowable item, whose reader
+is an implementer who never opens the paper. It records four things as contract rather than leaving them
+to that discipline's own text — an item reaches code only with the paper's own locator, the condition it
+holds under, our normalized form beside the paper's, and **a number a test can assert**, because a
+formula copied correctly and a formula implemented differently are otherwise indistinguishable, so an
+item without such an anchor stays a candidate; a verdict is the owner's and is dated, and an item is
+verified only when that number passes; the ledger grounds no research conclusion, while a module that
+disagrees with a ruled item is a defect rather than a difference of opinion; and one formula has one
+transcription, so where a section note already holds it the ledger cites that note instead of deriving it
+again. §4, §7, §8 and §9 state it. Revision 14 fixes the unit a section note is counted in, and says
 who decides it: **coverage is counted per top-level section**, a section written as notes for its own
 subsections is covered **in parts** and never also as a whole, and the reading that decides which
 sections a record already covers is made by reading the notes — the channel reports the ones it can
@@ -175,6 +185,10 @@ sections     a paper already chosen for study becomes one explanation note per m
              not written, an already-covered section is never written twice, counted per top-level
              section — one carried as notes for its own subsections is covered in parts — and an
              older note is repaired mechanically or not at all
+adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
+             condition it holds under, our normalized form beside the paper's, the module it
+             becomes, and the number a test can assert — the owner rules, nothing enters code
+             without an anchor, and the ledger grounds no conclusion
 challenge    a claim is opposed with a counterexample, contradicting evidence, or a
              falsification path — or the challenge reports that it cannot challenge
 settlement   conclusions, rejected directions and rulings are settled into three layers
@@ -323,6 +337,8 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
     00_scoping.md      question, boundary, non-goals, decidability
     literature/        reconstruction notes — non-normative by construction
     literature/refs/   the digest index: one line per reference actually read
+    adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
+                       into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
     journal/           the round-by-round record; never a conclusion
     experiments/       run cards; re-runnable evidence
@@ -332,7 +348,10 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
 
 The authority order is part of the contract: domain constraints outrank the scoping document, which
 outranks non-normative notes; a journal is a record and never grounds a claim; a pitfall entry
-carries the environment and date it applies to, so it can be deleted when it stops applying.
+carries the environment and date it applies to, so it can be deleted when it stops applying. An
+adoption ledger sits on both sides of that line and the contract says which is which: it grounds no
+claim, like a note, and it **binds the code**, so a module that disagrees with a ruled item is a defect
+rather than a difference of opinion.
 
 ## 8. Domain invariants
 
@@ -353,6 +372,10 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
 | `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
+| `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
+| `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
+| `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
+| `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper levels of the reading ladder cannot answer the question. | Context is the scarce resource of a research session; loading it is a spending decision, not a default. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
@@ -363,6 +386,9 @@ Every row must be falsifiable: a check must exist that can fail.
 - No resident, self-organizing band of agents with consensus voting. The preset is a workbench, not
   a research group simulation.
 - No automatic experiment orchestration: the preset provides the record, not a scheduler.
+- No adoption that follows from having been read. A paper being relevant never puts a formula into code:
+  the ledger's ruling and the number that proves it are the gate, and this preset performs neither on the
+  owner's behalf.
 - No unattended write-back into the reference library: nothing writes while the owner is not the one who
   asked for it. A write happens only under an authorization they granted in the reference manager — the
   single write their "Allow" covers, or their standing grant for that library — never as a background
