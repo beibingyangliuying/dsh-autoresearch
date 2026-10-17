@@ -3,7 +3,15 @@
 **Status: normative. Revision 15.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 15 adds the tenth on-demand discipline: a paper the study
+independent of any package version. Revision 16 parts what a run was predicted to do from what it
+did, and requires the artifacts a record cites to stay obtainable. It records three things as contract
+rather than leaving them to the scaffold's own text: the prediction is written **before** the run into
+an artifact of its own, because a prediction that shares a file with its outcome cannot be told apart
+from one written afterwards; the record of a run is added to and never repaired, so a run that failed
+its own gate is recorded as invalid rather than quietly reworded; and an artifact a record cites must
+be obtainable by the reader that record is written for — where a study's outputs live outside its own
+record, that means a copy kept with it, and a citation nothing can retrieve is a defect stated on the
+record rather than a line deleted from it. §1, §4, §7 and §8 state it. Revision 15 adds the tenth on-demand discipline: a paper the study
 has read becomes a **ruled ledger of what it may lend**, one verdict per borrowable item, whose reader
 is an implementer who never opens the paper. It records four things as contract rather than leaving them
 to that discipline's own text — an item reaches code only with the paper's own locator, the condition it
@@ -87,7 +95,8 @@ boolean state.
 | **Three-way typing** | The obligation to mark every statement as evidence-backed, an inference, or undecided. |
 | **Handoff** | Delegating a deliverable to a subagent, and receiving it back. |
 | **Run** | One execution of code intended to test a hypothesis. |
-| **Card** | The record of one run: prediction, command, configuration, artifacts, observation, validity, verdict. |
+| **Protocol** | What one run was declared to do before it ran: prediction, reference population, the closed variant set, validity gates, decision rule. Written before the run, never revised after it. |
+| **Card** | The record of one run as it happened: command, configuration, artifacts, observation, validity, verdict. It cites its protocol rather than restating it. |
 | **Study** | One research project, living in its own workspace with its own conventions. |
 | **Scaffold** | The default layout and instruction file the preset offers a new study. |
 
@@ -195,7 +204,9 @@ settlement   conclusions, rejected directions and rulings are settled into three
 metadata     bibliographic records come from a REST source; metadata is never evidence
 handoff      a delegated deliverable is fixed before spawning; a child's conclusion is
              unverified until the parent reads the artifact
-run          a hypothesis becomes a card; "ran" is not "valid"
+run          a hypothesis is written down before it is tested, and the test becomes a card;
+             "ran" is not "valid", and a card citing an artifact nobody can retrieve is not
+             evidence
 synthesis    several explored directions become one executable draft: the choice, the criteria
              it won on, the rejected alternatives and their grounds, and the acceptance
              criterion that would refute it
@@ -341,8 +352,12 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
     journal/           the round-by-round record; never a conclusion
-    experiments/       run cards; re-runnable evidence
+    experiments/       what a run was predicted to do, what it did, and what proves it: the
+                       prediction is written before the run, so it lives in its own file
+      protocols/       one pre-registration per run, named by the run's id
+      evidence/        copies of the cited artifacts a run wrote outside the study's own record
     pitfalls/          symptom-indexed operational record; pruned when obsolete
+    archive/           retired documents, and a README saying what they were and what replaced them
   .agents/skills/      study-level discipline, if the domain needs one
 ```
 
@@ -352,6 +367,11 @@ carries the environment and date it applies to, so it can be deleted when it sto
 adoption ledger sits on both sides of that line and the contract says which is which: it grounds no
 claim, like a note, and it **binds the code**, so a module that disagrees with a ruled item is a defect
 rather than a difference of opinion.
+
+A retired document is moved into the study's archive with a note saying what it was and what replaced
+it, and is not rewritten there; a live pointer into it is updated, a dated record inside it is not. The
+reason a direction was retired is the reusable part of it, and that reason survives only if the file
+carrying it survives unchanged.
 
 ## 8. Domain invariants
 
@@ -372,6 +392,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
 | `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
+| `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
