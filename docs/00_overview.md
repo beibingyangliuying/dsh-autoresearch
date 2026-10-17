@@ -75,9 +75,9 @@ node tools\arxiv-selftest.mjs                          # 预印本 helper：查�
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）
-node tools\zotero-note-selftest.mjs                    # 笔记：哪条是我们的 / 追加不覆盖（不连库）
+node tools\zotero-note-selftest.mjs                    # 笔记：哪条是我们的 / 追加不覆盖 / 同一段不重复 / CLI 对 stub 库不写（离线）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
-node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写（不连库）
+node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝（不连库）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
 ```
 

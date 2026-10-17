@@ -134,7 +134,7 @@ the replaced server could read a preprint's body, and dropping the row dropped t
 **What the reference-library channel is.** Eight helper programs, not a server. `tools/zotero-read.mjs`
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
 each kind of write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
-on one, `zotero-section-note.mjs` leaves one explanation note per method section (and repairs an older
+on one and writes nothing when the note already reads with it, `zotero-section-note.mjs` leaves one explanation note per method section (and repairs an older
 note's damaged formula delimiters, mechanically and only), `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and files, `zotero-link-attachments.mjs` turns stored PDFs into
 linked files. Together they replace an MCP row whose

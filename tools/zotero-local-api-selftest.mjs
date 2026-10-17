@@ -15,6 +15,10 @@
 //     "Always Allow" is kept per library and reused without asking; a key the library rejects is
 //     discarded, so a grant the owner revoked recovers by itself. The transport is injectable for
 //     exactly this reason: without it the asking could only be tested by holding a dialog open.
+//   * WHERE IT TALKS TO. `ZOTERO_LOCAL_API` is the seam a read has, so the command-line path that
+//     decides before it opens the write gate can be tested against a stub library. A malformed value
+//     must throw rather than fall back: talking to the reference manager while a test believed it was
+//     talking to a stub is the one failure this seam must not have.
 import { readFileSync } from 'node:fs'
 import {
   APP_NAME,
@@ -23,6 +27,7 @@ import {
   grantFilePath,
   isWriteAccepted,
   keptGrant,
+  localOrigin,
   parseGrantStore,
   withGrant,
   withoutGrant,
@@ -244,6 +249,38 @@ for (const file of [
   check(source.includes('appName: APP_NAME'), `${file} uses the shared name`)
   check(!/appName: '/.test(source), `${file} declares no name of its own`)
 }
+
+console.log('\n[11] where it talks to, which is the seam a read has')
+
+const originalAddress = process.env.ZOTERO_LOCAL_API
+delete process.env.ZOTERO_LOCAL_API
+const defaultOrigin = localOrigin()
+check(
+  defaultOrigin.host === '127.0.0.1' && defaultOrigin.port === 23119,
+  'with no override it talks to the reference manager',
+  `${defaultOrigin.host}:${defaultOrigin.port}`,
+)
+
+process.env.ZOTERO_LOCAL_API = '127.0.0.1:23999'
+const overridden = localOrigin()
+check(
+  overridden.host === '127.0.0.1' && overridden.port === 23999,
+  'an override is honoured - this is how a stub library is reached',
+  `${overridden.host}:${overridden.port}`,
+)
+
+process.env.ZOTERO_LOCAL_API = 'not-an-address'
+let malformed = ''
+try {
+  localOrigin()
+} catch (error) {
+  malformed = error.message
+}
+check(/host:port/.test(malformed), 'a malformed address throws rather than falling back to the real library', malformed)
+
+if (originalAddress === undefined) delete process.env.ZOTERO_LOCAL_API
+else process.env.ZOTERO_LOCAL_API = originalAddress
+check(process.env.ZOTERO_LOCAL_API === originalAddress, 'and the environment is left as it was found')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

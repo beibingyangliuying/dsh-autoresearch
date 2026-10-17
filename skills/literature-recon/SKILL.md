@@ -90,6 +90,7 @@ Literature that contradicts your expectation or the target claim gets its own se
 | Literature contradicting the claim was found | It must go into the contradicting-evidence section. Never hide it. |
 | It is a preprint / not peer reviewed | Mark it explicitly. |
 | "Many studies show" with no concrete references | Either supply the concrete references, or downgrade to "insufficient evidence found". |
+| The record already carries notes but none carries the digest marker | Read one before writing: the marker is an invisible comment, and the application drops it when the owner edits a note there, so the previous digest may be one of these notes. The note tool would create a **second** digest note. Report which note reads like the digest and stop. |
 
 ## 5. Wording discipline
 
@@ -202,6 +203,11 @@ Fixed sections:
 
   The note tool appends to the one note on a record that carries its marker, and creates that note when
   there is none — a note **without** the marker is never touched, so someone else's note stays theirs.
+  **A re-run adds nothing, and says so.** The new digest is compared against what the note already
+  reads with — as the text a reader sees, not byte for byte, because the library rewrites a note the
+  application has edited — and one already recorded is reported `ALREADY RECORDED` with nothing written.
+  `ALREADY RECORDED` is the expected answer on a re-run, not a failure to write; a digest that really is
+  a second reading has to say what is new, and the same sentence is not a second reading.
   Then append one line to the digest index. Without this step the next round pays the same reading cost
   again.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.

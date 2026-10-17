@@ -22,6 +22,24 @@
 // The text is HTML, inserted verbatim: the reference manager stores note bodies as HTML, and guessing
 // at a Markdown conversion would silently change what is stored.
 //
+// ONE READING IS RECORDED ONCE
+//
+// A digest says what was read and what it settles, so the record of a reading is that sentence, not a
+// count of attempts. A round that is re-run - a retry, a session resumed after its context was pruned -
+// reaches this tool with text the note already carries, and appending it again would leave the note
+// asserting the same reading twice while a read-back happily reported success, because it only asks
+// whether the text is there. An addition the note already reads with therefore writes NOTHING and
+// reports `ALREADY RECORDED` (exit 0): the state asked for already holds, which is the same answer
+// every other write tool here gives when the change it was asked for is already in place.
+//
+// The comparison is on VISIBLE text rather than on bytes, for the reason the read-back uses it too: the
+// application rewrites a note it has edited, so a body that reads identically need not match byte for
+// byte. And it searches the WHOLE note, not a part this tool appended, because the digests already in a
+// library were written before this tool existed and carry no boundary this tool could go by.
+//
+// What it cannot see is a restatement: a digest that repeats an older one and then adds to it reads as
+// a new sentence and is appended, so what is written still has to say what is new.
+//
 // Usage:
 //   node tools/zotero-note.mjs --item <itemKey> --text "<p>Read: the attention section.</p>"   # dry run
 //   node tools/zotero-note.mjs --item <itemKey> --file .tmp/digest.html --write
@@ -30,7 +48,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem } from './zotero-local-api.mjs'
+import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
 
 /** The marker that identifies this tool's digest note on a record. */
 export const DIGEST_MARKER = '<!-- autoresearch-digest -->'
@@ -52,14 +70,23 @@ export function findDigestNote(children, marker = DIGEST_MARKER) {
 /**
  * The note body a digest produces.
  *
+ * A digest the note already reads with produces nothing, so a re-run cannot turn one reading into the
+ * same sentence twice. The comparison is on {@link visibleText} - the application rewrites a note it
+ * has edited, so a body that reads identically need not match byte for byte - and it searches the
+ * whole recorded body rather than a part this tool appended, which is what makes it reach a digest
+ * written before this tool existed.
+ *
  * @param {{key: string, data: object}|undefined} existing The digest note to append to, if any.
  * @param {string} addition The HTML to add.
  * @param {string} [marker] The marker, written only when the note is created.
- * @returns {{html: string, mode: 'append'|'create'}} The body to send and what it does.
+ * @returns {{html: string, mode: 'create'|'append'|'duplicate'}} The body to send and what it does.
+ *   In `duplicate` mode the body is the note unchanged and nothing is to be written.
  */
 export function composeNote(existing, addition, marker = DIGEST_MARKER) {
   if (!existing) return { html: `${marker}\n${addition}`, mode: 'create' }
   const current = existing.data?.note ?? ''
+  const wanted = visibleText(addition)
+  if (wanted !== '' && visibleText(current).includes(wanted)) return { html: current, mode: 'duplicate' }
   return { html: `${current}${current.endsWith('\n') ? '' : '\n'}${addition}`, mode: 'append' }
 }
 
@@ -98,12 +125,27 @@ async function main() {
   const existing = findDigestNote(children)
   const composed = composeNote(existing, addition)
 
+  const action =
+    composed.mode === 'append'
+      ? `append to note ${existing.key}`
+      : composed.mode === 'duplicate'
+        ? `nothing to do - note ${existing.key} already reads with this text`
+        : 'create a new note on this record'
+
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
   console.log(`children: ${children.length}${existing ? ` (digest note ${existing.key})` : ' (no digest note yet)'}`)
-  console.log(`action  : ${composed.mode === 'append' ? `append to note ${existing.key}` : 'create a new note on this record'}`)
+  console.log(`action  : ${action}`)
   if (existing) console.log(`note    : ${(existing.data.note ?? '').length} characters now`)
   console.log(`addition: ${addition.length} characters`)
-  console.log(`result  : ${composed.html.length} characters`)
+  if (composed.mode !== 'duplicate') console.log(`result  : ${composed.html.length} characters`)
+
+  if (composed.mode === 'duplicate') {
+    console.log(`\nALREADY RECORDED - note ${existing.key} already carries this text, so nothing was written.`)
+    console.log('A digest records one reading once; the same sentence is not a second reading. If this reading')
+    console.log('adds something, the digest has to say what is new.')
+    return
+  }
+
   console.log(
     composed.mode === 'append'
       ? `write   : PATCH /api/users/0/items/${existing.key}  If-Unmodified-Since-Version: ${existing.data.version}`

@@ -1,9 +1,13 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 12.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 13.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 12 states the boundary this preset measured rather than
+independent of any package version. Revision 13 bounds a digest write: a digest the record already
+reads with is reported as already recorded and nothing is written, because a round that is re-run must
+not turn one reading into the same sentence twice — and that comparison is made on the text a reader
+sees rather than byte for byte, because the reference manager rewrites the body of a note its own
+application has edited. §6 and `INV-EVID-4` state it. Revision 12 states the boundary this preset measured rather than
 assumed: **it performs no deletion in the reference library.** Deleting through the library's local API is
 permanent — measured 2026-10-16, a `204` and the record is a `404` afterwards, while the library's trash
 neither grows nor holds the key — whereas the owner deleting in the application moves the item into that
@@ -280,7 +284,11 @@ Three rules bound their use:
   channel that returns an empty text for an unindexed attachment, or a failure as if it were a record,
   is reporting about itself rather than about the work.
 - **A note written onto a record stays the owner's.** The channel's note writes are additive or
-  mechanical. A section a record already covers is refused rather than written twice — coverage counts
+  mechanical. Additive is not a licence to write the same thing twice: a digest the record already
+  reads with is reported as already recorded and nothing is written, and that comparison is on the text
+  a reader sees rather than byte for byte, because the reference manager rewrites the body of a note
+  its own application has edited. One reading is one sentence on the record, however many times the
+  round that produced it is run. A section a record already covers is refused rather than written twice — coverage counts
   whether it is recorded by this preset's own marker or only by the note's opening line, because the
   notes an owner wrote by hand carry no marker. A note this preset did not identify as a section note
   is never modified. Repairing delimiters is content-preserving by construction: a span is converted
@@ -333,7 +341,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
-| `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
+| `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper levels of the reading ladder cannot answer the question. | Context is the scarce resource of a research session; loading it is a spending decision, not a default. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |

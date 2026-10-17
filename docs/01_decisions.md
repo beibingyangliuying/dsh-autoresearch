@@ -740,3 +740,38 @@ skill 里。
 一节的方法内容超过 5000 字符预算时，按**论文自己的子节号**分条（`3.1`、`3.2` 各一条），键就用该子节号。首例是 `7ZGICNQY` 第 3 节：单节方法内容 10.4k 字符，硬并成一条会超预算、砍掉两条会丢方法。工具已支持小数点节号（`c9f8958`），纪律正文同步写明。
 
 **落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（分条规则）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs)（小数点节号）· 只读清单 `.tmp/notes-to-delete.md`（工作区临时产物，不在版本控制内）。**补记（同日收口后）**：junhan 裁定把"不做删除"写进契约 §9 非目标，契约升 **Revision 12**（依据即 39.2 的实测），README 同步。**未做**：删除工具、全库清理清单、第 2 组入库、批量其余 24 篇。
+
+## 40. digest 笔记没有内容级去重：一条"该有的已经有了还会再加"的链条（契约 Revision 13，2026-10-17）
+
+**起因**：junhan 问"读完 Zotero PDF 要留笔记"那条规则，是不是没加防重复措施——"该有的已经有了，但它好像还会添加"。**先纠正一处前提**：这条规则（`literature-recon` §7 的 digest）来自 2026-10-12 的初版，**不是最近加的**；最近加的是逐节笔记（Revision 11），而**逐节笔记恰恰是去重最完整的一条**（marker 读不到还会退回读笔记开场句，命中即 exit 1 拒绝，§37 记过它的反向控制）。junhan 的直觉指对的，是 digest 这条更常被重跑的链。
+
+### 40.1 诊断：去重只做到了笔记级，没做到内容级
+
+| 层 | digest（`zotero-note.mjs`） | 逐节笔记 |
+|---|---|---|
+| 会不会堆出第二条笔记 | 不会（marker `<!-- autoresearch-digest -->`，一篇一条，无标记的笔记不碰） | 不会 |
+| 会不会重复同一段文字 | **会** | 不会 |
+
+`composeNote()` 原样拼接，没有"这段文本已经在笔记里"的判断；而**读回校验拦不住它**——它只验证 addition 在笔记里出现，重复的段落当然"出现"。⇒ 同一条命令跑两次：两段一样的文字，**两次都报 OK**。
+
+**还查出两处相邻缺口**（都不属"内容级"，一并记录，不混为一谈）：
+
+1. **笔记级有一处会被应用吃掉**：应用编辑过的笔记会**丢掉不可见标记注释**（Revision 11 已实测，见逐节笔记工具头部），而 `findDigestNote` 只认标记 ⇒ 所有者在 Zotero 里打开并保存过那条 digest 笔记后，下一次写入会**新建第二条** digest 笔记。
+2. **`research/literature/refs/` 那一行没有任何仪器**：纪律只说"再追加一行"，没写"这行已存在怎么办"，唯一防线是读侧的"读之前先查 index"。但它被契约定位成**派生数据**（§7、`refs/README.md`），可重建，严重性低于笔记。
+
+### 40.2 判据与三项裁定（junhan 2026-10-17 逐项定）
+
+1. **判重口径 = 归一化可见文本的子串包含**。不用字节比较：库会重写笔记（加 `<div data-schema-version>`），字节比较会漏判；不用逐段哈希标记：只保护今后写入的段落，且纪律里没有"digest 序号"这个概念。**残留边界（诚实记录）**：它看的是包含关系，看不出"重述"——新 digest 若先复述旧 digest 再补充，会被当成新句子追加。因此纪律仍要求"新的阅读必须说出新东西"。
+2. **命中行为 = 幂等无操作，exit 0，打印 `ALREADY RECORDED`**。依据是工具自己头写的退出码契约（`0 applied, or nothing to do | 1 refused …`）与 `zotero-edit` 的 "No change: … Nothing to write." 同构：要达成的状态已成立，不是冲突。**不加 `--force`**：判重是启发式，留一条逃生门就等于把"绕开唯一护栏"变成默认动作。
+3. **"标记被应用吃掉 ⇒ 新建第二条"本轮只在纪律里处置**：§4.2 新增一条排除条件（条目已有笔记但没有标记时，先读一条确认它是不是被应用重写过的 digest，报告并停下）。改工具要做到真正的笔记级幂等，得先用**标签**做笔记身份，而"标签在应用编辑后是否留存"需要一次真库实测 ⇒ 另开一轮。
+
+### 40.3 落点与验证
+
+- [`tools/zotero-note.mjs`](../tools/zotero-note.mjs)：`composeNote()` 从两态变三态（`create`／`append`／`duplicate`，重复时正文原文不动），`main()` 在**打开写入门禁之前**走 `ALREADY RECORDED` 分支（干跑与 `--write` 同一答案）。头部新增一节说明为什么按可见文本比、为什么搜整条笔记（旧 digest 没有边界可依）、以及"重述"这个看不到的边界。
+- [`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)：`visibleText` 上移到共享层。它原本只住在逐节笔记工具里；现在两个笔记工具都要拿"库存的"和"发出的"比，两份定义会漂移——这正是共享层当初存在的理由（该搬家单独一个重构提交，**无行为变化**，全绿）。同一文件新增**读的地址缝** `ZOTERO_LOCAL_API`（`host:port`，缺省仍是 `127.0.0.1:23119`）：写闸门有 `transport` 缝、**读没有**，于是"在开门禁之前就决定不写"这条命令行路径只可能拿真库去试。缝的取值非法时**抛错而不是回退**——测试以为在打 stub、实际打到了真库，正是这条缝唯一不能有的失效方式。
+- 自测：[`tools/zotero-note-selftest.mjs`](../tools/zotero-note-selftest.mjs) 新增 `[3]`（同一段 → 无操作且正文不动 · 空白差异 · 应用重写过的笔记仍匹配 · 两条 digest 中较旧的一条仍被认出 · **重述会被追加**（把边界钉成决定而不是意外）· 空 addition 不算重复 · 无我方笔记时仍是 create）、`[4]`（该分支在 `createWriteGate` **之前**）与 `[5]`——**命令行对 stub 库**：子进程起真 CLI、父进程当 stub，带 `--write` 重跑同一段 → `exit 0` ＋ 打印 `ALREADY RECORDED` ＋ **只发生两次 GET、没有任何写请求**；换一段新文字 → 计划 append 到本方笔记；条目只有所有者的笔记 → 计划 create 而不是追加到别人的笔记。子进程必须**异步** spawn：同进程既当服务器又同步等子进程＝死锁（第一版就是这么挂住的），并给 20s 护栏。
+- [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)：`[11]` 钉住地址缝（缺省值 · 覆盖生效 · 非法值抛错 · 环境复原）。
+- **反向控制（两次）**：把判重那一行从工具里抽掉 → `zotero-note-selftest` **FAIL (5)**（`[3]`）；把整个 `ALREADY RECORDED` 分支抽掉 → **FAIL (3)**（`[5]`：exit 变成 1，且门禁被打开、多出第三次请求）；两次装回都即 PASS。
+- 文本：[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（§7 那条 bullet 写明"重跑不添加，并且会这么说" · §4.2 新增排除条件一行）· [`protocol.md`](../protocol.md)（**Revision 13**：头部、§6 笔记条款、`INV-EVID-4`）· [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)（自测清单那两行）。
+
+**未做**：`refs/` 索引行的去重（另开一轮）· 用标签做 digest 笔记身份（需真库实测"标签是否留存"，另开一轮）· 库里既有 digest 笔记的整理。

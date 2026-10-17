@@ -31,8 +31,34 @@ import { request } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const HOST = '127.0.0.1'
-const PORT = 23119
+const DEFAULT_HOST = '127.0.0.1'
+const DEFAULT_PORT = 23119
+
+/**
+ * Where the reference manager answers, as `host:port`.
+ *
+ * The write gate carries a `transport` seam its self-test replaces, but a READ has none, and the
+ * command-line path that decides **before** it opens that gate could therefore only be exercised
+ * against the owner's real library. `ZOTERO_LOCAL_API` gives that path the same kind of seam the grant
+ * file already has: a self-test stands a stub library up on a temporary port and points the tool at it.
+ * It names an address rather than a credential, and an unset variable means the reference manager
+ * exactly as before.
+ *
+ * A malformed value throws rather than falling back: silently talking to the real library while a test
+ * believed it was talking to a stub is the one failure this seam must not have.
+ *
+ * @returns {{host: string, port: number}} The address to talk to.
+ */
+export function localOrigin() {
+  const override = String(process.env.ZOTERO_LOCAL_API ?? '').trim()
+  if (!override) return { host: DEFAULT_HOST, port: DEFAULT_PORT }
+  const separator = override.lastIndexOf(':')
+  const port = Number(override.slice(separator + 1))
+  if (separator === -1 || !Number.isInteger(port) || port <= 0) {
+    throw new Error(`ZOTERO_LOCAL_API must be host:port, got '${override}'`)
+  }
+  return { host: override.slice(0, separator), port }
+}
 
 /**
  * One request to the local API.
@@ -46,8 +72,7 @@ export function localRequest(method, path, { body, headers = {} } = {}) {
   return new Promise((resolve, reject) => {
     const req = request(
       {
-        host: HOST,
-        port: PORT,
+        ...localOrigin(),
         path,
         method,
         headers: { ...headers, ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}) },
