@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; every write is a dry run first, an existing section is never duplicated (coverage counted per top-level section, a section split into its own subsections counting as covered in parts), and an old note is only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$), never rewritten. Use after reading a method-heavy paper you will build on, and when a record's existing section notes have unreadable formulas.
+description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; one note per top-level section, never split into subsection keys and never a duplicate (a subsection-keyed note from an earlier round still counts as covering its parent), every write a dry run first, and an old note only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$), never rewritten. Use after reading a method-heavy paper you will build on, and when a record's existing section notes have unreadable formulas.
 ---
 
 # section-notes — one explanation note per method section
@@ -121,29 +121,33 @@ $$</p>
 <ol><li>…</li></ol>
 ```
 
-**Budget**: 1,500–5,000 characters per note. Above that is almost always the case study leaking in;
-below it, the section was probably not read.
+**Length is a signal, not a cap.** Most notes land between 1,500 and 5,000 characters. Much above that
+is usually the case study leaking in; much below it usually means the section was not read. Say which it
+is in the report — and **never split a section to stay inside that range**: the unit is the section, so a
+section whose method content is genuinely long gets a long note.
 
 ### 3.3 One note per section, and never a duplicate
 
-**The unit that is counted is the TOP-LEVEL section.** A subsection is a writing shape, never a
-separate thing to cover:
+**The unit that is counted is the TOP-LEVEL section, and one section is one note — however long the
+section is.** A subsection key is never something this skill creates:
 
 - The tool refuses to create a note for a section the record already covers, in three ways: the section
   itself is claimed by a note (including one written before this tool existed, whose claim is read from
   its own first paragraph); a **subsection** is asked for whose parent section is already covered as a
   whole; or a **top-level section** is asked for that is already covered in parts. **Do not work around
   a refusal**; report it.
+- **Do not split a long section**, and do not key a note to `3.1` or `3.2` to keep notes short. The
+  paper's method unit is the section; a note that explains it is as long as it needs to be, and §3.2's
+  range is a signal about the note, not a cap on the section. Measured on the one paper this ever
+  happened to: a 10.4k-character method section was split into `3.1` and `3.2` — the split added keys
+  that then had to be counted back into their parent, and covered nothing the long note would not have.
+- **Notes keyed to subsections may already exist** in a library (from that earlier round, or restored
+  from its trash). They count: such a note covers that part of its parent, a top-level section carried
+  that way is covered **in parts**, and the tool folds it into the parent. Recognise them, never create
+  them.
 - A **sibling** subsection is not coverage: a note about `3.2` says nothing about `3.1`, and the missing
   part is exactly what should be written next.
 - Notes are created in section order, so the record reads in the order the paper reads.
-- **A section whose method content exceeds the budget is split by the paper's OWN subsection numbers**
-  (`3.1`, `3.2`, one note each, keyed by that number) — **instead of** a note for the section as a
-  whole, never beside one. Measured on the first paper this happened to: one section's method text was
-  10.4k characters against a 5k budget, and one oversized note serves nobody. The subsection number is
-  the paper's, so the key stays exact and a later run still cannot duplicate it; a subsection note names
-  its own number in the first line like any other. The record then covers that section **in parts**, and
-  the parts are what a later run reads back.
 
 ### 3.4 Repairing an old note is mechanical, and only mechanical
 
@@ -192,12 +196,12 @@ which is the one thing a write tool must never say about the owner's library.
 | The section is already covered — the tool says so, **or your reading of the first paragraphs says so** | Report "already covered by note `<key>`" and skip it. Never create a second note for one section. |
 | The tool's `read here` list and your reading disagree about what a note is about | Report both readings and **stop**; ask. Which section a hand-written note is about is the owner's call, not a detail to write around. |
 | The section is already covered **in parts** (`3.1`, `3.2`) | Write the part that is missing, never a note for the parent as well. A section carried as a whole and in parts covers it twice. |
-| A note appears to cover a **subsection** while the parent section is what the paper's method unit is | Report it. The counted unit is the top-level section; a subsection key is only a way of writing one that was too big for one note. |
+| A note appears to cover a **subsection** while the parent section is what the paper's method unit is | Report it. The counted unit is the top-level section; a subsection key is only ever a legacy shape, and this skill does not create one. |
 | The paper is a survey/review with no derivation anywhere | Report "no method section". Do not force a note onto a background section. |
 | The section boundaries cannot be established from the text | Report the headings you did find and **stop**; ask. A note keyed on a guessed ordinal collides with the real one later. |
 | The section is a case study, a results table, or a conclusion | Do not write it. Say it was skipped and why. |
 | A `--tidy` run reports a span it left alone | That span needs a human or a rewrite. Report it; do not hand-close or hand-rewrite the formula. |
-| The note would exceed the budget | Cut the case-study material and the restatement of the abstract, not the derivation. |
+| The note runs long — well past the 5,000-character signal | Cut the case-study material and the restatement of the abstract, not the derivation, and say in the report that the section's method content is long. **Never split the section.** |
 
 ## 5. Wording discipline
 
@@ -265,13 +269,13 @@ The artifact is the note itself, on the library record. The report is what a lat
 - [ ] The section list was reported before any write, each with note / skipped and a reason
 - [ ] The coverage table was reported, per **top-level** section, with the note key or `none` and the evidence it was judged on
 - [ ] Every note from the plan's `judge these` list was judged, or the round says why it was not
-- [ ] No section is carried both as a whole and in parts
+- [ ] No section was split into subsection keys, and none is counted both as a whole and in parts
 - [ ] No note was written for the abstract, the introduction, the case study, or the conclusions
 - [ ] Every note names its section by the paper's own ordinal and heading
 - [ ] Every equation is inside `$…$` or `$$…$$`, with display math on lines of its own and no `$` nested in `$$`
 - [ ] Every symbol used is defined at its first appearance
 - [ ] Each note ends with a summary naming its contribution and its hand-off to the next section
-- [ ] Each note is within the character budget
+- [ ] Any note outside the 1,500–5,000 signal range is explained (too long: is the case study leaking in? too short: was the section read?)
 - [ ] Each write was a dry run first, and its read-back is quoted
 - [ ] No section is covered twice; every skip is reported
 - [ ] For a tidy: the converted and the declined spans are both reported, and no prose was rewritten
@@ -279,6 +283,7 @@ The artifact is the note itself, on the library record. The report is what a lat
 ## 9. Don't
 
 - Do not summarize the paper. The unit is the method section, not the paper.
+- Do not split a long section, and do not write a note keyed to a subsection: one section is one note.
 - Do not write a note for a section that was not read in this session.
 - Do not duplicate coverage to "complete" a record, and do not delete someone else's note.
 - Do not rewrite prose during a tidy, and do not close a delimiter the copy lost.

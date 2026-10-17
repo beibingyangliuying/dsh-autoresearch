@@ -26,13 +26,16 @@
 //
 // COVERAGE IS COUNTED PER TOP-LEVEL SECTION
 //
-// A section whose method content exceeds the note budget is written as one note per subsection of the
-// paper's own numbering ("3.1", "3.2"). That is a writing shape, not an extra coverage unit: the record
-// then covers §3, in parts. So a write is refused three ways - the section itself is claimed, a
-// subsection is asked for whose parent is covered as a whole, or a top-level section is asked for that
-// is already covered in parts - while a SIBLING subsection is never coverage (a note about 3.2 says
-// nothing about 3.1). Comparing tokens as whole strings expresses none of that, which is why every
-// comparison goes through {@link parentSectionToken}.
+// A section is written as ONE note, however long the section is. The discipline does not split a section
+// into notes keyed to its subsections: the key then has to be counted back into its parent, and it covers
+// nothing a long note would not have. The parent/child reading stays anyway, for two reasons - a library
+// can already carry notes keyed that way (this one did, and they can be restored from its trash), and
+// "which section is this" is a question about the PAPER rather than about how we chose to write it. So a
+// write is refused three ways - the section itself is claimed, a subsection is asked for whose parent is
+// covered as a whole, or a top-level section is asked for that is already covered in parts - while a
+// SIBLING subsection is never coverage, because the missing part is exactly what may be written next.
+// Comparing tokens as whole strings expresses none of that, which is why every comparison goes through
+// {@link parentSectionToken}.
 //
 // WHY A CLAIM IS READ NARROWLY, AND WHAT CARRIES THE REST
 //
@@ -91,9 +94,9 @@ export function normalizeSectionToken(value) {
     .replace(/^文?章?第/, '')
     .replace(/节$/, '')
     .trim()
-  // A dotted ordinal is a section's own number carried down to its subsections (3.1, 2.1.3), which a
-  // section whose method content exceeds the note budget is split by. It is matched exactly as written
-  // because it comes from the paper, not from this tool.
+  // A dotted ordinal is a subsection's own number (3.1, 2.1.3), kept exactly as written because it comes
+  // from the paper. This skill does not write notes keyed that way any more, but a library can carry them
+  // from before (or from its trash), and then the number is how they are recognised.
   if (/^\d+(\.\d+)*$/.test(text)) return text
   const digits = /^(\d+)$/.exec(text)
   if (digits) return digits[1]
@@ -244,11 +247,10 @@ export function sectionClaim(noteHtml) {
 /**
  * The top-level section a token belongs to.
  *
- * Coverage is counted per TOP-LEVEL section. A section whose method content exceeds the note budget is
- * written as one note per subsection of the paper's own numbering ("3.1", "3.2") - a writing shape, not
- * an extra coverage unit: the record then covers §3, in parts. Comparing tokens as whole strings cannot
- * express that, because "3" and "3.1" are simply different strings, so every comparison goes through
- * this.
+ * Coverage is counted per TOP-LEVEL section: a section is one note, and a note keyed to a subsection -
+ * which this skill no longer writes, but a library may carry from before - belongs to the section it is
+ * numbered under. Comparing tokens as whole strings cannot express that, because "3" and "3.1" are simply
+ * different strings, so every comparison goes through this.
  *
  * @param {string} token A normalized ordinal, e.g. `3` or `3.1`.
  * @returns {string} Its top-level part (`3`), or '' for an empty token.
