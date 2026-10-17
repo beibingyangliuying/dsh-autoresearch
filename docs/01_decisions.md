@@ -1043,3 +1043,72 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
   README 的那份清单有仪器校（`release-check-selftest` 的 [4] 段），这份没有 ⇒ 这是同一类漂移的第二个实例，
   处置记在本轮的发布条目里。
 
+## 46. 发布 0.3.0：自检抓到的是两份名单与四个示例，不是代码（2026-10-17）
+
+### 46.1 起因与范围
+
+junhan 要求发布新版本，并按 [`preset-release`](../.agents/skills/preset-release/SKILL.md) 先自检。
+`v0.2.1` 之后共 **33 个提交**（含上一轮的第十条纪律与契约 Revision 15），其中 **14 个此前从未推送**。
+
+### 46.2 自检结论（Phase 1）
+
+- 16 个离线自测 + `preset-selftest` + `release-check --local` **全部 PASS**（含新的 `scaffold-selftest`
+  与它的 5 条反向控制）。
+- **persona 4726 字符 ≈ 1313 token，与 Revision 15 那轮完全相同** ⇒ §45.2 说的"本轮零常驻成本"由仪器
+  确认，不再是推断。
+- §2 的"反方向声明"重扫抓到三处（46.3），§6 的痕迹扫描抓到两处（46.4）。**两份名单与四个示例**是本轮
+  被修的东西；这一版没有改任何代码行为。
+
+### 46.3 §2 重扫：三处"别处还在说旧话"
+
+| 命中 | 处置 |
+|---|---|
+| [`00_overview.md:22`](00_overview.md) 仍写"实验卡：**假设**/命令/…" | **已修**：改成预注册＋实验卡两件，且卡引用协议 |
+| [`01_decisions.md`](01_decisions.md) §8 记的卡字段表（2026-10-13） | **不改写**（它是当时的决策记录），在 §45.7 写明被取代——"退役的主张不得以降级形态存活" |
+| [`preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的发布清单 | **漏两个自测**：`zotero-section-note-selftest.mjs`（§41 加的）与 `scaffold-selftest.mjs`（§45 加的）⇒ **加仪器** |
+
+处理第三处的方式值得记下来：那份清单是散文，没有任何东西校它，所以它已经漂了两次；而 **README 里同一
+批名字的清单有机器的校**（`release-check-selftest` 的 [4] 段），一直是准的。⇒ 现在同一个 `documentedSelftests`
+同时读这两份名单，并且**先用真实缺陷驱动过**：在补齐之前，新检查报的正是
+`scaffold-selftest, zotero-section-note-selftest` 两个名字。**没有新造工具**——[4] 段本来就有这个函数，
+发布清单只是它的第二个调用方。
+
+### 46.4 §6 痕迹扫描：两处发现，三处判定为"不是痕迹"
+
+**发现一：脚手架的四个 EXAMPLE 用**属主的研究领域**自证。**
+`AGENTS.md.template` 的 invariants（"cross-scale risk study"、fragility model、event-tree descendants、
+`DESIGN PENDING`）、`research/literature/README.md` 的两行示例（cascading load loss、motif）、
+`research/adoption/README.md` 的示例项（无功灵敏度、`jacobian.reactive`、标幺、回落到完整潮流求解）、
+`research/domain-discipline` 的 `fragility-review`。
+**全部改成不含领域**：invariants 保留每一条 never 规则与它的理由、只是不再点名任何模型；文献两行改成
+"阈值以下平坦、阈值以上陡升"这类无领域表述；adoption 示例改成通用的一阶敏感性（`Δy = JΔx`）。
+其中 **adoption 那份从未发布过**——它落在上一轮未推送的提交 `d07e09d` 里，所以这次改的是"还没出门的"。
+
+**发现二：`zotero-section-note` 的夹具里有电压／连锁故障的字样。**
+判断是：**被解析的是形态**（罗马数字＋全大写标题＋旁边的中文节标），措辞从来不是证据 ⇒ 同法替换，并把
+`zotero-section-note.mjs` 的注释改成"**形态**在属主库上实测；这里的措辞是替身"。
+
+**判定为不是痕迹、因此保留的三处：**
+
+- pitfalls 示例里的 **OneDrive**：它是**产品名**而不是本机路径，且该文件的设计就是"按你会搜的词检索"，
+  指名才有用。
+- README 的 **`%USERPROFILE%`**：那是文档化的命令语法，不是这台机器的路径。
+- `skills.js` 与 `doc-selftest.mjs` 里的 **reparse point 注释**：它们解释的是"为什么目录扫描不问
+  `Dirent.isDirectory()`"——那是**证据**，删掉就把一次真实踩坑变成一句无来由的禁令。
+
+### 46.5 版本、tag 与远端核验
+
+- **0.3.0**（minor）：两条纪律、契约 Revision 15 与 16、脚手架布局变更、新增一个自测。契约的 Revision
+  号与包版本号**独立**，不耦合（沿用 §44 的记法）。
+- 版本号**单独一个提交**，排在所有修补之后，使 tag 指向的树恰好是这一版。
+- **本地全绿是关于工作树的断言，不是关于发布件的断言**（§34 的教训：0.2.0 发布时 47 个提交的绿色本地
+  工作谁都装不上）。所以 tag 之后必须跑 `node tools/release-check.mjs --tag v0.3.0`——它从远端读发布的
+  `package.json`、组合与 helper。
+
+### 46.6 未做与边界
+
+- **仍然没有任何真实课题走完这套新脚手架**（沿用 §45.6）：本版能证明的是"两份名单一致""示例不含领域"
+  "全套自测绿"，**不能**证明这些规则在真实研究里好用。
+- **P6 仍开着**（mnemon Documents 与课题自带规范层的边界）。
+- 领域示例的修改只动了**示例块**（`EXAMPLE:BEGIN … END`，课题本来就要删掉它们），没有动任何规则的措辞。
+
