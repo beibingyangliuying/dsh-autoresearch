@@ -45,7 +45,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem } from './zotero-local-api.mjs'
+import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
 
 /** The marker that identifies a section note this tool wrote. Invisible in the application's view. */
 export const SECTION_MARKER_PREFIX = '<!-- autoresearch-section:'
@@ -54,19 +54,6 @@ export const SECTION_MARKER_PREFIX = '<!-- autoresearch-section:'
 class UsageError extends Error {}
 
 const CHINESE_DIGITS = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
-
-/**
- * Strip HTML tags so a note's prose can be examined.
- *
- * @param {string} html Note body as the library stores it.
- * @returns {string} The text with tags removed and whitespace collapsed.
- */
-export function stripTags(html) {
-  return String(html ?? '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 /**
  * A section ordinal as a comparable token, so "第三节" and "第3节" cannot both be written for one
@@ -134,7 +121,7 @@ export function readSectionMarker(noteHtml) {
  * @returns {string} The ordinal, or '' when the opening names none.
  */
 export function readSectionFromOpening(noteHtml) {
-  const opening = stripTags(noteHtml).slice(0, 120)
+  const opening = visibleText(noteHtml).slice(0, 120)
   const match = /^文?章?第\s*(\d+(?:\.\d+)*|[一二三四五六七八九十]+)\s*节/.exec(opening)
   return match ? normalizeSectionToken(match[1]) : ''
 }
@@ -258,7 +245,7 @@ export function normalizeMath(html, { lineBreaks = true } = {}) {
       // converting the parentheses inside it would be a second guess: leave the whole node alone.
       const count = (char) => segment.split(char).length - 1
       if (count('[') !== count(']') || count('(') !== count(')')) {
-        leftAlone.push(`unbalanced delimiter in one text node: ${stripTags(segment).slice(0, 60)}`)
+        leftAlone.push(`unbalanced delimiter in one text node: ${visibleText(segment).slice(0, 60)}`)
         return segment
       }
 
@@ -323,21 +310,6 @@ export function normalizeMath(html, { lineBreaks = true } = {}) {
     skipped,
     leftAlone: [...new Set(leftAlone)],
   }
-}
-
-/**
- * The text a reader sees: tags and comments removed, whitespace collapsed.
- *
- * This is how a read-back is compared. A note body is NOT stored byte-for-byte as it was sent: the
- * application normalizes one it has edited (measured: the note gained a `<div data-schema-version="9">`
- * wrapper and LOST the invisible marker comment), so a byte comparison reports a mismatch on a write
- * that in fact landed - a false alarm about the owner's library, which is the worst kind.
- *
- * @param {string} html Note body as the library stores it.
- * @returns {string} Its visible text.
- */
-export function visibleText(html) {
-  return stripTags(html)
 }
 
 /**

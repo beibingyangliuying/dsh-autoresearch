@@ -11,6 +11,7 @@
 //   3. it never produces `$` inside `$$`, which is not valid MathJax and would render as prose.
 // Nothing here touches a library: every function under test is pure.
 import { readFileSync } from 'node:fs'
+import { visibleText } from './zotero-local-api.mjs'
 import {
   composeSectionNote,
   displayMathRegions,
@@ -23,7 +24,6 @@ import {
   sectionClaim,
   sectionMarker,
   topLevelSpans,
-  visibleText,
 } from './zotero-section-note.mjs'
 
 let failures = 0

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// One place for the reference library's local API: the transport, the write gate, and plain reads.
+// One place for the reference library's local API: the transport, the write gate, plain reads, and the
+// one definition of a note body's visible text, which is what a note write is compared against.
 //
 // WHY THIS FILE EXISTS
 //
-// Three tools talk to this API today (add an item, convert stored PDFs into linked files, and read or
-// search the library), and two more are planned (a note writer, and a collection/field editor). The
+// Seven helpers talk to this API (add an item, read or search the library, write a digest note, write a
+// section note, edit fields and tags, file a collection, and turn stored PDFs into linked files). The
 // transport and - above all - the WRITE GATE were duplicated in each tool: authorize, carry the
 // key, send the per-write token. That gate is what the contract's authorization rule rests on, so
-// five copies of it would be five places to drift apart.
+// seven copies of it would be seven places to drift apart. The same argument holds for
+// {@link visibleText}: two note tools compare what the library stored against what they sent, and two
+// definitions of "the same text" would let one of them call a delivered note undelivered.
 //
 // TRANSPORT, and why this is not `fetch`: the local API answers HTTP/1.0, and an authorization request
 // BLOCKS until the owner answers a dialog in the reference manager. `fetch` aborts that on its default
@@ -139,6 +142,27 @@ export function normalizeCollections(value) {
 export function normalizeTags(value) {
   if (!Array.isArray(value)) return []
   return value.map((tag) => (typeof tag === 'string' ? tag : (tag?.tag ?? ''))).filter(Boolean)
+}
+
+/**
+ * The text a reader sees: tags and comments removed, whitespace collapsed.
+ *
+ * A note body is **not** stored byte-for-byte as it was sent. The application rewrites a note it has
+ * edited - measured: the note gained a `<div data-schema-version="9">` wrapper and LOST the invisible
+ * marker comment this preset writes - so two bodies that read identically can differ byte for byte,
+ * and comparing bytes reports a mismatch on a write that in fact landed. That false alarm about the
+ * owner's library is what every note comparison here exists to avoid. The definition lives in one
+ * place because two note tools compare stored text against sent text, and two definitions of "the
+ * same text" would let one of them call a delivered note undelivered.
+ *
+ * @param {string} html Note body as the library stores it.
+ * @returns {string} Its visible text.
+ */
+export function visibleText(html) {
+  return String(html ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**
