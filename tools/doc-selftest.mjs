@@ -2,10 +2,16 @@
 //
 // Usage: node tools/doc-selftest.mjs [--negative-controls]
 //
-// Checks the split between the normative contract and the non-normative index, and the entry
-// document's obligation to link both without repeating the symbol list. The authoritative symbol
-// list is derived from the sources of truth (discipline front-matter and the composition's server
-// names), never from a copy inside the documents.
+// Checks the split between the normative contract and the non-normative index, the entry document's
+// obligation to link both without repeating the symbol list, and the reader-facing coverage map's
+// obligation to list every part that exists and no part that does not. The authoritative symbol list
+// is derived from the sources of truth (discipline front-matter and the composition's server names),
+// never from a copy inside the documents.
+//
+// The coverage map is the SECOND list of discipline names in this repository, and the rule it has to
+// satisfy is stated where it lives: a list nobody checks drifts. `surface.md` is held to the roster by
+// DOC-5; the map is held to it by DOC-9, and its paths by DOC-8. One checks concept-to-name, the other
+// part-to-coverage; neither is the other's copy.
 //
 // `--negative-controls` mutates the documents in memory and asserts the checks actually fail.
 // A check that cannot fail is not a check.
@@ -16,17 +22,18 @@ const ROOT = process.cwd()
 const PROTOCOL = join(ROOT, 'protocol.md')
 const SURFACE = join(ROOT, 'surface.md')
 const README = join(ROOT, 'README.md')
+const COVERAGE = join(ROOT, 'docs', '02_coverage.md')
 const SKILLS_DIR = join(ROOT, 'skills')
 const PATCH = join(ROOT, 'cordis.patch.yml')
 
 const MIN_STRUCTURED_BLOCKS = 8
 const MIN_MERMAID_DIAGRAMS = 2
 
-/** Authoritative public symbols: discipline names + MCP server names. */
-function authoritativeSymbols() {
+/** Discipline names, from the front-matter of the shipped skill files. */
+function disciplineNames() {
   // Deliberately not `Dirent.isDirectory()`: on Windows a reparse point (OneDrive placeholder, a
   // junction) reports false there while still holding files, which silently emptied this list.
-  const skills = readdirSync(SKILLS_DIR)
+  return readdirSync(SKILLS_DIR)
     .map((name) => {
       try {
         const text = readFileSync(join(SKILLS_DIR, name, 'SKILL.md'), 'utf8')
@@ -36,10 +43,14 @@ function authoritativeSymbols() {
       }
     })
     .filter(Boolean)
+}
+
+/** Authoritative public symbols: discipline names + MCP server names. */
+function authoritativeSymbols() {
   const servers = [...readFileSync(PATCH, 'utf8').matchAll(/^\s*serverName:\s*'?"?([\w-]+)'?"?\s*$/gm)].map(
     (match) => match[1],
   )
-  return [...new Set([...skills, ...servers])].sort()
+  return [...new Set([...disciplineNames(), ...servers])].sort()
 }
 
 /** Info strings of every fenced block, in document order. */
@@ -67,6 +78,18 @@ function indexedSymbols(text) {
     for (const span of cells[2].matchAll(/`([^`]+)`/g)) symbols.add(span[1])
   }
   return [...symbols].sort()
+}
+
+/**
+ * Disciplines the coverage map gives a row to, read from the source path each row cites.
+ *
+ * The map names its authoritative text as an inline-code path, so the roster it claims is exactly the
+ * set of `skills/<name>/SKILL.md` paths it prints. A row deleted, or a path pointing at a discipline
+ * that does not exist, therefore changes this list.
+ */
+function mapDisciplines(text) {
+  const names = [...text.matchAll(/`skills\/([\w-]+)\/SKILL\.md`/g)].map((match) => match[1])
+  return [...new Set(names)].sort()
 }
 
 // Names this repository retired. The reader-facing documents describe the artifact as it is now, so
@@ -118,6 +141,7 @@ const files = {
   protocol: existsSync(PROTOCOL) ? readFileSync(PROTOCOL, 'utf8') : null,
   surface: existsSync(SURFACE) ? readFileSync(SURFACE, 'utf8') : null,
   readme: existsSync(README) ? readFileSync(README, 'utf8') : null,
+  coverage: existsSync(COVERAGE) ? readFileSync(COVERAGE, 'utf8') : null,
 }
 
 const checks = [
@@ -203,26 +227,52 @@ const checks = [
   {
     id: 'DOC-8',
     label: 'every path in reader-facing prose still exists',
-    run: ({ protocol, surface, readme }) => {
+    run: ({ protocol, surface, readme, coverage }) => {
       const rootEntries = new Set(readdirSync(ROOT))
       const stale = []
       for (const [name, text] of [
         ['protocol.md', protocol],
         ['surface.md', surface],
         ['README.md', readme],
+        ['docs/02_coverage.md', coverage],
       ]) {
         for (const token of pathTokens(text)) {
+          // A path that climbs out of the repository — `../protocol.md`, the label the review aids in
+          // `docs/` give a sibling document — is a link label, not a claim about this repository's
+          // layout, and the walk below resolves from the root rather than from the document's own
+          // directory, so it cannot judge one. Judging it anyway reported every such label as stale.
+          if (token.startsWith('..')) continue
           const head = token.split('/')[0]
           // Only judge a path whose head is a root entry today, or a relative prefix. A path under a
           // package outside this repository is not a claim about this repository's layout, and the
           // documents legitimately name those. The limitation is real and stated rather than hidden:
           // this cannot catch a directory that was RENAMED away, because the old name is no longer a
           // root entry. Catching that case is what DOC-7 is for.
-          if (head !== '.' && head !== '..' && !rootEntries.has(head)) continue
+          if (head !== '.' && !rootEntries.has(head)) continue
           if (!documentedPathExists(token)) stale.push(`${name}: ${token}`)
         }
       }
       return stale.length === 0 ? null : `stale path in ${stale.join('; ')}`
+    },
+  },
+  {
+    id: 'DOC-9',
+    label: 'the coverage map gives every part a row, and no part that does not exist',
+    run: ({ coverage, disciplines }) => {
+      const mapped = mapDisciplines(coverage)
+      const missing = disciplines.filter((name) => !mapped.includes(name))
+      const extra = mapped.filter((name) => !disciplines.includes(name))
+      return missing.length === 0 && extra.length === 0
+        ? null
+        : `not mapped: ${missing.join(', ') || '-'}; mapped but not a discipline: ${extra.join(', ') || '-'}`
+    },
+  },
+  {
+    id: 'DOC-10',
+    label: 'the coverage map defers to the contract',
+    run: ({ coverage }) => {
+      const missing = ['非规范', 'protocol.md'].filter((needle) => !coverage.includes(needle))
+      return missing.length === 0 ? null : `coverage map missing: ${missing.join(', ')}`
     },
   },
 ]
@@ -239,6 +289,7 @@ function runChecks(input) {
 }
 
 const symbols = authoritativeSymbols()
+const disciplines = disciplineNames()
 const missingFiles = Object.entries(files)
   .filter(([, text]) => text === null)
   .map(([name]) => name)
@@ -248,7 +299,8 @@ if (missingFiles.length) {
 }
 
 console.log(`authoritative symbols (${symbols.length}): ${symbols.join(', ')}`)
-const results = runChecks({ ...files, symbols })
+console.log(`disciplines (${disciplines.length}): ${disciplines.join(', ')}`)
+const results = runChecks({ ...files, symbols, disciplines })
 for (const result of results) {
   console.log(`  ${result.failure ? 'FAIL' : 'OK  '} ${result.id}  ${result.label}${result.failure ? `  -> ${result.failure}` : ''}`)
 }
@@ -292,12 +344,33 @@ const mutations = [
       surface: input.surface.replace('`skills/*/SKILL.md`', '`skills/*/NOTES.md`'),
     }),
   },
+  {
+    label: 'a part removed from the coverage map',
+    apply: (input) => ({
+      ...input,
+      coverage: input.coverage.replace(/^\| 文献 `literature-recon`.*\n/m, ''),
+    }),
+  },
+  {
+    label: 'a documented helper renamed in the coverage map',
+    // Deliberately not a case-only rename: `existsSync` is case-insensitive on Windows, so
+    // `tools/zotero-READ.mjs` still resolves there and this control would pass without checking
+    // anything. The control has to differ by more than case to be a control on this machine.
+    apply: (input) => ({
+      ...input,
+      coverage: input.coverage.replaceAll('`tools/zotero-read.mjs`', '`tools/zotero-library.mjs`'),
+    }),
+  },
+  {
+    label: 'the coverage map no longer defers to the contract',
+    apply: (input) => ({ ...input, coverage: input.coverage.replaceAll('protocol.md', 'the contract') }),
+  },
 ]
 
 console.log('\nnegative controls (each mutation must break at least one check):')
 let controlFailures = 0
 for (const mutation of mutations) {
-  const mutated = runChecks(mutation.apply({ ...files, symbols }))
+  const mutated = runChecks(mutation.apply({ ...files, symbols, disciplines }))
   const broken = mutated.filter((result) => result.failure)
   const detected = broken.length > 0
   if (!detected) controlFailures += 1
