@@ -54,6 +54,7 @@ flowchart LR
 
 | 我想知道… | 看哪 |
 |---|---|
+| **每个部分覆盖什么、拒绝什么**（含"指定一篇文献之后发生什么"） | [`02_coverage.md`](02_coverage.md) |
 | 它**保证**什么、拒绝什么、边界在哪 | [`protocol.md`](../protocol.md)（normative） |
 | 某个概念**对应哪个名字** | [`surface.md`](../surface.md)（non-normative） |
 | 怎么装、怎么开发、有哪些已知约束 | [`README.md`](../README.md) |
@@ -70,7 +71,7 @@ node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + �
 node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
-node tools\doc-selftest.mjs                            # 契约/索引 的分工是否还成立
+node tools\doc-selftest.mjs                            # 契约/索引 的分工，以及覆盖地图的名册与路径
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）

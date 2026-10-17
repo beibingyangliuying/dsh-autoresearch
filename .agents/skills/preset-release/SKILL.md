@@ -35,8 +35,10 @@ Procedure — do it before the commit, not after the release:
 
 1. Name the claim you changed in one sentence, in its own words.
 2. Grep that sentence's phrasings across every reader-facing file: `README.md`, `protocol.md`,
-   `surface.md`, `docs/00_overview.md`, `docs/01_decisions.md`, and the comments in `isolation.js` /
-   `contact-bridge.js` / `skills.js`.
+   `surface.md`, `docs/00_overview.md`, `docs/02_coverage.md`, `docs/01_decisions.md`, and the comments
+   in `isolation.js` / `contact-bridge.js` / `skills.js`. The coverage map states in prose what each
+   part covers and refuses, and only its **roster and paths** are machine-checked (`doc-selftest` DOC-8,
+   DOC-9): a behaviour change that leaves a row's description stale is exactly what this step is for.
 3. Fix every hit, or record why it is history.
 
 **A normative claim lives in `protocol.md` and only there.** When the contract changes, bump its

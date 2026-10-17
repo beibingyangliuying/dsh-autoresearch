@@ -195,7 +195,7 @@ skills/                the on-demand disciplines, one <name>/SKILL.md each
                        preset's users never see it (skills.js reads skills/ alone)
 project-template/      the study scaffold, copied per study
 tools/                 self-tests, probes, the CLI helpers and the scaffolder
-docs/                  Chinese review aids and the frozen development log
+docs/                  Chinese review aids: the coverage map, the review, the decisions, the frozen log
 ```
 
 ## Develop it
@@ -211,7 +211,7 @@ node tools\contact-bridge-selftest.mjs   # configurable values -> prompt
 node tools\skills-selftest.mjs           # shipped disciplines parse and register
 node tools\client-selftest.mjs           # the browser half parses, loads and registers
 
-# documentation structure (contract/index split)
+# documentation structure (contract/index split; the coverage map's roster and its paths)
 node tools\doc-selftest.mjs
 
 # the preprint channel helper: the query url, Atom parsing and error feeds, without the network
