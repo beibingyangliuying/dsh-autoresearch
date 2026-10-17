@@ -1034,3 +1034,12 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
   实为 10；`project-template/.agents/skills/domain-discipline/SKILL.md` 说"four skills"实为 10）——它们是
   §36"不写散文计数"那条规矩的同族缺陷，不属于本轮关注点，所以单独一个提交，便于单独回滚。
 
+### 45.7 取代关系（发布自检时补记）
+
+- **本节取代 §8 记的卡字段表**（2026-10-13 那次把预测列在卡里）。§8 是当时的决策记录，原样保留；今天
+  卡片与协议的权威定义在契约 §1、§4 与纪律 §3.1，而字段本身分成两份文件。
+- [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的发布自检清单
+  **漏了两个自测**（`zotero-section-note-selftest.mjs` 是 §41 那轮加的、`scaffold-selftest.mjs` 是本轮加的）。
+  README 的那份清单有仪器校（`release-check-selftest` 的 [4] 段），这份没有 ⇒ 这是同一类漂移的第二个实例，
+  处置记在本轮的发布条目里。
+
