@@ -14,21 +14,20 @@ this study is meant to inform. Keep it short; the full scoping lives in `researc
 TODO — write them as checkable "never" rules, each with its reason. These are what make this
 domain's results trustworthy, and the agent treats them as hard constraints.
 
-<!-- EXAMPLE:BEGIN — invariants from a cross-scale risk study. Delete this block. -->
+<!-- EXAMPLE:BEGIN — the shape of a domain invariant, holding no domain. Delete this block. -->
 - **The baseline is read-only.** Never mutate, migrate, overwrite, or vacuum an original run database
   or its manifest. New material goes to a new output namespace, disclosed in the run report.
   *Why*: published numbers must stay reproducible.
-- **No physics drift.** Do not alter the simulation core, the fragility model, or the baseline
+- **No model drift.** Do not alter the simulation core, the calibrated parameter set, or the baseline
   observables of an existing series under this task.
-- **No invented science.** Do not introduce a new weight, threshold, dominant-mechanism class,
-  selection criterion, or cost function as if it were agreed. Proposals must be labelled
-  `[exploratory]`.
-- **No identity collapse.** Preserve scenario, root, generation, lineage, and model-action identity.
-  Counts over event-tree descendants are not independent samples.
+- **No invented science.** Do not introduce a new weight, threshold, category, selection criterion, or
+  cost function as if it were agreed. Proposals must be labelled `[exploratory]`.
+- **No identity collapse.** Preserve whatever identifies an observation — the run, the parent, the
+  generation, the lineage — because counts over descendants are not independent samples.
 - **No NA coercion.** Absent, zero, not-testable, undecidable, missing, and unexamined must remain
   distinguishable.
 - **No result-conditioned denominator.** Fix the reference population before looking at outcomes.
-- **`DESIGN PENDING` is a stop sign**, not a blank for the implementation agent to fill.
+- **A not-yet-decided field is a stop sign**, not a blank for the implementation agent to fill.
 <!-- EXAMPLE:END -->
 
 ### 2.1 Numbered rules (added as they are earned)

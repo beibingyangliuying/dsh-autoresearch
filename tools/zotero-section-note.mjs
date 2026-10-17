@@ -185,15 +185,16 @@ export function firstBlockText(noteHtml) {
  *     punctuation, or right after a document label. A section number in the middle of a sentence is a
  *     cross-reference ("这一节的内容与第2节相关"), while the notes that do name their own section name it
  *     at the start of one - sometimes glued to a label ("文章第2节标题是 ..."), sometimes after a colon
- *     ("解释文章的这一节（渲染好公式）：第二节 扰动后电压分布的推导").
+ *     ("解释文章的这一节（渲染好公式）：第二节 扰动后响应的推导").
  */
 const CLAUSE_START = '(?:^|[\\s：:。；;！!？?、，,（(【「]|文\\s*章?|本\\s*文|论\\s*文|全\\s*文)'
 const CLAIM_FORMS = [
   { rule: '第N节', pattern: new RegExp(`${CLAUSE_START}第\\s*(\\d+(?:\\.\\d+)*|[一二三四五六七八九十]+)\\s*节`), token: (match) => normalizeSectionToken(match[1]) },
   { rule: 'Section N', pattern: new RegExp(`${CLAUSE_START}Section\\s+(\\d+(?:\\.\\d+)*)`, 'i'), token: (match) => normalizeSectionToken(match[1]) },
   { rule: '§N', pattern: new RegExp(`${CLAUSE_START}§\\s*(\\d+(?:\\.\\d+)*)`), token: (match) => normalizeSectionToken(match[1]) },
-  // "II. DERIVING VOLTAGE PROFILES AFTER DISTURBANCES", "III. PROPOSED ..." - measured on the owner's
-  // library as the form a note uses where the Chinese one is absent. Two characters or more, so a bare
+  // "II. DERIVING RESPONSE PROFILES ...", "III. PROPOSED ..." - the FORM was measured on the owner's
+  // library as the one a note uses where the Chinese label is absent; the wording here stands in for it,
+  // since what is parsed is the form. Two characters or more, so a bare
   // "I." (a plausible list marker) is not read as a section.
   { rule: '罗马数字', pattern: new RegExp(`${CLAUSE_START}([IVX]{2,6})\\.\\s*\\S`), token: (match) => String(romanToNumber(match[1]) || '') },
   // "Appendix A.2". Read and reported, so a reader can see why a note looks like a section note; it can

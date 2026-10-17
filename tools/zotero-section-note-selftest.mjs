@@ -81,17 +81,17 @@ same(sectionClaim('<p>文章第3节给出的因子…</p>').by, 'paragraph', 'a 
 console.log('\n[2b] the forms the owner\'s own notes actually use, and the ones they do not')
 
 same(
-  sectionClaim('<p>解释文章的这一节（渲染好公式）：II. DERIVING VOLTAGE PROFILES AFTER DISTURBANCES 第二节 扰动后电压分布的推导</p>').token,
+  sectionClaim('<p>解释文章的这一节（渲染好公式）：II. DERIVING RESPONSE PROFILES AFTER DISTURBANCES 第二节 扰动后响应的推导</p>').token,
   '2',
   'a section named after a label is still a claim (第N节 inside the first paragraph)',
 )
 same(
-  sectionClaim('<p>解释文章的这一节（渲染好公式）：III. PROPOSED CASCADING FAILURE MODEL 第三节 所提连锁故障模型</p>').token,
+  sectionClaim('<p>解释文章的这一节（渲染好公式）：III. PROPOSED PROPAGATION MODEL 第三节 所提传播模型</p>').token,
   '3',
   'and the Roman numeral beside it does not change the answer',
 )
 same(
-  sectionClaim('<p>解释文章的这一节：II. WEAK LINK IDENTIFICATION OF CASCADING FAILURE 连锁故障的弱环节识别</p>').token,
+  sectionClaim('<p>解释文章的这一节：II. WEAK LINK IDENTIFICATION IN A NETWORK 网络中的弱环节识别</p>').token,
   '2',
   'a Roman numeral heading alone is a claim (II. is 2)',
 )
@@ -129,7 +129,7 @@ same(
   '3',
   'right after a space it IS a claim, which is the price of catching the notes that name it after a label',
 )
-same(sectionClaim('<p>解释文章的这一节（渲染好公式）：第二节 扰动后电压分布的推导</p>').token, '2', 'after a colon it is a claim')
+same(sectionClaim('<p>解释文章的这一节（渲染好公式）：第二节 扰动后响应的推导</p>').token, '2', 'after a colon it is a claim')
 same(sectionClaim('<p>综述。第4节 结论与展望</p>').token, '4', 'at the start of a clause after a full stop it is a claim')
 
 console.log('\n[2d] coverage is counted per TOP-LEVEL section')

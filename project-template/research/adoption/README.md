@@ -69,17 +69,17 @@ Derived data: if it is lost, rebuild it from the per-reference files. Add a line
 - **Not a literature note** — that is `../literature/<topic>.md`, and it is about the field.
 - **Not an experiment card** — that is `../experiments/<id>.md`, and it records a run that happened.
 
-<!-- EXAMPLE:BEGIN — one filled item. Delete this block. -->
-### A-ABCD1234-01 无功灵敏度的一阶近似
+<!-- EXAMPLE:BEGIN — one filled item, holding no domain. Delete this block. -->
+### A-ABCD1234-01 一阶敏感性系数
 
 - 原文定位：§3.2 · 公式 (12) · 切片 24000–36000
 - 原文式（照抄）：
-  $$\Delta Q = J_R\,\Delta V$$
-- 我们的归一化式：`J_R` → `jacobian.reactive`，标幺（pu），数值不变
-- 成立条件：运行点附近线性化，且 `|ΔV| < 0.05 pu`；在这里怎么验：`tests/test_linearize.py` 的线性区间扫点（`checked`）
-- 意图目标：`src/network/linearize.py::reactive_sensitivity`
+  $$\Delta y = J\,\Delta x$$
+- 我们的归一化式：`J` → `jacobian.sensitivity`，无量纲化（nu），数值不变
+- 成立条件：工作点附近线性化，且 `|Δx| < 0.05 nu`；在这里怎么验：`tests/test_linearize.py` 的线性区间扫点（`checked`）
+- 意图目标：`src/core/linearize.py::sensitivity`
 - 数值锚点：输入 … → `0.317`（论文表 2）；读者实算 … → `0.3169`（`reader-computed`，`tests/test_linearize.py::test_anchor_01`）
-- 反驳条件：`|ΔV| > 0.05 pu` 时该近似给出反向符号
-- 退路：该区间内回落到完整潮流求解
+- 反驳条件：`|Δx| > 0.05 nu` 时该近似给出反向符号
+- 退路：该区间内回落到完整求解
 - 状态：candidate
 <!-- EXAMPLE:END -->

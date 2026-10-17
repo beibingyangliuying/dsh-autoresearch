@@ -5,7 +5,7 @@ description: TODO — one sentence naming the trigger: when this study's domain 
 
 # domain-discipline — TODO short title
 
-Rename this directory to the discipline's real name (for example `storage-audit`, `fragility-review`)
+Rename this directory to the discipline's real name (for example `storage-audit`, `calibration-review`)
 and rewrite this file. Delete it if the study needs no domain-specific discipline.
 
 This file follows the same nine-section shape as the preset's shipped disciplines, so that a reader who

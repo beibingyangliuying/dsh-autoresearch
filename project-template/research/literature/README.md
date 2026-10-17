@@ -23,6 +23,6 @@ Produced by the `literature-recon` skill. One file per topic: `<topic>.md`.
 <!-- EXAMPLE:BEGIN — evidence table rows. Delete this block. -->
 | Source | Grade | What it actually says | Relation to this study |
 |---|---|---|---|
-| Author, *Title*, Venue, 2024, DOI:10.xxxx/yyyy | A | Reports that cascading load loss is insensitive to local hardening below a threshold magnitude | Directly challenges the assumed monotone benefit |
-| Author, *Title*, arXiv:2401.xxxxx (preprint) | B | Proposes a motif representation of cascade events | Method lead only; not yet read in full |
+| Author, *Title*, Venue, 2024, DOI:10.xxxx/yyyy | A | Reports a response that is flat below a threshold and rises sharply above it | Directly challenges the assumed monotone benefit |
+| Author, *Title*, arXiv:2401.xxxxx (preprint) | B | Proposes a representation of the same object from a different angle | Method lead only; not yet read in full |
 <!-- EXAMPLE:END -->
