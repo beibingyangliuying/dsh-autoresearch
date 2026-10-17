@@ -1,7 +1,7 @@
 # TODO <study name> — project instructions
 
 > This file carries **domain** constraints for one study. The general research discipline
-> (three-way typing, no unfalsifiable wording, no citations from memory, the four discipline
+> (three-way typing, no unfalsifiable wording, no citations from memory, the discipline
 > skills) comes from the Autoresearch preset and must **not** be repeated here.
 
 ## 1. What this study is
@@ -31,24 +31,57 @@ domain's results trustworthy, and the agent treats them as hard constraints.
 - **`DESIGN PENDING` is a stop sign**, not a blank for the implementation agent to fill.
 <!-- EXAMPLE:END -->
 
+### 2.1 Numbered rules (added as they are earned)
+
+Most rules belong in the section above and stay there. A rule promoted here is one this study paid
+for: a pitfall that recurred, or a defect found twice in the same shape. Give it a number, the date
+it took effect, and **the first instance** it came from.
+
+<!-- EXAMPLE:BEGIN — the shape of a promoted rule. Delete this block. -->
+- **R1 (2026-10-11) — a declared variant set is closed.** Once a protocol declares arms, strata or
+  comparators, the set is fixed: run all of them, or record the unrun ones as open items before
+  reporting. *First instance*: `research/experiments/<id>.md`, where one arm was declared and then
+  silently dropped, and it was the arm that carried the load-bearing confound.
+- **R2 — it governs new work and rewrites nothing.** A promoted rule is never applied backwards to
+  the records that produced it; those keep the wording they had.
+<!-- EXAMPLE:END -->
+
 ## 3. Document hierarchy and authority
 
 TODO — either accept the convention below, or declare this study's existing one and delete
 `research/` from the scaffold.
 
-Authority, highest first:
+**Authority is assigned by the question being asked, not by a ranking.** Exactly one ordering is
+real, and it is stated below the table. Everything else answers a different question, and a chain
+that ranks the rows eventually says something false — because it has to order things that do not
+share a scale (is a ruling "higher" than a run card?).
 
-1. `AGENTS.md` — this file: domain constraints.
-2. `research/00_scoping.md` — question, boundary, non-goals, decidability.
-3. `research/literature/**` — **non-normative**; never grounds an experiment on its own.
-4. `research/rulings/**` — challenges and their rulings.
-5. `research/journal/**` — a record of what happened, never a conclusion.
-6. `research/experiments/**` — experiment cards: re-runnable evidence, not conclusions.
-7. `research/pitfalls/**` — operational record; nothing here grounds a scientific claim.
-8. `research/literature/refs/**` — the digest index: derived from the library, rebuildable, never the only copy of a digest.
+| The question | Who answers it, and where |
+|---|---|
+| What must never be violated in this domain? | `AGENTS.md` — this file |
+| What exactly are we asking, and what would answer it? | `research/00_scoping.md` |
+| What have we read, and how well? | `research/literature/**` — **non-normative** |
+| What may we borrow, and what would prove the code implements it? | `research/adoption/**` — grounds no conclusion; **binds the code** |
+| What was challenged, and how was it ruled? | `research/rulings/**` |
+| What actually happened, and in what order? | `research/journal/**` — a record, never a conclusion |
+| What did a run do, and was it valid? | `research/experiments/**` — protocol (before), card (after), evidence copies |
+| What bit us, and what do we now do about it? | `research/pitfalls/**` |
+| Which reference have we already read? | `research/literature/refs/**` — derived from the library; rebuildable |
+| What did we retire, and why? | `research/archive/**` |
+| What do we claim? | mnemon Documents (topic-based) — see the settlement discipline |
+| Where do execution protocols live? | TODO — declare the path, or delete this row |
+| Where do conclusions get promoted to? | TODO — declare it, or delete this row |
 
-TODO — add where execution protocols live, if the study has them, and state explicitly that any
-`notes/`-style directory is exploratory and not runnable.
+**The one ordering:** this file outranks `research/00_scoping.md`, which outranks every
+non-normative note. Below that line, a disagreement is settled by **which question the two places
+are answering** — not by which of them looks more formal.
+
+Two cross-cutting rules:
+
+- **A record never grounds a claim.** A journal line, a run card, a pitfall entry and the digest
+  index are records: quoting any of them as a scientific claim is a misuse.
+- **A `notes/`-style directory is exploratory and not runnable.** TODO — name each such directory
+  this study has, or delete this rule.
 
 ## 4. Notation
 
@@ -80,3 +113,10 @@ preset takes no position on which version-control system or branching model a st
   change. A reviewer must be able to revert one concern without losing another.
 - **A commit message covers every change in that commit.** Read the staged diff before committing;
   a change the message does not mention is a change nobody signed off on.
+- **An artifact a card cites must survive a clone.** If runs write outside version control, copy the
+  cited artifacts under `research/experiments/evidence/` and say so on the card. A copy is never
+  regenerated; a citation without a copy is not evidence for a later reader.
+- **Moving a file does not change it.** A move is one commit, and the content is byte-identical
+  before and after (`git show --stat -M` shows a rename with zero changed lines). If the content
+  must change too, do it in a **second** commit, so a reviewer can see which one did what.
+- **Retirement is a move plus a reason, never a deletion.** See `research/archive/README.md`.

@@ -15,6 +15,22 @@ is a pitfall nobody will maintain.
 - **Verified by**: how you know (path or command)
 ```
 
+## Promotion: when a pitfall becomes a rule
+
+A pitfall that happens **twice in the same shape** is not a pitfall any more; it is a hole in the
+rules. Promote it:
+
+- Give it a **number** in the file that owns the behaviour — `AGENTS.md` §2.1 for a domain rule,
+  this README for a lookup rule — together with **the date it took effect** and **the first
+  instance** it came from.
+- **State what it now forbids or requires**, not the story of the incident. The story stays here.
+- **It governs new work and rewrites nothing.** A promoted rule is applied forwards; the records
+  that produced it keep the wording they had.
+- **Registering the first instance is the point.** Without it the rule cannot be re-examined when
+  someone asks why it exists, and a rule nobody can re-examine is one nobody will ever remove.
+
+Counts are deliberately absent here: prose counts drift, and the entry list is its own index.
+
 ## Rules
 
 - **Append.** Correct an entry by adding a dated line, not by rewriting it.

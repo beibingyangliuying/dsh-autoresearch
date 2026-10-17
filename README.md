@@ -175,6 +175,33 @@ scale, so the preset hands over a list instead — and the application stays two
 The scaffolder is PowerShell today, so this step is Windows-only. Copy `project-template/` by hand
 elsewhere; the layout is the same.
 
+### What a study looks like
+
+```text
+<study>/
+  AGENTS.md            domain constraints: invariants, authority order, notation, environment
+  research/
+    00_scoping.md      question, boundary, non-goals, decidability
+    literature/        reconstruction notes — non-normative by construction
+    literature/refs/   the digest index: one line per reference actually read
+    adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
+                       into which module, and the number that proves the code
+    rulings/           challenges and the rulings on them
+    journal/           the round-by-round record; never a conclusion
+    experiments/       a run's prediction, what it actually did, and what proves it — the
+                       prediction is written before the run, so it lives in its own file
+      protocols/       one pre-registration per run, named by the run's id
+      evidence/        copies of the cited artifacts a run wrote outside the study's own record
+    pitfalls/          symptom-indexed operational record; pruned when obsolete
+    archive/           retired documents, and a README saying what they were and what replaced them
+  .agents/skills/      study-level discipline, if the domain needs one
+```
+
+The contract states this layout itself in [`protocol.md`](protocol.md) §7. **The study's own README
+carries no map** — the authority table lives in the study's `AGENTS.md` §3, so that one list has one
+home, and `project-template/README.md` is the entry point a new study inherits rather than a
+description of the scaffold.
+
 ## Layout
 
 ```text
