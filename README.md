@@ -202,6 +202,11 @@ carries no map** — the authority table lives in the study's `AGENTS.md` §3, s
 home, and `project-template/README.md` is the entry point a new study inherits rather than a
 description of the scaffold.
 
+Three statements of the same layout is exactly the shape that drifts, so `tools/scaffold-selftest.mjs`
+holds the contract's version, the block above, and the authority table a study inherits to each other:
+a directory added to one of them and forgotten in the others is a failure rather than a silent
+divergence. (It found one on its first run — see [`docs/01_decisions.md`](docs/01_decisions.md) §45.)
+
 ## Layout
 
 ```text
@@ -240,6 +245,10 @@ node tools\client-selftest.mjs           # the browser half parses, loads and re
 
 # documentation structure (contract/index split; the coverage map's roster and its paths)
 node tools\doc-selftest.mjs
+
+# the study scaffold: one layout, stated in the contract, in this README and in the table a study
+# inherits — the check that catches a directory added to one of them and forgotten in the others
+node tools\scaffold-selftest.mjs
 
 # the preprint channel helper: the query url, Atom parsing and error feeds, without the network
 node tools\arxiv-selftest.mjs
