@@ -32,7 +32,7 @@ check(parseSkill('---\nname: a\n') === undefined, 'an unterminated front matter 
 // --- the shipped files -------------------------------------------------------------------------
 
 const skills = readSkills()
-check(skills.length === 9, 'nine disciplines ship with the bundle', `found=${skills.length}`)
+check(skills.length === 10, 'ten disciplines ship with the bundle', `found=${skills.length}`)
 
 for (const skill of skills) {
   const problems = []
@@ -53,6 +53,7 @@ for (const expected of [
   'research-scoping',
   'literature-recon',
   'section-notes',
+  'adoption-ruling',
   'redteam-ruling',
   'progress-sync',
   'metadata-query',

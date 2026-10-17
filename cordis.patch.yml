@@ -2,7 +2,7 @@
 # DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
 #   - `persona` carries a resident research discipline (three-way typing, no
 #     unfalsifiable wording, no memory-based citations, read-before-write) plus
-#     routing to nine research-discipline skills.
+#     routing to ten research-discipline skills.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
 #   - NO MCP server is mounted. Both external channels ship as command-line helpers named by the
@@ -22,7 +22,7 @@
       config:
         id: autoresearch
         name: Autoresearch
-        description: Domain-neutral research workbench — a resident evidence-typing discipline plus on-demand disciplines covering the whole research loop (scoping → literature → challenge → synthesis → runs → settlement), with keep-list tool isolation.
+        description: Domain-neutral research workbench — a resident evidence-typing discipline plus on-demand disciplines covering the whole research loop (scoping → literature → adoption → challenge → synthesis → runs → settlement), with keep-list tool isolation.
         order: 20
         plugins:
           - id: persona
@@ -53,6 +53,7 @@
                 - Wrapping up a work round, ending a session, handing off, or resuming → `progress-sync`
                 - Needs bibliographic metadata (DOI, venue, citation counts, reference lists) rather than full text → `metadata-query`
                 - A method-heavy paper has been chosen for study and its derivations must be understood durably, or an existing section note's formulas are unreadable → `section-notes`
+                - A paper has been read and the study will build on it, code is about to be written from its equations, or existing code cites one → `adoption-ruling`
                 - Work is about to be handed to a subagent (an explorer, or an implementer who writes or runs code) → `subagent-contract`
                 - Code is about to run to test a hypothesis, or a run's outcome is being reported → `experiment-protocol`
                 - Exploration produced several directions and one must be committed to, or the user asks "so what do we do now" → `synthesis-plan`

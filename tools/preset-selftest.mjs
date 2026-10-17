@@ -210,13 +210,13 @@ if (!existsSync(composedFile)) {
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
     ok(rules.length === 11, 'eleven numbered discipline rules', `found ${rules.length}`)
     const flatPersona = composedPersona.replace(/\s+/g, '')
-    const bullets = ['research-scoping', 'literature-recon', 'section-notes', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
+    const bullets = ['research-scoping', 'literature-recon', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
       (n) => flatPersona.includes(`→\`${n}\``),
     )
-    ok(bullets.length === 9, 'nine skill-routing bullets', `found ${bullets.length}`)
+    ok(bullets.length === 10, 'ten skill-routing bullets', `found ${bullets.length}`)
     ok(composedPersona.includes('{{model}}'), '{{model}} placeholder intact')
     ok(block.join('\n').includes('{{cwd}}'), '{{cwd}} placeholder intact (it lives in the suffix)')
-    for (const name of ['research-scoping', 'literature-recon', 'section-notes', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
+    for (const name of ['research-scoping', 'literature-recon', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
       ok(composedPersona.includes(name), `routing names: ${name}`)
     }
 

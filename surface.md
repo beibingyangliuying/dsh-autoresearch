@@ -10,6 +10,7 @@ mounts no MCP server. This file answers one question only — *which name implem
 | Scoping discipline — a topic becomes a decidable question (§4) | `research-scoping` |
 | Literature discipline — sources graded by what was read (§4) | `literature-recon` |
 | Section-notes discipline — one explanation note per method section, on the record (§4) | `section-notes` |
+| Adoption discipline — what a paper read may lend, under what condition, into which module (§4) | `adoption-ruling` |
 | Challenge discipline — objections, or an honest refusal (§4) | `redteam-ruling` |
 | Settlement discipline — conclusions, rejections and rulings (§4) | `progress-sync` |
 | Metadata discipline — bibliographic records, never evidence (§4) | `metadata-query` |
