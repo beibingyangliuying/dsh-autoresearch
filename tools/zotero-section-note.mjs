@@ -13,14 +13,37 @@
 // The two modes are deliberately one file, because they are the same object: a section note.
 //
 //   create   a NEW note for one section. Refused when that section is already covered - including by
-//            a note this tool did not write. Existing notes in this library carry no marker, so
-//            coverage is also read from the note's own opening phrase ("文章第2节标题是 ...").
+//            a note this tool did not write, which is most of them: the notes already in this library
+//            carry no marker. Coverage is READ from the note's first paragraph, and only in forms that
+//            cannot be a list marker or an ordinary sentence ("第N节", "Section N", "§N", a Roman
+//            numeral heading, an appendix label).
 //   tidy     a MECHANICAL repair of the math delimiters in one existing section note: the "<em>" that
 //            a Markdown underscore became, and "[ ... ]" / "( ... )" restored to "$$ ... $$" / "$...$".
 //            Display math also ends up on lines of its own ("$$\nx\n$$"), which is the shape the notes
 //            are read and edited in - and that rule is idempotent, so a note already in that shape is
 //            left byte-for-byte alone. It never rewrites prose, never guesses, and reports every span
 //            it refused to touch.
+//
+// COVERAGE IS COUNTED PER TOP-LEVEL SECTION
+//
+// A section whose method content exceeds the note budget is written as one note per subsection of the
+// paper's own numbering ("3.1", "3.2"). That is a writing shape, not an extra coverage unit: the record
+// then covers §3, in parts. So a write is refused three ways - the section itself is claimed, a
+// subsection is asked for whose parent is covered as a whole, or a top-level section is asked for that
+// is already covered in parts - while a SIBLING subsection is never coverage (a note about 3.2 says
+// nothing about 3.1). Comparing tokens as whole strings expresses none of that, which is why every
+// comparison goes through {@link parentSectionToken}.
+//
+// WHY A CLAIM IS READ NARROWLY, AND WHAT CARRIES THE REST
+//
+// A bare leading number is NOT a claim, and that is measured rather than cautious: in the owner's
+// library, sixteen notes open "1. 一段话总结" (a whole-paper summary, not a note about section 1) while
+// "2 仿真结果及分析" is a real section note. No rule over "digit, dot, text" tells those apart. So the
+// plan prints every note's first paragraph and lists the keys it could not read, and the judgement is
+// made by a reader: the discipline reads those paragraphs against the paper's own section list, decides
+// which sections are covered, and reports the decision before writing. Where that reading disagrees with
+// this tool's, both readings are reported and the round stops - this tool refuses a claim it read, and
+// never overrules a reading.
 //
 // A title is attempted, not required: measured on this library, a `title` field on a note is refused
 // with HTTP 500 (while a `tags` patch on the same note answers 204), so the create path tries the
@@ -110,34 +133,164 @@ export function readSectionMarker(noteHtml) {
 }
 
 /**
- * Which section a note claims, read from its opening phrase.
+ * A Roman numeral's value, for the "III. PROPOSED ..." heading form.
  *
- * The notes already in this library were written before this tool existed and carry no marker, so
- * coverage has to be readable from what they say: "文章第2节标题是 ...", "第三节题为 ...",
- * "第二节标题是 ...". Only the opening is examined - a section number mentioned later in the prose is
- * a cross-reference, not a claim about which section this note is.
+ * @param {string} text A Roman numeral.
+ * @returns {number} Its value, or 0 when the text is not a well-formed numeral.
+ */
+export function romanToNumber(text) {
+  const numeral = String(text ?? '').toUpperCase()
+  if (numeral === '' || !/^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(numeral)) return 0
+  const values = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
+  let total = 0
+  for (let index = 0; index < numeral.length; index += 1) {
+    const current = values[numeral[index]]
+    const next = values[numeral[index + 1]] ?? 0
+    total += current < next ? -current : current
+  }
+  return total
+}
+
+/**
+ * The first block of prose in a note, as a reader sees it.
+ *
+ * "First block", not "first N characters": {@link visibleText} collapses every run of whitespace, so
+ * the collapsed text has no line to measure a position against, and what makes a section number a claim
+ * rather than a cross-reference is which PARAGRAPH it sits in. A note the application wrote is wrapped
+ * in its own `<div>`, which is not prose, so the first `p` / `h1`-`h6` / `li` element is taken instead.
+ * A note with no block element at all is read the old way, by its first 120 visible characters.
  *
  * @param {string} noteHtml Note body.
- * @returns {string} The ordinal, or '' when the opening names none.
+ * @returns {string} The visible text of the first paragraph, heading or list item.
  */
-export function readSectionFromOpening(noteHtml) {
-  const opening = visibleText(noteHtml).slice(0, 120)
-  const match = /^文?章?第\s*(\d+(?:\.\d+)*|[一二三四五六七八九十]+)\s*节/.exec(opening)
-  return match ? normalizeSectionToken(match[1]) : ''
+export function firstBlockText(noteHtml) {
+  const html = String(noteHtml ?? '')
+  const block = /<(p|h[1-6]|li)\b[^>]*>([\s\S]*?)<\/\1>/i.exec(html)
+  return block ? visibleText(block[2]) : visibleText(html).slice(0, 120)
+}
+
+/**
+ * The forms a section claim may take, in the order they are tried.
+ *
+ * Two conditions, both narrow on purpose, because this reading can REFUSE a write:
+ *
+ *   * the form itself cannot be a list marker or an ordinary sentence - so a bare leading number is
+ *     never one, measured: "1. 一段话总结" (a whole-paper summary) and "2 仿真结果及分析" (a real
+ *     section note) are the same shape on the owner's library, and no rule over "digit, dot, text"
+ *     separates them;
+ *   * the ordinal must BEGIN a clause - the start of the paragraph, right after whitespace or
+ *     punctuation, or right after a document label. A section number in the middle of a sentence is a
+ *     cross-reference ("这一节的内容与第2节相关"), while the notes that do name their own section name it
+ *     at the start of one - sometimes glued to a label ("文章第2节标题是 ..."), sometimes after a colon
+ *     ("解释文章的这一节（渲染好公式）：第二节 扰动后电压分布的推导").
+ */
+const CLAUSE_START = '(?:^|[\\s：:。；;！!？?、，,（(【「]|文\\s*章?|本\\s*文|论\\s*文|全\\s*文)'
+const CLAIM_FORMS = [
+  { rule: '第N节', pattern: new RegExp(`${CLAUSE_START}第\\s*(\\d+(?:\\.\\d+)*|[一二三四五六七八九十]+)\\s*节`), token: (match) => normalizeSectionToken(match[1]) },
+  { rule: 'Section N', pattern: new RegExp(`${CLAUSE_START}Section\\s+(\\d+(?:\\.\\d+)*)`, 'i'), token: (match) => normalizeSectionToken(match[1]) },
+  { rule: '§N', pattern: new RegExp(`${CLAUSE_START}§\\s*(\\d+(?:\\.\\d+)*)`), token: (match) => normalizeSectionToken(match[1]) },
+  // "II. DERIVING VOLTAGE PROFILES AFTER DISTURBANCES", "III. PROPOSED ..." - measured on the owner's
+  // library as the form a note uses where the Chinese one is absent. Two characters or more, so a bare
+  // "I." (a plausible list marker) is not read as a section.
+  { rule: '罗马数字', pattern: new RegExp(`${CLAUSE_START}([IVX]{2,6})\\.\\s*\\S`), token: (match) => String(romanToNumber(match[1]) || '') },
+  // "Appendix A.2". Read and reported, so a reader can see why a note looks like a section note; it can
+  // never equal a writable section, because this tool writes numerals only.
+  { rule: 'Appendix X', pattern: new RegExp(`${CLAUSE_START}Appendix\\s+([A-Z](?:\\.\\d+)*)\\b`, 'i'), token: (match) => match[1].toUpperCase() },
+]
+
+/**
+ * Which section a note's own words say it is about.
+ *
+ * Only the first paragraph is read: a section number mentioned later in the prose is a cross-reference,
+ * not a claim about which section this note is.
+ *
+ * This reading is a BACKSTOP, not the judgement. It catches the notes that say what they are; it cannot
+ * catch the ones that merely look like they do, and those are not guessed at - the plan prints every
+ * note's first paragraph, and the discipline decides coverage by reading them against the paper's own
+ * section list. A wrong reading here is loud (a refusal naming the words it went by) rather than silent,
+ * which is the direction that costs a look instead of a section.
+ *
+ * @param {string} noteHtml Note body.
+ * @returns {{token: string, rule: string, evidence: string}|undefined} The section, the form that
+ *   matched, and the words it was read from.
+ */
+export function readSectionFromParagraph(noteHtml) {
+  const paragraph = firstBlockText(noteHtml)
+  for (const form of CLAIM_FORMS) {
+    const match = form.pattern.exec(paragraph)
+    if (!match) continue
+    const token = form.token(match)
+    if (token) return { token, rule: form.rule, evidence: match[0].trim() }
+  }
+  return undefined
 }
 
 /**
  * Which section a note is a note ABOUT, however that is recorded.
  *
  * @param {string} noteHtml Note body.
- * @returns {{token: string, by: 'marker'|'opening'|'none'}} The claim and how it was read.
+ * @returns {{token: string, by: 'marker'|'paragraph'|'none', rule: string, evidence: string}} The claim,
+ *   how it was read, the form that matched, and the words it was read from - the last two so that a
+ *   refusal can be audited without opening the note.
  */
 export function sectionClaim(noteHtml) {
   const marked = readSectionMarker(noteHtml)
-  if (marked) return { token: marked, by: 'marker' }
-  const opening = readSectionFromOpening(noteHtml)
-  if (opening) return { token: opening, by: 'opening' }
-  return { token: '', by: 'none' }
+  if (marked) return { token: marked, by: 'marker', rule: 'marker', evidence: sectionMarker(marked) }
+  const paragraph = readSectionFromParagraph(noteHtml)
+  if (paragraph) return { token: paragraph.token, by: 'paragraph', rule: paragraph.rule, evidence: paragraph.evidence }
+  return { token: '', by: 'none', rule: '', evidence: '' }
+}
+
+/**
+ * The top-level section a token belongs to.
+ *
+ * Coverage is counted per TOP-LEVEL section. A section whose method content exceeds the note budget is
+ * written as one note per subsection of the paper's own numbering ("3.1", "3.2") - a writing shape, not
+ * an extra coverage unit: the record then covers §3, in parts. Comparing tokens as whole strings cannot
+ * express that, because "3" and "3.1" are simply different strings, so every comparison goes through
+ * this.
+ *
+ * @param {string} token A normalized ordinal, e.g. `3` or `3.1`.
+ * @returns {string} Its top-level part (`3`), or '' for an empty token.
+ */
+export function parentSectionToken(token) {
+  return String(token ?? '').split('.')[0]
+}
+
+/**
+ * The note that already covers the section a write is for, and why.
+ *
+ * Three ways a section is covered, and each one refuses the write:
+ *
+ *   * a note claims that very section;
+ *   * the section asked for is a SUBSECTION whose parent is already covered as a whole;
+ *   * the section asked for is TOP-LEVEL and is already covered in parts.
+ *
+ * A sibling subsection is not coverage: a note about 3.2 says nothing about 3.1.
+ *
+ * @param {Array<{key: string, claim: {token: string}}>} notes The record's child notes.
+ * @param {string} token The section the write is for.
+ * @returns {{note: object, why: string}|undefined} The covering note and the reason, if any.
+ */
+export function coveringNote(notes, token) {
+  const covered = notes.filter((note) => note.claim.token)
+  const same = covered.find((note) => note.claim.token === token)
+  if (same) return { note: same, why: `note ${same.key} claims §${token}` }
+
+  const parent = parentSectionToken(token)
+  const whole = covered.find((note) => note.claim.token === parent && parent !== token)
+  if (whole) return { note: whole, why: `note ${whole.key} covers §${parent} as a whole, and §${token} is part of it` }
+
+  const parts = parent === token
+    ? covered.filter((note) => parentSectionToken(note.claim.token) === parent && note.claim.token !== token)
+    : []
+  if (parts.length) {
+    return {
+      note: parts[0],
+      why: `§${parent} is already covered in parts by ${parts.map((note) => `${note.key} (§${note.claim.token})`).join(' · ')}, and §${parent} is the unit that is counted`,
+    }
+  }
+  return undefined
 }
 
 /** Whether a span carries a LaTeX command or a braced sub/superscript - enough to make it math. */
@@ -406,7 +559,7 @@ async function noteChildren(itemKey) {
     .map((child) => ({ key: child.key, html: child.data.note ?? '', claim: sectionClaim(child.data.note ?? '') }))
 }
 
-/** The plan half of `--item …, no --section`: what this record already covers. */
+/** The plan half of `--item …, no --section`: what this record covers, and what to go read. */
 async function runPlan(itemKey) {
   const record = await readItem(itemKey)
   const children = await childrenOf(itemKey)
@@ -417,12 +570,35 @@ async function runPlan(itemKey) {
     `file   : ${attachment ? `${attachment.key}  ${attachment.data.contentType}` : 'NO PDF/EPUB/HTML ATTACHMENT - nothing here can be read as text'}`,
   )
   console.log(`notes  : ${notes.length} child note(s)`)
+
+  // Every note is shown with the first paragraph a reader would see, because that is what the coverage
+  // decision is made from - and it is printed for the notes the tool DID read too, since "§2" is a
+  // reading, and a reading is only as good as the words behind it.
   for (const note of notes) {
-    const label = note.claim.token ? `§${note.claim.token} (${note.claim.by})` : '(not a section note)'
-    console.log(`  ${note.key}  ${String(note.html.length).padStart(6)} chars  ${label}`)
+    const token = note.claim.token
+    const read = token
+      ? `§${token}${parentSectionToken(token) === token ? '' : ` → counts as §${parentSectionToken(token)}`}  (${note.claim.rule}: "${note.claim.evidence}")`
+      : '-'
+    console.log(`\n  ${note.key}  ${String(note.html.length).padStart(6)}c  ${isApplicationWrapped(note.html) ? 'app' : 'API'}  ${read}`)
+    console.log(`      ${firstBlockText(note.html).slice(0, 96)}`)
   }
-  const covered = notes.filter((note) => note.claim.token).map((note) => note.claim.token)
-  console.log(`covered: ${covered.length ? covered.map((token) => `§${token}`).join(' · ') : 'none'}`)
+
+  const read = notes.filter((note) => note.claim.token)
+  const unread = notes.filter((note) => !note.claim.token)
+  const topLevel = [...new Set(read.map((note) => parentSectionToken(note.claim.token)))]
+  const describe = (parent) => {
+    const tokens = read.filter((note) => parentSectionToken(note.claim.token) === parent).map((note) => note.claim.token)
+    return tokens.length > 1 ? `§${parent} (in parts: ${tokens.map((token) => `§${token}`).join(' · ')})` : `§${parent}`
+  }
+  console.log(`\nread here   : ${topLevel.length ? topLevel.map(describe).join(' · ') : 'none'}`)
+  console.log(`judge these : ${unread.length ? unread.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log('\nNOTE: `read here` is what this tool could read from a marker or a first paragraph, counted by')
+  console.log('TOP-LEVEL section - §3 covered as 3.1 and 3.2 is §3. `judge these` are the notes it could not')
+  console.log('read, and they are not guesses: read the first paragraph above (the whole note, with')
+  console.log('zotero-read.mjs --item <noteKey>, when it is not enough), say which section of THIS paper each')
+  console.log('one explains, and report the coverage before writing. Measured on one library: a note opening')
+  console.log('"1. 一段话总结" is a whole-paper summary while "2 仿真结果及分析" is a section note - the same')
+  console.log('shape, so the judgement is yours and this tool does not pretend to make it.')
 }
 
 /** Create one section note, refusing when the section is already covered. */
@@ -438,19 +614,23 @@ async function runCreate(options) {
   const record = await readItem(options.item)
   if (record.itemType === 'note') throw new UsageError(`${options.item} is itself a note; pass the record the note is about`)
   const notes = await noteChildren(options.item)
-  const covering = notes.find((note) => note.claim.token === token)
+  const covering = coveringNote(notes, token)
   const composed = composeSectionNote(token, body)
 
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
-  console.log(`section : §${token}`)
-  console.log(`notes   : ${notes.length} child note(s); covered: ${notes.filter((note) => note.claim.token).map((note) => `§${note.claim.token}`).join(' · ') || 'none'}`)
+  console.log(`section : §${token}${parentSectionToken(token) === token ? '' : `  (counts as §${parentSectionToken(token)})`}`)
+  console.log(`notes   : ${notes.length} child note(s); covered: ${[...new Set(notes.filter((note) => note.claim.token).map((note) => `§${parentSectionToken(note.claim.token)}`))].join(' · ') || 'none'}`)
   console.log(`body    : ${body.length} characters -> ${composed.length} with the marker`)
   if (options.title) console.log(`title   : "${options.title}" (attempted; the note is written without it if refused)`)
   console.log(`write   : ${createWriteLine(options.item)}`)
 
   if (covering) {
-    console.error(`\nREFUSED: §${token} is already covered by note ${covering.key} (read from its ${covering.claim.by}).`)
-    console.error('Nothing was written. Use --tidy to repair that note\'s delimiters, or a different --section.')
+    console.error(`\nREFUSED: §${token} is already covered - ${covering.why}.`)
+    console.error(`  read it as: §${covering.note.claim.token} (${covering.note.claim.rule}: "${covering.note.claim.evidence}")`)
+    console.error('Nothing was written. Use --tidy to repair that note\'s delimiters, a different --section, or write')
+    console.error('the part of a section that is missing when the coverage is in parts.')
+    console.error('If you have read that note and it is NOT a note about this section, report both readings and')
+    console.error('stop - do not work around this refusal.')
     process.exitCode = 1
     return
   }
@@ -506,7 +686,7 @@ async function tidyOne({ noteKey, gate, write }) {
   const appOwned = isApplicationWrapped(before)
   const repaired = normalizeMath(before, { lineBreaks: !appOwned })
   console.log(`\nnote    : ${noteKey}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
-  console.log(`claim   : ${claim.token ? `§${claim.token} (${claim.by})` : 'NOT a section note - refusing to touch it'}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token} (${claim.rule}: "${claim.evidence}")` : 'NOT a section note - refusing to touch it'}`)
   if (appOwned) {
     console.log('          the application has normalized this note already; the display-math line break')
     console.log('          is NOT attempted on it (measured: this library stores such a note back on one line)')

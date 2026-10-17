@@ -14,13 +14,17 @@ import { readFileSync } from 'node:fs'
 import { visibleText } from './zotero-local-api.mjs'
 import {
   composeSectionNote,
+  coveringNote,
   displayMathRegions,
+  firstBlockText,
   isApplicationWrapped,
   looksLikeHtml,
   normalizeMath,
   normalizeSectionToken,
+  parentSectionToken,
   readSectionMarker,
   repairConverged,
+  romanToNumber,
   sectionClaim,
   sectionMarker,
   topLevelSpans,
@@ -58,6 +62,7 @@ same(readSectionMarker(marked), '2', 'the marker reads back as the ordinal')
 same(readSectionMarker('<p>文章第2节标题是 “X”</p>'), '', 'an unmarked note has no marker')
 
 console.log('\n[2] what a note says it is about')
+
 same(sectionClaim('<p>文章第2节标题是 “X”，即…</p>').token, '2', 'the opening phrase is read (文章第2节标题是)')
 same(sectionClaim('<p>第三节题为 Methodology（方法论）…</p>').token, '3', 'the shortened opening phrase is read (第三节题为)')
 same(sectionClaim('<p>第二节标题是 GSDF…</p>').token, '2', 'the other shortened form is read (第二节标题是)')
@@ -68,7 +73,96 @@ same(
   '',
   'a section number mentioned later is a cross-reference, not a claim - negative control',
 )
-same(sectionClaim('<p>文章第3节给出的因子…</p>').by, 'opening', 'the opening phrase is attributed to the opening')
+same(sectionClaim('<p>文章第3节给出的因子…</p>').by, 'paragraph', 'a phrase claim is attributed to the paragraph')
+
+// The forms measured on the owner's library. Every one of these is a note that a real record carries
+// and that the previous, stricter reader called "not a section note" - so each is a duplicate it would
+// have written.
+console.log('\n[2b] the forms the owner\'s own notes actually use, and the ones they do not')
+
+same(
+  sectionClaim('<p>解释文章的这一节（渲染好公式）：II. DERIVING VOLTAGE PROFILES AFTER DISTURBANCES 第二节 扰动后电压分布的推导</p>').token,
+  '2',
+  'a section named after a label is still a claim (第N节 inside the first paragraph)',
+)
+same(
+  sectionClaim('<p>解释文章的这一节（渲染好公式）：III. PROPOSED CASCADING FAILURE MODEL 第三节 所提连锁故障模型</p>').token,
+  '3',
+  'and the Roman numeral beside it does not change the answer',
+)
+same(
+  sectionClaim('<p>解释文章的这一节：II. WEAK LINK IDENTIFICATION OF CASCADING FAILURE 连锁故障的弱环节识别</p>').token,
+  '2',
+  'a Roman numeral heading alone is a claim (II. is 2)',
+)
+same(sectionClaim('<p>Section 2 Methodology</p>').token, '2', 'the English section form is read')
+same(sectionClaim('<p>§3.1 The model</p>').token, '3.1', 'a section sign with a dotted ordinal is read')
+same(sectionClaim('<p>Appendix A.2. Re-Dispatch Strategy</p>').token, 'A.2', 'an appendix label is recorded rather than dropped')
+same(romanToNumber('III'), 3, 'III is 3')
+same(romanToNumber('IX'), 9, 'IX is 9')
+same(romanToNumber('IIII'), 0, 'a malformed numeral is not a number - negative control')
+
+// The sixteen "1. 一段话总结" notes on the owner's queue are why a bare leading number is NOT a claim:
+// "1. 一段话总结" (a whole-paper summary) and "2 仿真结果及分析" (a real section note) are the same
+// shape, so a rule that accepted one would claim §1 for all sixteen.
+same(sectionClaim('<p>1. 一段话总结 该研究为改善电力系统脆弱性…</p>').token, '', 'a numbered paragraph is not a claim - the measured false positive')
+same(sectionClaim('<p>2 仿真结果及分析 详细解释 本节是文章的验证核心</p>').token, '', 'and neither is a bare "N + title", which is why it is only a hint')
+same(
+  sectionClaim('<p>综述如下。</p><p>第2节给出模型。</p>').token,
+  '',
+  'a section number outside the FIRST paragraph is a cross-reference, not a claim - negative control',
+)
+same(
+  sectionClaim('<div data-schema-version="9"><p>解释：第三节 模型</p><p>第5节的表格见下。</p></div>').token,
+  '3',
+  'the application wrapper is skipped, and the first paragraph is what is read',
+)
+
+console.log('\n[2c] the boundary: a claim begins a clause, a cross-reference does not')
+same(
+  sectionClaim('<p>这一节的内容与第2节相关，但本节讲的是算法。</p>').token,
+  '',
+  'a section number inside a sentence is a cross-reference - the measured negative control',
+)
+same(
+  sectionClaim('<p>网络模型见 第3节，此处不重复。</p>').token,
+  '3',
+  'right after a space it IS a claim, which is the price of catching the notes that name it after a label',
+)
+same(sectionClaim('<p>解释文章的这一节（渲染好公式）：第二节 扰动后电压分布的推导</p>').token, '2', 'after a colon it is a claim')
+same(sectionClaim('<p>综述。第4节 结论与展望</p>').token, '4', 'at the start of a clause after a full stop it is a claim')
+
+console.log('\n[2d] coverage is counted per TOP-LEVEL section')
+
+same(parentSectionToken('3'), '3', 'a top-level section is its own parent')
+same(parentSectionToken('3.1'), '3', 'a subsection belongs to the section it is numbered under')
+same(parentSectionToken('2.1.3'), '2', 'however deep the numbering goes')
+same(parentSectionToken(''), '', 'an empty token has no parent', )
+same(parentSectionToken('A.2'), 'A', 'an appendix label belongs to its letter')
+
+/** A record's notes, as the create path sees them: a key and the section it claims. */
+const claiming = (...tokens) => tokens.map((token) => ({ key: `N${token.replace('.', '')}`, claim: { token } }))
+
+same(coveringNote([], '2'), undefined, 'nothing on the record covers nothing - negative control')
+same(coveringNote(claiming('1'), '2'), undefined, 'a different section is not coverage - negative control')
+same(coveringNote(claiming('3.2'), '3.1'), undefined, 'a SIBLING subsection is not coverage of 3.1 - negative control')
+same(coveringNote(claiming('3.1'), '3.1').note.key, 'N31', 'the same section is coverage')
+
+const wholeCoversPart = coveringNote(claiming('3'), '3.1')
+same(wholeCoversPart?.note.key, 'N3', 'a whole section covers the subsection asked for')
+check(/as a whole/.test(wholeCoversPart?.why ?? ''), 'and the refusal says which way it was covered', wholeCoversPart?.why)
+
+const partsCoverWhole = coveringNote(claiming('3.1', '3.2'), '3')
+check(partsCoverWhole !== undefined, 'a top-level section already covered in parts is not written again')
+check(/in parts/.test(partsCoverWhole?.why ?? ''), 'and the refusal names the parts', partsCoverWhole?.why)
+check(
+  coveringNote(claiming('3.1'), '3.2') === undefined,
+  'so the MISSING part is still writable: a record with 3.1 can take 3.2 - the split is a writing shape',
+)
+check(
+  coveringNote(claiming('3.1', '3'), '3.1') !== undefined && coveringNote(claiming('3.1', '3'), '3') !== undefined,
+  'and a record that carries both the part and the whole refuses either, whichever is asked for',
+)
 
 console.log('\n[3] the body must be HTML')
 check(looksLikeHtml('<p>解释</p>'), 'a paragraph is HTML')
