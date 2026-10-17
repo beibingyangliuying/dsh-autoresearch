@@ -54,6 +54,8 @@ Copying by hand also works, but `.agents/` is a hidden directory and is easy to 
     experiments/<id>.md              experiment cards: prediction / command / artifacts / validity
     pitfalls/README.md               symptom-indexed pitfalls (append-only, pruned when obsolete)
     literature/refs/README.md        digest index: one line per reference actually read
+    adoption/<itemKey>.md            what this study may borrow from one reference, and on what terms
+    adoption/INDEX.md                module -> adopted item, so code can find its formula
   .agents/skills/<discipline>/SKILL.md   project-level domain discipline
 ```
 
