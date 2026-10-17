@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; every write is a dry run first, an existing section is never duplicated, and an old note is only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$), never rewritten. Use after reading a method-heavy paper you will build on, and when a record's existing section notes have unreadable formulas.
+description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; every write is a dry run first, an existing section is never duplicated (coverage counted per top-level section, a section split into its own subsections counting as covered in parts), and an old note is only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$), never rewritten. Use after reading a method-heavy paper you will build on, and when a record's existing section notes have unreadable formulas.
 ---
 
 # section-notes — one explanation note per method section
@@ -35,14 +35,25 @@ on one record; neither replaces the other.
 Read-only, before writing anything:
 
 1. **The record's own state**: `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`. It reports
-   whether a readable attachment exists, every note already on the record, and which sections those
-   notes claim.
-2. **One existing section note as the ruler**, when the library has any:
+   whether a readable attachment exists, and for every note already on the record it prints the **first
+   paragraph** and the section the tool could read from it. Two lines close the report: `read here` —
+   the sections it read, counted per top-level section — and `judge these` — the notes it could **not**
+   read. **Read those first paragraphs and decide for yourself.** The tool reads markers and the
+   unambiguous forms ("第N节", "Section N", "§N", a Roman numeral heading); it cannot tell a section note
+   from a whole-paper summary, and it is not guessing at one: measured on the owner's library, notes
+   open "1. 一段话总结" (a summary) and "2 仿真结果及分析" (a section note) — the same shape. Open the
+   whole note with `zotero-read.mjs --item <noteKey>` where the first paragraph is not enough.
+2. **State the coverage before writing.** One line per section you are considering: the paper's own
+   ordinal and heading · the note key that already covers it, or `none` · on what evidence. This is the
+   table the round is judged on, and it is what makes "no section twice" checkable. Where your reading
+   disagrees with the tool's `read here` list, report both readings and **stop** — a disagreement about
+   what a note is about is the owner's to settle, not something to write around.
+3. **One existing section note as the ruler**, when the library has any:
    `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000`. The note's shape — where the
    heading line sits, how equations are delimited, how the closing summary reads — is the convention
    this skill follows. **An existing convention outranks the template below**; the template is what to
    use when there is none.
-3. **The paper's own section boundaries**, before reading for content: pull the text in slices and find
+4. **The paper's own section boundaries**, before reading for content: pull the text in slices and find
    the headings, or locate a heading with `--grep`. Section numbering is often unreadable in a scanned
    paper (the heading may be an unnumbered uppercase line), so **write down the heading line and its
    ordinal as you find them** — that note is what the write step is keyed on, and it is the only thing
@@ -115,15 +126,24 @@ below it, the section was probably not read.
 
 ### 3.3 One note per section, and never a duplicate
 
-- The tool refuses to create a note for a section the record already covers — including a note written
-  before this tool existed, whose claim is read from its own opening line. **Do not work around a
-  refusal**; report it.
+**The unit that is counted is the TOP-LEVEL section.** A subsection is a writing shape, never a
+separate thing to cover:
+
+- The tool refuses to create a note for a section the record already covers, in three ways: the section
+  itself is claimed by a note (including one written before this tool existed, whose claim is read from
+  its own first paragraph); a **subsection** is asked for whose parent section is already covered as a
+  whole; or a **top-level section** is asked for that is already covered in parts. **Do not work around
+  a refusal**; report it.
+- A **sibling** subsection is not coverage: a note about `3.2` says nothing about `3.1`, and the missing
+  part is exactly what should be written next.
 - Notes are created in section order, so the record reads in the order the paper reads.
 - **A section whose method content exceeds the budget is split by the paper's OWN subsection numbers**
-  (`3.1`, `3.2`, one note each, keyed by that number). Measured on the first paper this happened to: one
-  section's method text was 10.4k characters against a 5k budget, and one oversized note serves nobody.
-  The subsection number is the paper's, so the key stays exact and a later run still cannot duplicate
-  it; a subsection note names its own number in the first line like any other.
+  (`3.1`, `3.2`, one note each, keyed by that number) — **instead of** a note for the section as a
+  whole, never beside one. Measured on the first paper this happened to: one section's method text was
+  10.4k characters against a 5k budget, and one oversized note serves nobody. The subsection number is
+  the paper's, so the key stays exact and a later run still cannot duplicate it; a subsection note names
+  its own number in the first line like any other. The record then covers that section **in parts**, and
+  the parts are what a later run reads back.
 
 ### 3.4 Repairing an old note is mechanical, and only mechanical
 
@@ -169,7 +189,10 @@ which is the one thing a write tool must never say about the owner's library.
 | Hit | Action |
 |---|---|
 | The record has no PDF/EPUB/HTML attachment, or the library has not indexed it | Report "no readable text"; write nothing. The note is not owed from the abstract. |
-| The section is already covered (marker, or its opening line names it) | Report "already covered by note `<key>`" and skip it. Never create a second note for one section. |
+| The section is already covered — the tool says so, **or your reading of the first paragraphs says so** | Report "already covered by note `<key>`" and skip it. Never create a second note for one section. |
+| The tool's `read here` list and your reading disagree about what a note is about | Report both readings and **stop**; ask. Which section a hand-written note is about is the owner's call, not a detail to write around. |
+| The section is already covered **in parts** (`3.1`, `3.2`) | Write the part that is missing, never a note for the parent as well. A section carried as a whole and in parts covers it twice. |
+| A note appears to cover a **subsection** while the parent section is what the paper's method unit is | Report it. The counted unit is the top-level section; a subsection key is only a way of writing one that was too big for one note. |
 | The paper is a survey/review with no derivation anywhere | Report "no method section". Do not force a note onto a background section. |
 | The section boundaries cannot be established from the text | Report the headings you did find and **stop**; ask. A note keyed on a guessed ordinal collides with the real one later. |
 | The section is a case study, a results table, or a conclusion | Do not write it. Say it was skipped and why. |
@@ -191,11 +214,15 @@ which is the one thing a write tool must never say about the owner's library.
 The artifact is the note itself, on the library record. The report is what a later round needs:
 
 1. `## Record` — key, title, the attachment read and how many characters of it.
-2. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped** and the reason.
-3. `## Notes written` — note key · section · characters, one line each, or "none".
-4. `## Refusals and what was left alone` — every duplicate, missing file, unreadable boundary, and, for
-   a tidy, the spans converted and the spans declined.
-5. `## Read-back` — the note key and size as it read back after the write, which is the only evidence
+2. `## Coverage` — one line per section of the paper that matters: ordinal · the paper's heading ·
+   **the note key that already covers it, or `none`** · the evidence it was judged on (that note's first
+   paragraph). Counted per **top-level** section, with a section covered in parts written as
+   `§3 (3.1 · 3.2)`. This is the table the no-duplicate guarantee rests on.
+3. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped** and the reason.
+4. `## Notes written` — note key · section · characters, one line each, or "none".
+5. `## Refusals and what was left alone` — every duplicate, disagreement between the tool's reading and
+   yours, missing file, unreadable boundary, and, for a tidy, the spans converted and the spans declined.
+6. `## Read-back` — the note key and size as it read back after the write, which is the only evidence
    that the write happened.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
@@ -203,6 +230,13 @@ The artifact is the note itself, on the library record. The report is what a lat
 - **Writing is one section per invocation, dry run first.** `{{presetTools}}/zotero-section-note.mjs`
   states the change, refuses a duplicate, and writes only with `--write`; it reads back what it wrote
   before reporting success. Never batch several sections into one command — one invocation, one change.
+- **The judgement about coverage is yours; the tool's reading is a backstop.** The plan prints each
+  note's first paragraph and lists the keys it could not read; what it read is a **claim** about a note,
+  and a refusal names the form it went by ("第N节", "罗马 numeral", the marker). Read the paragraphs
+  before you write, and where the tool's reading and yours disagree, report both and stop. A tool that
+  reads a note wrongly costs you a look; a section written twice costs the record its meaning. Measured
+  on the owner's library: six notes had their invisible marker **eaten by the application**, and only
+  their first paragraphs still said which sections they cover.
 - **A write needs the owner's authorization** (`INV-EVID-3`). "Allow" covers one write; a lasting grant
   for that library means no dialog at all, and it is revoked in the reference manager, not here. Never
   treat a refused or revoked grant as granted.
@@ -229,6 +263,9 @@ The artifact is the note itself, on the library record. The report is what a lat
 ## 8. Acceptance checklist
 
 - [ ] The section list was reported before any write, each with note / skipped and a reason
+- [ ] The coverage table was reported, per **top-level** section, with the note key or `none` and the evidence it was judged on
+- [ ] Every note from the plan's `judge these` list was judged, or the round says why it was not
+- [ ] No section is carried both as a whole and in parts
 - [ ] No note was written for the abstract, the introduction, the case study, or the conclusions
 - [ ] Every note names its section by the paper's own ordinal and heading
 - [ ] Every equation is inside `$…$` or `$$…$$`, with display math on lines of its own and no `$` nested in `$$`

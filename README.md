@@ -135,8 +135,11 @@ the replaced server could read a preprint's body, and dropping the row dropped t
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
 each kind of write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
 on one and writes nothing when the note already reads with it, `zotero-section-note.mjs` leaves one
-explanation note per method section (and repairs an older note's damaged formula delimiters, mechanically
-and only), `zotero-edit.mjs` changes its fields and tags, `zotero-collection.mjs` creates, renames and
+explanation note per method section, counted per top-level section — its first step is a read-only report
+of what the record already covers, printing each note's first paragraph and naming the ones it cannot
+read, and it refuses a duplicate rather than trusting a pattern (it repairs an older note's damaged
+formula delimiters too, mechanically and only), `zotero-edit.mjs` changes its fields and tags,
+`zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
 not one of the seven: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
 manager, at their own keyboard and under no API authorization at all. Together they replace an MCP row whose

@@ -1,9 +1,14 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 13.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 14.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 13 bounds a digest write: a digest the record already
+independent of any package version. Revision 14 fixes the unit a section note is counted in, and says
+who decides it: **coverage is counted per top-level section**, a section written as notes for its own
+subsections is covered **in parts** and never also as a whole, and the reading that decides which
+sections a record already covers is made by reading the notes — the channel reports the ones it can
+read and names the ones it cannot, and a disagreement between the two readings stops the round instead
+of being written around. §6 states it. Revision 13 bounds a digest write: a digest the record already
 reads with is reported as already recorded and nothing is written, because a round that is re-run must
 not turn one reading into the same sentence twice — and that comparison is made on the text a reader
 sees rather than byte for byte, because the reference manager rewrites the body of a note its own
@@ -167,8 +172,9 @@ scoping      a vague topic becomes a decidable question; pseudo-questions are se
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
 sections     a paper already chosen for study becomes one explanation note per method section,
              attached to its library record; background, case study and conclusion sections are
-             not written, an already-covered section is never written twice, and an older note is
-             repaired mechanically or not at all
+             not written, an already-covered section is never written twice, counted per top-level
+             section — one carried as notes for its own subsections is covered in parts — and an
+             older note is repaired mechanically or not at all
 challenge    a claim is opposed with a counterexample, contradicting evidence, or a
              falsification path — or the challenge reports that it cannot challenge
 settlement   conclusions, rejected directions and rulings are settled into three layers
@@ -288,10 +294,15 @@ Three rules bound their use:
   reads with is reported as already recorded and nothing is written, and that comparison is on the text
   a reader sees rather than byte for byte, because the reference manager rewrites the body of a note
   its own application has edited. One reading is one sentence on the record, however many times the
-  round that produced it is run. A section a record already covers is refused rather than written twice — coverage counts
-  whether it is recorded by this preset's own marker or only by the note's opening line, because the
-  notes an owner wrote by hand carry no marker. A note this preset did not identify as a section note
-  is never modified. Repairing delimiters is content-preserving by construction: a span is converted
+  round that produced it is run. A section a record already covers is refused rather than written twice, and **what is counted is the
+  top-level section**: a section carried as notes for its own subsections is covered in parts, a note for
+  the whole of it is refused, and a note for one of its parts is refused once the whole is there — while
+  a sibling part is not coverage, because what is missing is exactly what may be written next. Which
+  sections a record already covers is decided by **reading** its notes, not by a pattern: the channel
+  reports the sections it can read and names the notes it cannot, and those are read before anything is
+  written, because the notes an owner wrote by hand carry no marker and the ones this preset wrote may
+  have had it eaten by the application. A reading that disagrees with the note's own words stops the
+  round for the owner to settle; it is never written around. Repairing delimiters is content-preserving by construction: a span is converted
   only when it carries LaTeX markup and sits inside one closed span of one text node, and every span
   declined is reported. A change to a note's prose is a rewrite, and a rewrite is the owner's decision,
   never a formatter's.
