@@ -18,15 +18,20 @@ import {
   displayMathRegions,
   firstBlockText,
   isApplicationWrapped,
+  isRetired,
   looksLikeHtml,
   normalizeMath,
   normalizeSectionToken,
   parentSectionToken,
   readSectionMarker,
   repairConverged,
+  replacesKey,
+  replacesTag,
+  retireTags,
   romanToNumber,
   sectionClaim,
   sectionMarker,
+  successorOf,
   topLevelSpans,
 } from './zotero-section-note.mjs'
 
@@ -165,6 +170,33 @@ check(
   'and a record that carries both the part and the whole refuses either, whichever is asked for',
 )
 
+console.log('\n[2e] retiring a note frees its section without deleting anything')
+
+check(!isRetired([]), 'no tags means live - negative control')
+check(!isRetired(['/section-note']), "the earlier round's /section-note tag says a note IS a section note; it is not a retirement")
+check(isRetired(['/retired']), 'the retire tag retires')
+check(isRetired(['/Retired']), 'and a hand-typed capitalisation counts too - a silently un-retired note is the worst failure here')
+
+same(retireTags(['/section-note']).join(' '), '/section-note /retired', 'retiring keeps every tag the note already had')
+same(retireTags(['/retired', '/section-note']).join(' '), '/section-note /retired', 'and it is idempotent: one mark, however often it is asked for')
+same(retireTags(['/retired', '/x'], { undo: true }).join(' '), '/x', 'undo removes the mark and nothing else')
+same(retireTags(['/x'], { undo: true }).join(' '), '/x', 'undo on a live note changes nothing - negative control')
+
+const retiredNote = (token, extra = {}) => ({ key: `N${token.replace('.', '')}`, retired: true, claim: { token }, ...extra })
+const liveNote = (token, extra = {}) => ({ key: `N${token.replace('.', '')}`, retired: false, claim: { token }, ...extra })
+
+same(coveringNote([retiredNote('3')], '3'), undefined, 'a retired note does not cover its section, so the section is writable again')
+same(coveringNote([retiredNote('3')], '3.1'), undefined, 'and a retired whole does not cover its subsections either')
+same(coveringNote([liveNote('3')], '3').note.key, 'N3', 'a live note still covers it - the negative control for that filter')
+same(coveringNote([liveNote('3.1'), retiredNote('3.2')], '3').note.key, 'N31', 'a section covered in parts counts only its live parts')
+same(coveringNote([liveNote('3.1'), retiredNote('3.2')], '3.2'), undefined, 'so the part whose note was retired is writable again')
+
+same(replacesTag('ABCD1234'), '/replaces-ABCD1234', 'a successor names the note it replaces')
+same(replacesKey(['/replaces-ABCD1234']), 'ABCD1234', 'and that name reads back')
+same(replacesKey(['/section-note']), '', 'an identity tag names no predecessor - negative control')
+same(successorOf([liveNote('3', { tags: ['/replaces-OLD'] })], 'OLD'), 'N3', 'the successor of a retired note is found by its tag')
+same(successorOf([liveNote('3')], 'OLD'), '', 'and where nothing names one, nothing is reported')
+
 console.log('\n[3] the body must be HTML')
 check(looksLikeHtml('<p>解释</p>'), 'a paragraph is HTML')
 check(looksLikeHtml('<div data-schema-version="9"><ul><li>x</li></ul></div>'), 'a Zotero note shape is HTML')
@@ -290,6 +322,9 @@ console.log('\n[5] the tool reads its own documentation the way the disciplines 
 const source = readFileSync(new URL('./zotero-section-note.mjs', import.meta.url), 'utf8')
 check(source.includes('REFUSED: §'), 'the refusal names the section it refuses')
 check(!/require\(/.test(source), 'the tool is ESM, like the rest of the suite')
+check(source.includes('--retire --note'), 'the usage states the retirement form')
+check(!/['"]DELETE['"]/.test(source), 'this tool never sends a DELETE: a wrong note is retired, not removed')
+check(source.includes('the body is NOT touched'), 'and the plan says in so many words that the body is left alone')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
