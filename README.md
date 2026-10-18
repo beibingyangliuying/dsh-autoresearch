@@ -146,7 +146,10 @@ the replaced server could read a preprint's body, and dropping the row dropped t
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
 `tools/zotero-pdf.mjs` reads the attachment **itself** where the library's index cannot answer: the file's
 own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),
-and the page rendered to an image — the rung that answers mathematics no text layer holds. Each kind of
+and the page rendered to an image — the rung that answers mathematics no text layer holds. **What each
+helper can do, what it refuses, and what to do when the refusal lands is one page**:
+[`docs/04_toolchain.md`](docs/04_toolchain.md), generated from the tools themselves, with every line
+citing something a self-test looks at. Each kind of
 write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
 on one and writes nothing when the note already reads with it, `zotero-section-note.mjs` leaves one
 explanation note per method section, counted per top-level section — its first step is a read-only report
@@ -274,6 +277,7 @@ node tools\client-selftest.mjs           # the browser half parses, loads and re
 
 # documentation structure (contract/index split; the coverage map's roster and its paths)
 node tools\doc-selftest.mjs
+node tools\toolchain-selftest.mjs          # the generated capability page: citations and drift
 
 # the study scaffold: one layout, stated in the contract, in this README and in the table a study
 # inherits — the check that catches a directory added to one of them and forgotten in the others
