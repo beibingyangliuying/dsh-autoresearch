@@ -3,6 +3,14 @@
 #   - `persona` carries a resident research discipline (three-way typing, no
 #     unfalsifiable wording, no memory-based citations, read-before-write) plus
 #     routing to ten research-discipline skills.
+#   - `persona` deliberately has NO `suffix`. The kernel registered `cwd` as a prompt variable only
+#     through 0.2.0; from 0.2.1 its registry holds `provider` and `model` alone, and prompt
+#     assembly interpolates strictly - any other name THROWS, which fails every turn before the
+#     request is made while the preset still mounts and stays on the new-session roster. The
+#     working directory is a REQUIRED runtime context now (`Current working directory: "<path>".`,
+#     refreshed at each assembly and kept current across `cd`), so dropping the suffix loses
+#     nothing. Do not put an unregistered `{{name}}` back: the self-test checks every placeholder
+#     against the kernel's registry. See #47 of docs/01_decisions.md.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
 #   - NO MCP server is mounted. Both external channels ship as command-line helpers named by the
@@ -61,7 +69,8 @@
                 These skills are **hard rules**, not suggestions: when a trigger condition is met, load the skill and follow it.
 
                 A skill that appears in this session's catalog but not in the list above belongs to the profile, not to this workbench. Loading one is allowed, but say in one line what it is for; do not treat a foreign discipline as this preset's method.
-              suffix: Your working directory is {{cwd}}.
+              # No `suffix:` - the kernel registers no `cwd` prompt variable from 0.2.1 on, and an
+              # unregistered name throws during prompt assembly (see the header note and #47).
 
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
