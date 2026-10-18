@@ -329,7 +329,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 6 M1/M2/M3/M7：`.section-notes` 骨架 · 署名头 · 占位符换实例 · 不写解析后路径 | ✅ | `8697611` |
 | 7 M4 写侧窄守卫（点号序号读得到、写不了） | ✅ | `65491ef` |
 | 8 P3 读的梯级（组合 A：`@hyzyla/pdfium` + `pdfjs-dist`；`--outline`/`--extract`/渲染 + 保真度标签） | ✅ 引擎实测见 §4.3.1；三个梯级在真库跑通，渲染页已当图像读回 | `ae75e6d` · `1d78c9b` |
-| 9 M6 生成式能力单页 + 不漂移断言 | **发布后单独一轮**（junhan 裁定） | — |
+| 9 M6 生成式能力单页 + 不漂移断言 | ✅ 见 `docs/01_decisions.md` §52 | `895298a`（+ `6f80323` 补 `REQUIRED_HELPERS` 缺口） |
 | 10 `zotero-read.mjs --item` 增印笔记 tags | ✅ **本来就有**（`zotero-read.mjs:445` 一直打印 `tags :`；用带 `/retired` 的真笔记验过）——原列项是我记错的假待办 | — |
 | 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/01_decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
 | 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
