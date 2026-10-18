@@ -107,21 +107,27 @@ mode this skill exists to prevent.
 5. **A closing summary** — its own small heading — naming the section's contribution and what it hands
    to the next section. A reader who stops here must still know why the section exists.
 
-**Shape, as a template** (the language is the record's, not this file's):
+**Shape, as a filled example** — every value in it is a value a note of this kind actually carries, so
+there is nothing here to copy literally (the language is the record's, not this file's):
 
 ```html
-<p>文章第&lt;X&gt;节标题是 <strong>“&lt;原文标题&gt;”（&lt;译名&gt;）</strong>。这一节的核心是：…
-下面分&lt;小节/部分&gt;解释。</p>
+<p>文章第 2 节标题是 <strong>“Model formulation”（模型表述）</strong>。这一节的核心是：定义一组变量，
+给出它们之间的关系，并说明每个量的量纲。下面分两部分解释。</p>
 <hr>
-<h2>&lt;小节号&gt; &lt;小标题&gt;</h2>
-<p>…每个符号第一次出现时给出含义…</p>
+<h2>2.1 定义</h2>
+<p>其中 $x$ 是自变量，$y$ 是因变量；每个符号第一次出现时给出含义。</p>
 <p>$$
-&lt;行间公式&gt;
+y = f(x)
 $$</p>
-<p>…引用原文的公式号，如「公式 (40)」…</p>
+<p>上式即原文「公式 (12)」。</p>
 <h2>小结</h2>
-<ol><li>…</li></ol>
+<ol><li>本节给出变量的定义与量纲。</li><li>下一节给出该关系的求解方法。</li></ol>
 ```
+
+**Write values, not angle brackets.** A placeholder that reads like content gets copied as content:
+measured twice in this discipline's own rounds, a child wrote the literal `&lt;2&gt;` from a template
+into a finished note. If you are about to type `<...>` into a note, you have mistaken the advice for the
+artifact.
 
 **Length is a signal, not a cap.** Most notes land between 1,500 and 5,000 characters. Much above that
 is usually the case study leaking in; much below it usually means the section was not read. Say which it
@@ -297,7 +303,13 @@ The artifact is the note itself, on the library record. The report is what a lat
   gated, auditable act, and keeping it in one pair of hands is what makes "no duplicate, no overwritten
   note" checkable. A child's drafted note is `[unverified]` until the parent reads it back.
 - **Workspace drafts are working files**, not deliverables; they carry no authority and need no
-  authority to delete.
+  authority to delete. The layout lives in `<workspace>/.section-notes/README.md`, which the scaffold
+  copies into every study, so the convention is read from there instead of being re-invented per batch.
+- **A workspace file does not carry the resolved helper path.** The command lines above print the helper
+  directory, and what they print is correct only for the install that is running: a link install, a
+  rename, or another machine makes a pasted copy wrong, and a file that stays keeps being wrong. Name the
+  program, say the path comes from this discipline, and pass a resolved path to a child in its prompt
+  when one round needs it.
 
 ## 8. Acceptance checklist
 
