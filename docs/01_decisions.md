@@ -1174,9 +1174,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 ### 47.5 未做与边界
 
 - **没有回改 `docs/archive/PLAN.md`**：那是归档时间线，`{{cwd}}` 在那里是当时的记录。
-- **`$DSH_HOME/.agent-presets/vibe-math-v1..v4` 同样在用 `{{cwd}}`**（v1:13/41、v2:14/37、v3:17/28、
-  v4:20/54，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 路径），会以完全相同的方式整轮失败。本轮
-  junhan 决定**只修本预设**，这四个个人预设留待另行安排。
+- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（**已更正，2026-10-18 见 §49**）：它们位于内核**已不再读取**的旧预设目录，因此**不会运行、也不会"整轮失败"**——真正的问题是它们已经**不是可用预设**了。若将来要恢复它们，必须按 DSH 自带的 `editing-cordis-compositions` skill 的"Migrate a legacy preset"路径改成声明行，**到那一步**才需要处理正文里的 `{{cwd}}`（每文件 2 处，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 绝对路径）。
 - 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
 
 ## 48. 发布 0.3.1：两条实现向契约对齐的修复，和一条只能声明"没测过"的内核窗口（2026-10-18）
@@ -1228,7 +1226,29 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 
 ### 48.7 未做与边界
 
-- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` 仍在用 `{{cwd}}`（§47.5），本轮未动。
+- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（§49 的更正）：旧目录不被加载，所以它们不会失败，只是不可用；本轮未动。
 - 窗口声明不覆盖 client 半，也不覆盖行名解析（后者由 `INV-ROW-1` 与 `preset-selftest` 守）。
 - **仍无一条真实课题走完这套脚手架**（沿用 §45.6/§46.6）。
+
+## 49. 更正：旧预设目录里的 `{{cwd}}` 不会"整轮失败"，因为没人读那个目录（2026-10-18）
+
+### 49.1 怎么发现的
+
+0.3.1 发出后收尾复核状态时，顺手验了 `editing-cordis-compositions`（DSH 自带 skill）里的一句断言："*Nothing reads that directory any more*"——指 `$DSH_HOME/.agent-presets/<id>/` 那套声明行之前的旧预设目录。若它为真，§47.5 与 §48.7 的推论（"这四个个人预设会以完全相同的方式整轮失败"）就不成立。
+
+### 49.2 实测（两条，都只用现成仪器）
+
+- **组合树**：`dsh --profile web --dump-config` 里只有 **5** 条预设声明行 —— `preset-standard`、`preset-ptc`、`preset-minimal`、`preset-cordis`、`preset-autoresearch`；`vibe` 字样出现 **0** 次。新会话名单由声明行产生 ⇒ 那四条**不可选**。
+- **谁还在读那个目录**：已装插件里只有 `dsh-config-manager` 的 `adapters/agent-presets.js`（自述"数据源 = `~/.dsh/.agent-presets/`"，用途是配置分区导出/导入）；其余四处命中（`dsh-better-sidebar`、`dsh-opencode-palette`、`dsh-pet`、`dshmarket`）全是**注释**——设置页的 section id、sidebar 对 preset 解析的镜像、market 对 PresetTree 的引用。⇒ **没有任何东西把那个目录注册成可运行的预设。**
+
+结论：四条 vibe-math **不会运行**，因此不存在"每轮失败"；它们只是磁盘上的历史文件。
+
+### 49.3 更正了什么，以及那条错误是怎么产生的
+
+§47.5 与 §48.7 已就地标注更正并指到本节。错误的形状值得留档：我从"**文件里有 `{{cwd}}`**"直接推到"**会以完全相同的方式整轮失败**"，中间那一步"它到底会不会被加载"**从未量过**——而量它的成本只有一条 `--dump-config`。这是 §5 那条"三种 nothing"的**镜像**：那时防的是把"没搜到"当成"不存在"，这次犯的是把"文件存在"当成"会生效"。**存在性与生效性是两件事**，前者不能当后者的证据。
+
+### 49.4 边界
+
+- 本轮不动那四条。要恢复它们，迁移路径在 `editing-cordis-compositions`（写成 bundle 声明行 → 挂载 → 校验行 → 删旧目录），**届时**正文里的 `{{cwd}}` 必须处理：每文件 2 处，其中三处把它拼进 `<cwd>/VibeMath/Projects/<project>/` 绝对路径。
+- 本节只更正声明，不改任何代码；`release-check --tag v0.3.1` 在此之后仍应 PASS（工具对"main 越过 tag"只打 NOTE，自己写明 *"Not a failure: main is allowed to move on after a release."*）。
 
