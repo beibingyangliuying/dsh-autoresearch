@@ -19,7 +19,7 @@
 // Exit code is 1 when any check fails.
 import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join, resolve } from 'node:path'
+import { join, resolve, dirname } from 'node:path'
 
 const composedFile = process.argv[2] ?? '.tmp/composed-web.txt'
 const patchFile = 'cordis.patch.yml'
@@ -62,6 +62,43 @@ function extractBlockScalar(lines, marker) {
     ...body.filter((l) => l.trim() !== '').map((l) => l.match(/^(\s*)/)[1].length),
   )
   return body.map((l) => l.slice(contentIndent)).join('\n').replace(/\s+$/, '')
+}
+
+/**
+ * The prompt variables the KERNEL registers, read out of the installed agent-loop row.
+ *
+ * A `{{name}}` outside that set is not a cosmetic mistake: prompt assembly interpolates strictly and
+ * throws on it BEFORE the request is made, so every turn of the preset fails while the preset still
+ * mounts and stays on the new-session roster - a livelock that reads as "the preset is broken" but
+ * never appears in the roster diagnostics. The registry is code, so ask the code: the names are the
+ * string arguments of `systemPrompt.variable(...)`. This package's own rows are read too, because a
+ * variable the preset registers is equally legitimate in its persona.
+ *
+ * @returns the registered names, or null when the kernel cannot be read - and the caller must FAIL
+ *   then: a guard that passes because it could not look is not a guard.
+ */
+function registeredPromptVariables() {
+  const requireFromProfile = createRequire(join(profileDir, 'composed-entry.js'))
+  let kernelFile
+  try {
+    const packageFile = requireFromProfile.resolve('@deepseek-ai/dsh-agent-loop/package.json')
+    kernelFile = join(dirname(packageFile), 'lib', 'index.js')
+  } catch {
+    return null
+  }
+  const sources = [
+    kernelFile,
+    ...['index.js', 'isolation.js', 'contact-bridge.js', 'skills.js'].map((f) => join(workspaceDir, f)),
+  ]
+  const names = new Set()
+  for (const file of sources) {
+    if (!existsSync(file)) continue
+    const found = readFileSync(file, 'utf8').matchAll(
+      /systemPrompt\s*\.\s*variable\(\s*["'`]([a-z][a-z0-9_]*)["'`]/g,
+    )
+    for (const match of found) names.add(match[1])
+  }
+  return [...names]
 }
 
 console.log('[1] bundle entry is a live link, not a copy')
@@ -215,7 +252,20 @@ if (!existsSync(composedFile)) {
     )
     ok(bullets.length === 10, 'ten skill-routing bullets', `found ${bullets.length}`)
     ok(composedPersona.includes('{{model}}'), '{{model}} placeholder intact')
-    ok(block.join('\n').includes('{{cwd}}'), '{{cwd}} placeholder intact (it lives in the suffix)')
+    // Retired on purpose, and named so it cannot come back: 0.2.0 registered `cwd` as a prompt
+    // variable and 0.2.1 replaced it with the REQUIRED runtime context "Current working directory:
+    // ...". The whole class of that mistake is what the next check catches (#47).
+    ok(!blockText.includes('{{cwd}}'), '{{cwd}} is not referenced (the kernel no longer registers it)')
+    const registered = registeredPromptVariables()
+    const referenced = [...new Set([...blockText.matchAll(/\{\{([^{}]*)\}\}/g)].map((m) => m[1]))]
+    const unregistered = registered === null ? referenced : referenced.filter((n) => !registered.includes(n))
+    ok(
+      registered !== null && unregistered.length === 0,
+      'every {{placeholder}} in the preset is a prompt variable the kernel registers',
+      registered === null
+        ? 'could not read the kernel registry (@deepseek-ai/dsh-agent-loop, from the profile)'
+        : `${referenced.map((n) => `{{${n}}}`).join(', ') || '(none)'} / kernel registers: ${registered.join(', ') || '(none)'}`,
+    )
     for (const name of ['research-scoping', 'literature-recon', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
       ok(composedPersona.includes(name), `routing names: ${name}`)
     }
