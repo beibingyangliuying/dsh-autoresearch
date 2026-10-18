@@ -1,9 +1,22 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 16.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 17.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 16 parts what a run was predicted to do from what it
+independent of any package version. Revision 17 states three capabilities this contract previously
+left without a channel, and corrects one reason it gave. A section a wrong note covers is freed by
+**retiring** that note: the note's body is never touched, the mark that retires it is reversible, a
+retired note stops counting as coverage, and the note that replaces it names the one it replaced, so
+the record of why the section was written again survives though nothing was deleted. What this preset
+asks the owner to remove is handed over as an artifact of fixed shape rather than as prose, because "a
+list, not a capability" says what the preset will not do and nothing about what it will hand over, and
+a round that has to invent that shape produces one no other round can merge. The reading ladder §8
+already leaned on is named rung by rung — the library's indexed text, the attachment's own text layer,
+and the page as an image — and a reading states which rung answered it, because an index that was never
+built, a text layer whose font encoding is broken, and a page whose mathematics never became text are
+three different failures that read alike in a transcript. It also corrects §9's reason for performing no
+deletion, which is a property of this channel rather than of deletion as such. §6, §7, §8 and §9 state
+it. Revision 16 parts what a run was predicted to do from what it
 did, and requires the artifacts a record cites to stay obtainable. It records three things as contract
 rather than leaving them to the scaffold's own text: the prediction is written **before** the run into
 an artifact of its own, because a prediction that shares a file with its outcome cannot be told apart
@@ -331,6 +344,20 @@ Three rules bound their use:
   only when it carries LaTeX markup and sits inside one closed span of one text node, and every span
   declined is reported. A change to a note's prose is a rewrite, and a rewrite is the owner's decision,
   never a formatter's.
+- **A note that is wrong is retired, not rewritten in place and not deleted.** Its body is left exactly
+  as it stands and a mark is added to it. A marked note is a tombstone rather than coverage, so the
+  section it claimed becomes writable again, and removing the mark restores the claim it made. The note
+  that replaces it names the one it replaced and why: that is the only record of a supersession once
+  the owner has cleaned up, and it is what a later reader needs to know that a section was written
+  twice on purpose. This is not the rewrite the paragraph above forbids — a rewrite replaces what a
+  note says, and retiring changes nothing it says.
+- **A reading states which rung of the ladder answered it.** The rungs, cheapest first, are the
+  library's indexed text, the attachment's own text layer, and the page rendered as an image. A channel
+  that returns an empty text for an attachment it never indexed is reporting about itself; a text layer
+  whose font encoding is broken reports confidently and wrongly about mathematics; a rendered page
+  answers questions neither can. Spending a rung that costs more than the one below it is a decision to
+  state, not a default, and what a rendered page yields is read as an image rather than quoted as
+  though it were text.
 
 The channels are reached through **helper programs this preset itself ships and its disciplines name**,
 never through a profile-level mount, so that enabling a research channel cannot change what an unrelated
@@ -352,6 +379,9 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
     journal/           the round-by-round record; never a conclusion
+    owner_actions.md   what this preset asks the owner to do, and cannot do itself: one row per item,
+                       naming the record, the note, the section, the action, why, the replacement
+                       draft's path and its status; a request, never a record
     experiments/       what a run was predicted to do, what it did, and what proves it: the
                        prediction is written before the run, so it lives in its own file
       protocols/       one pre-registration per run, named by the run's id
@@ -366,7 +396,9 @@ outranks non-normative notes; a journal is a record and never grounds a claim; a
 carries the environment and date it applies to, so it can be deleted when it stops applying. An
 adoption ledger sits on both sides of that line and the contract says which is which: it grounds no
 claim, like a note, and it **binds the code**, so a module that disagrees with a ruled item is a defect
-rather than a difference of opinion.
+rather than a difference of opinion. An owner-action list is a third kind of thing: a request, which
+states what the round could not do itself, carries the reason and the replacement with it, and grounds
+nothing.
 
 A retired document is moved into the study's archive with a note saying what it was and what replaced
 it, and is not rewritten there; a live pointer into it is updated, a dated record inside it is not. The
@@ -397,7 +429,8 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
-| `INV-CTX-1` | A full text is loaded only after the cheaper levels of the reading ladder cannot answer the question. | Context is the scarce resource of a research session; loading it is a spending decision, not a default. |
+| `INV-NOTE-1` | One section has one **live** note: a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
+| `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
 | `INV-DOC-1` | The contract names no public symbol, and the index is a bijection with the authoritative list. | It keeps the contract stable under renames and stops the index drifting from reality. |
@@ -415,11 +448,15 @@ Every row must be falsifiable: a check must exist that can fail.
   single write their "Allow" covers, or their standing grant for that library — never as a background
   action, and never on the strength of a grant that was refused or has been revoked. A whole-library
   migration is not a write this preset performs at all.
-- No deletion in the reference library. Measured 2026-10-16: a `DELETE` through the library's local API
-  is permanent — the record answers `404` afterwards and the trash neither grows nor keeps the key —
-  while a deletion made in the application goes into that trash and is recoverable. Removal therefore
-  stays the owner's act in the application, and this preset's answer to "delete these" is a list, not a
-  capability.
+- No deletion in the reference library, and the reason is a property of this channel rather than of
+  deletion as such: this API cannot put an item in the trash. Measured 2026-10-16: a `DELETE` answers
+  `204`, the record answers `404` afterwards, and the trash neither grows nor keeps the key. Measured
+  2026-10-18: an item carries no `deleted` field at all, and the request parameter that would ask for
+  trashed items is accepted and ignored, so there is no soft delete to reach for. A deletion made in
+  the application does go into that trash and is recoverable — on 2026-10-18 the trash held 473 items,
+  315 of them notes — so removal stays the owner's act there. What this preset owes that act is an
+  artifact rather than a capability: the list it hands over has a shape (§6, §7), and a section is
+  freed by retiring a note rather than by removing one (§6).
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.
