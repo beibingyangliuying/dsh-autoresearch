@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; one note per top-level section, never split into subsection keys and never a duplicate (a subsection-keyed note from an earlier round still counts as covering its parent), every write a dry run first, and an old note only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$), never rewritten. Use after reading a method-heavy paper you will build on, and when a record's existing section notes have unreadable formulas.
+description: Turn a paper already chosen for study into one explanation note per METHOD section, attached to the library record — background, case study and conclusion sections are not written; one note per top-level section, never split into subsection keys and never a duplicate (a subsection-keyed note from an earlier round still counts as covering its parent), every write a dry run first, an old note only ever repaired mechanically (bracket/underscore math delimiters restored to $ and $$) and never rewritten, and a wrong note RETIRED rather than deleted so that its section can be explained again. Use after reading a method-heavy paper you will build on, when a record's existing section notes have unreadable formulas, and when a section is blocked by a note that explains it badly.
 ---
 
 # section-notes — one explanation note per method section
@@ -36,9 +36,11 @@ Read-only, before writing anything:
 
 1. **The record's own state**: `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`. It reports
    whether a readable attachment exists, and for every note already on the record it prints the **first
-   paragraph** and the section the tool could read from it. Two lines close the report: `read here` —
-   the sections it read, counted per top-level section — and `judge these` — the notes it could **not**
-   read. **Read those first paragraphs and decide for yourself.** The tool reads markers and the
+   paragraph** and the section the tool could read from it. Three lines close the report: `read here` —
+   the sections it read, counted per top-level section — `retired` — the notes marked `/retired`, which
+   are tombstones rather than coverage, each with the note that names itself their successor — and
+   `judge these` — the notes it could **not** read. **Read those first paragraphs and decide for
+   yourself.** The tool reads markers and the
    unambiguous forms ("第N节", "Section N", "§N", a Roman numeral heading); it cannot tell a section note
    from a whole-paper summary, and it is not guessing at one: measured on the owner's library, notes
    open "1. 一段话总结" (a summary) and "2 仿真结果及分析" (a section note) — the same shape. Open the
@@ -148,6 +150,15 @@ section is.** A subsection key is never something this skill creates:
 - A **sibling** subsection is not coverage: a note about `3.2` says nothing about `3.1`, and the missing
   part is exactly what should be written next.
 - Notes are created in section order, so the record reads in the order the paper reads.
+- **A wrong note is retired, never deleted and never rewritten.** When a note explains its section badly
+  enough that the section has to be explained again, that note is **retired**:
+  `{{presetTools}}/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"`. Its body is left
+  exactly as it stands, a `/retired` tag makes it a tombstone rather than coverage, and the section
+  becomes writable again. The replacement is then written with `--replaces <retiredNoteKey>`, which
+  carries the pointer a retirement cannot — the successor's key does not exist until the successor is
+  written — and which the tool refuses unless the retired note really is retired and really did explain
+  the same top-level section. `--retire --undo` puts the claim back. **The tool deletes nothing**, and
+  neither does a round: deletion is the owner's act in the application, where it is recoverable.
 
 ### 3.4 Repairing an old note is mechanical, and only mechanical
 
@@ -163,8 +174,8 @@ section is.** A subsection key is never something this skill creates:
 A span is converted only when it carries LaTeX markup and sits inside one closed span of one text
 node. An unbalanced bracket, a span split across paragraphs, a parenthesised prose aside: all left
 exactly as they were and reported. **A repair that guesses at what a broken formula meant is a
-rewrite wearing a formatter's clothes** — if a section needs re-explaining, that is a new note or an
-explicit owner decision, never a tidy.
+rewrite wearing a formatter's clothes** — if a section needs re-explaining, that is a retirement and a
+new note (§3.3), never a tidy.
 
 **The library owns two things, and the repair must not fight them.** Measured here:
 
@@ -202,6 +213,7 @@ which is the one thing a write tool must never say about the owner's library.
 | The section is a case study, a results table, or a conclusion | Do not write it. Say it was skipped and why. |
 | A `--tidy` run reports a span it left alone | That span needs a human or a rewrite. Report it; do not hand-close or hand-rewrite the formula. |
 | The note runs long — well past the 5,000-character signal | Cut the case-study material and the restatement of the abstract, not the derivation, and say in the report that the section's method content is long. **Never split the section.** |
+| The section is covered by a note that is **wrong** — you have read it and it does not explain that section, or explains it badly enough to be replaced | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never delete it and never edit its prose: the retired note is the record of what was replaced. If your reading and the note's claim disagree about *which* section it explains, that is the row above — report both and stop. |
 
 ## 5. Wording discipline
 
@@ -228,6 +240,10 @@ The artifact is the note itself, on the library record. The report is what a lat
    yours, missing file, unreadable boundary, and, for a tidy, the spans converted and the spans declined.
 6. `## Read-back` — the note key and size as it read back after the write, which is the only evidence
    that the write happened.
+7. `## Retired` — one line per note retired this round: note key · the section it claimed · **the reason** ·
+   the key of the note that replaced it, or `nothing names a replacement yet`. A tag cannot hold prose,
+   so the reason is stored nowhere else: this section is where it is written down, and the replacement
+   note's opening line is where a later reader will look for it.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -244,6 +260,11 @@ The artifact is the note itself, on the library record. The report is what a lat
 - **A write needs the owner's authorization** (`INV-EVID-3`). "Allow" covers one write; a lasting grant
   for that library means no dialog at all, and it is revoked in the reference manager, not here. Never
   treat a refused or revoked grant as granted.
+- **Retiring is one note, one write, and it states its reason before it acts.** Dry run first, then
+  `--write`; the read-back asserts that the `/retired` tag came back. **Whether a tag survives the
+  application rewriting a note's body is not yet measured** — so where the mark is missing, say so and
+  treat the section as still covered rather than as free, and do not write a second note over a
+  retirement that did not land.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
   88k characters for the papers this discipline is used on — while this preset's result pruner keeps
   only a result's head and tail above 8,192 characters. Read in slices:
@@ -279,6 +300,7 @@ The artifact is the note itself, on the library record. The report is what a lat
 - [ ] Each write was a dry run first, and its read-back is quoted
 - [ ] No section is covered twice; every skip is reported
 - [ ] For a tidy: the converted and the declined spans are both reported, and no prose was rewritten
+- [ ] Every retirement is reported with its reason and its successor, and no note was deleted to free a section
 
 ## 9. Don't
 
@@ -286,6 +308,8 @@ The artifact is the note itself, on the library record. The report is what a lat
 - Do not split a long section, and do not write a note keyed to a subsection: one section is one note.
 - Do not write a note for a section that was not read in this session.
 - Do not duplicate coverage to "complete" a record, and do not delete someone else's note.
+- Do not delete a note to free its section, and do not retire one you have not read: retiring asserts
+  that the note is wrong, and that is a claim you have to be able to state the grounds for.
 - Do not rewrite prose during a tidy, and do not close a delimiter the copy lost.
 - Do not let a child write into the reference library.
 - Do not turn the note into review prose, a grade, or a judgement of the paper's quality.
