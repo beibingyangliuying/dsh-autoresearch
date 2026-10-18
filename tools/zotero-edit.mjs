@@ -114,10 +114,29 @@ export function computeTagChange(current, { add = [], remove = [] } = {}) {
   return { next, added, removed, unchanged: added.length === 0 && removed.length === 0 }
 }
 
+/**
+ * Whether the record already holds what the patch asks for.
+ *
+ * `tags` arrives as an array of objects, and `String([{ tag: '/done' }])` is "[object Object]" for
+ * every tag - comparing that way made a swap (one tag added, one removed) read as no change, and the
+ * write was skipped in silence. An array is therefore compared by its normalized contents; anything
+ * else keeps the plain textual comparison the read-back below also relies on.
+ *
+ * @param {unknown} before The record's current value.
+ * @param {unknown} after The value the patch asks for.
+ * @returns {boolean} True when the two differ.
+ */
+function differs(before, after) {
+  if (Array.isArray(before) || Array.isArray(after)) {
+    return JSON.stringify(normalizeTags(before ?? [])) !== JSON.stringify(normalizeTags(after ?? []))
+  }
+  return String(before ?? '') !== String(after ?? '')
+}
+
 /** The fields whose value would actually change, as `{field, from, to}`. */
 export function changedFields(before, patch) {
   return Object.entries(patch)
-    .filter(([field, value]) => String(before[field] ?? '') !== String(value))
+    .filter(([field, value]) => differs(before[field], value))
     .map(([field, value]) => ({ field, from: String(before[field] ?? ''), to: String(value) }))
 }
 

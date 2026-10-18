@@ -78,6 +78,14 @@ check(
   'the "from" side of an empty field is empty rather than undefined',
 )
 check(changedFields(record, { DOI: '' }).length === 0, 'asking to clear an already-empty field is not a change')
+check(
+  changedFields({ tags: [{ tag: '/unread' }] }, { tags: [{ tag: '/done' }] }).length === 1,
+  'a tag swap is a change, though both lists are one tag long - the object-array case',
+)
+check(
+  changedFields({ tags: [{ tag: '/done' }] }, { tags: [{ tag: '/done' }] }).length === 0,
+  'the same tags are not a change',
+)
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
