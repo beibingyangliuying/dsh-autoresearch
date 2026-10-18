@@ -325,11 +325,13 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 3 Revision 17 契约（§6 归退与梯级 · §7 清单产物 · §8 `INV-NOTE-1` · §9 删除理由 · README 删除段更正） | ✅ | `1754e83` |
 | 4 P1 归退：`--retire/--undo` · `--replaces` · `--plan` 墓碑行 · 21 条新断言 · 真库干跑 | ✅ | `423b37a` |
 | 4b 纪律文本：`section-notes` 的归退（§2 · §3.3 · §3.4 · §4.2 · §6 · §7 · §8 · §9 · 路由描述） | ✅ | `9f08fb1` |
-| 5 P2 清单：`--plan --json` · skill `## Owner actions` · 脚手架 `research/owner_actions.md` | 未开始 | — |
-| 6 M1/M2/M3/M7：`.section-notes` 骨架 · 署名头 · 占位符换实例 · 不写解析后路径 | 未开始 | — |
-| 7 M4 写侧窄守卫（点号序号读得到、写不了） | 未开始 | — |
-| 8 P3 读的梯级（组合 A：`@hyzyla/pdfium` + `pdfjs-dist`；`--outline`/`--extract`/渲染 + 保真度标签） | 未开始（引擎已实测，见 §4.3.1：文本 7 ms/页、渲染 77 ms/页、自写 PNG 24 ms；**pdfium 无大纲出口**，大纲走 pdfjs 且 55% 命中） | — |
-| 9 M6 生成式能力单页 + 不漂移断言 | 未开始 | — |
-| 10 `zotero-read.mjs --item` 增印笔记 tags | 未开始（`--plan` 已打印 tags） | — |
-| 11 **tag 活过应用改写**的回归测试（写入带 tag → 属主在应用里改一次 → 断言 tag 仍在） | 未开始（做 P1 退路时一并做） | — |
+| 5 P2 清单：`--plan --json` · skill `## Owner actions` · 脚手架 `research/owner_actions.md` | ✅ | `806fbed` |
+| 6 M1/M2/M3/M7：`.section-notes` 骨架 · 署名头 · 占位符换实例 · 不写解析后路径 | ✅ | `8697611` |
+| 7 M4 写侧窄守卫（点号序号读得到、写不了） | ✅ | `65491ef` |
+| 8 P3 读的梯级（组合 A：`@hyzyla/pdfium` + `pdfjs-dist`；`--outline`/`--extract`/渲染 + 保真度标签） | ✅ 引擎实测见 §4.3.1；三个梯级在真库跑通，渲染页已当图像读回 | `ae75e6d` · `1d78c9b` |
+| 9 M6 生成式能力单页 + 不漂移断言 | **发布后单独一轮**（junhan 裁定） | — |
+| 10 `zotero-read.mjs --item` 增印笔记 tags | ✅ **本来就有**（`zotero-read.mjs:445` 一直打印 `tags :`；用带 `/retired` 的真笔记验过）——原列项是我记错的假待办 | — |
+| 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/01_decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
+| 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
+| 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | 进行中 | — |
 | — | 清理 `.tmp/` 两百余个往轮遗留文件（junhan 未定） | — |
