@@ -43,32 +43,36 @@ const throws = (label, run) => {
 console.log('reference-library reader self-test')
 
 // --- fixtures: the shapes the library answered ---------------------------------------------------
+//
+// The SHAPES are what a real library answered. The keys are Zotero's own documented examples
+// (`ABCD2345` and friends), because a key is an identifier: a fixture that carries one out of a private
+// library publishes it, and a shipped artifact must not name the owner's shelf.
 
 /** Six rows from one `qmode=everything` search: three attachment rows, two notes, one record. */
 const SEARCH_ROWS = [
-  { key: '89IR5DP6', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'MXZ5D9T6', title: 'Example study alpha' } },
-  { key: 'XDZBJ3WU', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'WV4GY4UQ', title: 'Example study beta' } },
-  { key: '73WSQ4DD', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: '2UHDKBMJ', title: 'Example study gamma' } },
-  { key: 'WFYYMUXQ', data: { itemType: 'conferencePaper', title: 'Example study delta', date: '2017-06-01' } },
-  { key: 'VK2AN4SR', data: { itemType: 'note', parentItem: 'WFYYMUXQ', title: '' } },
-  { key: 'SVYKIBWU', data: { itemType: 'note', parentItem: 'WFYYMUXQ', title: '' } },
+  { key: 'BCDE3456', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'ABCD2345', title: 'Example study alpha' } },
+  { key: 'CDEF4567', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'FGHI6789', title: 'Example study beta' } },
+  { key: 'DEFG5678', data: { itemType: 'attachment', contentType: 'application/pdf', parentItem: 'HIJK7890', title: 'Example study gamma' } },
+  { key: 'JKLM8901', data: { itemType: 'conferencePaper', title: 'Example study delta', date: '2017-06-01' } },
+  { key: 'KLMN9012', data: { itemType: 'note', parentItem: 'JKLM8901', title: '' } },
+  { key: 'LMNO0123', data: { itemType: 'note', parentItem: 'JKLM8901', title: '' } },
 ]
 
 /** The children fixture: a note, a linked PDF, and an imported HTML snapshot. */
 const CHILDREN = [
-  { key: 'V3USIF2E', data: { itemType: 'note', title: '' } },
-  { key: '2PPY7UFW', data: { itemType: 'attachment', contentType: 'application/pdf', linkMode: 'linked_file', title: 'Full Text PDF' } },
-  { key: 'X6T87XVI', data: { itemType: 'attachment', contentType: 'text/html', linkMode: 'imported_url', title: 'Snapshot' } },
+  { key: 'MNOP1234', data: { itemType: 'note', title: '' } },
+  { key: 'NOPQ2345', data: { itemType: 'attachment', contentType: 'application/pdf', linkMode: 'linked_file', title: 'Full Text PDF' } },
+  { key: 'OPQR3456', data: { itemType: 'attachment', contentType: 'text/html', linkMode: 'imported_url', title: 'Snapshot' } },
 ]
 
-/** What `?itemKey=MXZ5D9T6,WV4GY4UQ` actually answered: the two records AND their children. */
+/** The measured shape of a `?itemKey=` answer: the two records AND their children. */
 const MULTI_GET_ROWS = [
-  { key: '89IR5DP6', data: { itemType: 'attachment', parentItem: 'MXZ5D9T6' } },
-  { key: 'XDZBJ3WU', data: { itemType: 'attachment', parentItem: 'WV4GY4UQ' } },
-  { key: 'JCK7898M', data: { itemType: 'note', parentItem: 'WV4GY4UQ' } },
-  { key: 'WV4GY4UQ', data: { itemType: 'preprint', title: 'Example study beta' } },
-  { key: 'JDRS7968', data: { itemType: 'note', parentItem: 'MXZ5D9T6' } },
-  { key: 'MXZ5D9T6', data: { itemType: 'journalArticle', title: 'Example study alpha' } },
+  { key: 'BCDE3456', data: { itemType: 'attachment', parentItem: 'ABCD2345' } },
+  { key: 'CDEF4567', data: { itemType: 'attachment', parentItem: 'FGHI6789' } },
+  { key: 'PQRS4567', data: { itemType: 'note', parentItem: 'FGHI6789' } },
+  { key: 'FGHI6789', data: { itemType: 'preprint', title: 'Example study beta' } },
+  { key: 'QRST5678', data: { itemType: 'note', parentItem: 'ABCD2345' } },
+  { key: 'ABCD2345', data: { itemType: 'journalArticle', title: 'Example study alpha' } },
 ]
 
 /** Collection rows in the measured shape, plus one whose parent is missing (marked) to pin the orphan rule. */
@@ -87,13 +91,13 @@ const FULLTEXT = 'A sample text for the reader. Another sample line follows it. 
 console.log('\n[1] a row is classified, and told which record it belongs to')
 
 const attachment = classifyHit(SEARCH_ROWS[0])
-check(attachment.kind === 'attachment' && attachment.parentKey === 'MXZ5D9T6', 'an attachment row belongs to its parent', attachment.parentKey)
+check(attachment.kind === 'attachment' && attachment.parentKey === 'ABCD2345', 'an attachment row belongs to its parent', attachment.parentKey)
 check(attachment.record === null, 'an attachment row carries no record of its own')
 check(attachment.contentType === 'application/pdf', 'the attachment content type is kept')
 const note = classifyHit(SEARCH_ROWS[4])
-check(note.kind === 'note' && note.parentKey === 'WFYYMUXQ', 'a note row belongs to its parent')
+check(note.kind === 'note' && note.parentKey === 'JKLM8901', 'a note row belongs to its parent')
 const record = classifyHit(SEARCH_ROWS[3])
-check(record.kind === 'item' && record.parentKey === 'WFYYMUXQ', 'a record row is its own parent')
+check(record.kind === 'item' && record.parentKey === 'JKLM8901', 'a record row is its own parent')
 check(record.record?.itemType === 'conferencePaper', 'a record row carries its own data')
 
 // --- collapsing onto records --------------------------------------------------------------------
@@ -102,7 +106,7 @@ console.log('\n[2] rows collapse onto records, without losing what matched')
 
 const groups = groupHits(SEARCH_ROWS)
 check(groups.length === 4, 'six rows become four records', `${groups.length}`)
-const notes = groups.find((group) => group.parentKey === 'WFYYMUXQ')
+const notes = groups.find((group) => group.parentKey === 'JKLM8901')
 check(notes.sources.length === 3, 'the record that matched by metadata AND by two notes keeps all three', `${notes.sources.length}`)
 check(notes.record?.itemType === 'conferencePaper', 'and it is printed as the record, not as a blank note title')
 check(
@@ -132,7 +136,7 @@ check(yearOf('Reprinted 1998, originally 1974') === '1998', 'the first year in a
 console.log('\n[4] the attachment to read is chosen and named')
 
 const picked = pickAttachment(CHILDREN)
-check(picked?.key === '2PPY7UFW', 'the PDF wins over the HTML snapshot and the note', picked?.key)
+check(picked?.key === 'NOPQ2345', 'the PDF wins over the HTML snapshot and the note', picked?.key)
 check(picked?.linkMode === 'linked_file', 'the link mode is reported, so a reader knows which file it was')
 check(pickAttachment([CHILDREN[0]]) === null, 'a record with only a note has nothing to read')
 check(pickAttachment([]) === null, 'a record with no children has nothing to read')
@@ -157,10 +161,10 @@ check(normalizeTags(undefined).length === 0, 'missing tags are none')
 
 console.log('\n[6] a multi-get is filtered back to what was asked for')
 
-const selected = selectRequested(MULTI_GET_ROWS, ['MXZ5D9T6', 'WV4GY4UQ'])
+const selected = selectRequested(MULTI_GET_ROWS, ['ABCD2345', 'FGHI6789'])
 check(selected.size === 2, 'two keys asked for, two records kept - not the six rows answered', `${selected.size}`)
-check(selected.get('MXZ5D9T6')?.itemType === 'journalArticle', 'and they are the records that were asked for')
-check(!selected.has('89IR5DP6'), "the children the library volunteered are not adopted as records")
+check(selected.get('ABCD2345')?.itemType === 'journalArticle', 'and they are the records that were asked for')
+check(!selected.has('BCDE3456'), "the children the library volunteered are not adopted as records")
 check(selectRequested(MULTI_GET_ROWS, []).size === 0, 'asking for nothing keeps nothing')
 
 // --- collections --------------------------------------------------------------------------------

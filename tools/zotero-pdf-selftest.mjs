@@ -37,7 +37,7 @@ const refused = (run, label) => {
 console.log('zotero-pdf self-test')
 
 console.log('\n[1] the path behind the redirect')
-same(filePathFrom('file:///D:/OneDrive/Zotero/a%20b.pdf'), 'D:\\OneDrive\\Zotero\\a b.pdf', 'a file URL becomes a path, with its escapes decoded')
+same(filePathFrom('file:///D:/Store/a%20b.pdf'), 'D:\\Store\\a b.pdf', 'a file URL becomes a path, with its escapes decoded')
 same(filePathFrom('file:///C:/x/y.pdf'), 'C:\\x\\y.pdf', 'and another drive works too')
 same(filePathFrom('https://example.org/x.pdf'), '', 'anything that is not a file URL is refused - negative control')
 same(filePathFrom(''), '', 'and so is an empty location')

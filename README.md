@@ -32,7 +32,7 @@ dsh --profile web --dump-config | Select-String 'preset-autoresearch'
 ```
 
 That GitHub path is verified end to end: the package lands in the profile as a real copy, pnpm
-hoists the one dependency so the row's import resolves, and the composition then carries the preset and
+hoists the dependency the row imports so it resolves, and the composition then carries the preset and
 its three rows. The local-link path is for developing against a checkout.
 
 ## Requirements
@@ -45,10 +45,13 @@ only "not tested here". What this preset actually depends on — the prompt vari
 registers, and the row packages it mounts — is checked against the installed kernel by
 `tools/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
-**To install: nothing beyond DSH itself.** One dependency (`@deepseek-ai/schemastery`, published on
-npm), no build step, and no second toolchain — in particular the two external channels are Node
-programs this package ships, not servers installed and launched through `uvx`, so a Python
-environment is not part of using this preset.
+**To install: nothing beyond DSH itself.** Three dependencies, all published on npm and all permissive
+(`@deepseek-ai/schemastery` for the row's configuration; `@hyzyla/pdfium` and `pdfjs-dist` for the two
+attachment-side reading rungs — PDFium compiled to WebAssembly, and pdf.js for the bookmarks that build
+does not export). There is no build step and no second toolchain: in particular the two external channels
+are Node programs this package ships, not servers installed and launched through `uvx`, so a Python
+environment is not part of using this preset. The two engines are reached only through
+`tools/zotero-pdf.mjs`, so they cost nothing on a request that does not read an attachment.
 
 **The profile may be bare.** Four global toolsets are used when present and never required: the memory
 layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
@@ -239,7 +242,7 @@ divergence. (It found one on its first run — see [`docs/01_decisions.md`](docs
 protocol.md            normative contract (semantics, boundary, invariants, non-goals)
 surface.md             non-normative index: concept <-> name
 README.md              this entry document
-package.json           the bundle manifest: name, the composition patch, the one dependency
+package.json           the bundle manifest: name, the composition patch, the dependencies
 index.js               the bundle's own row: it carries the editable configuration
 client.js              the settings page for that configuration (browser half)
 cordis.patch.yml       the composition: the preset declaration and its rows
