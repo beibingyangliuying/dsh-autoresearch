@@ -32,6 +32,7 @@ export const REQUIRED_HELPERS = [
   'preset-paths.js',
   'tools/arxiv.mjs',
   'tools/zotero-read.mjs',
+  'tools/zotero-pdf.mjs',
   'tools/zotero-local-api.mjs',
   'tools/zotero-link-snippet.js',
 ]
