@@ -129,7 +129,7 @@ export function sectionMarker(token) {
  * @returns {string} The ordinal, or '' when the note carries no marker.
  */
 export function readSectionMarker(noteHtml) {
-  const match = new RegExp(`${SECTION_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+)\\s*-->`).exec(
+  const match = new RegExp(`${SECTION_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+(?:\\.\\d+)*)\\s*-->`).exec(
     String(noteHtml ?? ''),
   )
   return match ? match[1] : ''

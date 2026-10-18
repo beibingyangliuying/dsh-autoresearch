@@ -59,6 +59,7 @@ same(sectionClaim('<p>文章第3节标题是 “X”。</p>').token, '3', 'and i
 const marked = composeSectionNote('2', '<p>解释</p>')
 check(marked.startsWith(sectionMarker('2')), 'a composed note opens with its marker')
 same(readSectionMarker(marked), '2', 'the marker reads back as the ordinal')
+same(readSectionMarker(sectionMarker('3.1')), '3.1', 'a dotted marker reads back too')
 same(readSectionMarker('<p>文章第2节标题是 “X”</p>'), '', 'an unmarked note has no marker')
 
 console.log('\n[2] what a note says it is about')
