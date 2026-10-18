@@ -1252,3 +1252,52 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 - 本轮不动那四条。要恢复它们，迁移路径在 `editing-cordis-compositions`（写成 bundle 声明行 → 挂载 → 校验行 → 删旧目录），**届时**正文里的 `{{cwd}}` 必须处理：每文件 2 处，其中三处把它拼进 `<cwd>/VibeMath/Projects/<project>/` 绝对路径。
 - 本节只更正声明，不改任何代码；`release-check --tag v0.3.1` 在此之后仍应 PASS（工具对"main 越过 tag"只打 NOTE，自己写明 *"Not a failure: main is allowed to move on after a release."*）。
 
+## 50. 复核三条文献会话的收尾现场：删除边界的更正、回收站端点的假absence、两条读法前提的实测（2026-10-18）
+
+### 50.1 背景
+
+三条课题会话（课题A《地震后区域电网功能恢复与安全再投运机制》· 课题B《局部电气设备减隔震…跨尺度影响机制》· 课题C《电力系统韧性文献分类》）的现状梳理交出 **39 条待属主处理**，根因不是"不能删"，而是**"不能取代"**（写＝新增、改正文＝禁止、`--tidy`＝4 类机械修复，中间那个动作没有通道）。本轮把会话结论逐条对预设本体复核，并对真库做**只读**普查。**全程零写入**；九个探针在 `.tmp/`（gitignored），本记录写下后删除其中五个。
+
+### 50.2 实测（全部 `GET`，可复现）
+
+| # | 命令 | 结果 |
+| --- | --- | --- |
+| E1 | `GET /api/users/0/items?itemType=note&limit=100&start=N`（翻页取全） | live 笔记 **360**：应用包裹体 146 · 裸体 214 · **带 tag 0** · 带 `<!-- autoresearch-section` 208 |
+| E2 | `GET /api/users/0/items/trash?limit=100&start=N` | 回收站 **473** ＝ **315 note** · 147 attachment · 10 journalArticle · 1 conferencePaper；其中应用包裹体 285、**带 tag 1**（`QE78EVJR`，`tags=[/section-note]`，裸体） |
+| E3 | `GET /api/users/0/items/trash?itemType=note` | **200 + `Total-Results: 0`**（`?itemType=book` 同为 0），而回收站实有 315 条 note；对照 `GET /items?itemType=note` 正常答 360 ⇒ **该端点静默忽略 `itemType`** |
+| E4 | `GET /api/users/0/items?itemType=note&limit=1` | `data` 键＝`dateAdded/dateModified/itemType/key/note/parentItem/relations/tags/version` ⇒ **无 `deleted`**；`includeTrashed=1`／`trashed=1` 被静默忽略（360→360，首条 key 相同） |
+| E5 | 官方文档两页 | Web API *Deleting an Item* 只写 `204 The item was deleted`，**未说**永久还是进回收站；Local API 页只说支持 DELETE，且"does not attempt to replicate every implementation detail" |
+| E6 | `GET /api/users/0/items/<attachmentKey>/file` | **302 → `file:///D:/OneDrive/Zotero/<title>.pdf`** ⇒ agent 能拿到附件在磁盘上的真实路径 |
+| E7 | 环境与先例 | 预设唯一依赖 `schemastery`；全仓 **0 个 `.py`/`pyproject.toml`/`uv.lock`**；`tools/release-check.mjs:69-70` 把 `command:`／`uvx` 判为问题；§34 记录旧发布版的 Python/`uvx` 依赖正是被修掉的缺陷 |
+| E8 | `.tmp/engine-probe/smoke.mjs`（真论文 `CPZ52NQV`，1.27 MB／8 页） | `@hyzyla/pdfium` 3.0.0：init 24 ms · load 4 ms · `getText()` 5,255 字符/7 ms · `render({scale:1.5,render:'bitmap'})` 892×1189／77 ms／裸 RGBA 4.24 MB · **自写 PNG 编码（`node:zlib`）24 ms → 324 KB/页**。包内唯一二进制 `pdfium.wasm` 5.05 MB、声明依赖为空。（`getOriginalSize()` 字段名是 `originalWidth/Height`） |
+| E9 | `.tmp/engine-probe/outline-census.mjs`（20 篇真论文，`pdfjs-dist` 的 `getOutline()`） | **自带大纲 11 篇（55%）**· 空/缺失 9 篇 · 读不出 0 篇。条目即论文自己的节标题，**并带论文自己的编号形式**（`I Introduction`／`II Measure of Stress`／`Appendix: Passive and Active Loading`）。而 **pdfium 给不了它**：该 WASM 只导出了渲染与文本那一小撮函数，`FPDFBookmark_*`、`FPDF_GetMetaText` 都不在其中 |
+
+### 50.3 结论（2026-10-18 裁定，junhan）
+
+1. **删除仍不开工具**，但理由更正：**这个 API 没有"放进回收站"这个动作**（E3/E4 —— 无 `deleted` 字段、`includeTrashed` 被忽略），而"DELETE 即永久"是**实测边界而非文档承诺**（E5）。回收站只由应用产生（E2：315 条 note 皆属主在应用内删的、可恢复）。
+2. **归退（retire）作为删除的替代品**：旧笔记打 `/retired`，覆盖只算**活**笔记，可逆（`--undo`），**永不删除**；库中已有的 `/section-note` **只读兼容**，不造第三种写法。协议里"a rewrite is the owner's decision"**原句不动**。
+3. **tag 能否活过应用改写仍未证**（E1/E2：675 条笔记里唯一带 tag 的一条，未被应用改过）⇒ 实现时一并做回归测试（写入带 tag → 属主在应用里改一次 → 断言 tag 仍在），并配**父条目标记**为退路、两种读法不一致就停下问。
+4. **读的梯级**写成：①库索引 → ②文件文字层 → ③自带目录 → ④页图+视觉。**②不补字体编码的洞**（`⩾`→`P`、`1⁄4` 代 ¼ 这类症状实为 PDF 字体编码/文字层抽取的产物，**不是预设的仪器坏**——会话把它记成 `math_symbols` 失效是归错账）。
+5. **引擎路线**：Node 生态内纯 JS/WASM 优先；**Node 都不可行时才引入 Python 运行时**（用 pypdfium2，**不用 PyMuPDF**，后者 AGPL）。`mupdf`（AGPL）任何路线下都出局——预设是 MIT。
+6. **验收顺序**：先实测能用，再写进契约（E8/E9 已完成这一步）。
+7. 协议版本：头部 `15 → 16` 补欠账，本轮改动立 **Revision 17**；清单默认落 `<study>/research/owner_actions.md`；`PUT /fulltext` 写回库索引**本次不做**、仅登记。
+
+### 50.4 教训（三条）
+
+1. **假absence 不只在文献检索里，也在自己的工具链里**：`GET /items/trash?itemType=note` 答 `200 + 0`，而那里有 315 条 note。**"按类型查"看起来很干净**，正是 §5 三种 nothing 要防的形状——这次是端点静默忽略参数，而读它的人以为自己在问一个受过滤的问题。
+2. **会话结论必须对预设本体复核**：本轮有三条归错账——`math_symbols` **不在预设里**（全 git 历史 0 命中）、弹窗早已由 Revision 10 修好、`{{presetTools}}` 的路径机制本来就是对的（硬编码发生在**会话自写的工作区契约**里）。不复核就照着改，会改错地方。
+3. **一个"文档欠账"需要一个机械护栏**：`protocol.md:3` 头部写 **Revision 15**，而本节上方 §45 早已记 **Revision 16**——**没有任何一条自测看这件事**。⇒ **已加 `DOC-11`**（头部 Revision ＝ 变更记录里出现的最高 Revision，含负向控制；提交 `6ec4d1d`），头部随之升到 16、本轮再升 17。
+
+### 50.5 复现命令
+
+五个库侧探针（本轮后删除，命令即上表 E1–E4；均只读）：
+
+```js
+// E1/E2：翻页取全，按 itemType 分类计数；判据是 `<div data-schema-version=` 为应用包裹体、`data.tags` 非空为带 tag
+// E3：对比 GET /items/trash?itemType=<t> 与 GET /items?itemType=<t> 的 Total-Results
+// E4：打印一个 item 的 Object.keys(data)，并对比带/不带 includeTrashed=1 的 Total-Results
+```
+
+E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待依赖路线定稿后一并处置。
+
+
