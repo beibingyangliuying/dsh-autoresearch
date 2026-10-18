@@ -143,6 +143,9 @@ section is.** A subsection key is never something this skill creates:
   range is a signal about the note, not a cap on the section. Measured on the one paper this ever
   happened to: a 10.4k-character method section was split into `3.1` and `3.2` — the split added keys
   that then had to be counted back into their parent, and covered nothing the long note would not have.
+  The tool now **refuses** a dotted `--section` outright rather than folding it afterwards, and says which
+  ordinal to pass instead: a section cannot be split by accident, and a note already keyed that way is
+  still read and still counted as covering its part.
 - **Notes keyed to subsections may already exist** in a library (from that earlier round, or restored
   from its trash). They count: such a note covers that part of its parent, a top-level section carried
   that way is covered **in parts**, and the tool folds it into the parent. Recognise them, never create

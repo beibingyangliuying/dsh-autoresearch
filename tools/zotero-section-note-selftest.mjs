@@ -32,6 +32,7 @@ import {
   romanToNumber,
   sectionClaim,
   sectionMarker,
+  sectionWriteToken,
   successorOf,
   topLevelSpans,
 } from './zotero-section-note.mjs'
@@ -43,6 +44,18 @@ const check = (condition, label, detail = '') => {
 }
 
 const same = (actual, expected, label) => check(actual === expected, label, actual === expected ? '' : `got ${JSON.stringify(actual)}`)
+
+/** Run something that must be refused, print the message it was refused with, and return that message. */
+const refused = (run, label) => {
+  try {
+    const value = run()
+    check(false, label, `it returned ${JSON.stringify(value)} instead of refusing`)
+    return ''
+  } catch (error) {
+    check(true, label, String(error.message).slice(0, 96))
+    return String(error.message)
+  }
+}
 
 console.log('section-note self-test')
 
@@ -197,6 +210,17 @@ same(replacesKey(['/replaces-ABCD1234']), 'ABCD1234', 'and that name reads back'
 same(replacesKey(['/section-note']), '', 'an identity tag names no predecessor - negative control')
 same(successorOf([liveNote('3', { tags: ['/replaces-OLD'] })], 'OLD'), 'N3', 'the successor of a retired note is found by its tag')
 same(successorOf([liveNote('3')], 'OLD'), '', 'and where nothing names one, nothing is reported')
+
+console.log('\n[2f] a subsection ordinal is read, and never written')
+
+same(normalizeSectionToken('3.1'), '3.1', 'READING still accepts a dotted ordinal: a library carries such notes, and the trash can give one back')
+same(sectionWriteToken('3'), '3', 'writing a top-level ordinal is what happens')
+same(sectionWriteToken('三'), '3', 'a Chinese numeral is written as digits')
+same(sectionWriteToken('第7节'), '7', 'and a wrapped phrase is unwrapped')
+const dotted = refused(() => sectionWriteToken('3.1'), 'WRITING a dotted ordinal is refused')
+check(/pass --section 3\./.test(dotted), 'and the refusal says which ordinal to pass instead', dotted)
+refused(() => sectionWriteToken('3.1.4'), 'however deep the dotted number goes')
+refused(() => sectionWriteToken('Methodology'), 'a value with no ordinal is refused as before - the negative control for the guard above')
 
 console.log('\n[3] the body must be HTML')
 check(looksLikeHtml('<p>解释</p>'), 'a paragraph is HTML')

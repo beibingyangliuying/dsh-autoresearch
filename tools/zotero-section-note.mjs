@@ -360,6 +360,33 @@ export function parentSectionToken(token) {
 }
 
 /**
+ * The ordinal a NEW note may be written for, or a refusal.
+ *
+ * The tool READS a dotted ordinal: a library can carry notes keyed to `3.1` from an earlier round, or
+ * from its trash, and those have to be recognised for what they are so that coverage stays countable.
+ * It never WRITES one. The unit this discipline counts is the top-level section, and a note keyed to a
+ * subsection would have to be folded back into its parent afterwards - which is the shape that produced
+ * a split section in the first place. Reading wide and writing narrow is the whole point: the refusal
+ * is narrow enough to be trusted, and it says which ordinal to pass instead.
+ *
+ * @param {string|number} value The `--section` value.
+ * @returns {string} The ordinal to write.
+ * @throws {UsageError} When the value carries no ordinal, or carries a subsection's.
+ */
+export function sectionWriteToken(value) {
+  const token = normalizeSectionToken(value)
+  if (!token) throw new UsageError(`--section '${value}' carries no ordinal this tool can match`)
+  if (token.includes('.')) {
+    const parent = parentSectionToken(token)
+    throw new UsageError(
+      `--section '${value}' names a subsection, and the unit this discipline writes is the TOP-LEVEL section: pass --section ${parent}. ` +
+        `A note already keyed to §${token} is still READ and still counts as covering that part of §${parent}.`,
+    )
+  }
+  return token
+}
+
+/**
  * The note that already covers the section a write is for, and why.
  *
  * Three ways a section is covered, and each one refuses the write:
@@ -691,6 +718,8 @@ const USAGE =
   '       --retire marks a wrong note as a tombstone instead of deleting it: the body is untouched, the\n' +
   '       section it claimed becomes writable again, and --undo puts the claim back. The reason is\n' +
   '       printed and must be written into the note that replaces it, because a tag cannot hold prose.\n' +
+  '       --section takes a TOP-LEVEL ordinal: a dotted subsection number is read from the notes that\n' +
+  '       carry one, and never written into a new note.\n' +
   '       --title is attempted and, if the library refuses it (measured: a title patch on a note answers\n' +
   '       HTTP 500 here), the same note is written WITHOUT it rather than not at all.'
 
@@ -820,8 +849,7 @@ async function runCreate(options) {
   if (!looksLikeHtml(body)) {
     throw new UsageError('the note body is not HTML; the library stores note bodies as HTML and a Markdown guess would silently change what is stored')
   }
-  const token = normalizeSectionToken(options.section)
-  if (!token) throw new UsageError(`--section '${options.section}' carries no ordinal this tool can match`)
+  const token = sectionWriteToken(options.section)
 
   const record = await readItem(options.item)
   if (record.itemType === 'note') throw new UsageError(`${options.item} is itself a note; pass the record the note is about`)
