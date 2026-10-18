@@ -333,5 +333,6 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 10 `zotero-read.mjs --item` 增印笔记 tags | ✅ **本来就有**（`zotero-read.mjs:445` 一直打印 `tags :`；用带 `/retired` 的真笔记验过）——原列项是我记错的假待办 | — |
 | 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/01_decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
 | 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
-| 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | 进行中 | — |
+| 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | ✅ `v0.4.0` → `57a3f3e`，远端复核 PASS（见 `docs/01_decisions.md` §51.5） | `57a3f3e` · `3106120` |
+| 13 **M6 的发布**（这份单页要不要单独发一个版本） | 待 junhan 定 | — |
 | — | 清理 `.tmp/` 两百余个往轮遗留文件（junhan 未定） | — |
