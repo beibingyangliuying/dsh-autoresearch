@@ -333,7 +333,7 @@ skill 里。
 
 ## 23. 自带 CLI 脚本必须是绝对路径：agent 并不在这个仓库里（2026-10-14）
 
-**现象（junhan 提出的问题，已核实到具体行）**：纪律 skill 与系统提示都用**相对**路径点名脚本（`skills/literature-recon/SKILL.md` 三处 `tools/zotero-write.mjs`；`contact-bridge.js` 的 mailto 行与附件策略行各一处），但脚本只存在于**本预设仓库**；脚手架 `tools/new-project.ps1` 只复制 `project-template/`（其中没有 `tools/`），而预设只告知 agent `{{cwd}}`。⇒ 在 `D:\studies\某课题` 里 `node tools/zotero-write.mjs` 直接解析不到，agent 唯一能做的是**满盘找这个 checkout**。这就是"agent 要来到我们这个仓库来找"的字面成因。
+**现象（junhan 提出的问题，已核实到具体行）**：纪律 skill 与系统提示都用**相对**路径点名脚本（`skills/literature-recon/SKILL.md` 三处 `tools/zotero-write.mjs`；`contact-bridge.js` 的 mailto 行与附件策略行各一处），但脚本只存在于**本预设仓库**；脚手架 `tools/new-project.ps1` 只复制 `project-template/`（其中没有 `tools/`），而预设当时只告知 agent `{{cwd}}`（**已过时，2026-10-18 见 §47**：内核 0.2.1 起 `cwd` 不再是提示词变量，工作目录改由必需运行时上下文给出）。⇒ 在 `D:\studies\某课题` 里 `node tools/zotero-write.mjs` 直接解析不到，agent 唯一能做的是**满盘找这个 checkout**。这就是"agent 要来到我们这个仓库来找"的字面成因。
 
 **决策**：路径在运行时由 `import.meta.url` 推出（新模块 `preset-paths.js`），分两处呈现——(1) `contact-bridge.js` 的 section **常驻一行**绝对目录；(2) skill 正文改用 `{{presetTools}}` 占位符，由 `skills.js` 在**注册时**替换（读盘内容保持原样 ⇒ `skills/` 仍是唯一真源）。
 
@@ -1111,4 +1111,71 @@ junhan 要求发布新版本，并按 [`preset-release`](../.agents/skills/prese
   "全套自测绿"，**不能**证明这些规则在真实研究里好用。
 - **P6 仍开着**（mnemon Documents 与课题自带规范层的边界）。
 - 领域示例的修改只动了**示例块**（`EXAMPLE:BEGIN … END`，课题本来就要删掉它们），没有动任何规则的措辞。
+
+## 47. 内核 0.2.1 移除了 `cwd` 提示词变量，预设的 persona 后缀随之删除（2026-10-18）
+
+### 47.1 起因与现象
+
+junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，**每一轮**都以同一句话失败，而预设本身
+仍在新建会话名单上，设置页也不报 broken：
+
+> 本轮运行失败 unknown prompt variable "{{cwd}}" in section "deployment:persona-suffix";
+> registered variables: provider, model
+
+### 47.2 先验（核对过的事实，不是推断）
+
+- **旧内核注册三个变量**：下载 `@deepseek-ai/dsh-agent-loop@0.2.0-rc.2` 实测，`lib/index.js:1564-1566`
+  依次注册 `provider`、`model`、`cwd`。
+- **新内核只剩两个**：已装的 `0.2.1-rc.2` 同文件 `1591-1592` 只有 `provider`、`model`，`cwd` 那行不存在。
+- **严格插值 ⇒ 每轮在请求之前就死**：`@deepseek-ai/dsh-system-prompt` 的 `interpolate()` 对未注册名字直接
+  `throw`（`lib/index.js:172-174`），而装配发生在请求之前。**这一层必须说清**：注册表试挂载只挂行、不装配
+  提示词，所以设置页没有红徽章、名单也不会过滤它——它与 §15/§19 那类"预设被标 broken 后静默隐藏"是**两种
+  不同的故障**，只有真实会话的第一次装配能暴露。
+- **cwd 没丢，改道成了运行时上下文**：新增包 `@deepseek-ai/dsh-working-directory`（npm 首发版本即
+  `0.2.1-alpha.2`）注册**必需**上下文 `working-directory:current`，文本为
+  `Current working directory: "<path>".`（`lib/index.js:41-47,121-123`），由 `dsh-base` 全局挂载
+  （`cordis.patch.yml:166-167`）；每次装配刷新，`cd` 之后还以用户消息追加"目录已改变"。作用域装配会先并入
+  **全局层**（`dsh-scope` 的 `merge()` 从 `global` 起算，`lib/index.js:177-179`）⇒ 预设自己**不需要**挂这
+  一行也能拿到，而且比旧变量更准：旧变量读的是 `session.header.cwd`（初始目录，`cd` 之后不更新）。注意
+  **上下文与工具是两件事**：本预设的隔离行把 agent 可见的 `working_directory` 工具屏蔽掉了
+  （`isolation-report.json` 的 denied 里就有它），但每轮的上下文来自服务侧的注册，屏蔽工具动不了它。
+- **上游同版做了同样的清理**：官方 `standard.patch.yml` 在 `0.2.0-rc.2` 里正是
+  `suffix: Your working directory is {{cwd}}.` + `{{model}}` 前缀，在 `0.2.1-rc.2` 里 suffix 整行已删。
+  **本预设当初就是照抄官方 standard 的写法**——这正是"内核升级要重扫"的判据，而不是我们独有的缺陷。
+
+### 47.3 决策与落点
+
+**决策（junhan 逐项确认，取推荐项）**：**删掉 suffix 那一行**，不做变量自补——工作目录已由必需运行时上下文
+每轮给出，自补只是把一条被内核废弃的契约请回预设。
+
+**否掉的替代方案**：
+
+- **在预设内自补 `ctx.systemPrompt.variable('cwd', …)`**（可行：`workingDirectory` 是全局服务，子作用域可
+  注入；变量 provider 同步求值、`get()` 无 I/O；作用域变量遮蔽而非冲突于未来的全局同名变量）。否掉的理由是
+  它只为我们自己的一行文本服务，却多维护一条内核契约——**但 `vibe-math-*` 那类拿 cwd 拼绝对路径的预设仍需
+  走这条路或改写措辞（见 47.5）**。
+- **保留句子、去掉变量**：与运行时上下文重复陈述，零收益。
+
+**落点**：[`cordis.patch.yml`](../cordis.patch.yml)（suffix 删除；头部注释与 persona 行就地写明理由，使下
+一个读到这一行的人不会把它加回来）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（新增两条
+检查）· 本文件 §23 的现象段就地标注更正（**不改写历史决策**，沿用 §46.3 的规矩）。
+
+### 47.4 护栏与验证
+
+`preset-selftest` 的第 [4] 段原来**守着这个 bug**：它断言 `{{cwd}}` 占位符必须存在。现在改为三条：
+
+1. **点名旧错误**：`{{cwd}}` 不得出现在预设块里——"命名替代品而不命名错误，就是在请错误回来"。
+2. **守住整类错误**：组合后预设块里出现的每个 `{{name}}`，与**内核注册表**逐一比对。注册表不是硬编码名单，
+   而是从 profile 解析到的 `@deepseek-ai/dsh-agent-loop` 里读出的 `systemPrompt.variable(...)` 字符串实参
+   （并合并本包自己的行，使预设日后自注册变量不会被误报）；**读不到内核时响亮 FAIL**，不静默通过。
+3. **变异驱动**（§3 的规矩）：把 `{{cwd}}` 与一个从未注册的名字分别注进 dump，新检查必须各自 FAIL，然后
+   还原。
+
+### 47.5 未做与边界
+
+- **没有回改 `docs/archive/PLAN.md`**：那是归档时间线，`{{cwd}}` 在那里是当时的记录。
+- **`$DSH_HOME/.agent-presets/vibe-math-v1..v4` 同样在用 `{{cwd}}`**（v1:13/41、v2:14/37、v3:17/28、
+  v4:20/54，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 路径），会以完全相同的方式整轮失败。本轮
+  junhan 决定**只修本预设**，这四个个人预设留待另行安排。
+- 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
 
