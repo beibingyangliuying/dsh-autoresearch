@@ -37,6 +37,14 @@ its three rows. The local-link path is for developing against a checkout.
 
 ## Requirements
 
+**Which DSH it runs on.** The bundle declares `engines.dsh: ">=0.2.0-rc.2 <0.3.0-0"` — the line this
+preset has been run on. Outside that range DSH skips the bundle at boot: it prints `skipping profile
+bundle ...`, the composition carries an error-level diagnostic, and the preset never reaches the
+new-session list — absent and loud, rather than present and failing every request. The range states
+only "not tested here". What this preset actually depends on — the prompt variables the kernel
+registers, and the row packages it mounts — is checked against the installed kernel by
+`tools/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
+
 **To install: nothing beyond DSH itself.** One dependency (`@deepseek-ai/schemastery`, published on
 npm), no build step, and no second toolchain — in particular the two external channels are Node
 programs this package ships, not servers installed and launched through `uvx`, so a Python
