@@ -1349,4 +1349,12 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 - **父条目标记退路**：未实现，理由见 §51.2（实证表明当前不需要）。
 - **OCR**：仍不做；`--fulltext` 与 `--extract` 现在各自打印 `rung`/`source` 行，把"哪一级答的、它可信到什么程度"写在结果里。
 
+### 51.5 发布 0.4.0（2026-10-18）
+
+- **版本号**：`0.3.1 → 0.4.0`，**单独一个提交**（`chore(release): 0.4.0`），使 tag 指向的那棵树恰好是这一版；契约 Revision 与包版本依旧互不绑定。
+- **打 tag 前置条件全绿**：17 个离线自测 · `preset-selftest`（对着**重新生成**的组合 dump——`package.json` 变了，旧 dump 会被它按设计拒绝）· `release-check --local`（含"工作树干净"这条，那是打 tag 的前置条件而非开发条件）。
+- **注释 tag** `v0.4.0` → `57a3f3e`；**先推分支、再推 tag**。
+- **从远端复核**（`node tools/release-check.mjs --tag v0.4.0`）：**PASS** —— 发布件声明 0.4.0 · 组合不挂 MCP server、不启外部命令 · 两个通道需要的 helper 全部在发布包里（含本轮新增的 `tools/zotero-pdf.mjs`）· `main` 与 tag 指向同一提交。
+- **未做**：M6（生成式能力单页 + 不漂移断言）——junhan 定为**发布后单独一轮**，见 §51.4。
+
 
