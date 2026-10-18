@@ -1179,3 +1179,53 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
   junhan 决定**只修本预设**，这四个个人预设留待另行安排。
 - 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
 
+## 48. 发布 0.3.1：两条实现向契约对齐的修复，和一条只能声明"没测过"的内核窗口（2026-10-18）
+
+### 48.1 起因与范围
+
+§47 的 `{{cwd}}` 迁移修完后，junhan 提出两件事：工作树里还躺着 **4 个 zotero 工具改动**（来源不明，需先定性）待提交，以及"没什么问题就该发版"。⇒ 本轮 = 两条 zotero 修复（各自带自测、各自一个提交）· 一条**内核实测窗口声明**（`engines.dsh`）· README 与新版本号。**协议不动**：两条修复都是**实现向已有契约对齐**，故 `protocol.md` 不 bump Revision（沿用 [`preset-release`](../.agents/skills/preset-release/SKILL.md) §2 的规矩：契约不动，改实现）。
+
+### 48.2 两条 zotero 修复（实测值，不是推断）
+
+1. **标签交换曾被静默跳过**。`changedFields` 对每个字段用 `String(value)` 比较，而本轮实测 `String([{tag:'/done'}]) === String([{tag:'/unread'}]) === "[object Object]"` ⇒ 换标签被判成"无变化"，`zotero-edit.mjs` 打印 *"No change: every value asked for is already what the record says. Nothing to write."*，**写入从未发生**，于是 §6 依赖的写后回读也没有执行——工具报告了一个记录并不支持的结论。修法：数组按 `normalizeTags` 的内容比（干跑、补丁、回读本来就用同一归一化），标量仍走文本比。自测两向：一换一是变化，同标签不是变化。
+   **一处值得记的反差**：§31 早把"**写后回读**并逐字段比对（**标签按归一化后比**）"写进决策，而**写前**那道"这算不算变化"的闸门没照同一条走——同一条规则只落实在链条的后半段。这不是记录过期，是**实现只对了一半**。
+2. **点号序号读不回来**。`readSectionMarker` 只认 `(\d+)`，而它上方十二行的 `normalizeSectionToken` 明写点号序号按原样识别并给了理由（旧笔记、回收站里的历史数据）。本轮实测：`sectionMarker('3.1')` 产出 `<!-- autoresearch-section: 3.1 -->`，**旧正则读出 `''`**，修后读出 `'3.1'`。覆盖单元不动：`parentSectionToken` 仍把它归到顶层 `3`，正是 §6 计的那个单位。⇒ 今天在库里看不到差别（§41 实测"带小数点键的逐节笔记全库 0 条"），它修的是**回退路径的自相矛盾**。
+
+### 48.3 内核窗口：机制、依据，以及它表达不了什么
+
+**决策（junhan 逐项确认，取 A）**：`package.json` 增 `engines.dsh: ">=0.2.0-rc.2 <0.3.0-0"`。
+
+**机制（实测 `dsh-app-boot`）**：`evaluatePluginCompatibility`（`lib/index.js:311`）由**自己的 `engines.dsh` 一票判定，此时 `peerDependencies` 被完全忽略**；匹配走 `semver.satisfies(…, { includePrerelease: true })`（L276-277）。不满足时 `loadProfileDirectory`（L1020-1040）把**整个 bundle** 放进 `skippedBundles` ⇒ 启动时 `reportSkippedBundles`（L537，由 CLI 的 profile-boot 调用）在 stderr 打一行 `skipping profile bundle …`、schema 诊断里多一条 error（L3462-3465）、预设**不进新建会话名单**；另留"精确 `name@version` ↔ 精确 runtime"的豁免通道。这正是我们要的失败方向：**响亮地缺席**，而不是像本轮这样"留在名单上、每轮都失败"。
+
+**区间实测**（用内核自己的 semver 跑）：`0.2.0-rc.2` IN · `0.2.1-alpha.2` IN · `0.2.1-rc.2` IN · `0.2.5` IN · `0.2.0-rc.1` out · `0.3.0-0` out。声明后重新组合，dump 里**没有** `skipping profile bundle` 行 ⇒ 不会自锁。
+
+**下限为什么是 `0.2.0-rc.2`，而不是本轮验证过的 `0.2.1-rc.2`**：(1) npm 的 `latest` 就是 `0.2.0-rc.2`，下限写 0.2.1 会让按默认渠道装 DSH 的人**装不上**；(2) 本预设此前就活跑在 `0.2.0-rc.2` 上（§47.1 的升级起点）；(3) 实测对比——我们声明的 **28 个行包名逐一**出现在该版本官方 `standard.patch.yml` 的行名里，零缺失。
+
+**这条声明表达不了什么（写清，免得下一个人把它当护栏）**：`0.2.0-rc.2 → 0.2.1-rc.2` 同在区间之内，而"`cwd` 退出提示词变量注册表"不写在任何元数据里 ⇒ 版本区间只是"没测过的版本别跑"的**粗门**，能抓住这一类的仍是 §47.4 的注册表检查。两条不是替代关系。
+
+**否掉的替代方案**：只设下限 `>=0.2.0-rc.2`（0.3 线也默许跑，撞坑仍表现为每轮失败）· 逐包 `peerDependencies`（DSH 只做版本比对、不做解析，但 pnpm 对 `link:` 包的 peer 行为本轮**未实测**，且约 20 条要跟着行清单维护）· 不声明只文档（全新安装撞上未测版本时没有任何前置拦截）。
+
+### 48.4 自检结论（Phase 1）
+
+- **17 个离线自测 17/17 PASS**（本轮在 zotero 提交后重跑）；`preset-selftest` 的两条新检查输出 `{{model}} / kernel registers: provider, model`。
+- **反向控制**（§3 的规矩，三条分支都驱过）：注入 `{{cwd}}` → 两条 FAIL；注入从未注册的 `{{workspace}}` → 注册表那条 FAIL；让 profile 解析不到内核 → `could not read the kernel registry` **FAIL**，不静默通过。
+- `release-check --local`：composition 不挂 MCP / 行名经 `exports` 可解析 / 两份自测名单一致，全 OK；"工作树干净"在打标前必然 FAIL（tag 前置条件，不是开发前置条件）。
+
+### 48.5 §2 反方向重扫与 §6 痕迹扫描
+
+- 重扫口径＝本轮改动的三条声明（"标签交换不算变化"、"点号标记读不回来"、"本预设支持的 DSH 版本"）。结果：**相反说法只存在于实现里**（48.2 的两条），散文侧无一处陈述它们；[`docs/02_coverage.md:60`](02_coverage.md) 的"改条目的字段与标签"与 [`docs/00_overview.md:79`](00_overview.md) 的"无变化即不写"，在本次修复之后**才**完全成立，故不改写。
+- `protocol.md` 不动：§3 的十一条纪律与路由未变，而 §6 的写入门禁与写后回读，正是被这两条修复**兑现**的东西。
+- §6 痕迹：本轮新增行（`engines.dsh`、README 一段、本节）不含本机路径、盘符或属主库标识。
+
+### 48.6 版本与 tag：验证先于打标
+
+- **0.3.1**（patch）：四个改动全是修复、无契约 Revision；0.3.0 已含上一轮两条纪律与 Revision 15/16。版本号**单独一个提交**，排在所有修复之后，使 tag 指向的树恰好是这一版。
+- **顺序是刻意的**：`{{cwd}}` 那条修复目前只被"内核源码 + 变异驱动"证明过，**还没在活会话里跑过**，而 `preset-release` §3 写着"绿色本地套件对发布件什么都没说"、§7.5 要求从远端核验发布件。⇒ 先重启宿主、开一条新的 autoresearch 会话确认能跑通，再 bump → `release-check --local` 全绿（含干净树）→ annotated tag → push 分支与 tag → `node tools/release-check.mjs --tag v0.3.1`。**远端写入需 junhan 明确同意。**
+- tag 之后的实测结果按 §46 的惯例记在**下一轮**，不回头改本节。
+
+### 48.7 未做与边界
+
+- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` 仍在用 `{{cwd}}`（§47.5），本轮未动。
+- 窗口声明不覆盖 client 半，也不覆盖行名解析（后者由 `INV-ROW-1` 与 `preset-selftest` 守）。
+- **仍无一条真实课题走完这套脚手架**（沿用 §45.6/§46.6）。
+
