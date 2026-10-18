@@ -55,11 +55,14 @@ Read-only, before writing anything:
    heading line sits, how equations are delimited, how the closing summary reads — is the convention
    this skill follows. **An existing convention outranks the template below**; the template is what to
    use when there is none.
-4. **The paper's own section boundaries**, before reading for content: pull the text in slices and find
-   the headings, or locate a heading with `--grep`. Section numbering is often unreadable in a scanned
-   paper (the heading may be an unnumbered uppercase line), so **write down the heading line and its
-   ordinal as you find them** — that note is what the write step is keyed on, and it is the only thing
-   that makes a later re-run idempotent.
+4. **The paper's own section boundaries**, before reading for content. Ask
+   `{{presetTools}}/zotero-pdf.mjs --item <recordKey> --outline` first: where the file carries the
+   paper's own table of contents, the section list and its ordinals come from there. Where it carries
+   none — measured at 9 of 20 papers on one library — pull the text in slices and find the headings, or
+   locate one with `--grep`. Either way, **write down the heading line and its ordinal as you find them**:
+   the heading is what the write step is keyed on, and section numbering is often unreadable in a scanned
+   paper (the heading may be an unnumbered uppercase line). Only the text confirms the wording — a table
+   of contents states what the paper says its sections are, not what the page prints.
 
 Nothing about a paper may be written from memory. A section note whose content was not read in this
 session is a fabrication with a citation attached.
@@ -294,8 +297,15 @@ The artifact is the note itself, on the library record. The report is what a lat
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --offset 12000   # this offset was printed
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --grep "heading"
   ```
-- **No outline rung exists.** Nothing in this toolchain returns a paper's structure; the boundary step
-  in §2 is done by reading, and the headings are written down as they are found.
+- **The structure rungs, and what each is worth.** `{{presetTools}}/zotero-pdf.mjs --outline` returns the
+  paper's **own** table of contents where the file carries one (measured on one library: 11 of 20 papers
+  did, 9 carried none), each entry with the ordinal this discipline writes — `I Introduction` arrives as
+  `§1`, which is the form the write side refuses as input. It is authoritative about what the paper says
+  its sections are and about nothing else, so a heading is still seen in the text before a note is keyed
+  on it (§2.4). `--extract` reads the file's own text layer: it answers an attachment the library never
+  indexed, and it reads broken mathematics just as wrongly, because it is the same encoding table.
+  `--render --pages 3` writes page images into the study's draft directory — the rung for mathematics no
+  text layer holds — and those are read as images, never quoted as text.
 - **Whose write is it.** One paper is done inline. From three papers onward, hand each paper to one
   child under `subagent-contract` — the child reads the text and writes the note bodies to files under
   `<workspace>/.section-notes/<recordKey>/` and returns a manifest, and **the parent performs every
