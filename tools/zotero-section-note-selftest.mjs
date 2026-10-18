@@ -23,6 +23,7 @@ import {
   normalizeMath,
   normalizeSectionToken,
   parentSectionToken,
+  planJson,
   readSectionMarker,
   repairConverged,
   replacesKey,
@@ -325,6 +326,44 @@ check(!/require\(/.test(source), 'the tool is ESM, like the rest of the suite')
 check(source.includes('--retire --note'), 'the usage states the retirement form')
 check(!/['"]DELETE['"]/.test(source), 'this tool never sends a DELETE: a wrong note is retired, not removed')
 check(source.includes('the body is NOT touched'), 'and the plan says in so many words that the body is left alone')
+
+console.log('\n[6] the machine plan a round joins records on')
+
+const planNote = (key, token, extra = {}) => ({
+  key,
+  html: '<p>x</p>',
+  tags: [],
+  retired: false,
+  claim: { token, rule: 'marker', evidence: `<!-- autoresearch-section: ${token} -->` },
+  ...extra,
+})
+const plan = planJson({
+  record: { key: 'REC1', itemType: 'journalArticle', title: 'A paper' },
+  attachment: { key: 'ATT1', data: { contentType: 'application/pdf' } },
+  notes: [
+    planNote('N2', '2'),
+    planNote('N31', '3.1'),
+    planNote('N32', '3.2'),
+    planNote('OLD', '4', { retired: true, tags: ['/retired'] }),
+    planNote('NEW', '4', { tags: ['/replaces-OLD'] }),
+    planNote('SUM', '', { claim: { token: '', rule: 'none', evidence: '' } }),
+  ],
+})
+
+same(plan.record.key, 'REC1', 'the record is named')
+same(plan.record.title, 'A paper', 'with its title, so a list of records is readable without a second read')
+same(plan.file.contentType, 'application/pdf', 'and the file a reading would use')
+same(plan.counts.notes, 6, 'every child note is counted')
+same(plan.counts.live, 4, 'the live notes are counted apart from the tombstones')
+same(plan.counts.retired, 1, 'the retired note is a tombstone, not coverage')
+same(plan.counts.unreadable, 1, 'and the note it could not read is named as unreadable rather than folded into the rest')
+same(plan.coverage.live.map((entry) => entry.section).sort().join(' '), '2 3 4', 'the live coverage is per top-level section')
+same(plan.coverage.live.find((entry) => entry.section === '3').notes.sort().join(' '), '3.1 3.2', 'a section covered in parts keeps its parts')
+same(plan.coverage.retired[0].note, 'OLD', 'the tombstone is reported')
+same(plan.coverage.retired[0].successor, 'NEW', 'with the note that names itself its successor')
+same(plan.notes.find((note) => note.key === 'NEW').replaces, 'OLD', 'and the successor carries that pointer on itself')
+same(plan.coverage.unreadable.join(' '), 'SUM', 'the note the tool could not read is listed, never guessed at')
+same(plan.notes.find((note) => note.key === 'OLD').origin, 'API', 'and how each note was written is stated')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

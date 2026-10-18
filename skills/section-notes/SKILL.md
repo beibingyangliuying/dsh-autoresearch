@@ -244,6 +244,12 @@ The artifact is the note itself, on the library record. The report is what a lat
    the key of the note that replaced it, or `nothing names a replacement yet`. A tag cannot hold prose,
    so the reason is stored nowhere else: this section is where it is written down, and the replacement
    note's opening line is where a later reader will look for it.
+8. `## Owner actions` — one row per thing the round cannot do itself: the record · the note · the section ·
+   the action (retire · write the replacement · delete in Zotero · decide) · **why** · the draft's path.
+   This is the same table as `<study>/research/owner_actions.md`, and that file is where it is kept when
+   the round ends; a request is not a record and is never quoted as one. **A deletion always lands here**:
+   this preset performs none, so a note the owner may want gone is listed with its reason and its
+   replacement's path, and the owner's act in the application is what closes it.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -265,6 +271,11 @@ The artifact is the note itself, on the library record. The report is what a lat
   application rewriting a note's body is not yet measured** — so where the mark is missing, say so and
   treat the section as still covered rather than as free, and do not write a second note over a
   retirement that did not land.
+- **When the round spans records, ask for the plan as JSON.** `{{presetTools}}/zotero-section-note.mjs
+  --item <recordKey> --json` prints the same facts the prose plan does — every note with its section,
+  its tags, whether it is a tombstone, which notes the tool could not read — in a shape another program
+  can join. Assemble the owner-action table from that, never by parsing the prose: prose joined by hand
+  is how two rounds end up with two formats for one list.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
   88k characters for the papers this discipline is used on — while this preset's result pruner keeps
   only a result's head and tail above 8,192 characters. Read in slices:
@@ -301,6 +312,7 @@ The artifact is the note itself, on the library record. The report is what a lat
 - [ ] No section is covered twice; every skip is reported
 - [ ] For a tidy: the converted and the declined spans are both reported, and no prose was rewritten
 - [ ] Every retirement is reported with its reason and its successor, and no note was deleted to free a section
+- [ ] `## Owner actions` is reported, and written to the study's `research/owner_actions.md` when anything is left for the owner
 
 ## 9. Don't
 

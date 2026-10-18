@@ -617,7 +617,7 @@ export function createWriteLine(itemKey) {
 function parseArgs(argv) {
   const options = {
     item: '', note: '', section: '', text: '', file: '', title: '', reason: '', replaces: '',
-    tidy: false, plan: false, write: false, retire: false, undo: false,
+    tidy: false, plan: false, write: false, retire: false, undo: false, json: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
@@ -632,6 +632,10 @@ function parseArgs(argv) {
     }
     if (flag === '--plan') {
       options.plan = true
+      continue
+    }
+    if (flag === '--json') {
+      options.json = true
       continue
     }
     if (flag === '--retire') {
@@ -670,11 +674,14 @@ function parseArgs(argv) {
   if (options.replaces && !options.section) {
     throw new UsageError('--replaces names the note a new section note replaces, so it goes with the --section that note is written for')
   }
+  if (options.json && (options.section || options.tidy || options.retire)) {
+    throw new UsageError('--json prints the coverage plan; it goes with --item and nothing else')
+  }
   return options
 }
 
 const USAGE =
-  'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan]\n' +
+  'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan] [--json]\n' +
   '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
   '                                       [--title "<title>"] [--replaces <retiredNoteKey>] [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
@@ -699,12 +706,68 @@ async function noteChildren(itemKey) {
     })
 }
 
+/**
+ * The coverage plan as one object.
+ *
+ * The prose plan is written for a person deciding what to read next. A round that has to hand the owner
+ * one list across several records needs the same facts in a shape it can join on, because prose joined
+ * by hand is how each round ends up inventing its own list. This is that shape, and it carries only what
+ * the tool can read: which sections are covered, by which note, which notes are tombstones and what
+ * names itself their successor, and which notes it could not read at all.
+ *
+ * @param {{record: object, attachment: object|undefined, notes: Array<object>}} input The record's state.
+ * @returns {object} A JSON-serializable plan.
+ */
+export function planJson({ record, attachment, notes }) {
+  const live = notes.filter((note) => note.claim.token && !note.retired)
+  const retired = notes.filter((note) => note.claim.token && note.retired)
+  const sections = new Map()
+  for (const note of live) {
+    const top = parentSectionToken(note.claim.token)
+    if (!sections.has(top)) sections.set(top, [])
+    sections.get(top).push(note.claim.token)
+  }
+  return {
+    record: { key: record.key, itemType: record.itemType, title: record.title ?? '' },
+    file: attachment ? { key: attachment.key, contentType: attachment.data?.contentType ?? '' } : null,
+    notes: notes.map((note) => ({
+      key: note.key,
+      chars: note.html.length,
+      origin: isApplicationWrapped(note.html) ? 'app' : 'API',
+      tags: note.tags,
+      retired: note.retired,
+      section: note.claim.token,
+      sectionTop: parentSectionToken(note.claim.token),
+      claimRule: note.claim.rule,
+      claimEvidence: note.claim.evidence,
+      replaces: replacesKey(note.tags),
+    })),
+    coverage: {
+      live: [...sections.entries()].map(([section, parts]) => ({ section, notes: parts })),
+      retired: retired.map((note) => ({ section: note.claim.token, note: note.key, successor: successorOf(notes, note.key) })),
+      unreadable: notes.filter((note) => !note.claim.token).map((note) => note.key),
+    },
+    counts: {
+      notes: notes.length,
+      live: live.length,
+      retired: retired.length,
+      unreadable: notes.length - live.length - retired.length,
+    },
+  }
+}
+
 /** The plan half of `--item …, no --section`: what this record covers, and what to go read. */
-async function runPlan(itemKey) {
+async function runPlan(itemKey, { json = false } = {}) {
   const record = await readItem(itemKey)
   const children = await childrenOf(itemKey)
   const notes = await noteChildren(itemKey)
   const attachment = children.find((child) => child.data?.itemType === 'attachment' && ['application/pdf', 'application/epub+zip', 'text/html'].includes(child.data?.contentType ?? ''))
+  // The machine plan is the whole output in this mode: a caller that has to parse one is a caller that
+  // will parse it wrongly, and this file is not the place to learn that.
+  if (json) {
+    console.log(JSON.stringify(planJson({ record, attachment, notes }), null, 2))
+    return
+  }
   console.log(`record : ${itemKey}  [${record.itemType}]  "${record.title ?? ''}"`)
   console.log(
     `file   : ${attachment ? `${attachment.key}  ${attachment.data.contentType}` : 'NO PDF/EPUB/HTML ATTACHMENT - nothing here can be read as text'}`,
@@ -998,8 +1061,8 @@ async function main() {
     await runRetire(options)
     return
   }
-  if (options.plan || (!options.tidy && !options.section)) {
-    await runPlan(options.item)
+  if (options.plan || options.json || (!options.tidy && !options.section)) {
+    await runPlan(options.item, { json: options.json })
     return
   }
 

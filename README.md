@@ -208,6 +208,9 @@ elsewhere; the layout is the same.
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
     journal/           the round-by-round record; never a conclusion
+    owner_actions.md   what this preset asks the owner to do and cannot do itself: one row per item,
+                       naming the record, the note, the section, the action, why, the replacement
+                       draft's path and its status; a request, never a record
     experiments/       a run's prediction, what it actually did, and what proves it — the
                        prediction is written before the run, so it lives in its own file
       protocols/       one pre-registration per run, named by the run's id

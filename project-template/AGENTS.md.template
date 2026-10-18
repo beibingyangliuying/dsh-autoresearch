@@ -63,6 +63,7 @@ share a scale (is a ruling "higher" than a run card?).
 | What may we borrow, and what would prove the code implements it? | `research/adoption/**` — grounds no conclusion; **binds the code** |
 | What was challenged, and how was it ruled? | `research/rulings/**` |
 | What actually happened, and in what order? | `research/journal/**` — a record, never a conclusion |
+| What does this round need from me? | `research/owner_actions.md` — a request, never a record |
 | What did a run do, and was it valid? | `research/experiments/**` — protocol (before), card (after), evidence copies |
 | What bit us, and what do we now do about it? | `research/pitfalls/**` |
 | Which reference have we already read? | `research/literature/refs/**` — derived from the library; rebuildable |
