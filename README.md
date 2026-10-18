@@ -139,9 +139,12 @@ rule is written into the helper and its self-test. It returns metadata and abstr
 the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
 ([`docs/01_decisions.md`](docs/01_decisions.md) #29).
 
-**What the reference-library channel is.** Seven helper programs, not a server. `tools/zotero-read.mjs`
+**What the reference-library channel is.** Eight helper programs, not a server. `tools/zotero-read.mjs`
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
-each kind of write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
+`tools/zotero-pdf.mjs` reads the attachment **itself** where the library's index cannot answer: the file's
+own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),
+and the page rendered to an image — the rung that answers mathematics no text layer holds. Each kind of
+write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
 on one and writes nothing when the note already reads with it, `zotero-section-note.mjs` leaves one
 explanation note per method section, counted per top-level section — its first step is a read-only report
 of what the record already covers, printing each note's first paragraph and naming the ones it cannot
@@ -278,6 +281,7 @@ node tools\arxiv-selftest.mjs
 
 # the reference-library helpers: their pure halves run without a library, and write nothing
 node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing
+node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
 node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended

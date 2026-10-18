@@ -81,6 +81,7 @@ node tools\doc-selftest.mjs
 node tools\scaffold-selftest.mjs
 node tools\arxiv-selftest.mjs
 node tools\zotero-read-selftest.mjs
+node tools\zotero-pdf-selftest.mjs
 node tools\zotero-edit-selftest.mjs
 node tools\zotero-collection-selftest.mjs
 node tools\zotero-note-selftest.mjs

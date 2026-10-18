@@ -3,7 +3,11 @@
   "version": "0.3.1",
   "description": "A domain-neutral research workbench for DSH: an agent preset, ten on-demand research disciplines, two external channels reached through shipped command-line helpers, and a study scaffold.",
   "license": "MIT",
-  "dependencies": { "@deepseek-ai/schemastery": "^3.18.4" },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4",
+    "@hyzyla/pdfium": "^3.0.0",
+    "pdfjs-dist": "^6.4.299"
+  },
   "engines": { "dsh": ">=0.2.0-rc.2 <0.3.0-0" },
   "repository": { "type": "git", "url": "git+https://github.com/beibingyangliuying/dsh-autoresearch.git" },
   "homepage": "https://github.com/beibingyangliuying/dsh-autoresearch",

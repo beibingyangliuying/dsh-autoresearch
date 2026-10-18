@@ -540,6 +540,12 @@ async function runFulltext(options) {
     )
   }
   console.log(`text   : ${content.length} characters · ${body.indexedPages ?? '?'} of ${body.totalPages ?? '?'} indexed pages`)
+  // Which rung answered, and what it can be trusted for. The line matters most when the answer is
+  // EMPTY: an attachment the library never indexed reports about the index rather than about the
+  // paper, and the two read identically from the text alone (protocol §6, `INV-CTX-1`).
+  console.log(`rung   : (1) the library's indexed text - cheapest, and the rung that can be missing or stale.`)
+  console.log(`         An empty text here is a statement about the index. tools/zotero-pdf.mjs reads the`)
+  console.log(`         others: (2) the file's own text layer, (3) its table of contents, (4) the page as an image.`)
 
   if (options.grep) {
     const passages = findPassages(content, options.grep)
