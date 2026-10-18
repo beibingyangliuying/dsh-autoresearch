@@ -275,6 +275,23 @@ const checks = [
       return missing.length === 0 ? null : `coverage map missing: ${missing.join(', ')}`
     },
   },
+  {
+    id: 'DOC-11',
+    label: 'the contract header states the revision its own changelog records',
+    // The header declares one revision and the preamble records every revision this contract has
+    // reached, newest first. They drifted once already: the header still said 15 while the preamble
+    // recorded 16, and nothing in this repository looked at either. A header nobody checks is a
+    // header that lies about which contract a reader is holding.
+    run: ({ protocol }) => {
+      const declared = protocol.match(/\*\*Status:\s*normative\.\s*Revision\s+(\d+)\s*\.\*\*/i)?.[1]
+      if (declared === undefined) return 'the header declares no revision'
+      const preamble = protocol.split(/\n{2,}/).find((block) => /Status:\s*normative/i.test(block)) ?? ''
+      const recorded = [...preamble.matchAll(/Revision\s+(\d+)/g)].map((match) => Number(match[1]))
+      if (recorded.length === 0) return 'the changelog names no revision'
+      const highest = Math.max(...recorded)
+      return Number(declared) === highest ? null : `header says ${declared}, the changelog reaches ${highest}`
+    },
+  },
 ]
 
 function runChecks(input) {
@@ -364,6 +381,18 @@ const mutations = [
   {
     label: 'the coverage map no longer defers to the contract',
     apply: (input) => ({ ...input, coverage: input.coverage.replaceAll('protocol.md', 'the contract') }),
+  },
+  {
+    label: 'the contract header left one revision behind its changelog',
+    // One lower, not a fixed number: the control must keep working after the next revision bumps the
+    // header, and it must be the drift this check was written for rather than an unrelated breakage.
+    apply: (input) => ({
+      ...input,
+      protocol: input.protocol.replace(
+        /(\*\*Status:\s*normative\.\s*Revision\s+)(\d+)/,
+        (whole, prefix, revision) => `${prefix}${Number(revision) - 1}`,
+      ),
+    }),
   },
 ]
 

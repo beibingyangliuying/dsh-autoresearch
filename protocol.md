@@ -1,6 +1,6 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 15.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 16.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
 independent of any package version. Revision 16 parts what a run was predicted to do from what it
