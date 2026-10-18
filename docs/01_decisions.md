@@ -1220,7 +1220,10 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 ### 48.6 版本与 tag：验证先于打标
 
 - **0.3.1**（patch）：四个改动全是修复、无契约 Revision；0.3.0 已含上一轮两条纪律与 Revision 15/16。版本号**单独一个提交**，排在所有修复之后，使 tag 指向的树恰好是这一版。
-- **顺序是刻意的**：`{{cwd}}` 那条修复目前只被"内核源码 + 变异驱动"证明过，**还没在活会话里跑过**，而 `preset-release` §3 写着"绿色本地套件对发布件什么都没说"、§7.5 要求从远端核验发布件。⇒ 先重启宿主、开一条新的 autoresearch 会话确认能跑通，再 bump → `release-check --local` 全绿（含干净树）→ annotated tag → push 分支与 tag → `node tools/release-check.mjs --tag v0.3.1`。**远端写入需 junhan 明确同意。**
+- **顺序是刻意的**：`{{cwd}}` 那条修复起初只被"内核源码 + 变异驱动"证明过，而 `preset-release` §3 写着"绿色本地套件对发布件什么都没说"、§7.5 要求从远端核验发布件。⇒ 先重启宿主、在活会话里跑通（下一条），再 bump → `release-check --local` 全绿（含干净树）→ annotated tag → push 分支与 tag → `node tools/release-check.mjs --tag v0.3.1`。**远端写入需 junhan 明确同意。**
+- **活会话验证（2026-10-18，已完成；用 `tools/dump-session.mjs` 复核转写，不靠"看着像正常"）**：
+  - **重启后**在本工作区新开一条 autoresearch 会话：`ran=autoresearch created=standard selection-records=1`（§26 的读法——看那条独立事件，不看 session 记录里创建时的默认值）；persona 首行渲染为 `You are a research agent powered by the deepseek-v4.1-flash model.`；`unknown prompt variable` 出现 **0** 次、`deployment:persona-suffix` **0** 次（空段落不再进提示词）、`Your working directory is` **0** 次，而 `Current working directory` 出现 **2** 次；`turn/end` 的 reason 是 `{kind: "completed"}`；该会话的回复**自己说出了工作目录** ⇒ §47.2 断言的替代路径在真实会话里到位，而且做到位的是它，不是"没报错"。
+  - **对照组＝重启前那条失败会话**（另一个工作区）：同一句话出现 **2** 次、`turn/end` **两次都是 error**。⇒ 诊断时"截图里那两行应该是同一次失败被记了两次"的推断，据此更正为事实：那是**两轮**各自失败。修复前后各一条转写，是本轮唯一同时具备"症状"与"消除"两侧读数的那件仪器。
 - tag 之后的实测结果按 §46 的惯例记在**下一轮**，不回头改本节。
 
 ### 48.7 未做与边界
