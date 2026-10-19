@@ -1304,7 +1304,7 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 ### 51.1 本轮做了什么
 
-方案在 [`docs/03_revision_plan.md`](03_revision_plan.md)（§10 裁定表、§11 进度表）。十一个提交，按依赖分层：
+方案在 [`docs/plans/revision-17.md`](plans/revision-17.md)（§10 裁定表、§11 进度表）。十一个提交，按依赖分层：
 
 | 提交 | 内容 |
 | --- | --- |
@@ -1391,7 +1391,7 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 **同一轮的仓库卫生**：`.tmp/` 从 **112.8 MB / 978 个文件**降到 **0.81 MB / 88 个文件**。删的是大件（`node_modules` 83.5 MB · 会话 `.jsonl` 约 25 MB · 库正文副本 · 渲染图 · composed dump · 日志与提交信息草稿）；留的是证据与未采纳草案（§4.3.1 的探针配方与输出 · 四份普查报告 · 那 39 条的待办清单 `notes-to-delete.md` · `scaffold-revision/` 提案 · 三条会话的笔记产物 · 候选技能 `adoption-ruling.SKILL.md`）。§4.3.1 因此补上了重跑命令——**删掉 `node_modules` 只在配方与输出都留着时才安全**，否则那一节的数字就从测量退化成断言。
 
-**登记项独立成一节**：`docs/03_revision_plan.md` §12 把"已登记"与"不做"分开，三项各带自己的触发条件（写回库索引 · 父条目退路 · Python 运行时）。其中一条是我给自己定的规矩：**触发条件写不出来的，就不是 backlog，而是一条尚未做出的裁定，该送回 §10**。
+**登记项独立成一节**：`docs/backlog.md`（原 `plans/revision-17.md` §12）把"已登记"与"不做"分开，三项各带自己的触发条件（写回库索引 · 父条目退路 · Python 运行时）。其中一条是我给自己定的规矩：**触发条件写不出来的，就不是 backlog，而是一条尚未做出的裁定，该送回 §10**。
 
 **明确搁置、记在这里免得下次重新考古**：三条文献会话工作区里的 **39 条**（清单 `.tmp/notes-to-delete.md`，不进库）——junhan 裁定**先不动**；它们的收法已经是现成的（讲错的 `--retire` → 那一节变可写 → `--replaces` 写新稿），不需要新的工具。
 
@@ -1595,7 +1595,7 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 **顺带一条旁证，回给 C**：`metadata.mjs` 沿用整套的 `--flag` 语汇，而不是另起一套子命令——
 一个套件里并存两种命令行语法，才是真正会让模型出错的那种不一致（这也是 D 不做的一个正面理由）。
 
-**未做**：不改程序、不改纪律、不改生成器。是否把"不做 + 触发条件"登记进 `docs/03_revision_plan.md` §12
+**未做**：不改程序、不改纪律、不改生成器。是否把"不做 + 触发条件"登记进 `docs/backlog.md`
 （那是 junhan 自己的台账格式）留给他定。
 
 ---
@@ -1688,7 +1688,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - **`--delete --write` 未实现**：本轮只到干跑；API 删除永久、不进回收站，实写要另一轮授权。
 - **digest 原地刷新的旧版只在工作区备份**，不在库里；这是"派生视图可刷新"的代价。
 - **其他库的旧 digest 笔记**可能仍带 marker；需要先补 `/digest` tag，本库为 0。
-- 计划与分阶段见 [`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md)。
+- 计划与分阶段见 [`docs/plans/note-pipeline.md`](plans/note-pipeline.md)。
 
 ---
 
@@ -1702,7 +1702,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - 发布前在最终树上重跑 Phase 1：**20 项离线自测 + `preset-selftest` 全绿**；`release-check --local` **PASS**（干净树、声明 0.7.0）。
 - **注解 tag** `v0.7.0` → `e888219`；**先推分支**（`c69f46f..e888219`），**再推 tag**。
 - **从远端复核** `node tools/release-check.mjs --tag v0.7.0`：**PASS** —— 发布件声明 0.7.0 · 组合不挂 MCP、不启外部命令 · **三条通道需要的 helper 全在发布包里** · `v0.7.0` 与 `main` 同点 `e888219`。
-- **§2 的反方向重扫命中并修掉**：`project-template/research/owner_actions.md` 的示例仍写"mechanical repair declined 4 spans"；[`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md) 仍写 `in parts`、"当前工具仍读点号"、"三种拒绝"；E6 与 archive 仍有本机路径。
+- **§2 的反方向重扫命中并修掉**：`project-template/research/owner_actions.md` 的示例仍写"mechanical repair declined 4 spans"；[`docs/plans/note-pipeline.md`](plans/note-pipeline.md) 仍写 `in parts`、"当前工具仍读点号"、"三种拒绝"；E6 与 archive 仍有本机路径。
 - **机器痕迹**：E6 的 `file:///D:/OneDrive/...` 改为 `file:///<library>/...`；`docs/archive/PLAN.md` 的 checkout 路径改为 `<checkout>`；`docs/05` 的 9 个库 key 改为计数，只保留"9 条记录，最多 10 条"。
 
 **未做 / 边界**：
@@ -1754,7 +1754,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - **注解 tag** `v0.8.0` → `47c4956`；**先推分支**（`08565ad..47c4956`），**再推 tag**。
 - **从远端复核** `node tools/release-check.mjs --tag v0.8.0`：**PASS** —— 发布件声明 0.8.0 · 组合不挂 MCP、不启外部命令 · 三条通道需要的 helper 全在发布包里 · tag 与 `main` 同点 `47c4956`。
 
-**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/03_revision_plan.md`](03_revision_plan.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/02_coverage.md`](02_coverage.md)、[`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/04_toolchain.md`](04_toolchain.md) 由工具源重新生成。
+**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/plans/revision-17.md`](plans/revision-17.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/02_coverage.md`](02_coverage.md)、[`docs/plans/note-pipeline.md`](plans/note-pipeline.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/04_toolchain.md`](04_toolchain.md) 由工具源重新生成。
 
 **未做 / 边界**：
 
@@ -1845,7 +1845,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 
 **实现**：
 
-- `cb60923` — 更正机制表述：六份 skill 正文（`reading-triage`、`section-notes`、`literature-recon`、`adoption-ruling`、`subagent-contract`、`experiment-protocol`）、`docs/02_coverage.md`、`docs/04_toolchain.md`（由 `toolchain-page.mjs --write` 重新生成，24 条断言仍全部有据）、`docs/06_reading_triage_plan.md` 的风险 7 与 §4.1；`arxiv.mjs` / `metadata.mjs` / `zotero-read.mjs` 的注释与 `zotero-read-selftest` 的一条断言说明。`reading-triage` 新增两条硬要求：报告**读到的 offset 区间**（取代"实际读到多少字符"）、**不得从被裁的片里引用**标题或句子。
+- `cb60923` — 更正机制表述：六份 skill 正文（`reading-triage`、`section-notes`、`literature-recon`、`adoption-ruling`、`subagent-contract`、`experiment-protocol`）、`docs/02_coverage.md`、`docs/04_toolchain.md`（由 `toolchain-page.mjs --write` 重新生成，24 条断言仍全部有据）、`docs/plans/reading-triage.md` 的风险 7 与 §4.1；`arxiv.mjs` / `metadata.mjs` / `zotero-read.mjs` 的注释与 `zotero-read-selftest` 的一条断言说明。`reading-triage` 新增两条硬要求：报告**读到的 offset 区间**（取代"实际读到多少字符"）、**不得从被裁的片里引用**标题或句子。
 - `69893d2` — 契约升 **Revision 24**：`re-open if` 的必填范围收窄到"停得早于全文"，并补给旧工作区残留 `refs/` 的处理（报告不删）；§4 `triage` 一条写明必填范围，§7 加一段；`literature-recon` 加"报告但不删"的护栏；台账 README 的列说明、`reading-triage` 的裁决表与检查单同步。
 
 **未做（已裁定不做）**：复用的成本对比仍只是估算（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。junhan 2026-10-19 裁定：**不需要这个精确数字，不实测**。理由是它不改变任何一条纪律的行为——纪律要求的是"先调 `--item` 看记录上已有什么"，全仓没有任何一处写"这样更省"的量化断言，所以缺的只是一个优化判断的输入，不是一条待兑现的承诺。日后若真有人要回答"扩面复用到底省多少"，实测入口仍在这里：同一条记录上，一次 `--item` 对比首次通读的切片数。
