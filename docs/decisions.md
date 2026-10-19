@@ -1815,3 +1815,49 @@ Revision 22 划走的职责；判决归读轮）。
 - 新课题在属主写出 `AGENTS.md` 之前**没有不变式可读**，这是已知且已接受的代价；两处提示 + 纪律不编造。
 - 没有拿一个真实新课题跑过 `new-project.ps1` 的完整流程（只做了 `-DryRun`）；
   "层根规则"只在文件结构上推理过，还没被一次真实纪律执行踩过。
+
+---
+
+## 68. 新增第十二条纪律：把"一个分类"变成"一个具名课题的候选队列"（Revision 27，2026-10-19）
+
+**起因**：junhan 最关心的两件事之一，是**参考文献的渐进式读取**。核下去发现读取这一段有三条纪律
+（分级、逐节推进、节末写笔记），**缺的是入口**：没有任何东西把"这个分类里的文献"变成"这一轮该读哪几篇、
+按什么顺序、哪些已经在摘要这一级被排除了"。结果是分类被按库里的排列顺序读，或者手工筛一遍而什么都不留。
+
+**先验（本轮实测，不是回忆）**：
+
+| 事实 | 出处 |
+|---|---|
+| 本地 API **支持 `start` 分页**（`start=5` 与 `start=12` 返回不同的行） | 2026-10-19 直接请求 `/api/users/0/collections/<key>/items` |
+| **父分类不含子分类条目**：问一个子分类里共 46 条的父分类，items 端点答 `total 0` | 同上 |
+| 分类树里的件数与 items 端点的 `total` **不是同一个数**（同一个分类 13 vs 33），后者把 notes/attachments 也算了 | 同上 |
+| 11 份纪律里 `collection`／`分类` **零命中** | 全仓 grep |
+| 两个真实课题的 `references/` 都已有入口文件（A 的 `zotero_anchor_map.md`、B 的 `zotero_anchor_set.md`，B 记 14 叶），A 的 `reading_ledger.md` 已按 `reading-triage` 的词表写读态 | 两个课题的 `references/` |
+
+**裁定（junhan 逐项确认）**：
+
+1. **新增纪律**，不塞进 `literature-recon`：语义清晰优先，且检索轮不该开始写读态判决。
+2. **单位是（分类 × 课题）**；一行台账仍是（论文 × 课题）。同一分类被第二个课题扫是新的一轮。
+3. **词表照抄 `reading-triage`**，不加新词：出局＝`stop`、排队＝空 `verdict`、读不了＝`park`；
+   `enough` 永不写在摘要上。
+4. **筛掉的也要一行**：`depth: abstract` · `verdict: stop` · `basis` 指到摘要哪句。
+5. **不建 `corpus/` 目录、不建"一分类一文件"**：可持久形态就是台账行 + 锚定集补行。
+6. **章节笔记仍只在方法节末由 `section-notes` 写**，本纪律只把论文送到那一步之前。
+
+**否掉的方案**：把入口塞进 `literature-recon`（一场检索和一个分类扫描的产物不同，混在一份纪律里会让
+"这一轮写了哪些行"说不清）· 新建 `corpus/` 目录装分类快照（第三份真值）· 给扫描另造词表（两套词表就是
+两套要维持的真相）· 用 `--fulltext` 逐条取摘要（34 篇 ≈10 万字符，比整轮预算还大）· 让 `--collection`
+自动翻页（**已改**：`--screen` 翻页，普通列举改为在截断时**响亮报出** `truncated`）。
+
+**落点**：[`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) ·
+[`protocol.md`](../protocol.md) §4 + Revision 27 · [`cordis.patch.yml`](../cordis.patch.yml) 路由一条（11→12）·
+[`surface.md`](../surface.md) · [`coverage.md`](coverage.md) ·
+[`zotero-read.mjs`](../tools/zotero-read.mjs) `--collection --screen` ·
+[`revision-27.md`](plans/revision-27.md)。
+
+**未测／边界**：
+
+- 新纪律的第一次真实执行就是它的第一次验收；本轮只做了一次**只读试扫**（一个 13 条的分类），
+  没有写过任何一行台账、没有碰库。
+- `--screen` 的 `INCOMPLETE` 分支只有上限 2000 行这一段代码，没有被一个真的超大分类触发过。
+- `--screen` 不解码 HTML 实体（`&amp;` 原样打印）：摘要里出现实体时，读者看到的是实体。
