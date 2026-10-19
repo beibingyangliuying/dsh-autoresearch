@@ -16,8 +16,9 @@
 // THE DIGEST IS A PROJECTION OF THE SECTION NOTES
 //
 // The digest says what the paper's method is, derived from the `/section-N` notes the `section-notes`
-// discipline wrote. It is not a reading receipt and not a log: the receipt lives in the `refs/` index
-// line and the item's `/done` tag, and the digest is one synthesis. This tool writes the body the agent
+// discipline wrote. It is not a reading record and not a log: how far a paper was read, and why that
+// reading stopped, is a row in the research question's own ledger (`research/literature/<topic>.md`),
+// and the digest is one synthesis. This tool writes the body the agent
 // gives it; it does not read the paper and does not synthesize.
 //
 // REFRESH IS IN PLACE, AND THE OLD BODY STAYS IN THE LIBRARY

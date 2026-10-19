@@ -1,9 +1,18 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 21.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 22.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 21 lets the preset erase a retired note: `--delete`
+independent of any package version. Revision 22 removes the **study-level reading receipt index**. A
+study has several questions in flight, and one line per reference could say only that a paper had been
+read — not for which question, nor how far — so a paper one question stopped at its third section and
+another read to the end had one blurry row between them. How far a paper was read is now recorded in
+**that question's own ledger**, inside the question's literature file: `depth` says where the reading
+stopped, `verdict` says why, and `INV-EVID-4`'s judgement is made by reading that row and then the
+record's notes rather than by looking up an index. A grade now measures the sentence it sits on and
+never how much of the paper was read. The item's `/done` tag survives as a marker the owner may set,
+and no decision reads it. §6 and §7 state it, and `INV-EVID-6` is added. Revision 21 lets the preset
+erase a retired note: `--delete`
 performs the `DELETE` it used to only plan, on a `/retired` note only, carrying the version it was
 read at as a precondition, and proving it with a 404. Deletion is therefore a capability of the
 preset now, bounded to one note at a time; it is still not a cleanup pass. The same revision keeps
@@ -14,7 +23,7 @@ the source, the plan shows the old first block, and a version conflict is refuse
 state it. Revision 20 makes the digest a **projection of the section
 notes**: one live `/digest` per record, synthesized from its `/section-N` notes rather than from the
 raw paper, refreshed in place, and no longer a reading receipt —
-the receipt is the `refs/` index line and the item's `/done` tag. Revision 19 moves a note's identity
+the receipt is the question's own ledger row (Revision 22). Revision 19 moves a note's identity
 out of the body: `/section-N`, `/imported`, `/digest`, `/retired` and `/replaces-KEY` are tags, no
 invisible marker is written or read, a note with no `/section-` tag is **unknown** until it is read
 and claimed, the mechanical prose repair is removed, and a pasted note may be rewritten in place
@@ -386,8 +395,8 @@ These rules bound their use:
   same visible text is reported as already recorded with nothing written. The old body is kept **in
   the library**, not in a workspace file: before the patch, it is written once as a `/digest` +
   `/retired` child note on the same record, which takes part in no coverage and may itself be
-  deleted later. It is not a reading receipt: the receipt is the `refs/` index line and the item's
-  `/done` tag, and a paper with no section notes has no digest.
+  deleted later. It is not the reading record: how far a paper was read, and why that reading stopped,
+  are a row in the question's own ledger (§7), and a paper with no section notes has no digest.
 - **A reading states which rung of the ladder answered it.** The rungs, cheapest first, are the
   library's indexed text, the attachment's own text layer, and the page rendered as an image. A channel
   that returns an empty text for an attachment it never indexed is reporting about itself; a text layer
@@ -410,8 +419,9 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
   AGENTS.md            domain constraints: invariants, authority order, notation, environment
   research/
     00_scoping.md      question, boundary, non-goals, decidability
-    literature/        reconstruction notes — non-normative by construction
-    literature/refs/   the reading receipt index: one line per reference actually read
+    literature/        reconstruction notes — non-normative by construction; one file per research
+                       question, and each file carries that question's own reading ledger: one row
+                       per paper, the depth the reading reached and the verdict that stopped it
     adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
@@ -460,8 +470,9 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
-| `INV-EVID-4` | A source already read at full-text grade is not read again to recover what its section notes or digest say; the section notes are the transcription of the reading, the digest is their paper-level projection, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a transcript plus a projection is what makes one reading reusable. |
+| `INV-EVID-4` | A source already read is not read again to recover what it or its section notes say: how far a paper was read, and why that reading stopped, are a row in the question's own ledger, the section notes are the transcription of the reading, the digest is their paper-level projection, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round: the ledger row says where the last reading stopped, a transcript plus a projection is what makes that reading reusable, and a study-level receipt can say neither for a question it is not about. |
 | `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
+| `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |

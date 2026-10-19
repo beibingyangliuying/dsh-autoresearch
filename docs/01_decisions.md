@@ -1669,7 +1669,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 4. **`--tidy` 完全删除**：写笔记只由 agent 提供正文，工具不自动修公式。
 5. **`--retire` 任何笔记**；`--delete` 只对 `/retired` 开放，本轮只干跑。
 6. **digest 是章节笔记的投影**：一条论文一条 `/digest`，从 `/section-N` 合成；原地刷新（备份 + 版本守卫），不产生墓碑；回执 = `refs/` 一行 + `/done` tag。
-7. **不写也不读点号**；38 条旧子节迁移时合并/退休，不自动转 tag。
+6. **digest 是章节笔记的投影**：一条论文一条 `/digest`，从 `/section-N` 合成；原地刷新（备份 + 版本守卫），不产生墓碑；回执 = `refs/` 一行 + `/done` tag。**（回执部分已由 §62 取代：读态改为每个课题自己的台账行，`refs/` 已废除。）**
 8. **`adoption-ruling` 按需**，不进主流程。
 
 ### 58.3 落地
@@ -1678,7 +1678,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - [`tools/zotero-note.mjs`](../tools/zotero-note.mjs)：digest 身份改为 `/digest`，`findDigestNote` 跳过 `/retired`；追加改为原地刷新（备份 + 版本守卫）；无 marker、无 append。
 - [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)：身份、claim/rewrite/retire、digest 合成、报告与清单重写；删除 §3.4 机械修复。
 - [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)：读完写回执（`refs/` 一行 + `/done`），digest 交给 `section-notes`。
-- [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md)：digest 是投影，plan 词汇改为 `covered`/`unknown`。
+- [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)：读完写回执（`refs/` 一行 + `/done`），digest 交给 `section-notes`。**（已由 §62 取代）**
 - [`protocol.md`](../protocol.md)：Revision 20；§4、§6、§8、§9；`INV-NOTE-1` 改为"一条活 claim"，新增 `INV-NOTE-2`（digest 投影），`INV-EVID-4` 改为"章节笔记是转写，digest 是投影"。
 - 自测：`zotero-section-note-selftest` 增加**第一条 CLI 级 stub 测试**（plan/claim/rewrite/delete 干跑，全部只发 GET）；`zotero-note-selftest` 改为 create/refresh/no-op + stub CLI；全套 20 项离线自测通过。
 
@@ -1761,3 +1761,52 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍暂停；0.8.0 只是给 34 条 retired 的处置开了出口，没有自动执行任何一条。
 - 没有在真库上执行一次删除或 digest 刷新：新路径由 stub 覆盖（DELETE + 404、快照先于 PATCH），真库写仍要下一次逐条授权。
 - 工作区不再保留 `rewritten-*` / `digest-*` 备份；`.section-notes/` 仍用于草稿与 `--render` 页面图。
+
+---
+
+## 62. 读态落进每个课题自己的台账，`refs/` 废除（Revision 22，2026-10-19）
+
+**缘起**：junhan 在 2026-10-19 的对话里连问四件事——(1) 读一份参考文献为什么要默认按各章节生成笔记，"读到第二节发现跟课题关系不大"却没地方停；(2) 怎么让 agent 判断这篇是否**值得读完**；(3) digest 与"裁决笔记"是否功能重复；(4) 各课题的参考文档有没有统一规格。追到根上发现是同一条：**"读到哪、为什么停"没有任何地方记账**，于是每一轮都要么重读、要么把同一个判断再做一遍。
+
+**已核实的前提**（都在源码里读过，不是回忆）：
+
+| 事实 | 出处 |
+|---|---|
+| 大纲只给 `{depth, title, ordinal}`，**没有页码、没有 dest、没有字符偏移** ⇒ "大纲 → 位置"的映射不存在 | `tools/zotero-pdf.mjs` `outlineRows()` |
+| 切片打印 `next: --offset N`，且每片开头就是那一节的标题 ⇒ "读到第几节"由读到的文字自己给出 | `tools/zotero-read.mjs` `sliceText()` |
+| `--grep` 的命中项带字符 `index`，可直接当 `--offset` 用 | `tools/zotero-read.mjs` `findPassages()` |
+| `zotero-section-note.mjs --item <recordKey>` **一次**打印每条笔记的 tags + 首段（`firstBlockText` 取第一个 `<p>/<h>/<li>` 块） | `tools/zotero-section-note.mjs` |
+| OCR 件上的标题可能被认错（`P SOLUTIOCN`、`-P IZATION AND THE CORRECTOR`） | [§37](01_decisions.md) |
+
+**裁定**（逐条经 junhan 确认）：
+
+| # | 项 | 裁定 |
+|---|---|---|
+| 1 | 一篇文献服务多个课题 | 可能；判定按（课题 × 文献）存 |
+| 2 | 台账落点 | **课题自己的文件**里，不是项目根共享文件 |
+| 3 | `refs/` | **废除**；跨课题查重靠 `grep -n "<itemKey>" research/literature/*.md` |
+| 4 | 读法 | **从前往后顺序读**为默认；跳读只在"大纲存在 + `--grep` 命中 + 打印命中的标题行原文"三条同时成立时允许 |
+| 5 | 词汇 | `depth` 载水位（`—`/`abstract`/`§N`/`full`）；`verdict` 三值 `park`/`enough`/`stop` + 空 = 正在读 |
+| 6 | 权限 | 继续 / 停由 agent 直接落台账，不提问；只有滑向研究方向决策时才问 owner |
+| 7 | `grade`/`depth` 的写者 | 搜索轮**先填它实际读到的**，读轮可就地改正；`verdict`/判定依据/复看条件/日期只归读轮 |
+| 8 | `/done` | 降为人工标记，**任何判断都不读它** |
+
+**否掉的方案**（记下来，防止再提）：
+
+- **"读之前先宣布这篇要深读"**：读是渐进的，停下才是判断；预声明深读等于把"读完"变成承诺。
+- **入口节优先 / 跳读为默认**（本轮 v1 草案的原建议）：依赖于上面那条"大纲 → 位置"的映射，而它不存在；在 OCR 件上 `--grep` 标题还可能静默落空。已撤回。
+- **只按章节数决定写不写笔记**：起因正是"强制逐节生成"本身。
+- **把判定塞进 `refs/` 加一列**：study 级共享索引答不出"对哪个课题读到哪"，加列只是把模糊留在原地。
+- **让读轮独占 `grade`/`depth`**：A/B/C 会在同一个文件里出现两个家，或让搜索轮已经读过的全文在台账里看不出来从而被重读。
+
+**实现**：
+
+- **S1（`1431fa3`）**：`research/literature/README.md` 的 `## Evidence table` 换成九列 `## Reference ledger`（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）+ `## Reading log`；`A` 的定义从"读了全文"改成"读了这句话靠的那几段"，`depth` 才是"读到哪"。`literature-recon` 只追加候选行、不再决定"是否值得读"；`section-notes` 接受**中途停下**的阅读（没走到的节报 `not reached`，不报"不需要笔记"）；`adoption-ruling` 改读台账行，`§4.2` 那条"digest 是 B 级就停"改成 depth/grade 判定——它对"读到 §3、digest 合理地短"的论文会合法地误判。
+- **S2（本次）**：删除 `project-template/research/literature/refs/`；`protocol.md` 升 Revision 22，`INV-EVID-4` 的判据从"查索引"改成"查本课题台账行，再看记录上的笔记"，新增 `INV-EVID-6`；`README.md` / `AGENTS.md.template` / `docs/02_coverage.md` / `adoption/README.md` 的三处布局与回执句同步；`tools/zotero-note.mjs` 头部注释里的"回执在 `refs/`"改掉。
+
+**未做**：
+
+- **`reading-triage` discipline 本身**还没写（下一步，Revision 23）：契约与模板先落地，是为了让"写 discipline"时它描述的每一格都已经存在。
+- **`refs/` 只在模板里废除**。已经按旧布局建好的研究工作区里那份 `refs/` 不会自动迁移：它现在是一份**无人读取的旧文件**，删不删由 owner 决定，工具不会碰。
+- 判定"复用记录上已有的 `/section-N` 笔记"这条路径的**成本对比是估算**（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。
+- 结果裁剪器配置写 8,192/4,096/1,024，而本轮实测一次 14,999 字符的工具结果**完整到达、未被裁剪**——两者不一致，**未查清**。切片大小取 7,000，在两种解释下都安全。

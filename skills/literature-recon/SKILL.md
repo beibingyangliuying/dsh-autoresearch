@@ -220,8 +220,8 @@ Fixed sections:
   node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write
   ```
 
-  The item's `/done` tag marks *this library record* as read; it carries neither a grade nor a depth,
-  because a tag cannot hold them.
+  The item's `/done` tag is a **marker, not a record**: it carries neither a grade nor a depth, and no
+  judgement reads it. What the next round reads is the ledger row.
 - **The digest is one `/digest` note per record, from the section notes.** `section-notes` writes it
   after the notes; `zotero-note.mjs --item <recordKey> --file <digest.html>` creates it or refreshes it
   in place. Do not write a digest from the raw PDF in the literature round, and do not treat the ledger

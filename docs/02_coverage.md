@@ -75,10 +75,14 @@
 
 这一段是你此前只从对话里得到过的东西。以**读一篇方法论文并留下逐节笔记**为主线：
 
-### 1. 读之前：先查读过没有
+### 1. 读之前：先看这个课题自己的台账
 
-`research/literature/refs/` 里一条参考文献一行（key · 年份 · 等级 · 标签 · 一行 takeaway）。命中说明读过了；
-`B` 行说明**只读了摘要，全文还欠着**。这一行 + 条目的 `/done` tag 是**回执**；`/digest` 是另一件东西（§6）。
+台账在课题自己的文件里：`research/literature/<topic>.md` 的 `## Reference ledger`，一篇文献一行
+（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）。`depth` 说读到哪
+（`—` · `abstract` · `§N` · `full`），`verdict` 说为什么停（`park` · `enough` · `stop`，空 = 还没人判过）。
+**别的课题读到哪，用 `grep -n "<itemKey>" research/literature/*.md` 看**：同一篇被两个课题读过是正常的，
+两个课题各记各的；记录上已有的 `/section-N` 笔记反而是两个课题**共用**的资产。`/digest` 是另一件东西（§6）；
+条目的 `/done` tag 只是你自己打的一个标记，**任何判断都不读它**。
 
 ### 2. 体检：把"这个条目已经 claim 了什么"先摊开（只读）
 
@@ -165,7 +169,7 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 - 它只覆盖有笔记的节，写明覆盖范围；结果/结论不在其中。没有节笔记的论文**没有 digest**。
 - `node tools\zotero-note.mjs --item <recordKey> --file <digest.html>`：没有就创建，有就原地刷新
   （干跑、版本守卫）；旧正文先写成一条 `/digest` + `/retired` 快照留在库里；同一文本报 `ALREADY RECORDED`，不写。
-- 回执仍是 `refs/` 一行 + `/done` tag；digest 不是回执。
+- 读态不在 digest 里：它在这一课题自己的台账行（`depth` + `verdict`）。digest 只覆盖有笔记的节。
 
 ### 7. 写入四步（每一次都是这四步）
 

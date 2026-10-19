@@ -209,7 +209,7 @@ is in the report — and **never split a section to stay inside that range**.
 
 ## 4. The digest, after the notes
 
-The digest is **the paper-level projection of the section notes**, not a reading receipt and not a
+The digest is **the paper-level projection of the section notes**, not a reading record and not a
 summary of the whole paper.
 
 - **Write it after the section notes exist.** Every sentence in it must be traceable to a `/section-N`
@@ -228,9 +228,9 @@ summary of the whole paper.
   reading stopped before the first method section is recorded in the topic's ledger row and gets no
   digest: a `stop` writes no notes, so there is nothing to project.
 - **The reading record is elsewhere.** The topic's ledger row says how far the paper was read (`depth`)
-  and why the reading stopped (`verdict`); the item's `/done` tag marks the record as read and carries
-  neither. The digest says "this is what the sections that were read amount to". Do not use the digest
-  as the reading record, and never write a `verdict` from a digest.
+  and why the reading stopped (`verdict`); the item's `/done` tag is a marker the owner may set and no
+  judgement reads it. The digest says "this is what the sections that were read amount to". Do not use
+  the digest as the reading record, and never write a `verdict` from a digest.
 
 ## 5. Do vs don't
 

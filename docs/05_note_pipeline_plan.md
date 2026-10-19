@@ -1,6 +1,7 @@
 # 05 — 笔记管线草案：tag 身份、claim/rewrite、digest 投影
 
 **状态：Phase 1–6 已实施（2026-10-19）；0.8.0（Revision 21）补上了删除实写与 digest 旧版的库内保留；Phase 7 已跑 187 条顶层 tag 迁移，剩余 38 条点号 / 153 条无 marker / 34 条 retired 待后续批次。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。实施记录见 [`docs/01_decisions.md` §58](01_decisions.md#L1638) 与 §60。
+**本文件描述的"回执 = `research/literature/refs/` 一行 + `/done` tag"已被 Revision 22 取代**（[§62](01_decisions.md)）：读态现在记在**每个课题自己的台账**里，`refs/` 与"回执"这个概念都废除了。其余（tag 身份、claim/rewrite、digest 投影）仍然有效。
 
 ## 0. 一句话
 

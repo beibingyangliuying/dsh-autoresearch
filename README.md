@@ -237,8 +237,9 @@ elsewhere; the layout is the same.
   AGENTS.md            domain constraints: invariants, authority order, notation, environment
   research/
     00_scoping.md      question, boundary, non-goals, decidability
-    literature/        reconstruction notes — non-normative by construction
-    literature/refs/   the reading receipt index: one line per reference actually read
+    literature/        reconstruction notes — non-normative by construction; one file per research
+                       question, each carrying that question's own reading ledger: one row per paper,
+                       the depth the reading reached and the verdict that stopped it
     adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them

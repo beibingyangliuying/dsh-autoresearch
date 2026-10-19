@@ -66,7 +66,7 @@ share a scale (is a ruling "higher" than a run card?).
 | What does this round need from me? | `research/owner_actions.md` — a request, never a record |
 | What did a run do, and was it valid? | `research/experiments/**` — protocol (before), card (after), evidence copies |
 | What bit us, and what do we now do about it? | `research/pitfalls/**` |
-| Which reference have we already read? | `research/literature/refs/**` — derived from the library; rebuildable |
+| Which reference have we already read, for which question, and how far? | the question's own ledger in `research/literature/<topic>.md` — `depth` says where the reading stopped, `verdict` says why; `grep -n "<itemKey>" research/literature/*.md` finds every question that already holds it |
 | What did we retire, and why? | `research/archive/**` |
 | What do we claim? | mnemon Documents (topic-based) — see the settlement discipline |
 | Where do execution protocols live? | TODO — declare the path, or delete this row |
