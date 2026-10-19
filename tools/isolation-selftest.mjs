@@ -14,6 +14,9 @@
 //   3. applying a filter does not re-enter itself into a loop. A restriction change is announced as
 //      `tools/change` like any other, so the fake registry invokes the handler from inside
 //      `restrict()` exactly as the real one does. Without this the guard is assumed, not tested.
+//   4. keeping a NAMESPACE (`mnemon_`) stays narrow in the direction that matters: a name that merely
+//      CONTAINS the prefix is still denied, while a tool the provider adds in a later upgrade is kept
+//      rather than masked - which is the whole reason the namespace replaced a list of names.
 //
 // The fake models ONE scope whose registry view GROWS — and, in the last scenario, SHRINKS, because a
 // registry that reports the VISIBLE set would shrink it as soon as our own filter applies. Which of
@@ -29,6 +32,8 @@ import { apply } from '../isolation.js'
 const VIEW_AT_ACTIVATION = [
   { name: 'mnemon_recall' },
   { name: 'mnemon_runtime_memory' },
+  // Contains the kept prefix but does not start with it: keeping `mnemon_` must not keep this.
+  { name: 'xmnemon_recall' },
   { name: 'read_page' },
   { name: 'x_search' },
   { name: 'str_replace_editor' },
@@ -39,8 +44,16 @@ const VIEW_AT_ACTIVATION = [
   { name: 'code_review' },
 ]
 
-/** Tools that appear only later: a plugin waiting on a late service, plus a future install. */
-const LATE_TOOLS = [{ name: 'config_backup' }, { name: 'config_restore' }, { name: 'some_future_plugin_tool' }]
+/**
+ * Tools that appear only later: a plugin waiting on a late service, plus a future install, plus one
+ * the memory provider itself adds in an upgrade - the case a name list cannot follow.
+ */
+const LATE_TOOLS = [
+  { name: 'config_backup' },
+  { name: 'config_restore' },
+  { name: 'some_future_plugin_tool' },
+  { name: 'mnemon_tool_added_by_an_upgrade' },
+]
 
 const calls = []
 const handlers = {}
@@ -100,6 +113,9 @@ check(keptAtActivation.has('read_image'), 'keeps read_image')
 check(deniedAtActivation.has('univer_api') && deniedAtActivation.has('univer_execute'), 'denies univer')
 check(deniedAtActivation.has('code_review'), 'denies code-review')
 check(!deniedAtActivation.has('config_backup'), 'config-manager is invisible at activation (that is the gap)')
+// The namespace rule must stay narrow where it counts: `mnemon_` is a prefix, not a substring.
+check(deniedAtActivation.has('xmnemon_recall'), 'a name that only CONTAINS the kept prefix is still denied')
+check(keptAtActivation.has('mnemon_recall'), 'and a name inside the kept namespace is kept')
 
 // --- the late plugin registers, and the registry announces it -------------------------------------
 
@@ -120,6 +136,11 @@ const deniedLate = new Set(second.deny ?? [])
 
 check(deniedLate.has('config_backup') && deniedLate.has('config_restore'), 'config-manager is denied')
 check(deniedLate.has('some_future_plugin_tool'), 'a plugin installed later is denied too')
+check(deniedLate.has('xmnemon_recall'), 'and a name that merely contains the kept prefix is still denied')
+check(
+  !deniedLate.has('mnemon_tool_added_by_an_upgrade'),
+  'a tool the memory provider adds later is KEPT, not masked (why a namespace replaced the list)',
+)
 check(!deniedLate.has('mnemon_recall'), 'and mnemon is still kept')
 check(!deniedLate.has('read_page'), 'and modsearch is still kept')
 
@@ -154,6 +175,15 @@ check(
 check(
   Array.isArray(report.rounds) && report.rounds.some((round) => round.when === 'at a tool-set change'),
   'and records the round that caught them, so a session can be traced to a pass',
+)
+check(
+  Array.isArray(report.keptByNamespace) && report.keptByNamespace.includes('mnemon_runtime_memory'),
+  'the report resolves the kept namespace to the exact names it covered',
+  `${(report.keptByNamespace ?? []).length} names`,
+)
+check(
+  (report.keptByNamespace ?? []).includes('mnemon_tool_added_by_an_upgrade'),
+  'and names the namespace-kept tool that appeared late, so a widening is recorded rather than silent',
 )
 check(!('agentError' in report), 'and carries no field from the pass that never ran')
 

@@ -51,26 +51,28 @@ export const name = 'autoresearch-isolation'
 /** The tool registry this row contributes to. */
 export const inject = ['tools']
 
-/** Global tools this preset deliberately keeps. Every other GLOBAL tool is denied. */
+/**
+ * Global tool NAMESPACES this preset keeps wholesale, matched by prefix exactly as written.
+ *
+ * The memory layer is ONE layer, not a stock-take of its current tool names: that set belongs to the
+ * installed mnemon provider, so a name list is wrong in both directions at once.
+ *
+ *   - Narrower than the dependency: an upgrade that adds a tool registers a global that `deny`
+ *     (global view − KEEP) would mask, so `progress-sync` - whose whole settlement layer is that
+ *     provider - loses a tool with nothing said. Measured 2026-10-19 across 57 autoresearch sessions
+ *     (6,081 tool calls): mnemon answered 88 calls (1.4%) from SIX of the seventeen names this list
+ *     used to carry; the other eleven were never called once.
+ *   - Wider than the need: it kept those eleven names, 15,112 characters (≈4.2k tokens) of tool
+ *     schema on EVERY request, for a layer whose resident prose in those same sessions named no
+ *     mnemon tool at all.
+ *
+ * The namespace states the intent instead, and `keptByNamespace` in the report resolves it to the
+ * exact names, so widening the surface is never silent.
+ */
+const KEEP_NAMESPACES = ['mnemon_']
+
+/** Global tools this preset deliberately keeps by exact name. Every other GLOBAL tool is denied. */
 const KEEP = [
-  // mnemon — the memory layer `progress-sync` depends on
-  'mnemon_document_create',
-  'mnemon_document_manage',
-  'mnemon_document_search',
-  'mnemon_forget',
-  'mnemon_link',
-  'mnemon_memory_bodies',
-  'mnemon_memory_body_create',
-  'mnemon_memory_body_merge',
-  'mnemon_memory_body_update',
-  'mnemon_recall',
-  'mnemon_related',
-  'mnemon_remember',
-  'mnemon_runtime_memory',
-  'mnemon_status',
-  'mnemon_subagent_result',
-  'mnemon_view_action',
-  'mnemon_view_route',
   // modsearch — page reading and X search, used by literature work
   'read_page',
   'x_search',
@@ -80,6 +82,11 @@ const KEEP = [
   // image reading (screenshots, figures, scanned pages), when registered globally
   'read_image',
 ]
+
+/** Whether a global name is kept: by exact name, or by falling in a kept namespace. */
+function isKept(toolName) {
+  return KEEP.includes(toolName) || KEEP_NAMESPACES.some((prefix) => toolName.startsWith(prefix))
+}
 
 /** Write the outcome beside this module so the restriction can be inspected offline. */
 function writeReport(report) {
@@ -94,14 +101,18 @@ function writeReport(report) {
 function splitGlobalView(scope) {
   const globalNames = [...new Set(scope.tools.schemas().map((schema) => schema.name))].sort()
   return {
-    kept: globalNames.filter((toolName) => KEEP.includes(toolName)),
-    denied: globalNames.filter((toolName) => !KEEP.includes(toolName)),
+    kept: globalNames.filter(isKept),
+    keptByNamespace: globalNames.filter(
+      (toolName) => !KEEP.includes(toolName) && KEEP_NAMESPACES.some((prefix) => toolName.startsWith(prefix)),
+    ),
+    denied: globalNames.filter((toolName) => !isKept(toolName)),
   }
 }
 
 export function apply(ctx) {
   let appliedSignature = null
-  const report = { applied: false, kept: [], denied: [], checks: 0, rounds: [] }
+  let announcedNamespaceKept = null
+  const report = { applied: false, kept: [], keptByNamespace: [], denied: [], checks: 0, rounds: [] }
 
   /**
    * Recompute the deny list, and apply it when it differs from what is already applied.
@@ -120,16 +131,35 @@ export function apply(ctx) {
       if (signature === appliedSignature && !always) return
       appliedSignature = signature
       report.checks += 1
+      // Kept reflects the CURRENT view in every round; `denied` is overwritten only by a round that
+      // really applied a filter, so a shrinking view cannot erase the evidence of what was masked.
+      report.kept = view.kept
+      report.keptByNamespace = view.keptByNamespace
+      // A namespace-kept tool that appears later does NOT change the deny list, so nothing else would
+      // report it: announce the resolved names at activation, and again whenever that set changes.
+      const namespaceSignature = view.keptByNamespace.join('\n')
+      if (namespaceSignature !== announcedNamespaceKept) {
+        announcedNamespaceKept = namespaceSignature
+        if (view.keptByNamespace.length > 0) {
+          console.log(
+            `[autoresearch-isolation] ${when}: kept by namespace ${KEEP_NAMESPACES.join(', ')} - ${view.keptByNamespace.join(' ')}`,
+          )
+        }
+      }
       if (view.denied.length > 0) {
         // `deny` only rejects the names it lists, so the preset's own tools are unaffected.
         ctx.tools.restrict({ deny: view.denied })
         // Recorded only when something was really applied: a round our own restriction triggered
         // computes an empty deny list, and letting that overwrite the evidence would hide what was done.
         report.applied = true
-        report.kept = view.kept
         report.denied = view.denied
-        report.rounds = [...report.rounds.slice(-9), { when, kept: view.kept.length, denied: view.denied.length }]
-        console.log(`[autoresearch-isolation] ${when}: kept ${view.kept.length}, denied ${view.denied.length}`)
+        report.rounds = [
+          ...report.rounds.slice(-9),
+          { when, kept: view.kept.length, keptByNamespace: view.keptByNamespace.length, denied: view.denied.length },
+        ]
+        console.log(
+          `[autoresearch-isolation] ${when}: kept ${view.kept.length} (${view.keptByNamespace.length} by namespace), denied ${view.denied.length}`,
+        )
       }
       writeReport(report)
     } catch (error) {

@@ -1395,4 +1395,81 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 **明确搁置、记在这里免得下次重新考古**：三条文献会话工作区里的 **39 条**（清单 `.tmp/notes-to-delete.md`，不进库）——junhan 裁定**先不动**；它们的收法已经是现成的（讲错的 `--retire` → 那一节变可写 → `--replaces` 写新稿），不需要新的工具。
 
+---
+
+## 54. 工具粒度的判据，与 keep-list 从"名字名单"改成"命名空间"（2026-10-19）
+
+**起因**：junhan 问"这套预设提供的工具，粒度足够细了吗"，并确认四个强化方向（A 量前提 · B 改 keep-list 粒度 · C 给 metadata 通道落一个 helper · D 评估读侧模式改子命令）都做。本轮做的是 **A 与 B**（C/D 各占后续一节）。
+
+### 54.1 先验（全部是本次实测，不是推断）
+
+1. **现役工具面的成本**：取 2026-10-19 08:34 一个顶层 autoresearch 会话的 `request/header`，
+   `node tools/dump-session.mjs <dir> .tmp/as-session.jsonl` + `node tools/list-tools.mjs` 数出
+   **44 个工具 / 38,282 字符 ≈ 10.6k token，每请求常驻**（估算尺 3.6 字符/token，与 §29/§31 同一把）。
+   组成：宿主行 24 个 · 保留的 profile 全局 20 个（mnemon 17 + `read_page`/`x_search` + `read_image`）。
+   **预设自带的领域工具在这 44 里占 0 个名字**——九个 helper 走 `pwsh`，工具面 0 字符。
+   对照：§29/§31 删掉的两条 MCP 行是 77,586 字符 ≈ 21.5k token/请求 ⇒ 现在整个面是当年的一半。
+2. **mnemon 是最大的单项**：17 个工具 15,112 字符 ≈ **4.2k token/请求（占 44 个工具 token 的 39%）**，
+   是 persona（4,726 字符 ≈ 1.3k）的 **3.7 倍**。
+3. **实际调用**（`.tmp/mnemon-usage.mjs`，57 个 autoresearch 会话 / 6,081 次 `tool/call`）：
+   mnemon 共 **88 次 = 1.4%**，来自 **17 个里的 6 个**——`runtime_memory` 49 · `document_search` 15 ·
+   `document_create` 11 · `document_manage` 7 · `recall` 4 · `remember` 2；**其余 11 个一次也没被调用**
+   （`forget` · `link` · `memory_bodies` · `memory_body_create/merge/update` · `related` · `status` ·
+   `subagent_result` · `view_action` · `view_route`）。
+4. **常驻散文与工具集是解耦的**（`.tmp/mnemon-resident-names.mjs`，同一批 57 个会话）：
+   它们的**系统提示里出现的 mnemon 工具名 = 0 个，57/57**。那段协议块由 profile 级的
+   `dsh-mnemon-strategy-default-three-tier` 按 **mnemon View 的 offers** 拼出来，`mnemon_recall` /
+   `mnemon_runtime_memory` 是字符串常量，**它从不查 DSH 的工具注册表**。
+   ⇒ **隔离挡得住工具，挡不住散文**：`ctx.tools.restrict()` 只能对注册表里的名字生效。
+
+### 54.2 裁定：不缩名单，改成命名空间级保留
+
+原先的写法是 17 个名字的硬名单，它**同时比依赖窄、比需要宽**：
+
+- **比依赖窄**：那组名字属于装上的 mnemon provider，不属于本预设。provider 升级新增一个 `mnemon_*`
+  时，它是"全局视图里不在 KEEP 的工具"，会被 `deny = 全局视图 − KEEP` **默认屏蔽**——
+  而 `progress-sync` 的三层沉淀整个架在它上面，却没有东西会报告这件事。这与 §33 抓到的是同一类缺口：
+  **名单式检查看不见自己名册之外的东西**。
+- **比需要宽**：它保留了 11 个在 57 个会话里从未被调用的名字。
+- **缩名单是不可选的**：第 4 条实测说明"今天没被点名"是 **View 状态**，不是结构保证；哪天 View 重新提供
+  route，点名就回来，而被 deny 的工具就成了一条**悬空指令**（让 agent 去调一个它看不见的工具）。
+  用一句"实测过没点名"去换这个风险，是把状态当成了契约。
+
+所以保留的**方向**（拉黑制）与护栏都不动，只把名单里那一段换成**意图**：
+
+```js
+const KEEP_NAMESPACES = ['mnemon_']        // 记忆层是"一层"，不是它的工具快照
+const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWith(p))
+```
+
+**加宽必须是响亮的**：命名空间解析出的确切名字进 `isolation-report.json` 的 `keptByNamespace`，
+并且在**该集合发生变化**时打一行（`kept by namespace mnemon_ - …`）。这是这道宽判据唯一的代价，
+也是它必须自己说出来的那件事——工具面被加宽时不留下痕迹，才是真危险。
+
+### 54.3 落点与验证
+
+- [`isolation.js`](../isolation.js)：`KEEP_NAMESPACES` + `isKept()` + `splitGlobalView()` 返回
+  `keptByNamespace` + 报告与那行提示；`kept` 每轮反映**当前**视图，`denied` 仍只由"真的施加过过滤的那一轮"写入
+  （收缩视图不许抹掉证据，这条语义原来就有，这里只是没被顺手破坏）。
+- [`tools/isolation-selftest.mjs`](../tools/isolation-selftest.mjs)：**4 条新断言**——
+  ① 只在**包含**前缀（`xmnemon_recall`）而不以前缀开头的名字**仍被拒**；
+  ② **provider 事后新增**的工具被**保留**而不是屏蔽（命名空间替代名单的全部理由）；
+  ③ 报告把命名空间**解析成确切名字**；
+  ④ 晚到的命名空间工具**被记录**，加宽不是静默的。
+- 验证：`node tools/isolation-selftest.mjs` **PASS**（含上述新断言）。
+- **生效时点**（§25）：预设源改动只有宿主重启才生效，所以这四条断言是**离线**证明，
+  它对真实会话的验证要等下一次重启后的新会话（`isolation-report.json` 的 `keptByNamespace` 是那时读的凭据）。
+
+### 54.4 未做与边界（登记）
+
+- **省下那 4.2k token 不在预设这一侧**：能裁 mnemon 工具面的地方是 profile 的 `dsh-mnemon` 配置
+  （`writeEnabled` / `memoryView` 等），那是所有者自己的设置。**预设不得依赖 profile 配置**，
+  所以"mnemon 占 39%"这条登记在这里，作为下一轮如果要动的**前提**，而不是本轮的动作。
+- **命名空间保留是宽容方向的判据**，与"窄到可信、命中就响亮拒绝"的护栏偏好方向相反；
+  它之所以可接受，是因为它只放宽**一个具名前缀**，且解析结果每轮入报告。若将来出现第二个前缀，
+  该按同一标准逐项裁定，不要合成一张前缀表。
+- **A 的探针是 `.tmp/` 下的一次性脚本**（gitignored）：重跑配方就是上面两条命令与两个脚本名；
+  脚本本身不进发布件，因此这里的数字在重跑之前是**测量**，重跑不了时就退化为**断言**（§53 同一条规矩）。
+
+
 
