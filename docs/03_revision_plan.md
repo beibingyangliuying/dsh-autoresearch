@@ -163,6 +163,8 @@
 
 **装了：** `@hyzyla/pdfium` 3.0.0（**声明依赖为空**，包内唯一二进制 `pdfium.wasm` **5.05 MB**，许可证 MIT／引擎 BSD-3）＋ `pdfjs-dist` 6.4.299（Apache-2.0，**33.3 MB** 安装量；其 `@napi-rs/canvas` 是 **optionalDependency**，是那个原生 skia 二进制的来源）。
 
+**重跑这套探针：** `cd .tmp/engine-probe && npm install && node smoke.mjs`（普查大纲覆盖率用 `node outline-census.mjs`）。沙箱的 `node_modules` 已在清理中删除，但 `package.json`（两个版本就是上面这两个）、两个脚本与渲染输出 `out/page1.png` 都留着 ⇒ 这一节的数字随时可复现，不是只留下一句断言。
+
 | 验的是 | 结果 |
 | --- | --- |
 | `/items/<key>/file` → 真实路径（E6） | ✅ `302 → file:///D:/OneDrive/Zotero/<title>.pdf` |
@@ -335,7 +337,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
 | 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | ✅ `v0.4.0` → `57a3f3e`，远端复核 PASS（见 `docs/01_decisions.md` §51.5） | `57a3f3e` · `3106120` |
 | 13 **M6 的发布**（这份单页要不要单独发一个版本） | 待 junhan 定 | — |
-| — | 清理 `.tmp/` 的往轮遗留（junhan：留证据、删大件） | 见 §12 |
+| — | 清理 `.tmp/` 的往轮遗留（junhan 裁定：**留证据、删大件**） | ✅ **112.8 MB → 0.81 MB**（978 → 88 个文件）。保留：§4.3.1 的探针配方与输出 · 四份普查报告与 `notes-to-delete.md`（那 39 条的待办清单）· 未采纳的脚手架提案 `scaffold-revision/` · 三条会话的笔记产物 `section-notes/` · 候选技能 `adoption-ruling.SKILL.md`。删除的是大件：`node_modules` 83.5 MB、会话 `.jsonl` 约 25 MB、库正文副本、渲染图、composed dump、日志与提交信息草稿 | `.tmp` 不进库 |
 
 ---
 
