@@ -160,7 +160,7 @@ arXiv DOI answered with the work's other DOI), and every citation count is print
 gave it and the date it was read, because the same work measured 43,412 citations on one source and
 46,513 on the other.
 
-**What the reference-library channel is.** Eight helper programs, not a server. `tools/zotero-read.mjs`
+**What the reference-library channel is.** Seven helper programs, not a server. `tools/zotero-read.mjs`
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
 `tools/zotero-pdf.mjs` reads the attachment **itself** where the library's index cannot answer: the file's
 own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),
@@ -168,9 +168,7 @@ and the page rendered to an image — the rung that answers mathematics no text 
 helper can do, what it refuses, and what to do when the refusal lands is one page**:
 [`docs/toolchain.md`](docs/toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
-write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` keeps one `/digest` note
-per record — the paper-level projection of its section notes, refreshed in place, with the body it
-replaces kept as a `/digest` + `/retired` note on the same record — and
+write has its own tool: `zotero-write.mjs` adds a record, and
 `zotero-section-note.mjs` leaves one explanation note per top-level method section. Its identity is a
 `/section-N` tag rather than an invisible marker (the application eats comments in the body); its first
 step is a read-only report of what the record already claims and which notes are **unknown**, and those
@@ -180,7 +178,7 @@ rewritten; `--tidy` is gone; and `--delete` erases a `/retired` note permanently
 after printing the plan. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
-not one of the seven: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
+not one of them: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
 manager, at their own keyboard and under no API authorization at all. Together they replace an MCP row whose
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
 tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
@@ -322,7 +320,6 @@ node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment ch
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
-node tools\zotero-note-selftest.mjs       # which note is the /digest, and the in-place refresh
 node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard

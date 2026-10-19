@@ -240,7 +240,6 @@ console.log('\n[10] every write helper names itself the same way')
 check(APP_NAME === 'DSH autoresearch preset', 'the shared name is the one the owner sees', APP_NAME)
 for (const file of [
   'zotero-write.mjs',
-  'zotero-note.mjs',
   'zotero-edit.mjs',
   'zotero-collection.mjs',
   'zotero-link-attachments.mjs',

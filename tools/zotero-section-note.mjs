@@ -11,7 +11,7 @@
 //
 //   /section-3       this note claims TOP-LEVEL section 3
 //   /imported        this claim came from an imported/pasted note, so it may still be rewritten
-//   /digest          this note is the record's paper-level digest, not a section note
+//   /digest          LEGACY: an earlier version's whole-paper summary; never a section note, never written now
 //   /retired         out of service: not coverage, and the only note a delete may target
 //   /replaces-<key>  this note replaced a retired note
 //
@@ -64,7 +64,7 @@ export const SECTION_TAG_PREFIX = '/section-'
 /** The tag that marks a claimed note as an import, which may still be rewritten in place. */
 export const IMPORTED_TAG = '/imported'
 
-/** The tag that marks a paper-level digest note. */
+/** The tag an earlier version used for a paper-level summary note. Nothing writes it now. */
 export const DIGEST_TAG = '/digest'
 
 /** The tag that takes a note out of service. */
@@ -201,7 +201,11 @@ export function isImported(tags) {
 }
 
 /**
- * Whether a note is a paper-level digest rather than a section note.
+ * Whether a note is a legacy whole-paper summary rather than a section note.
+ *
+ * An earlier version of this preset wrote one `/digest` note per record. That artifact is gone, but a
+ * library may still carry one: recognizing the tag keeps it out of coverage and refuses to claim it,
+ * while nothing here writes the tag or refreshes the note.
  *
  * @param {string[]} tags The note's tags, bare text.
  * @returns {boolean} True when the note carries `/digest`.
@@ -280,8 +284,8 @@ export function sectionWriteToken(value) {
  * The note that already claims the section a write is for, and why.
  *
  * Only an explicit `/section-N` tag counts. A retired note is a tombstone and does not cover its
- * section; a digest is not a section note; an unknown note is read by the discipline rather than
- * guessed at here. There is no parent/child folding: dotted keys are not part of this model.
+ * section; a legacy `/digest` summary is not a section note; an unknown note is read by the discipline
+ * rather than guessed at here. There is no parent/child folding: dotted keys are not part of this model.
  *
  * @param {Array<{key: string, retired?: boolean, digest?: boolean, claim: {token: string}}>} notes The record's child notes.
  * @param {string} token The top-level section the write is for.
@@ -390,7 +394,7 @@ function ambiguousLive(notes) {
 export function planJson({ record, attachment, notes }) {
   const live = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
   const retired = notes.filter((note) => note.retired)
-  const digests = notes.filter((note) => note.digest && !note.retired)
+  const legacy = notes.filter((note) => note.digest && !note.retired)
   const unknown = notes.filter((note) => !note.retired && !note.digest && !note.claim.token && !note.claim.ambiguous)
   const ambiguous = notes.filter((note) => note.claim.ambiguous && !note.retired)
   const covered = new Map()
@@ -409,7 +413,7 @@ export function planJson({ record, attachment, notes }) {
       tags: note.tags,
       retired: note.retired,
       imported: note.imported,
-      digest: note.digest,
+      legacy: note.digest,
       section: note.claim.token,
       sectionTags: note.claim.tags,
       invalidSectionTags: note.claim.invalid,
@@ -419,7 +423,7 @@ export function planJson({ record, attachment, notes }) {
     coverage: {
       live: [...covered.entries()].map(([section, keys]) => ({ section, notes: keys })),
       retired: retired.map((note) => ({ section: note.claim.token, note: note.key, successor: successorOf(notes, note.key) })),
-      digest: digests.map((note) => ({ note: note.key })),
+      legacy: legacy.map((note) => ({ note: note.key })),
       unknown: unknown.map((note) => note.key),
       ambiguous: ambiguous.map((note) => note.key),
     },
@@ -427,7 +431,7 @@ export function planJson({ record, attachment, notes }) {
       notes: notes.length,
       live: live.length,
       retired: retired.length,
-      digest: digests.length,
+      legacy: legacy.length,
       unknown: unknown.length,
       ambiguous: ambiguous.length,
     },
@@ -457,7 +461,7 @@ async function runPlan(itemKey, { json = false } = {}) {
 
   for (const note of notes) {
     const label = note.digest
-      ? 'digest'
+      ? 'legacy digest'
       : note.claim.token
         ? `§${note.claim.token}`
         : note.claim.ambiguous
@@ -473,7 +477,7 @@ async function runPlan(itemKey, { json = false } = {}) {
 
   const live = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
   const retired = notes.filter((note) => note.retired)
-  const digests = notes.filter((note) => note.digest && !note.retired)
+  const legacy = notes.filter((note) => note.digest && !note.retired)
   const unknown = notes.filter((note) => !note.retired && !note.digest && !note.claim.token && !note.claim.ambiguous)
   const ambiguous = notes.filter((note) => note.claim.ambiguous && !note.retired)
   const sections = [...new Set(live.map((note) => note.claim.token))]
@@ -491,14 +495,15 @@ async function runPlan(itemKey, { json = false } = {}) {
         : 'none'
     }`,
   )
-  console.log(`digest      : ${digests.length ? digests.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log(`legacy      : ${legacy.length ? legacy.map((note) => note.key).join(' · ') : 'none'}`)
   console.log(`unknown     : ${unknown.length ? unknown.map((note) => note.key).join(' · ') : 'none'}`)
   console.log(`ambiguous   : ${ambiguous.length ? ambiguous.map((note) => note.key).join(' · ') : 'none'}`)
   console.log('\nNOTE: `covered` is what explicit /section-N tags claim, counted per TOP-LEVEL section.')
   console.log('`unknown` notes have no claim: read the first paragraph above (the whole note with')
   console.log('zotero-read.mjs --item <noteKey> when it is not enough), then --claim it, --rewrite it, or')
   console.log('--retire it. A note marked RETIRED is a tombstone: it is NOT coverage, and only a retired')
-  console.log('note is deletable. A /digest note is the record\'s digest, not a section note.')
+  console.log('note is deletable. A legacy /digest note is an earlier version\'s whole-paper summary: not a')
+  console.log('section note, and never claimed for one.')
 }
 
 /** Create one section note, refusing when the section is already claimed. */
@@ -530,7 +535,7 @@ async function runCreate(options) {
     if (!isRetired(oldTags)) {
       throw new UsageError(`--replaces ${replacedKey} is not retired, so it still covers its section. Retire it first: --retire --note ${replacedKey} --reason "<why>" --write`)
     }
-    if (isDigest(oldTags)) throw new UsageError(`--replaces ${replacedKey} is a digest, not a section note`)
+    if (isDigest(oldTags)) throw new UsageError(`--replaces ${replacedKey} is a legacy /digest summary, not a section note`)
     const oldClaim = readSectionTag(oldTags)
     if (oldClaim.ambiguous) throw new UsageError(`--replaces ${replacedKey} carries more than one /section- tag; fix it first`)
     if (oldClaim.token && oldClaim.token !== token) {
@@ -616,7 +621,7 @@ async function runClaim(options) {
   const token = sectionWriteToken(options.section)
   const tags = (note.tags ?? []).map((entry) => entry.tag)
   if (isRetired(tags)) throw new UsageError(`${options.note} is retired; run --retire --note ${options.note} --undo --write first`)
-  if (isDigest(tags)) throw new UsageError(`${options.note} is a digest, not a section note; a digest is not claimed for a section`)
+  if (isDigest(tags)) throw new UsageError(`${options.note} is a legacy /digest whole-paper summary, not a section note; it is not claimed for a section`)
   if (!note.parentItem) throw new UsageError(`${options.note} has no parent item; a section note is a child of the record it explains`)
   const claim = readSectionTag(tags)
   if (claim.ambiguous) {
@@ -870,7 +875,6 @@ async function runDelete(options) {
   }
   const notes = note.parentItem ? await noteChildren(note.parentItem) : []
   const successor = successorOf(notes, options.note)
-  const digest = isDigest(tags)
 
   console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
   console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none (not a section note)'}`)
@@ -878,7 +882,6 @@ async function runDelete(options) {
   console.log(`size    : ${String(note.note ?? '').length} characters`)
   console.log(`body    : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
   console.log(`successor: ${successor ? `${successor} names itself this note's replacement` : 'nothing names a replacement yet'}`)
-  if (digest) console.log('DIGEST  : this note is a /digest; deleting it removes the record of what was read.')
   if (!successor) console.log('WARNING : nothing names a replacement; deleting removes the last record of what this note said.')
   console.log(`write   : DELETE /api/users/0/items/${options.note}  If-Unmodified-Since-Version: ${note.version}`)
   console.log('\nThis channel cannot put an item in the trash: DELETE is permanent, the record answers 404')
@@ -936,7 +939,7 @@ const USAGE =
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
   '       node tools/zotero-section-note.mjs --delete --note <noteKey> [--write]\n' +
   '       Identity is a tag: /section-N claims a top-level section, /imported marks an import that may\n' +
-  '       still be rewritten, /digest marks the paper-level digest, /retired takes a note out of service.\n' +
+  '       still be rewritten, /digest is a LEGACY whole-paper summary from an earlier version, /retired takes a note out of service.\n' +
   '       No invisible marker is written or read, and no prose is parsed: a note with no /section- tag\n' +
   '       is UNKNOWN and is read before anything is written. --tidy does not exist; a damaged body is\n' +
   '       rewritten by the agent or retired and written again. --delete erases only a /retired note,\n' +

@@ -74,7 +74,7 @@ export const FACTS = [
   },
   {
     says: '本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。',
-    cites: [cite('docs/coverage.md', '不做 OCR'), cite('README.md', 'Eight helper programs')],
+    cites: [cite('docs/coverage.md', '不做 OCR'), cite('README.md', 'Seven helper programs')],
   },
   {
     says: 'helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。',
@@ -136,18 +136,10 @@ export const HELPERS = [
     cites: [cite('tools/zotero-pdf.mjs', 'one rung per invocation', '--render needs --pages', 'no table of contents, so rung (3) has nothing to give')],
   },
   {
-    name: 'zotero-note.mjs',
-    role: '在记录上留一条 `/digest` 投影（原地刷新，旧正文留库）',
-    can: ['没有 `/digest` 笔记就创建；有就原地刷新（干跑、版本守卫）', '旧正文先写成 `/digest` + `/retired` 子笔记，留在库里', '同一可见文本 → `ALREADY RECORDED`，不写'],
-    refuses: ['没有 `/digest` 的笔记**从不触碰**', '一条记录有多条活 `/digest` → `REFUSED`', '被 `/retired` 的 digest 不当目标，新建一条'],
-    when: ['节笔记变了 → 刷新同一条，不追加、不换 key；旧正文成为 retired 快照，可 `--delete`'],
-    cites: [cite('tools/zotero-note.mjs', 'DIGEST_TAG', 'ALREADY RECORDED', 'refresh in place', 'findDigestNote', 'findRetiredSnapshot')],
-  },
-  {
     name: 'zotero-section-note.mjs',
     role: '逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除（仅 `/retired`，永久）',
     can: [
-      '`--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、digest',
+      '`--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、legacy',
       '写一条节的解释笔记（干跑默认，写后回读 `/section-N`）',
       '`--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`',
       '`--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（版本守卫，不写备份）',

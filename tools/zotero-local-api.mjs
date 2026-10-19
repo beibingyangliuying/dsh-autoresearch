@@ -4,13 +4,13 @@
 //
 // WHY THIS FILE EXISTS
 //
-// Seven helpers talk to this API (add an item, read or search the library, write a digest note, write a
-// section note, edit fields and tags, file a collection, and turn stored PDFs into linked files). The
+// Six helpers talk to this API (add an item, read or search the library, write a section note, edit
+// fields and tags, file a collection, and turn stored PDFs into linked files). The
 // transport and - above all - the WRITE GATE were duplicated in each tool: authorize, carry the
 // key, send the per-write token. That gate is what the contract's authorization rule rests on, so
-// seven copies of it would be seven places to drift apart. The same argument holds for
-// {@link visibleText}: two note tools compare what the library stored against what they sent, and two
-// definitions of "the same text" would let one of them call a delivered note undelivered.
+// six copies of it would be six places to drift apart. The same argument holds for
+// {@link visibleText}: the note tool compares what the library stored against what it sent, and two
+// definitions of "the same text" would let it call a delivered note undelivered.
 //
 // TRANSPORT, and why this is not `fetch`: the local API answers HTTP/1.0, and an authorization request
 // BLOCKS until the owner answers a dialog in the reference manager. `fetch` aborts that on its default

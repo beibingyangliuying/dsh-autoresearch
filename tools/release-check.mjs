@@ -48,7 +48,6 @@ export const REQUIRED_HELPERS = [
   'tools/zotero-read.mjs',
   'tools/zotero-pdf.mjs',
   'tools/zotero-write.mjs',
-  'tools/zotero-note.mjs',
   'tools/zotero-edit.mjs',
   'tools/zotero-collection.mjs',
   'tools/zotero-section-note.mjs',

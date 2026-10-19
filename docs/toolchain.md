@@ -25,7 +25,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
 | 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
 | 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `16,000` |
-| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
+| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Seven helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
 | **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
 | **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
@@ -77,31 +77,11 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 **出处**：`tools/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give`
 
-#### `zotero-note.mjs` — 在记录上留一条 `/digest` 投影（原地刷新，旧正文留库）
-
-**能做**
-
-- 没有 `/digest` 笔记就创建；有就原地刷新（干跑、版本守卫）
-- 旧正文先写成 `/digest` + `/retired` 子笔记，留在库里
-- 同一可见文本 → `ALREADY RECORDED`，不写
-
-**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
-
-- 没有 `/digest` 的笔记**从不触碰**
-- 一条记录有多条活 `/digest` → `REFUSED`
-- 被 `/retired` 的 digest 不当目标，新建一条
-
-**撞上怎么办**
-
-- 节笔记变了 → 刷新同一条，不追加、不换 key；旧正文成为 retired 快照，可 `--delete`
-
-**出处**：`tools/zotero-note.mjs` · `DIGEST_TAG` · `ALREADY RECORDED` · `refresh in place` · `findDigestNote` · `findRetiredSnapshot`
-
 #### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除（仅 `/retired`，永久）
 
 **能做**
 
-- `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、digest
+- `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、legacy
 - 写一条节的解释笔记（干跑默认，写后回读 `/section-N`）
 - `--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`
 - `--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（版本守卫，不写备份）
