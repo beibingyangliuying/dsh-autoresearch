@@ -1,108 +1,100 @@
 #!/usr/bin/env node
-// Leave a durable digest on a record in the reference library, as a note that travels with it.
+// Leave the record's ONE paper-level digest on a record, as a note that travels with it.
 //
-// WHY THIS FILE EXISTS
+// IDENTITY IS /digest, NOT A COMMENT
 //
-// The literature discipline requires a digest to be written onto the library item after reading, so
-// the next round does not pay the same reading cost again. Until now the only instrument for that was
-// the MCP row's `zotero_manage_note`, which writes whatever it is given with no preview. This tool
-// states the change first, appends rather than replaces, and refuses the write if the note moved while
-// the plan was being built.
+// This tool used to identify its note by an invisible HTML comment. Measured on this library: when the
+// application rewrites a note's body it drops the comment, and the next digest run then created a
+// SECOND digest note. A tag is item metadata, outside the body, and `/retired` was measured to survive
+// a real application rewrite. The digest note therefore carries `/digest`:
 //
-// HOW IT DECIDES BETWEEN APPENDING AND CREATING
+//   /digest    this note is the record's paper-level digest
+//   /retired   out of service: a tombstone is never appended to, and a new digest is created instead
 //
-// One note per record carries a marker comment, invisible in the application's rendered view:
+// No marker is written or read.
 //
-//     <!-- autoresearch-digest -->
+// THE DIGEST IS A PROJECTION OF THE SECTION NOTES
 //
-// A note with that marker is this tool's; the new text is APPENDED to it, so a record accumulates its
-// digests instead of collecting a pile of notes. Without the marker, a new note is created. A note
-// without the marker is never touched, which is what keeps someone else's note safe.
+// The digest says what the paper's method is, derived from the `/section-N` notes the `section-notes`
+// discipline wrote. It is not a reading receipt and not a log: the receipt lives in the `refs/` index
+// line and the item's `/done` tag, and the digest is one synthesis. This tool writes the body the agent
+// gives it; it does not read the paper and does not synthesize.
 //
-// The text is HTML, inserted verbatim: the reference manager stores note bodies as HTML, and guessing
-// at a Markdown conversion would silently change what is stored.
+// REFRESH IS IN PLACE
 //
-// ONE READING IS RECORDED ONCE
-//
-// A digest says what was read and what it settles, so the record of a reading is that sentence, not a
-// count of attempts. A round that is re-run - a retry, a session resumed after its context was pruned -
-// reaches this tool with text the note already carries, and appending it again would leave the note
-// asserting the same reading twice while a read-back happily reported success, because it only asks
-// whether the text is there. An addition the note already reads with therefore writes NOTHING and
-// reports `ALREADY RECORDED` (exit 0): the state asked for already holds, which is the same answer
-// every other write tool here gives when the change it was asked for is already in place.
-//
-// The comparison is on VISIBLE text rather than on bytes, for the reason the read-back uses it too: the
-// application rewrites a note it has edited, so a body that reads identically need not match byte for
-// byte. And it searches the WHOLE note, not a part this tool appended, because the digests already in a
-// library were written before this tool existed and carry no boundary this tool could go by.
-//
-// What it cannot see is a restatement: a digest that repeats an older one and then adds to it reads as
-// a new sentence and is appended, so what is written still has to say what is new.
+// One record has one live `/digest` note. When the synthesis changes, the SAME note is patched, with
+// the old body backed up under `.section-notes/` first and a version guard on the write. The key does
+// not change, no tombstone accumulates, and the old body is recoverable from the workspace. A retired
+// digest is skipped: a new digest is created instead, and the tombstone stays as history. A changed
+// digest is a refresh in place, so the same note and the same key carry the current projection.
 //
 // Usage:
-//   node tools/zotero-note.mjs --item <itemKey> --text "<p>Read: the attention section.</p>"   # dry run
+//   node tools/zotero-note.mjs --item <itemKey> --text "<p>Digest: ...</p>"          # dry run
 //   node tools/zotero-note.mjs --item <itemKey> --file .tmp/digest.html --write
 //
-// Exit codes: 0 applied, or nothing to do | 1 refused (conflict or a library error) | 2 usage.
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+// Exit codes: 0 applied, or nothing to do | 1 refused (conflict, multiple live digests, library error)
+// | 2 usage.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
-
-/** The marker that identifies this tool's digest note on a record. */
-export const DIGEST_MARKER = '<!-- autoresearch-digest -->'
+import { DIGEST_TAG, isDigest, isRetired } from './zotero-section-note.mjs'
 
 /** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
 class UsageError extends Error {}
 
-/**
- * The record's own digest note, if it has one.
- *
- * @param {object[]} children Child items as the library returns them.
- * @param {string} [marker] The marker to look for.
- * @returns {object|undefined} The note row carrying the marker.
- */
-export function findDigestNote(children, marker = DIGEST_MARKER) {
-  return children.find((child) => child?.data?.itemType === 'note' && (child.data.note ?? '').includes(marker))
+/** A note's tags as bare text. */
+function tagList(item) {
+  return (item?.data?.tags ?? []).map((entry) => entry.tag)
 }
 
 /**
- * The note body a digest produces.
+ * The record's live digest note, if it has one.
  *
- * A digest the note already reads with produces nothing, so a re-run cannot turn one reading into the
- * same sentence twice. The comparison is on {@link visibleText} - the application rewrites a note it
- * has edited, so a body that reads identically need not match byte for byte - and it searches the
- * whole recorded body rather than a part this tool appended, which is what makes it reach a digest
- * written before this tool existed.
+ * A retired `/digest` is a tombstone and is skipped: appending to it would keep writing to a note that
+ * is out of service, and the next digest should be a new note.
  *
- * @param {{key: string, data: object}|undefined} existing The digest note to append to, if any.
- * @param {string} addition The HTML to add.
- * @param {string} [marker] The marker, written only when the note is created.
- * @returns {{html: string, mode: 'create'|'append'|'duplicate'}} The body to send and what it does.
- *   In `duplicate` mode the body is the note unchanged and nothing is to be written.
+ * @param {object[]} children Child items as the library returns them.
+ * @returns {object|undefined} The note row carrying `/digest` and not `/retired`.
  */
-export function composeNote(existing, addition, marker = DIGEST_MARKER) {
-  if (!existing) return { html: `${marker}\n${addition}`, mode: 'create' }
+export function findDigestNote(children) {
+  return children.find((child) => child?.data?.itemType === 'note' && isDigest(tagList(child)) && !isRetired(tagList(child)))
+}
+
+/**
+ * The body a digest write produces, and what it does.
+ *
+ * The digest is a projection, not a log: a changed synthesis REPLACES the body rather than appending
+ * to it. The comparison is on {@link visibleText}, because the application rewrites a note it has
+ * edited, so a body that reads identically need not match byte for byte.
+ *
+ * @param {{key: string, data: object}|undefined} existing The live digest note, if any.
+ * @param {string} addition The new digest body, as HTML.
+ * @returns {{html: string, mode: 'create'|'refresh'|'no-op'}} The body to send and what it does.
+ */
+export function composeNote(existing, addition) {
+  if (!existing) return { html: addition, mode: 'create' }
   const current = existing.data?.note ?? ''
-  const wanted = visibleText(addition)
-  if (wanted !== '' && visibleText(current).includes(wanted)) return { html: current, mode: 'duplicate' }
-  return { html: `${current}${current.endsWith('\n') ? '' : '\n'}${addition}`, mode: 'append' }
+  if (visibleText(current) === visibleText(addition)) return { html: current, mode: 'no-op' }
+  return { html: addition, mode: 'refresh' }
 }
 
 const USAGE =
-  'usage: node tools/zotero-note.mjs --item <recordKey> (--text "<html>" | --file <path>) [--write]'
+  'usage: node tools/zotero-note.mjs --item <itemKey> (--text "<html>" | --file <path>) [--write]\n' +
+  '       The digest is the record\'s ONE paper-level projection, derived from its /section-N notes.\n' +
+  '       It carries /digest; a retired digest is skipped and a new one is created. A changed digest\n' +
+  '       refreshes the same note in place, after backing up the old body under .section-notes/.'
 
 function parseArgs(argv) {
   const options = { item: '', text: '', file: '', write: false }
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
-    const next = argv[index + 1]
     if (flag === '--write') {
       options.write = true
       continue
     }
     if (!['--item', '--text', '--file'].includes(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
+    const next = argv[index + 1]
     if (!next) throw new UsageError(`${flag} needs a value`)
     options[flag.slice(2)] = next
     index += 1
@@ -122,34 +114,43 @@ async function main() {
     throw new UsageError(`${options.item} is itself a note; pass the record the digest is about`)
   }
   const children = await childrenOf(options.item)
-  const existing = findDigestNote(children)
+  const live = children.filter((child) => child?.data?.itemType === 'note' && isDigest(tagList(child)) && !isRetired(tagList(child)))
+  if (live.length > 1) {
+    console.error(`\nREFUSED: ${live.map((note) => note.key).join(' · ')} all carry a live ${DIGEST_TAG}.`)
+    console.error('One record has one digest. Retire all but one, then run this again.')
+    process.exitCode = 1
+    return
+  }
+  const existing = live[0]
   const composed = composeNote(existing, addition)
+  const backup = join(process.cwd(), '.section-notes', options.item, `digest-${new Date().toISOString().replace(/[:.]/g, '-')}.html`)
 
   const action =
-    composed.mode === 'append'
-      ? `append to note ${existing.key}`
-      : composed.mode === 'duplicate'
-        ? `nothing to do - note ${existing.key} already reads with this text`
-        : 'create a new note on this record'
+    composed.mode === 'refresh'
+      ? `refresh note ${existing.key} in place`
+      : composed.mode === 'no-op'
+        ? `nothing to do - note ${existing?.key} already reads with this text`
+        : 'create a new /digest note on this record'
 
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
-  console.log(`children: ${children.length}${existing ? ` (digest note ${existing.key})` : ' (no digest note yet)'}`)
+  console.log(`children: ${children.length}${existing ? ` (live digest note ${existing.key})` : ' (no live digest note)'}`)
   console.log(`action  : ${action}`)
   if (existing) console.log(`note    : ${(existing.data.note ?? '').length} characters now`)
   console.log(`addition: ${addition.length} characters`)
-  if (composed.mode !== 'duplicate') console.log(`result  : ${composed.html.length} characters`)
+  if (composed.mode === 'refresh') console.log(`backup  : ${backup}`)
+  if (composed.mode !== 'no-op') console.log(`result  : ${composed.html.length} characters`)
 
-  if (composed.mode === 'duplicate') {
-    console.log(`\nALREADY RECORDED - note ${existing.key} already carries this text, so nothing was written.`)
-    console.log('A digest records one reading once; the same sentence is not a second reading. If this reading')
-    console.log('adds something, the digest has to say what is new.')
+  if (composed.mode === 'no-op') {
+    console.log(`\nALREADY RECORDED - note ${existing.key} already reads with this text, so nothing was written.`)
+    console.log('A digest records one synthesis once. If the section notes changed, the digest has to say what')
+    console.log('is different; the same sentence is not a new synthesis.')
     return
   }
 
   console.log(
-    composed.mode === 'append'
+    composed.mode === 'refresh'
       ? `write   : PATCH /api/users/0/items/${existing.key}  If-Unmodified-Since-Version: ${existing.data.version}`
-      : `write   : POST /api/users/0/items  [{itemType: note, parentItem: ${options.item}, note: ...}]`,
+      : `write   : POST /api/users/0/items  [{itemType: note, parentItem: ${options.item}, note: ..., tags: [{tag: ${DIGEST_TAG}}]}]`,
   )
 
   if (!options.write) {
@@ -161,11 +162,19 @@ async function main() {
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
 
-  if (composed.mode === 'append') {
+  if (composed.mode === 'refresh') {
+    try {
+      mkdirSync(dirname(backup), { recursive: true })
+      writeFileSync(backup, existing.data.note ?? '', 'utf8')
+    } catch (error) {
+      console.error(`\nREFUSED: could not write the backup ${backup}: ${error instanceof Error ? error.message : String(error)}`)
+      process.exitCode = 1
+      return
+    }
     const result = await patchItem({ gate, key: existing.key, patch: { note: composed.html }, apply: true })
     if (result.conflict) {
       console.error(`\nCONFLICT: note ${existing.key} changed since this plan was read. Nothing was written.`)
-      console.error(`It is now ${(result.before.note ?? '').length} characters at version ${result.before.version}.`)
+      console.error(`The old body is at ${backup}.`)
       process.exitCode = 1
       return
     }
@@ -174,17 +183,19 @@ async function main() {
       process.exitCode = 1
       return
     }
-    if (!(result.after.note ?? '').includes(addition)) {
-      console.error(`\nREAD-BACK MISMATCH: note ${existing.key} does not read back with the addition.`)
+    if (visibleText(result.after.note ?? '') !== visibleText(composed.html)) {
+      console.error(`\nREAD-BACK MISMATCH: note ${existing.key} does not read back with the digest that was sent.`)
+      console.error(`The old body is at ${backup}.`)
       process.exitCode = 1
       return
     }
-    console.log(`\nOK - appended to note ${existing.key} (now ${result.after.note.length} characters, version ${result.after.version}).`)
+    console.log(`\nOK - note ${existing.key} refreshed in place (now ${result.after.note.length} characters, version ${result.after.version}).`)
+    console.log(`The old body is at ${backup}.`)
     return
   }
 
   const res = await gate.write('POST', '/api/users/0/items', [
-    { itemType: 'note', parentItem: options.item, note: composed.html },
+    { itemType: 'note', parentItem: options.item, note: composed.html, tags: [{ tag: DIGEST_TAG }] },
   ])
   if (res.status !== 200) {
     console.error(`\nThe library refused the write (HTTP ${res.status}): ${res.text.slice(0, 300)}`)
@@ -200,7 +211,12 @@ async function main() {
     return
   }
   const back = await readItem(noteKey)
-  if (!(back.note ?? '').includes(addition)) {
+  if (!isDigest(tagList(back))) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${DIGEST_TAG}.`)
+    process.exitCode = 1
+    return
+  }
+  if (visibleText(back.note ?? '') !== visibleText(composed.html)) {
     console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the digest text.`)
     process.exitCode = 1
     return
