@@ -169,13 +169,15 @@ helper can do, what it refuses, and what to do when the refusal lands is one pag
 [`docs/04_toolchain.md`](docs/04_toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
 write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` keeps one `/digest` note
-per record — the paper-level projection of its section notes, refreshed in place — and
+per record — the paper-level projection of its section notes, refreshed in place, with the body it
+replaces kept as a `/digest` + `/retired` note on the same record — and
 `zotero-section-note.mjs` leaves one explanation note per top-level method section. Its identity is a
 `/section-N` tag rather than an invisible marker (the application eats comments in the body); its first
 step is a read-only report of what the record already claims and which notes are **unknown**, and those
 are read before anything is written. A pasted note can be claimed (`--claim`) or rewritten in place
-(`--rewrite`, with a backup); a claimed record is retired rather than rewritten; `--tidy` is gone; and
-`--delete` only plans the removal of a `/retired` note. `zotero-edit.mjs` changes its fields and tags,
+(`--rewrite`, no workspace backup: the paper is the source); a claimed record is retired rather than
+rewritten; `--tidy` is gone; and `--delete` erases a `/retired` note permanently, one note at a time,
+after printing the plan. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
 not one of the seven: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
@@ -196,18 +198,21 @@ second code path and the tree unchanged) — it is attempted rather than assumed
 it stops the tool instead of creating a key-changing replacement — and a collection's version is
 **unreliable rather than absent**: nearly every collection here reported version 0 on 2026-10-15, so the
 staleness guard the rename sends cannot bite on those, while the collection renamed on 2026-10-16 carried a
-real version and moved it. Deleting is deliberately not built, and the boundary is a property of this channel rather than a
-preference: **this API cannot put an item in the trash.** A `DELETE` through the local API erased the
+real version and moved it. Deleting is built, but bounded to one note, and the boundary is a property
+of this channel rather than a preference: **this API cannot put an item in the trash.** A `DELETE`
+through the local API erased the
 record on 2026-10-16 (a `204`, then a `404`, with the trash neither growing nor keeping the key), and on
 2026-10-18 an item was measured to carry no `deleted` field at all while the parameter that would ask for
 trashed items was accepted and ignored — so there is no soft delete to reach for either, and what an agent
 cannot undo is not something it should be able to do at scale. A deletion made in the application does go
 into that trash and can be undone: on 2026-10-18 it held 473 items, 315 of them notes. Removal therefore
-stays the owner's act there, and what the preset owes that act is the artifact rather than the button — a
+stays the owner's act there, and what the preset owes that act is the artifact as well as a bounded
+button: a
 wrong note is **retired**, so the section it claimed becomes writable again while the note itself is left
-untouched and one later write puts it back; a removal the owner still wants is handed over as a list with
-a fixed shape rather than as prose. Only a `/retired` note is a deletion candidate: `--delete --note <key>`
-states the plan and the irreversibility facts, and this round does not send the request.
+untouched and one later write puts it back; only a `/retired` note is eligible, `--delete --note <key>`
+prints the plan and the irreversibility facts, and `--write` sends one `DELETE` carrying the version it
+was read at and proves it with a `404`. A bulk cleanup remains the owner's act, handed over as a list
+with a fixed shape rather than as prose.
 
 One thing about that trash is worth knowing before you query it:
 `GET /api/users/0/items/trash?itemType=note` answers `200` with `Total-Results: 0` while the trash holds
@@ -317,7 +322,7 @@ node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths,
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
 node tools\zotero-note-selftest.mjs       # which note is the /digest, and the in-place refresh
-node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion plan
+node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 

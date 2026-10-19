@@ -1,11 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 20.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 21.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 20 makes the digest a **projection of the section
+independent of any package version. Revision 21 lets the preset erase a retired note: `--delete`
+performs the `DELETE` it used to only plan, on a `/retired` note only, carrying the version it was
+read at as a precondition, and proving it with a 404. Deletion is therefore a capability of the
+preset now, bounded to one note at a time; it is still not a cleanup pass. The same revision keeps
+the digest's previous body **in the reference library**: a refresh writes the old body once as a
+`/digest` + `/retired` child note and then patches the live digest, rather than leaving the old body
+in a workspace file. A section-note rewrite stops writing a workspace backup at all: the paper is
+the source, the plan shows the old first block, and a version conflict is refused. §6, §8 and §9
+state it. Revision 20 makes the digest a **projection of the section
 notes**: one live `/digest` per record, synthesized from its `/section-N` notes rather than from the
-raw paper, refreshed in place after a backup and a version guard, and no longer a reading receipt —
+raw paper, refreshed in place, and no longer a reading receipt —
 the receipt is the `refs/` index line and the item's `/done` tag. Revision 19 moves a note's identity
 out of the body: `/section-N`, `/imported`, `/digest`, `/retired` and `/replaces-KEY` are tags, no
 invisible marker is written or read, a note with no `/section-` tag is **unknown** until it is read
@@ -59,12 +67,13 @@ reads with is reported as already recorded and nothing is written, because a rou
 not turn one reading into the same sentence twice — and that comparison is made on the text a reader
 sees rather than byte for byte, because the reference manager rewrites the body of a note its own
 application has edited. §6 and `INV-EVID-4` state it. Revision 12 states the boundary this preset measured rather than
-assumed: **it performs no deletion in the reference library.** Deleting through the library's local API is
+assumed: **at that revision it performed no deletion in the reference library.** Deleting through the library's local API is
 permanent — measured 2026-10-16, a `204` and the record is a `404` afterwards, while the library's trash
 neither grows nor holds the key — whereas the owner deleting in the application moves the item into that
 trash and can be undone. The asymmetry is the point: what an agent cannot undo is not something an agent
-should be able to do at scale, so removal stays the owner's act and this preset hands over a list rather
-than a button. §9 states it. Revision 11 adds the ninth on-demand discipline: a paper already
+should be able to do at scale, so removal stayed the owner's act and the preset handed over a list rather
+than a button. Revision 21 later allowed one bounded erasure of a retired note; the same asymmetry is
+why it is one note at a time and why the plan is separate from the act. §9 states it. Revision 11 adds the ninth on-demand discipline: a paper already
 chosen for study becomes **one explanation note per method section**, attached to its reference-library
 record, with background, case study and conclusion sections deliberately not written. It records three
 things that discipline is built on rather than leaving them to its own text: the note is a different
@@ -359,20 +368,26 @@ These rules bound their use:
   refused rather than written twice, and **what is counted is the top-level section**: a dotted key is
   neither written nor read, and a note keyed to a subsection is unknown until it is merged into its
   top-level section or retired. A note with no `/section-` tag, or `/section-N` + `/imported`, is an
-  import and may be rewritten in place, after a dry run, a backup, and a version guard. A `/section-N`
+  import and may be rewritten in place, after a dry run and a version guard. A `/section-N`
   note without `/imported` is a record: its prose is not rewritten in place, and a change to it is a
-  retirement and a replacement. There is no automatic prose repair.
-- **A note that is wrong is retired, not rewritten in place and not deleted.** Its body is left exactly
+  retirement and a replacement. There is no automatic prose repair, and a rewrite writes no workspace
+  backup: the plan prints the old first block, the paper remains the source, and a note the
+  application edited while the write ran is refused rather than overwritten.
+- **A note that is wrong is retired, not rewritten in place.** Its body is left exactly
   as it stands and `/retired` is added. A retired note is a tombstone rather than coverage, so the
   section it claimed becomes writable again, and removing the mark restores the claim it made. The note
   that replaces it names the one it replaced and why: that is the record of a supersession. Only a
-  retired note is eligible for a deletion, and this round plans one rather than performing it.
+  retired note is eligible for a deletion: `--delete` states the plan and the irreversibility facts,
+  and `--write` performs one erasure — the version it was read at is the precondition, and a read-back
+  404 is what proves it.
 - **The digest is a projection of the section notes.** One record has one live `/digest` note,
   synthesized from its `/section-N` notes; every sentence traces to a section note and it introduces
-  no fact those notes do not carry. It is refreshed in place — dry run, backup, version guard — and the
-  same visible text is reported as already recorded with nothing written. It is not a reading receipt:
-  the receipt is the `refs/` index line and the item's `/done` tag, and a paper with no section notes
-  has no digest.
+  no fact those notes do not carry. It is refreshed in place under a version guard, and the
+  same visible text is reported as already recorded with nothing written. The old body is kept **in
+  the library**, not in a workspace file: before the patch, it is written once as a `/digest` +
+  `/retired` child note on the same record, which takes part in no coverage and may itself be
+  deleted later. It is not a reading receipt: the receipt is the `refs/` index line and the item's
+  `/done` tag, and a paper with no section notes has no digest.
 - **A reading states which rung of the ladder answered it.** The rungs, cheapest first, are the
   library's indexed text, the attachment's own text layer, and the page rendered as an image. A channel
   that returns an empty text for an attachment it never indexed is reporting about itself; a text layer
@@ -452,7 +467,8 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
-| `INV-NOTE-2` | One record has one live `/digest`, and the digest is a projection of the record's section notes: every sentence traces to a `/section-N` note, it introduces no fact those notes do not carry, and a changed digest refreshes that note in place rather than appending to it or creating a second one. | A digest that can introduce its own facts is a second, unaudited reading; one that accumulates versions is no longer a projection of the notes it claims to summarize. |
+| `INV-NOTE-2` | One record has one live `/digest`, and the digest is a projection of the record's section notes: every sentence traces to a `/section-N` note, it introduces no fact those notes do not carry, and a changed digest refreshes that note in place rather than appending to it or creating a second one; the body it replaces stays in the library as a `/digest` + `/retired` child note. | A digest that can introduce its own facts is a second, unaudited reading; one that accumulates versions in its own body is no longer a projection of the notes it claims to summarize, and an old body kept only on a disk is not a record the library can show. |
+| `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
@@ -471,18 +487,16 @@ Every row must be falsifiable: a check must exist that can fail.
   single write their "Allow" covers, or their standing grant for that library — never as a background
   action, and never on the strength of a grant that was refused or has been revoked. A whole-library
   migration is not a write this preset performs at all.
-- No deletion in the reference library, and the reason is a property of this channel rather than of
-  deletion as such: this API cannot put an item in the trash. Measured 2026-10-16: a `DELETE` answers
-  `204`, the record answers `404` afterwards, and the trash neither grows nor keeps the key. Measured
-  2026-10-18: an item carries no `deleted` field at all, and the request parameter that would ask for
-  trashed items is accepted and ignored, so there is no soft delete to reach for. A deletion made in
-  the application does go into that trash and is recoverable — on 2026-10-18 the trash held 473 items,
-  315 of them notes — so removal stays the owner's act there. What this preset owes that act is an
-  artifact rather than a capability: the list it hands over has a shape (§6, §7), and a section is
-  freed by retiring a note rather than by removing one (§6). A retired note is the only deletion
-  candidate; `--delete` states the plan and the irreversibility facts, and this round does not perform
-  the removal. A deletion through this channel is permanent, which is why the plan is separate from the
-  act.
+- No deletion as cleanup. This API cannot put an item in the trash — measured 2026-10-16: a `DELETE`
+  answers `204`, the record answers `404` afterwards, and the trash neither grows nor keeps the key;
+  measured 2026-10-18: an item carries no `deleted` field at all, and the request parameter that would
+  ask for trashed items is accepted and ignored, so there is no soft delete to reach for. A removal is
+  therefore an erasure, and this preset performs one only on a `/retired` note, one note per command,
+  after printing the plan and the irreversibility facts, and only with `--write`; the version it was
+  read at is the precondition and a read-back 404 is the proof. A deletion made in the application
+  does go into that trash and is recoverable — on 2026-10-18 the trash held 473 items, 315 of them
+  notes — so a bulk cleanup remains the owner's act there. A section is freed by retiring a note
+  rather than by removing one (§6).
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.

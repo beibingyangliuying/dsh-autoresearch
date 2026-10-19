@@ -62,7 +62,7 @@ export const FACTS = [
   },
   {
     says: '本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。',
-    cites: [cite('protocol.md', 'cannot put an item in the trash'), cite('tools/zotero-section-note.mjs', 'performs no deletion')],
+    cites: [cite('protocol.md', 'cannot put an item in the trash'), cite('tools/zotero-section-note.mjs', 'DELETION IS PERMANENT')],
   },
   {
     says: '抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。',
@@ -137,23 +137,23 @@ export const HELPERS = [
   },
   {
     name: 'zotero-note.mjs',
-    role: '在记录上留一条 `/digest` 投影（原地刷新）',
-    can: ['没有 `/digest` 笔记就创建；有就原地刷新（干跑、备份、版本守卫）', '同一可见文本 → `ALREADY RECORDED`，不写'],
+    role: '在记录上留一条 `/digest` 投影（原地刷新，旧正文留库）',
+    can: ['没有 `/digest` 笔记就创建；有就原地刷新（干跑、版本守卫）', '旧正文先写成 `/digest` + `/retired` 子笔记，留在库里', '同一可见文本 → `ALREADY RECORDED`，不写'],
     refuses: ['没有 `/digest` 的笔记**从不触碰**', '一条记录有多条活 `/digest` → `REFUSED`', '被 `/retired` 的 digest 不当目标，新建一条'],
-    when: ['节笔记变了 → 刷新同一条，不追加、不换 key，旧正文留在工作区备份里'],
-    cites: [cite('tools/zotero-note.mjs', 'DIGEST_TAG', 'ALREADY RECORDED', 'refresh in place', 'findDigestNote')],
+    when: ['节笔记变了 → 刷新同一条，不追加、不换 key；旧正文成为 retired 快照，可 `--delete`'],
+    cites: [cite('tools/zotero-note.mjs', 'DIGEST_TAG', 'ALREADY RECORDED', 'refresh in place', 'findDigestNote', 'findRetiredSnapshot')],
   },
   {
     name: 'zotero-section-note.mjs',
-    role: '逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除干跑',
+    role: '逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除（仅 `/retired`，永久）',
     can: [
       '`--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、digest',
       '写一条节的解释笔记（干跑默认，写后回读 `/section-N`）',
       '`--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`',
-      '`--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（备份 + 版本守卫）',
+      '`--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（版本守卫，不写备份）',
       '`--retire --note <key> --reason "<why>"`：任何笔记都可变成**墓碑**，`--undo` 可逆',
       '`--replaces <旧key>`：新笔记带走"我取代了谁"的指针',
-      '`--delete --note <key>`：只对 `/retired` 干跑，不发 DELETE',
+      '`--delete --note <key> [--write]`：只对 `/retired`；`--write` 永久擦除，404 回读',
     ],
     refuses: [
       '已被 claim 的顶层节（`REFUSED: §…`）——**不要绕过它**',
@@ -161,10 +161,12 @@ export const HELPERS = [
       '带 `/section-N` 但没有 `/imported` 的记录：**不原地改写**，走退休 + 新写',
       '多条 `/section-` tag 的笔记：`ambiguous`，不计覆盖',
       '`--replaces` 的对象没退休，或它讲的是另一节',
+      '`--delete` 一个不是 `/retired` 的笔记：`REFUSED`',
     ],
     when: [
       '要改正一条已有记录：**先 `--retire`，再 `--replaces`**——不删、不重写，正文一个字不动',
-      '网页版粘贴的笔记：读 → `--claim` 或 `--rewrite`；垃圾 → `--retire`，以后可 `--delete` 干跑',
+      '网页版粘贴的笔记：读 → `--claim` 或 `--rewrite`；垃圾 → `--retire`',
+      '确认一条 retired 笔记没有保留价值 → `--delete --write`；不可恢复，且回收站里不会有它',
       '没有 `--tidy`；公式坏了由 agent 读文字层/页图后重写',
     ],
     cites: [

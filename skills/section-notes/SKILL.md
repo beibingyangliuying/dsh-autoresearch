@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Turn a paper already chosen for study into one explanation note per TOP-LEVEL method section, attached to the library record, and then a paper-level digest synthesized from those notes. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place, a wrong record is retired rather than deleted; the digest is refreshed in place. Use after reading a method-heavy paper you will build on, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
+description: Turn a paper already chosen for study into one explanation note per TOP-LEVEL method section, attached to the library record, and then a paper-level digest synthesized from those notes. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place, a wrong record is retired first and may be deleted only after that; the digest is refreshed in place and its old body stays in the library. Use after reading a method-heavy paper you will build on, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
 ---
 
 # section-notes — one explanation note per method section, plus the digest
@@ -57,8 +57,8 @@ Read-only, before writing anything:
    | What the note is | Move |
    |---|---|
    | a usable explanation of §N, in any format | `--claim --note <key> --section N` — only tags are written; the body is untouched; a note with no section tag also gets `/imported` |
-   | about §N but needs our format or prose | `--rewrite --note <key> --section N --file <draft>` — dry run first; the old body is backed up |
-   | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone, never a deletion; it becomes deletable later |
+   | about §N but needs our format or prose | `--rewrite --note <key> --section N --file <draft>` — dry run first; no backup is written |
+   | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone; it may be erased later with `--delete --write` |
    | a digest, a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one |
 
 3. **State the coverage table before writing.** One line per section you are considering: the paper's
@@ -163,16 +163,17 @@ is in the report — and **never split a section to stay inside that range**.
   alone; a note that had no section tag also gets `/imported`. A claim is a durable statement that a
   later round can check; a note left unclaimed is read again every round.
 - **A claimed import may be rewritten in place; a record may not.** `/section-N` + `/imported` is an
-  import: `--rewrite` may replace its body (dry run, backup, version guard). `/section-N` without
+  import: `--rewrite` may replace its body (dry run, version guard). `/section-N` without
   `/imported` is a record: its prose is never rewritten in place. Retire it and write the replacement.
-- **A wrong note is retired, never deleted and never rewritten.** When a note explains its section
+- **A wrong note is retired, never rewritten.** When a note explains its section
   badly enough that the section has to be explained again:
   `{{presetTools}}/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"`. Its body is left
   exactly as it stands, a `/retired` tag makes it a tombstone rather than coverage, and the section
   becomes writable again. The replacement is then written with `--replaces <retiredNoteKey>`, which
   the tool refuses unless the retired note really is retired and really did explain the same top-level
-  section. `--retire --undo` puts the claim back. **The tool deletes nothing**; deletion is a later
-  owner-authorized act, and only a `/retired` note is eligible for it.
+  section. `--retire --undo` puts the claim back. **Deleting is a separate act**: only a `/retired`
+  note is eligible, `--delete` prints the plan and the irreversibility facts, and `--write` erases it
+  permanently — the channel has no trash. Do not delete what you have not read and retired.
 - **The digest is not a section note.** One `/digest` per record, synthesized from the section notes
   after they exist (§4). It is not counted as coverage and is never claimed for a section.
 - Notes are created in section order, so the record reads in the order the paper reads.
@@ -183,8 +184,11 @@ is in the report — and **never split a section to stay inside that range**.
   rewrote a formula because it looked like LaTeX was making a content decision while claiming to format
   one. The old mechanical rules are gone.
 - **`--rewrite` is for an import**: a note with no `/section-` tag, or `/section-N` + `/imported`. It
-  replaces the body with the draft the agent wrote, after a dry run, a backup under
-  `.section-notes/<recordKey>/`, and a version guard. The note's key does not change.
+  replaces the body with the draft the agent wrote, after a dry run and under a version guard. The
+  note's key does not change, and no workspace backup is written: a section note transcribes the
+  paper, the paper remains the source, and the plan prints the old first block before the write. If the
+  note changed in the application while the draft was being written, the tool refuses rather than
+  overwrite it.
 - **A record is not rewritten in place.** Retire it and write the replacement (§3.3).
 - **The formula shape is the agent's responsibility**: `$…$` inline, `$$` alone on its own lines for
   display, every symbol defined at first use, the paper's own equation number in prose. If the text
@@ -204,8 +208,10 @@ summary of the whole paper.
   would break the rule this skill exists for.
 - **One record, one live `/digest`.** Write it with
   `{{presetTools}}/zotero-note.mjs --item <recordKey> --file <digest.html>`. When the synthesis changes,
-  the same note is refreshed in place: dry run, backup, version guard. The same visible text is
-  `ALREADY RECORDED` and writes nothing.
+  the same note is refreshed in place under a version guard, and the body it replaces is kept in the
+  library: before the patch, the old body is written as a `/digest` + `/retired` child note. That
+  snapshot takes part in no coverage and can be deleted later like any other retired note. The same
+  visible text is `ALREADY RECORDED` and writes nothing.
 - **A record with no section notes has no digest.** A survey or an abstract-only reading has the
   `refs/` index line and the `/done` tag as its receipt; it does not get a digest.
 - **The receipt is elsewhere.** `research/literature/refs/` holds one line per reference actually read,
@@ -236,7 +242,7 @@ summary of the whole paper.
 | The section boundaries cannot be established from the text | Report the headings you did find and **stop**; ask. A note keyed on a guessed ordinal collides with the real one later. |
 | The section is a case study, a results table, or a conclusion | Do not write it. Say it was skipped and why. |
 | The note runs long — well past the 5,000-character signal | Cut the case-study material and the restatement of the abstract, not the derivation, and say in the report that the section's method content is long. **Never split the section.** |
-| The section is claimed by a note that is **wrong** | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never delete it and never edit its prose. |
+| The section is claimed by a note that is **wrong** | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never edit its prose; deleting it is a separate act, allowed only once it is retired. |
 | The text layer is unreadable, or a formula only exists in the image | Read the rendered page as an image (`--render` + `read_image`); say which rung answered. Do not trust the text layer for mathematics. |
 
 ## 6. Wording discipline
@@ -267,12 +273,14 @@ The artifact is the notes and the digest on the library record. The report is wh
 8. `## Read-back` — each note key and size as it read back after the write, which is the only evidence
    that the write happened.
 9. `## Retired` — one line per note retired this round: note key · the section it claimed · **the
-   reason** · the key of the note that replaced it, or `nothing names a replacement yet`. A tag cannot
-   hold prose, so the reason is stored nowhere else: this section is where it is written down.
+   reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
+   was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
+   stored nowhere else: this section is where it is written down.
 10. `## Owner actions` — one row per thing the round cannot do itself: the record · the note · the
     section · the action (retire · write the replacement · delete in Zotero · decide) · **why** · the
-    draft's path. A deletion always lands here: this preset performs none, and only a `/retired` note
-    is eligible.
+    draft's path. A deletion the preset may not perform lands here: a note that was never retired, or
+    anything the owner would have to do in the application instead. A retired note the round deleted
+    itself is reported under `## Retired`, not here.
 
 ## 8. Instrument discipline (where this skill most easily goes wrong)
 
@@ -283,14 +291,18 @@ The artifact is the notes and the digest on the library record. The report is wh
   and first paragraph and names the `unknown` ones. A tag is a claim; a note with no tag is read. Where
   your reading and the tag disagree, report both and stop.
 - **A write needs the owner's authorization** (`INV-EVID-3`). "Allow" covers one write; a lasting grant
-  for that library means no dialog at all, and it is revoked in the reference manager, not here.
+  for that library means no dialog at all, and it is revoked in the reference manager, not here. A
+  digest refresh is two writes — the retired snapshot, then the patch — so a single-use `Allow` is
+  asked once for each, and one lasting grant covers both.
 - **Retiring is one note, one write, and it states its reason before it acts.** Dry run first, then
   `--write`; the read-back asserts that `/retired` came back. Whether a tag survives the application
   rewriting a note's body is measured: it does (`/retired`, 2026-10-18). A missing tag is reported, not
   assumed away.
-- **Deleting is a later act.** `--delete --note <key>` prints the plan and the irreversibility facts;
-  the write path is not implemented in this round, and only a `/retired` note is eligible. A deletion
-  always lands in `## Owner actions`.
+- **Deleting is the one irreversible act, and it comes after retiring.** `--delete --note <key>` prints
+  the plan and the irreversibility facts; `--write` erases the note, and the tool proves it with a 404.
+  Only a `/retired` note is eligible: this channel has no trash, so the note and its key are gone. The
+  request carries the version the plan was read at; a note that moved is refused. Bulk cleanup stays
+  the owner's act in the application.
 - **When the round spans records, ask for the plan as JSON.**
   `{{presetTools}}/zotero-section-note.mjs --item <recordKey> --json` prints the same facts the prose
   plan does: every note's tags, section, retired/imported/digest state, and the `unknown` and
@@ -339,6 +351,7 @@ The artifact is the notes and the digest on the library record. The report is wh
 - [ ] The digest was written after the notes, cites the sections it covers, and every sentence traces to a section note
 - [ ] No section is claimed twice; every skip is reported
 - [ ] Every retirement is reported with its reason and its successor
+- [ ] Every deletion was a `/retired` note, planned first, and the report quotes its read-back 404
 - [ ] `## Owner actions` is reported, and written to the study's `research/owner_actions.md` when anything is left for the owner
 
 ## 10. Don't
@@ -347,8 +360,9 @@ The artifact is the notes and the digest on the library record. The report is wh
 - Do not write a note keyed to a subsection, and do not fold a dotted note silently: merge it or retire it.
 - Do not write a note for a section that was not read in this session.
 - Do not duplicate coverage to "complete" a record, and do not delete someone else's note.
-- Do not delete a note to free its section, and do not retire one you have not read: retiring asserts
-  that the note is wrong, and that is a claim you have to be able to state the grounds for.
+- Do not delete a note that is not retired, and do not delete one to free its section: retiring frees
+  it, and deletion is permanent. Do not retire a note you have not read: retiring asserts that the note
+  is wrong, and that is a claim you have to be able to state the grounds for.
 - Do not rewrite a `/section-N` record in place; retire it and write the replacement. Only an
   `/imported` note is rewritten in place.
 - Do not use `--tidy`: there is no automatic repair. Read the text or the page image and write the body.

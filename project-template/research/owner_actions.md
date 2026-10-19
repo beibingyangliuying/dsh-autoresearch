@@ -12,9 +12,10 @@ claim, it is not evidence, and it is rewritten as items close rather than append
   the paper.
 - Where the round has already drafted the replacement, the row carries its path: the owner's act should
   not have to wait on another round.
-- **Nothing here is done on the owner's behalf.** This preset performs no deletion in the reference
-  library — the library's own API cannot put an item in the trash, so its answer to "delete these" is
-  this list rather than a capability.
+- **Deletion is bounded, not absent.** A `/retired` note can be erased with `--delete --write`; the
+  request is permanent (the library's API cannot put an item in the trash) and the round reports it
+  under `## Retired`, not here. A row here is for a deletion the preset may not perform — a note that
+  was never retired, or a bulk cleanup — and for any judgement only the owner can make.
 - Close a row by removing it, or by marking it `done <date>`. This file is not a log: the round-by-round
   record is `research/journal/`.
 

@@ -1708,8 +1708,35 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 **未做 / 边界**：
 
 - Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍未迁移（junhan 选择暂停；187 条已迁）。
-- `--delete --write` 仍未实现；发布不改变工作区的迁移状态。
+- `--delete --write` 未实现（§60 补上）；发布不改变工作区的迁移状态。
 - digest 原地刷新的旧版只在工作区备份；其他库带 marker 的旧 digest 仍需先补 `/digest` tag。
+
+---
+
+## 60. 删除实写、digest 旧版留库、取消失败备份（2026-10-19，Revision 21）
+
+**缘起**：0.7.0 发布后 junhan 指出"不在 0.7.0 里"的三条中，第 1 条（`--delete --write` 未实现）与第 3 条（digest 旧版只在工作区）是功能缺口；第 2 条（153 条无 marker / 38 条点号 / 34 条 retired 的整理）他明确不做，只改预设功能。三个决定逐条确认：
+
+| # | 决定 | 裁定 |
+|---|---|---|
+| 1 | 删除 | 实现 `--delete --write`：只删 `/retired`；**不要求 `--reason`**（理由已在退休动作里）；先打印计划，写时带 `If-Unmodified-Since-Version`，2xx 后读回 404 才算成功；批量不做 |
+| 2 | digest 旧版 | 从工作区备份改成**库里留一条 `/digest` + `/retired` 快照**（同一 record 下），再 PATCH 活 digest；快照不参与覆盖，可用 `--delete` 清掉；工作区不再写 `digest-*` |
+| 3 | 逐节 `--rewrite` | junhan 问"不备份行不行，直接重写呗？"——**行**。节笔记是对论文的转写，论文才是来源；干跑打印旧首段、版本守卫保留；工作区不再写 `rewritten-*` |
+
+**实现**（`tools/zotero-section-note.mjs`、`tools/zotero-note.mjs`）：
+
+- `runDelete`：重读确认仍是 `/retired` 且版本未动；`gate.write('DELETE', …, undefined, {'If-Unmodified-Since-Version': v})`；非 2xx 报库的原文；读回必须 404，否则 `READ-BACK MISMATCH`。删除后若笔记有 claim，明说该节重新可写；successor 的 `/replaces-KEY` 会悬空，计划里已警告。
+- `zotero-note.mjs`：`findRetiredSnapshot(children, body)` 复用上次失败留下的同文快照，避免叠 tombstone；refresh 先 POST 快照并回读 `/digest` + `/retired`，再 `patchItem`；快照建立后 PATCH 失败时明说活 digest 未动、旧正文在快照里。`--rewrite` 与 digest refresh 不再写 `.section-notes/` 下的备份文件（该目录仍用于草稿与 `--render` 页面图）。
+- **顺手修掉一个潜伏 bug**：`zotero-note.mjs` 的 `tagList` 只读包装后的 `item.data.tags`，而 `readItem` 返回的是已解包的 data，所以 create 路径的回读校验一直在读空 tags；现在两种形状都认。
+
+**测试**：两条 CLI stub 扩成能处理 `POST /api/local/authorize`、`POST /items`、`PATCH`、`DELETE`（含 428 前提检查），并使用临时 `ZOTERO_LOCAL_KEY_STORE`，不碰本机 grant 文件。新增断言：DELETE 后读回 404、快照先于 PATCH、快照带两个 tag、快照正文是旧版、`--delete --reason` 是 usage error、`--rewrite` 输出不再出现 backup。全套离线自测与 `toolchain-page --check` 见交付时的运行记录。
+
+**边界 / 未做**：
+
+- Phase 7 的 38 / 153 / 34 仍暂停；删除工具只是让 34 条 retired 的处置有了出口，不自动执行。
+- 不做批量删除、不做"删除后自动清理 successor 指针"；`--replaces-KEY` 悬空只报告。
+- digest 快照会随刷新累积；这是"库里留历史"的代价，清理用 `--delete`，由人决定。
+- 工作区备份取消后，改错的正文没有本地副本；节笔记的来源是论文，digest 的旧版在库里。
 
 
 

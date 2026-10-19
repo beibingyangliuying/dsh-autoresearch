@@ -1,6 +1,6 @@
 # 05 — 笔记管线草案：tag 身份、claim/rewrite、digest 投影
 
-**状态：Phase 1–6 已实施（2026-10-19）；Phase 7 已跑 187 条顶层 tag 迁移，剩余 38 条点号 / 153 条无 marker / 34 条 retired 待后续批次。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。实施记录见 [`docs/01_decisions.md` §58](01_decisions.md#L1638)。
+**状态：Phase 1–6 已实施（2026-10-19）；0.8.0（Revision 21）补上了删除实写与 digest 旧版的库内保留；Phase 7 已跑 187 条顶层 tag 迁移，剩余 38 条点号 / 153 条无 marker / 34 条 retired 待后续批次。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。实施记录见 [`docs/01_decisions.md` §58](01_decisions.md#L1638) 与 §60。
 
 ## 0. 一句话
 
@@ -37,7 +37,7 @@
 
 1. **40.5% 的节笔记已经丢了 marker**，且 378 条 live 笔记全部是节笔记——tag 身份不是优化，是修复。
 2. **没有证据表明 digest 曾落库**：live 0 条带 digest marker；153 条无 marker 笔记的首段没有 "Read" 形态；回收站 0 条。所以现在改它的语义没有迁移成本。
-3. 34 条 `/retired` + 15 条 `/replaces-` 说明归退/替换已经在用；删除干跑一上线就有真实样本。
+3. 34 条 `/retired` + 15 条 `/replaces-` 说明归退/替换已经在用；删除实写一上线就有真实样本。
 4. 无 marker 的笔记不是"10 条"，是 **153 条**；迁移是一次 378 条的战役，不是一次小修。
 5. **38 条旧子节笔记还在库里**（旧工具写的点号 marker）。旧工具会读它们并折回父节；新方案不写也不读点号，这 38 条进 `unknown`，迁移时合并成顶层节或退休。
 
@@ -91,8 +91,7 @@
 `--rewrite --note KEY --file PATH [--section N]`：
 
 - **对无 tag 的导入笔记，或 `/section-N` + `/imported` 的导入笔记**开放。
-- 干跑打印：旧/新可见文本摘要、字符数、tags、备份路径、写请求。
-- `--write` 前先把旧正文写到 `<cwd>/.section-notes/<recordKey>/rewritten-<key>-<timestamp>.html`；备份失败就中止。
+- 干跑打印：旧/新可见文本摘要、字符数、tags、写请求。**不写工作区备份**（0.8.0 起）：节笔记是对论文的转写，论文才是来源；版本守卫保留——草稿生成期间应用改过这条笔记，工具就拒绝而不是覆盖。
 - 带 `--section N` 时：
   - 无 tag：检查 §N 未被别的活笔记 claim；成功后加 `/section-N` + `/imported`（保留原有 tags）。
   - 已有 `/section-N` + `/imported`：允许刷新；`--section M` 与 N 不同时按 re-claim 处理，覆盖检查后更新 tag。
@@ -117,11 +116,11 @@
 
 ### 4.7 delete
 
-`--delete --note KEY`：
+`--delete --note KEY [--write]`：
 
 - **只对带 `/retired` 的笔记**开放；否则 `REFUSED`。
-- 本轮只干跑：打印 claim/tag、父条目、字符数、首段、successor、无 successor 警告、digest 警告、`DELETE /api/users/0/items/<key>`、三条不可逆事实。
-- `--write` 本轮显式拒绝（exit 2，"write path not implemented"）。
+- 干跑：打印 claim/tag、父条目、字符数、首段、successor、无 successor 警告、digest 警告、`DELETE /api/users/0/items/<key>  If-Unmodified-Since-Version: <v>`、三条不可逆事实。
+- `--write`（0.8.0 起）：重读并确认仍是 `/retired`、版本没动；发 DELETE（版本前提是必需的，不带 428）；2xx 后读回必须 **404** 才算成功；否则报 `READ-BACK MISMATCH`。
 - 删除后 successor 的 `/replaces-KEY` 会悬空；干跑必须把这条说出来。
 
 ### 4.8 生命周期由 tag 决定
@@ -129,9 +128,9 @@
 | 笔记 | 原地改正文？ | 更新方式 |
 |---|---|---|
 | `/section-N`（记录，无 `/imported`） | 否 | `--retire` + 新写，`/replaces-OLD` |
-| `/section-N` + `/imported`（导入后 claim） | 是 | `--rewrite`，备份 + 版本守卫 |
-| `/digest`（派生视图） | 是 | PATCH 同一条，备份 + 版本守卫 |
-| 无 tag（导入/草稿） | 是 | `--rewrite`，备份 + 版本守卫 |
+| `/section-N` + `/imported`（导入后 claim） | 是 | `--rewrite`，版本守卫（无备份） |
+| `/digest`（派生视图） | 是 | PATCH 同一条 + 版本守卫；旧正文先落成 `/digest` + `/retired` 快照（留库里） |
+| 无 tag（导入/草稿） | 是 | `--rewrite`，版本守卫（无备份） |
 
 这张表是"工具不再解析散文"的回报：类型是显式的，规则按类型分，不用猜。
 
@@ -146,13 +145,13 @@
 ### 5.2 生命周期
 
 - **create**：当 record 没有活 `/digest` 时创建，写 `/digest`。
-- **refresh（原地）**：笔记变化后，PATCH **同一条** `/digest` 的正文；版本守卫；旧正文先备份到 `<cwd>/.section-notes/<recordKey>/digest-<timestamp>.html`；读回可见文本。**不 retire、不新写、不换 key、不留墓碑。**
+- **refresh（原地）**：笔记变化后，PATCH **同一条** `/digest` 的正文；版本守卫；旧正文先写成一条 `/digest` + `/retired` 快照**留在库里**（同一 record 下，不参与覆盖，可 `--delete`）；读回可见文本。活 digest **不 retire、不新写、不换 key、不追加**；库里的版本历史由快照承担，不由工作区文件承担。
 - **no-op**：新文本与活 digest 的可见文本相同 → `ALREADY RECORDED`，不写。
 - **retire**：只有"这条 digest 整体作废"才走 `--retire`；之后可再 create 一条新的（可选 `/replaces-OLD`），但这不是日常更新路径。
 - 工具改造落在 `zotero-note.mjs`：
   - `findDigestNote` 改为找 `/digest` tag 且不是 `/retired`；
   - 去掉 append 语义（它把"回执日志"和"投影"混在一起了）；
-  - 文本不同时走 refresh：干跑打印旧/新可见文本摘要、备份路径、`PATCH /items/<key>`；`--write` 才写；
+  - 文本不同时走 refresh：干跑打印旧/新可见文本摘要、快照写入、`POST` + `PATCH /items/<key>`；`--write` 才写；快照已存在（上次失败留下的）则复用，不叠第二条；
   - 版本为 0 时干跑要提示"版本守卫空转"（§39.3）。
 
 ### 5.3 回执
@@ -195,7 +194,7 @@ digest 不再是回执。回执由三样承担：
 --claim --note KEY --section N [--write]         给已有笔记打 claim（无 tag 时加 /imported）
 --retire --note KEY --reason "..." [--undo]      任何笔记；正文不动
 --rewrite --note KEY --file PATH [--section N] [--write]   无 tag 或 /imported
---delete --note KEY                              本轮只干跑
+--delete --note KEY [--write]                    仅 /retired；--write 永久擦除
 ```
 
 没有 `--tidy`；坏公式由 agent 重写正文，工具不做机械修复。
@@ -228,7 +227,7 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 | `protocol.md` §6 | 身份=claim tag；claim/rewrite/retire/delete 的边界；digest 是投影；**记录不可原地改散文，派生视图与 `/imported` 导入可以**；不提供自动修复 |
 | `protocol.md` §8 | `INV-NOTE-1` 改成"一节一条活 **claim**"；新增 digest 投影的不变量 |
 | `protocol.md` §8 | `INV-EVID-4` 改成"章节笔记是阅读的转写，digest 是它们的投影；无笔记的论文回执在索引行与 `/done`" |
-| `protocol.md` §9 | 删除仍不做；本轮只到干跑 |
+| `protocol.md` §9 | 删除只对 `/retired`：计划、版本前提、404 回读 |
 | `skills/literature-recon` | §7 改成"写回执"，不再写 digest |
 | `skills/section-notes` | 删除 §3.4（机械修复）；增加 claim/rewrite/retire 的粘贴笔记路径；§6/§7 增加 digest 合成；frontmatter 同步 |
 | `skills/adoption-ruling` | digest 是投影，节笔记仍是 primary input |
@@ -237,10 +236,11 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 | `tools/toolchain-page.mjs` / `docs/04_toolchain.md` | 更新 claim 与引用字符串，重新生成 |
 | `README.md` / `docs/02_coverage.md` / `surface.md` | 笔记管线与流程同步 |
 
-契约分两次升版：
+契约分三次升版：
 
 - **Revision 19**：tag 身份、claim/rewrite/retire、delete 干跑。
 - **Revision 20**：digest 投影、流程、`INV-EVID-4`。
+- **Revision 21**：删除实写（仅 `/retired`、版本前提、404 回读）；digest 旧正文留库；`--rewrite` 不写工作区备份。
 
 ## 10. 分阶段实施
 
@@ -248,9 +248,9 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 |---|---|---|
 | 1 | tag 身份：`/section-N`、create、plan、covering、删 marker/正则 | tag 解析、一种拒绝、plan 形状、无正文解析 |
 | 2 | 生命周期：`--claim` + `/imported`、删除 `--tidy`、retire 不限、`--replaces` 看 tag、digest 工具 `/digest` + 跳过 retired | claim/imported、retire/replaces、retired digest 跳过 |
-| 3 | `--rewrite`：无 tag 或 `/imported`、干跑 diff、自动备份、版本守卫 | 纯函数 + 第一条 CLI 级测试（`ZOTERO_LOCAL_API` stub） |
-| 4 | `--delete` 干跑：`/retired` 守卫、不可逆提示 | 干跑输出、无写请求、`gate.write('DELETE')` 意图断言 |
-| 5 | digest 投影：`zotero-note.mjs` create/refresh-in-place、`section-notes` 最后一步、`literature-recon` §7 | create/refresh/no-op、备份与版本守卫、不产生墓碑、引用节笔记 |
+| 3 | `--rewrite`：无 tag 或 `/imported`、干跑 diff、版本守卫（不写备份） | 纯函数 + 第一条 CLI 级测试（`ZOTERO_LOCAL_API` stub） |
+| 4 | `--delete`：`/retired` 守卫、不可逆提示、`--write` 发 DELETE、404 回读 | 干跑无写请求、DELETE 请求、404 断言 |
+| 5 | digest 投影：`zotero-note.mjs` create/refresh-in-place、`section-notes` 最后一步、`literature-recon` §7 | create/refresh/no-op、旧正文落成库内 retired 快照、引用节笔记 |
 | 6 | 文本/契约：Revision 19/20、两份 skill、README、coverage、toolchain | `doc-selftest`、`toolchain-page --check`、全套离线自测 |
 | 7 | 迁移：225 条 marker（187 顶层脚本 + 38 点号人工合并）；153 条无 marker 候选 + 抽查；34 条 retired 处置 | 只读清单 + 干跑；真实库写单独授权 |
 
@@ -263,7 +263,7 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 | 有 section marker（顶层） | 187 | 一次性脚本从 marker 补 `/section-N`；runtime 不再读 marker；脚本跑完即删 |
 | 有 section marker（点号子节） | 38 | **不自动转 tag**；agent 读这些笔记，合并成顶层节（`--rewrite --section N`）或退休；分布在 9 条记录 |
 | 无 marker 的节笔记 | 153 | 首段都写"文章第N节"；**先用旧判据生成候选清单（只写工作区，不写库）**，agent 抽查后批量 `--claim`，未命中的逐条读；其中点号首段要按子节处理 |
-| `/retired` | 34 | 已是墓碑；删除干跑的真实样本；不自动删 |
+| `/retired` | 34 | 已是墓碑；`--delete --write` 的真实样本；不自动删 |
 | `/replaces-` | 15 | 保留；后继笔记按 marker/首段补 `/section-N` |
 | digest | 0 | 无需迁移 |
 
@@ -275,7 +275,7 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 
 1. **重复守卫削弱**：删掉正则后，工具无法机械拒绝"无 tag 但首段写了第N节"的重复。缓解：plan 列全 `unknown`；skill 要求写 §N 前读完 `unknown`，谁解释了 §N 就先 claim/retire；claim 让阅读结论持久化。
 2. **digest 只覆盖方法节**：这不是整篇总结；要写明边界，避免后来者把它当全文摘要。
-3. **digest 原地刷新覆盖旧版**：旧版只在工作区备份，不在库里；这是"派生视图可刷新"的代价。记录类不走这条路。
+3. **digest 原地刷新会留下 retired 快照**：旧版在库里（`/digest` + `/retired` 子笔记），不参与覆盖、可 `--delete`。代价是库会随刷新变长，需要偶尔清理；记录类不走这条路。
 4. **索引成为无笔记论文的唯一回执**：`refs/README.md` 现在说"索引绝不能是 digest 的唯一副本"；这条要改，因为 digest 不再是回执。
 5. **迁移是 378 条的战役**：不许一次性盲写；先清单、再抽查、再授权批量。
 6. **tag 可见、可手改**：这是比隐形 marker 好的失败方式——错了看得见；plan 要把 tag 与首段并排打印。
@@ -291,8 +291,8 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 2. `--tidy` 完全删除；坏公式由 agent 重写。
 3. 点号不写不读；38 条旧子节在迁移时人工合并/退休。
 4. digest 由 `zotero-note.mjs` 写，默认自动 create-or-refresh；文本相同 no-op。
-5. 契约两次升版：Revision 19 = 身份，Revision 20 = digest。
-6. 迁移分批：225（187 顶层脚本 + 38 点号人工）、153（候选清单 + 抽查）、34 retired（删除干跑）。
+5. 契约三次升版：Revision 19 = 身份，Revision 20 = digest，Revision 21 = 删除实写 + 旧正文留库。
+6. 迁移分批：225（187 顶层脚本 + 38 点号人工）、153（候选清单 + 抽查）、34 retired（`--delete --write`）。
 7. 其余按本草案执行。
 
 ## 14. 已裁定（2026-10-19）
@@ -304,10 +304,10 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 | 3 | 粘贴笔记 | claim 前可 `--rewrite`；claim 后带 `/imported` 仍可原地刷新；不带的是记录，走 `--retire` + 新写 |
 | 4 | 改写范围 | 无 tag 或 `/section-N` + `/imported` |
 | 5 | 退休 | 任何笔记都可 `/retired`；digest 工具跳过 retired |
-| 6 | 删除 | 只对 `/retired`；本轮只干跑，`--write` 显式拒绝 |
-| 7 | digest | 章节笔记的投影；一条论文一条，原地刷新，不产生墓碑 |
+| 6 | 删除 | 只对 `/retired`；先干跑，`--write` 永久擦除（Revision 21） |
+| 7 | digest | 章节笔记的投影；一条论文一条，原地刷新；旧正文留库为 retired 快照（Revision 21） |
 | 8 | 裁定 | `adoption-ruling` 按需，不进主流程 |
 | 9 | `--tidy` | 完全删除；写笔记只由 agent 提供正文 |
 | 10 | 子节 | 不写也不读点号；38 条旧子节迁移时合并/退休 |
-| 11 | 迁移 | 225（187 脚本 + 38 人工）· 153 候选+抽查 · 34 retired 干跑 |
-| 12 | 契约 | Revision 19（身份）+ Revision 20（digest） |
+| 11 | 迁移 | 225（187 脚本 + 38 人工）· 153 候选+抽查 · 34 retired 实删 |
+| 12 | 契约 | Revision 19（身份）+ Revision 20（digest）+ Revision 21（删除实写、旧正文留库） |
