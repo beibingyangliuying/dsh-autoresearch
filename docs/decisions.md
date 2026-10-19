@@ -3,6 +3,27 @@
 > 只记**长期仍然成立**的决策与理由。会立刻过时的验证数字不在这里（跑自测即得）；
 > 原始时间线在 [`archive/plan-v0.md`](archive/plan-v0.md)。
 
+## 怎么读这份文件
+
+**节号就是时间序**（§1 最早），所以引用一律写"§NN"——改名、搬家之后它仍然成立。
+每条裁定的形状是"背景 → 实测 → 结论 → 落在何处"；找不到某条裁定就按标题里的症状或主题检索。
+
+**发布记录已移出本文件**：每个版本发了什么、从哪个 tag、复核结论，在 [`releases.md`](releases.md)。
+下表记的是**原节号**，所以"§34"这类旧引用照旧落得到。
+
+| 版本 | 原节 |
+| --- | --- |
+| 0.2.0 | §34 |
+| 0.2.1 | §36 |
+| 0.3.0 | §46 |
+| 0.3.1 | §48 |
+| 0.4.0 | §51.5 |
+| 0.5.0 | §53 |
+| 0.6.0 | §57 |
+| 0.7.0 | §59 |
+| 0.8.0 | §61 |
+| 0.9.0 | §64 |
+
 ## 1. 分层：预设管"怎么研究"，工作区管"研究什么"
 
 **决策**：预设里**不出现任何议题专属内容**；课题的护栏、权威层级、记号写在工作区的 `AGENTS.md`。
@@ -563,24 +584,6 @@ skill 里。
 2. **测试可以替一个从不运行的机制当替身。** `isolation-selftest` 原先驱动的是**模拟的** `agent/created` 处理器，绿了很久，而真实投递从未发生 ⇒ **"测试驱动的是什么事件"本身就是需要被验证的假设**（§26 是同一族的另一面：诊断工具的输出也要被验收）。
 3. **新自测特意断言"旧事件未被注册"。** 只写替代品、不写被替代的错误，等于邀请下一个人把它加回来——而它当年就是这样静静躺着的。
 
-## 34. 发布 0.2.0：本地全绿是关于工作树的断言，不是关于发布件的断言（2026-10-15）
-
-**背景**：[`README.md`](../README.md) 里那条 `dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch` 是给别人用的唯一安装入口，而 GitHub 上的 `main` 停在 `a800b9b`（2026-10-13），本地 HEAD 已领先 **47 个提交**。⇒ 那 47 个提交里的工作（两个通道改自带 helper、`preset-paths.js`、§32 与 §33 的修复）**对外都不存在**；照 README 安装的人拿到的仍是挂两个 `uvx` MCP 行、需要 Python 环境的旧版。**14 项本地自测全绿也看不见这件事**——它们读的都是工作树。
-
-**发布动作**：6 个提交（两处 P0 文档回扫修正、`contact-bridge.js` 的陈旧理由句、两轮去个人化、版本号独立提交）→ `package.json` 0.1.0→0.2.0 → annotated tag `v0.2.0` → 先推分支再推 tag。远端 head 与 tag 均已核对为同一提交。
-
-**从远端复核**（新增 [`tools/release-check.mjs --tag`](../tools/release-check.mjs)）：读 tag 上的 `package.json`（版本 0.2.0）、组合（`id: mcp-*` **0** 条、`command:` **0** 条、`uvx` **0** 次）、以及 5 个必需 helper 的状态（全 200）。**这是唯一能看见"别人到底装到什么"的检查**，因此它有一个 `--tag` 模式而不是只读本地。
-
-**代价与边界**：`--local` 把"工作树干净"当失败项——那是**打 tag 的前置条件**，不是开发每一步的条件；开发中途跑它会有这一条红，这是刻意的（一个永远绿的检查等于没有检查）。
-
-**教训（三条）**：
-
-1. **"本地全绿"是关于工作树的断言，不是关于发布件的断言。** 发布流程必须包含一次**从远端读**的检查，否则"我不知道远端落后多少"与"远端是对的"无法区分。
-2. **一个版本的"完成"包含它可被安装。** tag 与分支 head 不是一回事：发布后 main 继续前进是正常的，但"修复已经做了"与"该 release 含有此修复"是两句不同的话。
-3. **去个人化是发布动作的一部分。** 公开仓库里的测试 fixture、模板示例与设置页占位符都会泄露所有者的机器与领域；而 `docs/` 里**构成证据的量化值**（字符数、命中数、写入前后的 version）要留下——删了就把测量变成断言。
-
-**落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（新：`--local` / `--tag`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新：纯函数 + 反向对照，离线）· [`README.md`](../README.md)（Develop 的工具清单、Layout）· [`.agents/skills/preset-release/`](../.agents/skills/preset-release/SKILL.md)（新：本仓库自己的维护 skill——自检 → 发布 → 远端复核，**不进** `skills/`）· [`protocol.md`](../protocol.md)（Revision 3 条目补一句"被 Revision 9 取代"）
-
 ## 35. Zotero 弹窗为什么"始终允许"也没用：留住授予是客户端的责任（契约 Revision 10，2026-10-15）
 
 **现象（junhan 提出）**：操作参考库的工具每次都要弹授权框；点了 **Always Allow** 之后照弹不误。
@@ -613,27 +616,6 @@ skill 里。
 **本条取代的旧前提**：§11 与 §12（“key 单次有效且不落盘”、“脚本也不保存 key”）、§21（“库写入的闸门不变：Zotero 原生逐次授权”）、§22（以“每次写入一个弹窗”为分工理由）、§24（以“逐次授权”为禁止 Always Allow 的理由）——它们的**结论**多数仍然成立，但**前提**已由本条取代。
 
 **落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md)。
-
-## 36. 发布 0.2.1，以及在发布复核里抓到的 checker 缺陷：一个通不过真路径的修法（2026-10-15）
-
-**发布内容**：契约 Revision 10 与随之的写闸门改动（见 §35）。版本 0.2.0 → **0.2.1**（独立提交 `776a4b7`），annotated tag **`v0.2.1`**（tag 对象 `18a2627`，其 `^{}` = `776a4b7`）。推送顺序照 §34：先推分支、再推 tag。
-
-**发布前按要求做的反向声明回扫抓到一处我自己写错的引用**：§35 把"脚本也不保存 key"记成 §11（实为 §12），并把 §21 列入"以逐写弹窗为前提"的条目（§21 的前提是闸门的**范围**，不是**粒度**）⇒ 单列提交 `2fee875` 修掉。一条指错地方的更正比没有更正更坏：下一位读者顺着它去找，发现旧话还立着，只会得出"更正本身错了"的结论。
-
-**从远端复核**（`release-check.mjs --tag v0.2.1`）：发布件声明 0.2.1 ✓、组合不挂任何 MCP 也不启动任何东西 ✓、两个通道所需 helper 全在发布包内 ✓。
-
-**本轮真正的教训：一个通过了自己自测的修法，在真实路径上什么也没修。**
-
-那次 `--tag` 打的是 `v0.2.1 -> 18a2627…`（**tag 对象**）对 `main -> 776a4b7…`，并据此打印 *"the branch head has moved past this tag"* —— 而 `refs/tags/v0.2.1^{}` 与 `refs/heads/main` 是**同一个 commit**。成因：`ls-remote` 对 annotated tag 回**两行**（tag 对象 + peeled commit），而代码 `.find()` 了第一行 ⇒ 拿**对象类型都不同**的两个 SHA 相比，annotated tag **永远**不可能相等 ⇒ **每逢 annotated 发布必然误报**。0.2.0 那次它"碰巧"说对了（main 后来确实前进），缺陷因此藏住；§34 记录的"手工核对"正是当年绕开它的方式。
-
-修的时候差点犯第二个错：只把"优先取 peeled 行"改好，离线自测**全绿**，而真实远端**照旧误报**——因为 `git ls-remote <remote> refs/tags/v0.2.1`（**精确 ref**）**根本不输出** peeled 行。⇒ 我那份夹具**比现实宽容**，把残废的修法放行了。补上第二半（查询显式加 `refs/tags/<t>^{}`）之后，两个方向都在真实远端验过：`v0.2.1`（tag 就是 main 头）不再报，`v0.2.0`（main 真的前进了）照报。
-
-**教训（两条）**：
-
-1. **比值之前先比对象类型。** 一个"绝不相等"的比较不会失败，它只会**一直说同一句话**——这种检查比没有检查更坏，因为它把谎话说成了证据。
-2. **夹具要比现实更苛刻，不能更宽容。** 只按"我希望命令给我什么"造夹具，就会漏掉"命令实际给什么"；这次的分界恰好在**查询本身**。⇒ 修检查时，先跑一次真命令，把它的实际输出抄下来当夹具。
-
-**落在何处**：[`tools/release-check.mjs`](../tools/release-check.mjs)（`tagRefQuery`／`taggedCommit`／`branchHead` 三个纯函数，修法为 `38e4529`）· [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)（新增 [5] 八条，含"精确 ref 无 peeled 行"与"查询必须显式要 peeled"两条反向控制）· annotated tag `v0.2.1`。
 
 ## 37. 逐节笔记成为第九条纪律：先验是"库里已有的手写笔记全都没有标记"，而现有写笔记的工具在语义上做不了它（2026-10-16）
 
@@ -670,7 +652,6 @@ skill 里。
 
 **落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（九节骨架 + 选节表 + 模板 + 就地排除条件）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`--item` 读笔记正文，此前只能读到元数据——纪律点名了一把打不开的尺子）· [`cordis.patch.yml`](../cordis.patch.yml)（路由第 9 条）· `protocol.md`（Revision 11：§4／§6）· [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（8→9）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（路由 8→9）。
 
-
 ### 37-补. 审阅一轮之后的收尾：行间公式改块状，以及"库会改写你的笔记"的三个后果（2026-10-16）
 
 **起因**：junhan 审阅通过这 5 条笔记的内容，只提一点——行间公式应写成 `$$` 单独成行的块状，而不是挤在一行。
@@ -679,7 +660,7 @@ skill 里。
 
 1. **笔记标题在这个库写不进去**：对同一条笔记、同一把版本守卫，`{"tags":[…]}` → **204** 且读回生效（version 2160→2171），而 `{"title":"section 2 probe"}`（纯 ASCII，排除中文与 `§` 的干扰）→ **HTTP 500**，读回 `title=null`。⇒ 原计划"给笔记加标题、子笔记列表可辨"**前提不成立，退回不加**；节号只能靠正文首句与不可见 marker。
 2. **应用会剥掉不可见 marker**：junhan 在 Zotero 里打开审阅过的那条（`AQZTGMGQ`）已被应用规范化——多了 `<div data-schema-version="9">` 外壳、**marker 注释消失**；它仍被正确识别为 `§2 (opening)` ⇒ 当初"幂等判据必须能读开场句"的决定被真实数据验证：marker 只是提示，开场句才是键。
-3. **块状换行只在"裸笔记"上存得住**：API 直写的 4 条换行完整保留（`TS36N2CG` 的存储文本里可见 `<p>$$`⏎`t_k = \pm 1`⏎`$$</p>`，再次干跑即 `nothing to do`）；而被应用接管的那条，写入块状后**库把它折回一行**。⇒ 工具新增 `isApplicationWrapped`：对这类笔记**不尝试换行**并明说原因，避免"每次都想改、每次都改不动"——正是 §36 记下的"永远通不过的检查只会一直说同一句话"。
+3. **块状换行只在"裸笔记"上存得住**：API 直写的 4 条换行完整保留（`TS36N2CG` 的存储文本里可见 `<p>$$`⏎`t_k = \pm 1`⏎`$$</p>`，再次干跑即 `nothing to do`）；而被应用接管的那条，写入块状后**库把它折回一行**。⇒ 工具新增 `isApplicationWrapped`：对这类笔记**不尝试换行**并明说原因，避免"每次都想改、每次都改不动"——正是 [`releases.md`](releases.md) §36 记下的"永远通不过的检查只会一直说同一句话"。
 
 **同时修掉的仪器缺陷**：`--tidy` 的回读校验原本要求**逐字节**一致，而库会重写它碰过的笔记正文，于是对 `AQZTGMGQ` 报出 `READ-BACK MISMATCH`——**写成功了却说写失败**，是写工具最不该说的话。改成两条可判定的条件：**重跑修复已无改动**（收敛）＋**可见文字一致**（不丢内容）。
 
@@ -858,7 +839,7 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 
 1. **缺口不是"忘了写"，是这份文档的读者从未被定义过。** 现有四份各答一个问题：README 的 "What you get"（段落级、英文、面向安装的人）· [`protocol.md`](../protocol.md) §4（规范上一行一条纪律，而且 DOC-1 **禁止它出现任何符号名**）· [`surface.md`](../surface.md)（概念 ↔ 名字的索引，不问覆盖）· [`docs/overview.md`](overview.md)（**一行一个"步骤"**，不是一行一个"部分"）。"谁负责"有了、"保证什么"有了、"为什么"有了，**"每个部分覆盖什么 / 拒绝什么 / 触发条件 / 产物落在哪"没有**。
 2. **每部分的细节此前只有一种成文形式：九份 `skills/*/SKILL.md`**（英文、面向模型的激活、合计约 1,100 行）。所以所有者要理解整体，除了问 agent 没有第二条路——这正是这次发生的事。抽查证实：读 PDF 那一侧的事实（附件按 `PDF → EPUB → HTML` 挑、**本预设不做 OCR**、读阶梯、单次结果超 8,192 字符在压缩后只剩头尾（裁剪时点已更正，见 §63）、覆盖靠读笔记第一段裁定）在中文读者文档里几乎一处也没有。
-3. **但"再手写一份名单"会撞上仓库自己立的规矩**：[`overview.md`](overview.md) 头部写着"本文不重复符号清单——两处列同一批名字必然漂移"，DOC-6 甚至禁止 README 正文重复符号，而 §36 那一轮刚抓到两处陈旧计数（`package.json` 写 "eight" 实际 9 条纪律；README 写 "Eight helper programs" 可它自己枚举 7 个）。⇒ **病因不是名单多，是没有一份名单有仪器校。**
+3. **但"再手写一份名单"会撞上仓库自己立的规矩**：[`overview.md`](overview.md) 头部写着"本文不重复符号清单——两处列同一批名字必然漂移"，DOC-6 甚至禁止 README 正文重复符号，而 [`releases.md`](releases.md) §36 那一轮刚抓到两处陈旧计数（`package.json` 写 "eight" 实际 9 条纪律；README 写 "Eight helper programs" 可它自己枚举 7 个）。⇒ **病因不是名单多，是没有一份名单有仪器校。**
 
 **派生能力的边界（一条关键实测）**：九份 SKILL.md 第 8 行都是同一句式 "This skill does exactly one thing: …"，但**否定句写法不统一**——七份是 `It does not…`，`metadata-query` 与 `section-notes` 是 `It is not…`。所以可派生的**只有名册**，中文描述只能人写。护栏的边界因此被定死为：**名册与路径机器校，描述由阅读负责**——与"窄机械护栏 + 阅读裁定"那条规则设计偏好同构。
 
@@ -882,7 +863,7 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 ### 43.4 未做与边界
 
 - 护栏只校**名册与路径**，不校中文描述是否仍然准确——那份职责在发布前的"重扫相反主张"里，已写进 `preset-release` 第 2 步。
-- 地图**不覆盖**脚手架、工具隔离、诊断与发布（README 已经管了），只留指针：同一件事写成两份，就是 §36 那两处陈旧计数的来路。
+- 地图**不覆盖**脚手架、工具隔离、诊断与发布（README 已经管了），只留指针：同一件事写成两份，就是 [`releases.md`](releases.md) §36 那两处陈旧计数的来路。
 - 未在本轮处理的旧账不变：§42 之后的"逐节笔记 CLI 级 stub 端到端测试"仍缺。
 
 ## 44. 借鉴裁定成为第十条纪律：读者是没读过论文的实现者，而"数值锚点"是链上唯一能失败的检查（契约 Revision 15，2026-10-17）
@@ -1032,7 +1013,7 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
 - **P6 仍开着**（mnemon Documents 与课题自带规范层的边界），理由与证据见 §45.3 那一行。
 - **顺手发现的两处陈旧计数已单独修掉**（`.agents/skills/preset-release/SKILL.md` 说"eight routing names"
   实为 10；`project-template/.agents/skills/domain-discipline/SKILL.md` 说"four skills"实为 10）——它们是
-  §36"不写散文计数"那条规矩的同族缺陷，不属于本轮关注点，所以单独一个提交，便于单独回滚。
+  [`releases.md`](releases.md) §36"不写散文计数"那条规矩的同族缺陷，不属于本轮关注点，所以单独一个提交，便于单独回滚。
 
 ### 45.7 取代关系（发布自检时补记）
 
@@ -1042,75 +1023,6 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
   **漏了两个自测**（`zotero-section-note-selftest.mjs` 是 §41 那轮加的、`scaffold-selftest.mjs` 是本轮加的）。
   README 的那份清单有仪器校（`release-check-selftest` 的 [4] 段），这份没有 ⇒ 这是同一类漂移的第二个实例，
   处置记在本轮的发布条目里。
-
-## 46. 发布 0.3.0：自检抓到的是两份名单与四个示例，不是代码（2026-10-17）
-
-### 46.1 起因与范围
-
-junhan 要求发布新版本，并按 [`preset-release`](../.agents/skills/preset-release/SKILL.md) 先自检。
-`v0.2.1` 之后共 **33 个提交**（含上一轮的第十条纪律与契约 Revision 15），其中 **14 个此前从未推送**。
-
-### 46.2 自检结论（Phase 1）
-
-- 16 个离线自测 + `preset-selftest` + `release-check --local` **全部 PASS**（含新的 `scaffold-selftest`
-  与它的 5 条反向控制）。
-- **persona 4726 字符 ≈ 1313 token，与 Revision 15 那轮完全相同** ⇒ §45.2 说的"本轮零常驻成本"由仪器
-  确认，不再是推断。
-- §2 的"反方向声明"重扫抓到三处（46.3），§6 的痕迹扫描抓到两处（46.4）。**两份名单与四个示例**是本轮
-  被修的东西；这一版没有改任何代码行为。
-
-### 46.3 §2 重扫：三处"别处还在说旧话"
-
-| 命中 | 处置 |
-|---|---|
-| [`overview.md:22`](overview.md) 仍写"实验卡：**假设**/命令/…" | **已修**：改成预注册＋实验卡两件，且卡引用协议 |
-| [`decisions.md`](decisions.md) §8 记的卡字段表（2026-10-13） | **不改写**（它是当时的决策记录），在 §45.7 写明被取代——"退役的主张不得以降级形态存活" |
-| [`preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的发布清单 | **漏两个自测**：`zotero-section-note-selftest.mjs`（§41 加的）与 `scaffold-selftest.mjs`（§45 加的）⇒ **加仪器** |
-
-处理第三处的方式值得记下来：那份清单是散文，没有任何东西校它，所以它已经漂了两次；而 **README 里同一
-批名字的清单有机器的校**（`release-check-selftest` 的 [4] 段），一直是准的。⇒ 现在同一个 `documentedSelftests`
-同时读这两份名单，并且**先用真实缺陷驱动过**：在补齐之前，新检查报的正是
-`scaffold-selftest, zotero-section-note-selftest` 两个名字。**没有新造工具**——[4] 段本来就有这个函数，
-发布清单只是它的第二个调用方。
-
-### 46.4 §6 痕迹扫描：两处发现，三处判定为"不是痕迹"
-
-**发现一：脚手架的四个 EXAMPLE 用**属主的研究领域**自证。**
-`AGENTS.md.template` 的 invariants（"cross-scale risk study"、fragility model、event-tree descendants、
-`DESIGN PENDING`）、`research/literature/README.md` 的两行示例（cascading load loss、motif）、
-`research/adoption/README.md` 的示例项（无功灵敏度、`jacobian.reactive`、标幺、回落到完整潮流求解）、
-`research/domain-discipline` 的 `fragility-review`。
-**全部改成不含领域**：invariants 保留每一条 never 规则与它的理由、只是不再点名任何模型；文献两行改成
-"阈值以下平坦、阈值以上陡升"这类无领域表述；adoption 示例改成通用的一阶敏感性（`Δy = JΔx`）。
-其中 **adoption 那份从未发布过**——它落在上一轮未推送的提交 `d07e09d` 里，所以这次改的是"还没出门的"。
-
-**发现二：`zotero-section-note` 的夹具里有电压／连锁故障的字样。**
-判断是：**被解析的是形态**（罗马数字＋全大写标题＋旁边的中文节标），措辞从来不是证据 ⇒ 同法替换，并把
-`zotero-section-note.mjs` 的注释改成"**形态**在属主库上实测；这里的措辞是替身"。
-
-**判定为不是痕迹、因此保留的三处：**
-
-- pitfalls 示例里的 **OneDrive**：它是**产品名**而不是本机路径，且该文件的设计就是"按你会搜的词检索"，
-  指名才有用。
-- README 的 **`%USERPROFILE%`**：那是文档化的命令语法，不是这台机器的路径。
-- `skills.js` 与 `doc-selftest.mjs` 里的 **reparse point 注释**：它们解释的是"为什么目录扫描不问
-  `Dirent.isDirectory()`"——那是**证据**，删掉就把一次真实踩坑变成一句无来由的禁令。
-
-### 46.5 版本、tag 与远端核验
-
-- **0.3.0**（minor）：两条纪律、契约 Revision 15 与 16、脚手架布局变更、新增一个自测。契约的 Revision
-  号与包版本号**独立**，不耦合（沿用 §44 的记法）。
-- 版本号**单独一个提交**，排在所有修补之后，使 tag 指向的树恰好是这一版。
-- **本地全绿是关于工作树的断言，不是关于发布件的断言**（§34 的教训：0.2.0 发布时 47 个提交的绿色本地
-  工作谁都装不上）。所以 tag 之后必须跑 `node tools/release-check.mjs --tag v0.3.0`——它从远端读发布的
-  `package.json`、组合与 helper。
-
-### 46.6 未做与边界
-
-- **仍然没有任何真实课题走完这套新脚手架**（沿用 §45.6）：本版能证明的是"两份名单一致""示例不含领域"
-  "全套自测绿"，**不能**证明这些规则在真实研究里好用。
-- **P6 仍开着**（mnemon Documents 与课题自带规范层的边界）。
-- 领域示例的修改只动了**示例块**（`EXAMPLE:BEGIN … END`，课题本来就要删掉它们），没有动任何规则的措辞。
 
 ## 47. 内核 0.2.1 移除了 `cwd` 提示词变量，预设的 persona 后缀随之删除（2026-10-18）
 
@@ -1158,7 +1070,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 
 **落点**：[`cordis.patch.yml`](../cordis.patch.yml)（suffix 删除；头部注释与 persona 行就地写明理由，使下
 一个读到这一行的人不会把它加回来）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（新增两条
-检查）· 本文件 §23 的现象段就地标注更正（**不改写历史决策**，沿用 §46.3 的规矩）。
+检查）· 本文件 §23 的现象段就地标注更正（**不改写历史决策**，沿用 [`releases.md`](releases.md) §46.3 的规矩）。
 
 ### 47.4 护栏与验证
 
@@ -1177,64 +1089,11 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 - `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（**已更正，2026-10-18 见 §49**）：它们位于内核**已不再读取**的旧预设目录，因此**不会运行、也不会"整轮失败"**——真正的问题是它们已经**不是可用预设**了。若将来要恢复它们，必须按 DSH 自带的 `editing-cordis-compositions` skill 的"Migrate a legacy preset"路径改成声明行，**到那一步**才需要处理正文里的 `{{cwd}}`（每文件 2 处，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 绝对路径）。
 - 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
 
-## 48. 发布 0.3.1：两条实现向契约对齐的修复，和一条只能声明"没测过"的内核窗口（2026-10-18）
-
-### 48.1 起因与范围
-
-§47 的 `{{cwd}}` 迁移修完后，junhan 提出两件事：工作树里还躺着 **4 个 zotero 工具改动**（来源不明，需先定性）待提交，以及"没什么问题就该发版"。⇒ 本轮 = 两条 zotero 修复（各自带自测、各自一个提交）· 一条**内核实测窗口声明**（`engines.dsh`）· README 与新版本号。**协议不动**：两条修复都是**实现向已有契约对齐**，故 `protocol.md` 不 bump Revision（沿用 [`preset-release`](../.agents/skills/preset-release/SKILL.md) §2 的规矩：契约不动，改实现）。
-
-### 48.2 两条 zotero 修复（实测值，不是推断）
-
-1. **标签交换曾被静默跳过**。`changedFields` 对每个字段用 `String(value)` 比较，而本轮实测 `String([{tag:'/done'}]) === String([{tag:'/unread'}]) === "[object Object]"` ⇒ 换标签被判成"无变化"，`zotero-edit.mjs` 打印 *"No change: every value asked for is already what the record says. Nothing to write."*，**写入从未发生**，于是 §6 依赖的写后回读也没有执行——工具报告了一个记录并不支持的结论。修法：数组按 `normalizeTags` 的内容比（干跑、补丁、回读本来就用同一归一化），标量仍走文本比。自测两向：一换一是变化，同标签不是变化。
-   **一处值得记的反差**：§31 早把"**写后回读**并逐字段比对（**标签按归一化后比**）"写进决策，而**写前**那道"这算不算变化"的闸门没照同一条走——同一条规则只落实在链条的后半段。这不是记录过期，是**实现只对了一半**。
-2. **点号序号读不回来**。`readSectionMarker` 只认 `(\d+)`，而它上方十二行的 `normalizeSectionToken` 明写点号序号按原样识别并给了理由（旧笔记、回收站里的历史数据）。本轮实测：`sectionMarker('3.1')` 产出 `<!-- autoresearch-section: 3.1 -->`，**旧正则读出 `''`**，修后读出 `'3.1'`。覆盖单元不动：`parentSectionToken` 仍把它归到顶层 `3`，正是 §6 计的那个单位。⇒ 今天在库里看不到差别（§41 实测"带小数点键的逐节笔记全库 0 条"），它修的是**回退路径的自相矛盾**。
-
-### 48.3 内核窗口：机制、依据，以及它表达不了什么
-
-**决策（junhan 逐项确认，取 A）**：`package.json` 增 `engines.dsh: ">=0.2.0-rc.2 <0.3.0-0"`。
-
-**机制（实测 `dsh-app-boot`）**：`evaluatePluginCompatibility`（`lib/index.js:311`）由**自己的 `engines.dsh` 一票判定，此时 `peerDependencies` 被完全忽略**；匹配走 `semver.satisfies(…, { includePrerelease: true })`（L276-277）。不满足时 `loadProfileDirectory`（L1020-1040）把**整个 bundle** 放进 `skippedBundles` ⇒ 启动时 `reportSkippedBundles`（L537，由 CLI 的 profile-boot 调用）在 stderr 打一行 `skipping profile bundle …`、schema 诊断里多一条 error（L3462-3465）、预设**不进新建会话名单**；另留"精确 `name@version` ↔ 精确 runtime"的豁免通道。这正是我们要的失败方向：**响亮地缺席**，而不是像本轮这样"留在名单上、每轮都失败"。
-
-**区间实测**（用内核自己的 semver 跑）：`0.2.0-rc.2` IN · `0.2.1-alpha.2` IN · `0.2.1-rc.2` IN · `0.2.5` IN · `0.2.0-rc.1` out · `0.3.0-0` out。声明后重新组合，dump 里**没有** `skipping profile bundle` 行 ⇒ 不会自锁。
-
-**下限为什么是 `0.2.0-rc.2`，而不是本轮验证过的 `0.2.1-rc.2`**：(1) npm 的 `latest` 就是 `0.2.0-rc.2`，下限写 0.2.1 会让按默认渠道装 DSH 的人**装不上**；(2) 本预设此前就活跑在 `0.2.0-rc.2` 上（§47.1 的升级起点）；(3) 实测对比——我们声明的 **28 个行包名逐一**出现在该版本官方 `standard.patch.yml` 的行名里，零缺失。
-
-**这条声明表达不了什么（写清，免得下一个人把它当护栏）**：`0.2.0-rc.2 → 0.2.1-rc.2` 同在区间之内，而"`cwd` 退出提示词变量注册表"不写在任何元数据里 ⇒ 版本区间只是"没测过的版本别跑"的**粗门**，能抓住这一类的仍是 §47.4 的注册表检查。两条不是替代关系。
-
-**否掉的替代方案**：只设下限 `>=0.2.0-rc.2`（0.3 线也默许跑，撞坑仍表现为每轮失败）· 逐包 `peerDependencies`（DSH 只做版本比对、不做解析，但 pnpm 对 `link:` 包的 peer 行为本轮**未实测**，且约 20 条要跟着行清单维护）· 不声明只文档（全新安装撞上未测版本时没有任何前置拦截）。
-
-### 48.4 自检结论（Phase 1）
-
-- **17 个离线自测 17/17 PASS**（本轮在 zotero 提交后重跑）；`preset-selftest` 的两条新检查输出 `{{model}} / kernel registers: provider, model`。
-- **反向控制**（§3 的规矩，三条分支都驱过）：注入 `{{cwd}}` → 两条 FAIL；注入从未注册的 `{{workspace}}` → 注册表那条 FAIL；让 profile 解析不到内核 → `could not read the kernel registry` **FAIL**，不静默通过。
-- `release-check --local`：composition 不挂 MCP / 行名经 `exports` 可解析 / 两份自测名单一致，全 OK；"工作树干净"在打标前必然 FAIL（tag 前置条件，不是开发前置条件）。
-
-### 48.5 §2 反方向重扫与 §6 痕迹扫描
-
-- 重扫口径＝本轮改动的三条声明（"标签交换不算变化"、"点号标记读不回来"、"本预设支持的 DSH 版本"）。结果：**相反说法只存在于实现里**（48.2 的两条），散文侧无一处陈述它们；[`docs/coverage.md:60`](coverage.md) 的"改条目的字段与标签"与 [`docs/overview.md:79`](overview.md) 的"无变化即不写"，在本次修复之后**才**完全成立，故不改写。
-- `protocol.md` 不动：§3 的十一条纪律与路由未变，而 §6 的写入门禁与写后回读，正是被这两条修复**兑现**的东西。
-- §6 痕迹：本轮新增行（`engines.dsh`、README 一段、本节）不含本机路径、盘符或属主库标识。
-
-### 48.6 版本与 tag：验证先于打标
-
-- **0.3.1**（patch）：四个改动全是修复、无契约 Revision；0.3.0 已含上一轮两条纪律与 Revision 15/16。版本号**单独一个提交**，排在所有修复之后，使 tag 指向的树恰好是这一版。
-- **顺序是刻意的**：`{{cwd}}` 那条修复起初只被"内核源码 + 变异驱动"证明过，而 `preset-release` §3 写着"绿色本地套件对发布件什么都没说"、§7.5 要求从远端核验发布件。⇒ 先重启宿主、在活会话里跑通（下一条），再 bump → `release-check --local` 全绿（含干净树）→ annotated tag → push 分支与 tag → `node tools/release-check.mjs --tag v0.3.1`。**远端写入需 junhan 明确同意。**
-- **活会话验证（2026-10-18，已完成；用 `tools/dump-session.mjs` 复核转写，不靠"看着像正常"）**：
-  - **重启后**在本工作区新开一条 autoresearch 会话：`ran=autoresearch created=standard selection-records=1`（§26 的读法——看那条独立事件，不看 session 记录里创建时的默认值）；persona 首行渲染为 `You are a research agent powered by the deepseek-v4.1-flash model.`；`unknown prompt variable` 出现 **0** 次、`deployment:persona-suffix` **0** 次（空段落不再进提示词）、`Your working directory is` **0** 次，而 `Current working directory` 出现 **2** 次；`turn/end` 的 reason 是 `{kind: "completed"}`；该会话的回复**自己说出了工作目录** ⇒ §47.2 断言的替代路径在真实会话里到位，而且做到位的是它，不是"没报错"。
-  - **对照组＝重启前那条失败会话**（另一个工作区）：同一句话出现 **2** 次、`turn/end` **两次都是 error**。⇒ 诊断时"截图里那两行应该是同一次失败被记了两次"的推断，据此更正为事实：那是**两轮**各自失败。修复前后各一条转写，是本轮唯一同时具备"症状"与"消除"两侧读数的那件仪器。
-- tag 之后的实测结果按 §46 的惯例记在**下一轮**，不回头改本节。
-
-### 48.7 未做与边界
-
-- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（§49 的更正）：旧目录不被加载，所以它们不会失败，只是不可用；本轮未动。
-- 窗口声明不覆盖 client 半，也不覆盖行名解析（后者由 `INV-ROW-1` 与 `preset-selftest` 守）。
-- **仍无一条真实课题走完这套脚手架**（沿用 §45.6/§46.6）。
-
 ## 49. 更正：旧预设目录里的 `{{cwd}}` 不会"整轮失败"，因为没人读那个目录（2026-10-18）
 
 ### 49.1 怎么发现的
 
-0.3.1 发出后收尾复核状态时，顺手验了 `editing-cordis-compositions`（DSH 自带 skill）里的一句断言："*Nothing reads that directory any more*"——指 `$DSH_HOME/.agent-presets/<id>/` 那套声明行之前的旧预设目录。若它为真，§47.5 与 §48.7 的推论（"这四个个人预设会以完全相同的方式整轮失败"）就不成立。
+0.3.1 发出后收尾复核状态时，顺手验了 `editing-cordis-compositions`（DSH 自带 skill）里的一句断言："*Nothing reads that directory any more*"——指 `$DSH_HOME/.agent-presets/<id>/` 那套声明行之前的旧预设目录。若它为真，§47.5 与 [`releases.md`](releases.md) §48.7 的推论（"这四个个人预设会以完全相同的方式整轮失败"）就不成立。
 
 ### 49.2 实测（两条，都只用现成仪器）
 
@@ -1245,7 +1104,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 
 ### 49.3 更正了什么，以及那条错误是怎么产生的
 
-§47.5 与 §48.7 已就地标注更正并指到本节。错误的形状值得留档：我从"**文件里有 `{{cwd}}`**"直接推到"**会以完全相同的方式整轮失败**"，中间那一步"它到底会不会被加载"**从未量过**——而量它的成本只有一条 `--dump-config`。这是 §5 那条"三种 nothing"的**镜像**：那时防的是把"没搜到"当成"不存在"，这次犯的是把"文件存在"当成"会生效"。**存在性与生效性是两件事**，前者不能当后者的证据。
+§47.5 与 [`releases.md`](releases.md) §48.7 已就地标注更正并指到本节。错误的形状值得留档：我从"**文件里有 `{{cwd}}`**"直接推到"**会以完全相同的方式整轮失败**"，中间那一步"它到底会不会被加载"**从未量过**——而量它的成本只有一条 `--dump-config`。这是 §5 那条"三种 nothing"的**镜像**：那时防的是把"没搜到"当成"不存在"，这次犯的是把"文件存在"当成"会生效"。**存在性与生效性是两件事**，前者不能当后者的证据。
 
 ### 49.4 边界
 
@@ -1268,7 +1127,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 | E4 | `GET /api/users/0/items?itemType=note&limit=1` | `data` 键＝`dateAdded/dateModified/itemType/key/note/parentItem/relations/tags/version` ⇒ **无 `deleted`**；`includeTrashed=1`／`trashed=1` 被静默忽略（360→360，首条 key 相同） |
 | E5 | 官方文档两页 | Web API *Deleting an Item* 只写 `204 The item was deleted`，**未说**永久还是进回收站；Local API 页只说支持 DELETE，且"does not attempt to replicate every implementation detail" |
 | E6 | `GET /api/users/0/items/<attachmentKey>/file` | **302 → `file:///<library>/<title>.pdf`** ⇒ agent 能拿到附件在磁盘上的真实路径 |
-| E7 | 环境与先例 | 预设唯一依赖 `schemastery`；全仓 **0 个 `.py`/`pyproject.toml`/`uv.lock`**；`tools/release-check.mjs:69-70` 把 `command:`／`uvx` 判为问题；§34 记录旧发布版的 Python/`uvx` 依赖正是被修掉的缺陷 |
+| E7 | 环境与先例 | 预设唯一依赖 `schemastery`；全仓 **0 个 `.py`/`pyproject.toml`/`uv.lock`**；`tools/release-check.mjs:69-70` 把 `command:`／`uvx` 判为问题；[`releases.md`](releases.md) §34 记录旧发布版的 Python/`uvx` 依赖正是被修掉的缺陷 |
 | E8 | `.tmp/engine-probe/smoke.mjs`（真论文 `CPZ52NQV`，1.27 MB／8 页） | `@hyzyla/pdfium` 3.0.0：init 24 ms · load 4 ms · `getText()` 5,255 字符/7 ms · `render({scale:1.5,render:'bitmap'})` 892×1189／77 ms／裸 RGBA 4.24 MB · **自写 PNG 编码（`node:zlib`）24 ms → 324 KB/页**。包内唯一二进制 `pdfium.wasm` 5.05 MB、声明依赖为空。（`getOriginalSize()` 字段名是 `originalWidth/Height`） |
 | E9 | `.tmp/engine-probe/outline-census.mjs`（20 篇真论文，`pdfjs-dist` 的 `getOutline()`） | **自带大纲 11 篇（55%）**· 空/缺失 9 篇 · 读不出 0 篇。条目即论文自己的节标题，**并带论文自己的编号形式**（`I Introduction`／`II Measure of Stress`／`Appendix: Passive and Active Loading`）。而 **pdfium 给不了它**：该 WASM 只导出了渲染与文本那一小撮函数，`FPDFBookmark_*`、`FPDF_GetMetaText` 都不在其中 |
 
@@ -1349,13 +1208,9 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 - **父条目标记退路**：未实现，理由见 §51.2（实证表明当前不需要）。
 - **OCR**：仍不做；`--fulltext` 与 `--extract` 现在各自打印 `rung`/`source` 行，把"哪一级答的、它可信到什么程度"写在结果里。
 
-### 51.5 发布 0.4.0（2026-10-18）
+### 51.5 发布 0.4.0
 
-- **版本号**：`0.3.1 → 0.4.0`，**单独一个提交**（`chore(release): 0.4.0`），使 tag 指向的那棵树恰好是这一版；契约 Revision 与包版本依旧互不绑定。
-- **打 tag 前置条件全绿**：17 个离线自测 · `preset-selftest`（对着**重新生成**的组合 dump——`package.json` 变了，旧 dump 会被它按设计拒绝）· `release-check --local`（含"工作树干净"这条，那是打 tag 的前置条件而非开发条件）。
-- **注释 tag** `v0.4.0` → `57a3f3e`；**先推分支、再推 tag**。
-- **从远端复核**（`node tools/release-check.mjs --tag v0.4.0`）：**PASS** —— 发布件声明 0.4.0 · 组合不挂 MCP server、不启外部命令 · 两个通道需要的 helper 全部在发布包里（含本轮新增的 `tools/zotero-pdf.mjs`）· `main` 与 tag 指向同一提交。
-- **未做**：M6（生成式能力单页 + 不漂移断言）——junhan 定为**发布后单独一轮**，见 §51.4。
+已移入 [`releases.md`](releases.md)（原 §51.5）：发布是事件，决策是立场，两者不放在同一份文件里。
 
 ## 52. 工具链单页：生成物，且每条声明挂一条可校验的出处（2026-10-18）
 
@@ -1373,27 +1228,6 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 **同一轮抓到一个真缺口**：`tools/release-check.mjs` 的 `REQUIRED_HELPERS`——"缺了它，发布件里通道就不工作"的那张名册——写于梯级之前，**不含 `tools/zotero-pdf.mjs`**。而 Revision 17 的纪律已经把该 helper 写进交给 agent 的命令 ⇒ 一个不含它的发布件里，**有文档的一级梯级不可达**。这是名册式检查看不见自己名册之外的东西（`6f80323` 补上；随后用 `release-check --tag v0.4.0` **反向验证**：已发布的包里确实有它）。
 
 **已知边界（登记）**：`docs/toolchain.md` 里的链接路径**不在** `doc-selftest DOC-8` 的扫描范围内（那份检查只读 `protocol.md` / `surface.md` / `README.md` / `docs/coverage.md`）；该页的 helper 名册由 `toolchain-selftest` 自己对着仓库校验（重命名会红）。
-
----
-
-## 53. 发布 0.5.0：能力单页成为可安装的东西（2026-10-19）
-
-**为什么是 0.5.0 而不是 0.4.1**：这一版交给用户的是**新产物**（`docs/toolchain.md` 与它的生成器、自测）和**新的检查**（`REQUIRED_HELPERS` 补上 `zotero-pdf.mjs`），不是修一个坏掉的 0.4.0。这一点事先实测过，没有靠感觉：`git ls-tree v0.4.0 -- tools` 里 `zotero-pdf.mjs` **在**——名册缺的是"检查看不见自己名册之外"，不是"发布件缺件"。
-
-**流程**（`preset-release` §4 / §7）：
-
-- 版本号 `0.4.0 → 0.5.0`，**单独一个提交**（`5ea7690`，只改 `package.json` 一行），使 tag 指向的树恰好是这一版；**契约 Revision 仍是 17**，与包版本互不绑定。
-- 提交前在最终树上重跑：**18 项离线自测 + `preset-selftest` 全绿**；`toolchain-page.mjs --check` 报 *current and every citation holds (20 claims)*；`release-check --local` **PASS**（含干净树这条 tag 前置条件，并报出 7 个提交尚未推到远端）。
-- **注释 tag** `v0.5.0` → `5ea7690`（tag 对象 `712519a`）；**先推分支、再推 tag**。这次推上去的是 **7 个提交**：0.4.0 发布后写的 5 个（含 M6 那四个）此前**一直只在本地**，`--local` 的那行计数是唯一提前说出来的地方。
-- **从远端复核** `node tools/release-check.mjs --tag v0.5.0`：**PASS** —— 发布件声明 0.5.0 · 组合不挂 MCP、不启外部命令 · 通道需要的 helper 全部在发布包里 · `v0.5.0` 与 `main` 同点 `5ea7690`。
-
-**关于这个检查本身的一条性质**：`--tag` 的最后一项走 `git ls-remote`，因此**继承调用者的 git 配置**。这一次本机配置的代理不可达，该项报的是 **ERROR**（其余三项已 OK）；把代理在单次调用里覆盖掉后即为 PASS。这不是发布件的性质，但它决定了失败时该怎么读：**先分辨"远端没有"与"本机连不上"**，否则会把一次网络故障当成一次发布缺陷。
-
-**同一轮的仓库卫生**：`.tmp/` 从 **112.8 MB / 978 个文件**降到 **0.81 MB / 88 个文件**。删的是大件（`node_modules` 83.5 MB · 会话 `.jsonl` 约 25 MB · 库正文副本 · 渲染图 · composed dump · 日志与提交信息草稿）；留的是证据与未采纳草案（§4.3.1 的探针配方与输出 · 四份普查报告 · 那 39 条的待办清单 `notes-to-delete.md` · `scaffold-revision/` 提案 · 三条会话的笔记产物 · 候选技能 `adoption-ruling.SKILL.md`）。§4.3.1 因此补上了重跑命令——**删掉 `node_modules` 只在配方与输出都留着时才安全**，否则那一节的数字就从测量退化成断言。
-
-**登记项独立成一节**：`docs/backlog.md`（原 `plans/revision-17.md` §12）把"已登记"与"不做"分开，三项各带自己的触发条件（写回库索引 · 父条目退路 · Python 运行时）。其中一条是我给自己定的规矩：**触发条件写不出来的，就不是 backlog，而是一条尚未做出的裁定，该送回 §10**。
-
-**明确搁置、记在这里免得下次重新考古**：三条文献会话工作区里的 **39 条**（清单 `.tmp/notes-to-delete.md`，不进库）——junhan 裁定**先不动**；它们的收法已经是现成的（讲错的 `--retire` → 那一节变可写 → `--replaces` 写新稿），不需要新的工具。
 
 ---
 
@@ -1471,7 +1305,7 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 - **A 的探针已转正**为 [`tools/session-tool-usage.mjs`](../tools/session-tool-usage.mjs) 与
   [`tools/session-prompt-names.mjs`](../tools/session-prompt-names.mjs)（共用 `dump-session.mjs` 的
   `readSession`）。它们不是通道 helper、不进 `REQUIRED_HELPERS`，但**能被重跑**——所以上面的数字是测量而不是断言
-  （§53 同一条规矩：重跑不了的数字会退化）。
+  （[`releases.md`](releases.md) §53 同一条规矩：重跑不了的数字会退化）。
 
 ---
 
@@ -1600,41 +1434,6 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 
 ---
 
-## 57. 发布 0.6.0：第三通道拿到程序，记录改挂仪器（2026-10-19）
-
-**范围**：A–D 四项（§54 / §55 / §56）+ 三个探针转正 + 契约 Revision 18。
-
-**流程**（`preset-release` §7）：
-
-- 版本 `0.5.0 → 0.6.0`，**单独一个提交**（`622f981`，只改 `package.json` 版本一行），使 tag 指向的树恰好是这一版；
-  **契约 Revision 仍是 18**，与包版本互不绑定。
-- 提交前在最终树上重跑 Phase 1：**20 项离线自测 + `preset-selftest` 全绿**；`toolchain-page --check` 报
-  *current and every citation holds (24 claims)*；`release-check --local` **PASS**（含干净树这条 tag 前置条件，
-  当时报出 10 个提交未推）。
-- **注解 tag** `v0.6.0` → `622f981`（tag 对象 `20c656d`）；**先推分支、再推 tag**。
-- **从远端复核** `node tools/release-check.mjs --tag v0.6.0`：**PASS** —— 发布件声明 0.6.0 · 组合不挂 MCP、
-  不启外部命令 · **三条通道需要的 helper（含本轮新增的 `tools/metadata.mjs`）全在发布包里** ·
-  `v0.6.0` 与 `main` 同点 `622f981`。
-
-**§2 的反方向重扫在发布前又命中一次**：`package.json` 的 description（会进发布件元数据）、README 的
-"Two channels need setup" 小标题（其实只有参考库需要设置）、组合里的注释、以及反向护栏的注释，四处都还在写
-"两条通道"。这是同一轮里第二次证明那条规矩：**改行为的人改的是他刚编辑的那个文件，陈旧句子在别处。**
-
-**网络边界（登记）**：本机 git 配置的代理 `http://127.0.0.1:12450` 当时不可达 ⇒ 推送与 `ls-remote` 都报
-connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https.proxy=`；给 node 生成的 git 用
-`GIT_CONFIG_COUNT/KEY/VALUE` 环境变量）后即为成功。而 `raw.githubusercontent.com` / `api.github.com` /
-`github.com` 三者实测均 **HTTP 200**，所以第一次 `--tag` 复核报的 `fetch failed` 是**瞬时**的，重跑即 PASS。
-照 §53 的读法：**先分辨"远端没有"与"本机连不上"，再读这条失败。**
-
-**未做**：没有新的规范变更，Revision 保持 18；没有动 mnemon 的 profile 配置（§54.4 那条边界仍然成立）。
-
-**发布后的本地状态（登记，免得下次读 `main` 时困惑）**：本节之后还有一个 `docs:` 注释修正提交
-（`43f48ec`：把 `preset-selftest` 那道反向护栏的注释从"三条通道"改回它真正守的范围）**没有推上去**——
-当时本机代理已关闭、直连 `github.com` 也不通（两条路都实测不通），按 junhan 的"不要纠结"停手。
-它与发布无关：`v0.6.0`、`622f981` 及其之前的提交都已推送并已从远端核验；下次能联网时 `git push origin main` 即可收尾。
-
----
-
 ## 58. 笔记身份改为 tag，digest 改为章节笔记的投影（Revision 19/20，2026-10-19）
 
 **起因**：junhan 连续追问五件事——隐形 marker 为什么会被应用吃掉、首段正则该不该删、网页版粘贴的笔记能不能原地改写、`--tidy` 该不该保留、digest 到底该从哪来；并指出库里"好像还会走子节生成"。这一轮把五个问题合成一次身份模型的重写。
@@ -1692,27 +1491,6 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 
 ---
 
-## 59. 发布 0.7.0：笔记身份换成 tag，digest 成为章节笔记的投影（2026-10-19）
-
-**范围**：§58 的 Phase 1–6，加上 187 条顶层 marker 的 tag 迁移。
-
-**流程**（`preset-release` §7）：
-
-- 版本 `0.6.0 → 0.7.0`，**单独一个提交**（`e888219`，只改 `package.json` 一行），使 tag 指向的树恰好是这一版；**契约 Revision 仍是 20**，与包版本互不绑定。
-- 发布前在最终树上重跑 Phase 1：**20 项离线自测 + `preset-selftest` 全绿**；`release-check --local` **PASS**（干净树、声明 0.7.0）。
-- **注解 tag** `v0.7.0` → `e888219`；**先推分支**（`c69f46f..e888219`），**再推 tag**。
-- **从远端复核** `node tools/release-check.mjs --tag v0.7.0`：**PASS** —— 发布件声明 0.7.0 · 组合不挂 MCP、不启外部命令 · **三条通道需要的 helper 全在发布包里** · `v0.7.0` 与 `main` 同点 `e888219`。
-- **§2 的反方向重扫命中并修掉**：`project-template/research/owner_actions.md` 的示例仍写"mechanical repair declined 4 spans"；[`docs/plans/note-pipeline.md`](plans/note-pipeline.md) 仍写 `in parts`、"当前工具仍读点号"、"三种拒绝"；E6 与 archive 仍有本机路径。
-- **机器痕迹**：E6 的 `file:///D:/OneDrive/...` 改为 `file:///<library>/...`；`docs/archive/plan-v0.md` 的 checkout 路径改为 `<checkout>`；`docs/05` 的 9 个库 key 改为计数，只保留"9 条记录，最多 10 条"。
-
-**未做 / 边界**：
-
-- Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍未迁移（junhan 选择暂停；187 条已迁）。
-- `--delete --write` 未实现（§60 补上）；发布不改变工作区的迁移状态。
-- digest 原地刷新的旧版只在工作区备份；其他库带 marker 的旧 digest 仍需先补 `/digest` tag。
-
----
-
 ## 60. 删除实写、digest 旧版留库、取消失败备份（2026-10-19，Revision 21）
 
 **缘起**：0.7.0 发布后 junhan 指出"不在 0.7.0 里"的三条中，第 1 条（`--delete --write` 未实现）与第 3 条（digest 旧版只在工作区）是功能缺口；第 2 条（153 条无 marker / 38 条点号 / 34 条 retired 的整理）他明确不做，只改预设功能。三个决定逐条确认：
@@ -1737,30 +1515,6 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - 不做批量删除、不做"删除后自动清理 successor 指针"；`--replaces-KEY` 悬空只报告。
 - digest 快照会随刷新累积；这是"库里留历史"的代价，清理用 `--delete`，由人决定。
 - 工作区备份取消后，改错的正文没有本地副本；节笔记的来源是论文，digest 的旧版在库里。
-
-
-
-
----
-
-## 61. 发布 0.8.0：删除实写与 digest 库内历史（2026-10-19）
-
-**范围**：§60 的三项（删除实写、digest 旧版留库、取消 `--rewrite` 工作区备份），契约升 **Revision 21**。
-
-**流程**（`preset-release` §7）：
-
-- 版本 `0.7.0 → 0.8.0`，**单独一个提交**（`47c4956`，只改 `package.json` 一行）；契约 Revision 21 与包版本互不绑定。
-- 发布前在最终树上重跑：**20 项离线自测 + `preset-selftest`（fresh dump）全绿**；`toolchain-page --check` 24 条引用成立；`release-check --local` **PASS**（干净树、声明 0.8.0）。
-- **注解 tag** `v0.8.0` → `47c4956`；**先推分支**（`08565ad..47c4956`），**再推 tag**。
-- **从远端复核** `node tools/release-check.mjs --tag v0.8.0`：**PASS** —— 发布件声明 0.8.0 · 组合不挂 MCP、不启外部命令 · 三条通道需要的 helper 全在发布包里 · tag 与 `main` 同点 `47c4956`。
-
-**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/plans/revision-17.md`](plans/revision-17.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/coverage.md`](coverage.md)、[`docs/plans/note-pipeline.md`](plans/note-pipeline.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/toolchain.md`](toolchain.md) 由工具源重新生成。
-
-**未做 / 边界**：
-
-- Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍暂停；0.8.0 只是给 34 条 retired 的处置开了出口，没有自动执行任何一条。
-- 没有在真库上执行一次删除或 digest 刷新：新路径由 stub 覆盖（DELETE + 404、快照先于 PATCH），真库写仍要下一次逐条授权。
-- 工作区不再保留 `rewritten-*` / `digest-*` 备份；`.section-notes/` 仍用于草稿与 `--render` 页面图。
 
 ---
 
@@ -1851,19 +1605,3 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 **未做（已裁定不做）**：复用的成本对比仍只是估算（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。junhan 2026-10-19 裁定：**不需要这个精确数字，不实测**。理由是它不改变任何一条纪律的行为——纪律要求的是"先调 `--item` 看记录上已有什么"，全仓没有任何一处写"这样更省"的量化断言，所以缺的只是一个优化判断的输入，不是一条待兑现的承诺。日后若真有人要回答"扩面复用到底省多少"，实测入口仍在这里：同一条记录上，一次 `--item` 对比首次通读的切片数。
 
 ---
-
-## 64. 0.9.0 发布（2026-10-19）
-
-**版本**：`0.9.0`，提交 `938f607`，注解 tag `v0.9.0` 与 `main` 同指。
-
-**相对 0.8.0 的八条提交**：S1 `1431fa3` · S2 `21ce6bc` · S3 `d104312` · S4 `5a441bd`（§62）＋ 机制更正 `cb60923` ＋ Revision 24 `69893d2` ＋ 记录 `96fe167` ＋ 版本提交本身。
-
-**发布前的门**（都在最终树上跑过）：
-
-- 20 项离线自测全绿，`preset-selftest` 用的 dump 是版本提交后重新生成的（72,732 字节，persona 5,060 字符）。
-- `release-check --local` 在干净树上 PASS：声明版本 0.9.0、组合不挂载 MCP、每个行名经 `exports` 解析、20 个自测都在 README 里有名。
-- `release-check --tag v0.9.0` 从**远端** PASS：发布物声明 0.9.0、组合不挂载 MCP 也不启动进程、每个通道要的 helper 都在包内、`v0.9.0` 与 `main` 同指 `938f607`。这是唯一能看见"47 条本地绿灯但没人装得上"那类缺陷的检查。
-
-**顺手改掉一处陈旧计数**：`package.json` 的 description 由 "ten on-demand research disciplines" 改成 "eleven"。0.8.0 发布时确实是十条，`reading-triage` 是它之后加的，计数没跟上——与 §36 抓到的那类陈旧计数同型，靠发布前通读一遍抓住。
-
-**一次环境故障，不记为缺陷**：本机 git 全局代理当时不可用，`push` 与检查内部的 `git ls-remote` 都报 `Failed to connect ... port 443`；改用一次性覆盖（`git -c http.proxy= …` 与 `GIT_CONFIG_*` 环境变量）后推送与复核都成功。仓库与发布物未改动。

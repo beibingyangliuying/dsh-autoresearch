@@ -52,7 +52,7 @@ flowchart LR
   S --> Q
 ```
 
-## 六个"看哪里"
+## 八个"看哪里"
 
 | 我想知道… | 看哪 |
 |---|---|
@@ -61,6 +61,8 @@ flowchart LR
 | 某个概念**对应哪个名字** | [`surface.md`](../surface.md)（non-normative） |
 | 怎么装、怎么开发、有哪些已知约束 | [`README.md`](../README.md) |
 | 当初**为什么**这么做、否掉了什么 | [`decisions.md`](decisions.md) |
+| **还剩什么**、什么条件到了才做 | [`backlog.md`](backlog.md)（活账，不在计划里） |
+| 每份文档**回答哪个问题**、被什么钉住 | [`docs/README.md`](README.md)（本目录的索引） |
 | 当时的原始过程（含我犯的错） | [`archive/plan-v0.md`](archive/plan-v0.md)（冻结，不再维护） |
 
 ## 现状怎么查（不写死在文档里）
