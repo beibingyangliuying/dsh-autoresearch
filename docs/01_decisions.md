@@ -1684,7 +1684,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 
 ### 58.4 未做 / 边界
 
-- **旧笔记迁移（Phase 7）**：225 条 marker（187 顶层脚本 + 38 点号人工合并）、153 条无 marker 候选 + agent 抽查、34 条 retired 的删除干跑。**尚未批量写库**；旧笔记先只打 `/retired` 入口，批量整理其次。
+- **旧笔记迁移（Phase 7）**：2026-10-19 已完成 **187 条顶层 marker 补 `/section-N`**（0 失败，只写 tag、不碰正文）；剩余 **38 条点号**（有内容的子节解释，先合并成顶层节再退休，不能无差别打 `/retired`）、**153 条无 marker**（读后 claim/rewrite/retire）、**34 条 retired**（删除干跑）。后续批次各自授权，不盲写。
 - **`--delete --write` 未实现**：本轮只到干跑；API 删除永久、不进回收站，实写要另一轮授权。
 - **digest 原地刷新的旧版只在工作区备份**，不在库里；这是"派生视图可刷新"的代价。
 - **其他库的旧 digest 笔记**可能仍带 marker；需要先补 `/digest` tag，本库为 0。

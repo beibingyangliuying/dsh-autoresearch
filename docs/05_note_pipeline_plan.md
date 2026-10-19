@@ -1,6 +1,6 @@
 # 05 — 笔记管线草案：tag 身份、claim/rewrite、digest 投影
 
-**状态：Phase 1–6 已实施（2026-10-19）；Phase 7 迁移待做。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。实施记录见 [`docs/01_decisions.md` §58](01_decisions.md#L1638)。
+**状态：Phase 1–6 已实施（2026-10-19）；Phase 7 已跑 187 条顶层 tag 迁移，剩余 38 条点号 / 153 条无 marker / 34 条 retired 待后续批次。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。实施记录见 [`docs/01_decisions.md` §58](01_decisions.md#L1638)。
 
 ## 0. 一句话
 
