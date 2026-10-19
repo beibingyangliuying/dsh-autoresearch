@@ -7,16 +7,18 @@
 // a green local suite over an unpublished composition that still mounted two MCP servers. So every
 // pure check is driven with a mutation that must be detected, and the composition's own comments
 // (which name the removed servers on purpose) must NOT be.
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  REQUIRED_HELPERS,
   branchHead,
   bundleRowSpecs,
   codeLines,
   compositionProblems,
   documentedSelftests,
   exportProblems,
+  namedHelperProblems,
   taggedCommit,
   tagRefQuery,
   versionOfTag,
@@ -116,7 +118,30 @@ check(
 )
 
 
-console.log('\n[5] which commit a tag names')
+console.log('\n[5] the required-helper roster against the helpers a discipline names')
+
+// The roster is hand-written, so what it OMITS is invisible to the check that reads it. This drives the
+// demand side instead - the `{{presetTools}}` commands the shipped disciplines hand an agent - and it
+// has to FAIL when a named helper is not on the roster, which is the state the roster sat in twice.
+const disciplineTexts = readdirSync(join(ROOT, 'skills')).map((name) => read(join('skills', name, 'SKILL.md')))
+const gaps = namedHelperProblems(disciplineTexts, REQUIRED_HELPERS)
+check(gaps.length === 0, 'every helper a discipline hands an agent is on the roster', gaps.join('; '))
+check(
+  namedHelperProblems(['run {{presetTools}}/invented.mjs'], REQUIRED_HELPERS).length === 1,
+  'a discipline naming a helper the roster omits is reported - this check can fail',
+)
+check(
+  namedHelperProblems(['{{presetTools}}/zotero-read.mjs and {{presetTools}}/invented.mjs'], REQUIRED_HELPERS).length === 1,
+  'a known helper is no problem, and two mentions of one gap are still one problem',
+)
+check(
+  namedHelperProblems(['read tools/zotero-read.mjs, no token'], REQUIRED_HELPERS).length === 0,
+  'a path without the presetTools token is not read as a discipline command - the guard is narrow on purpose',
+)
+const absent = REQUIRED_HELPERS.filter((path) => !existsSync(join(ROOT, path)))
+check(absent.length === 0, 'every path on the roster exists in this tree - a typo would fail every tag', absent.join(', '))
+
+console.log('\n[6] which commit a tag names')
 
 // The real shape of `git ls-remote origin refs/heads/main refs/tags/vX.Y.Z` for an ANNOTATED tag: the
 // tag object AND the commit it peels to. Comparing the first line that ends with the tag name put a tag

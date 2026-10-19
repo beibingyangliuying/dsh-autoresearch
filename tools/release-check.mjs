@@ -27,13 +27,32 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const DEFAULT_REPO = 'beibingyangliuying/dsh-autoresearch'
 
-/** Helpers whose absence means the external channels do not work in the published package. */
+/**
+ * Helpers whose absence means the external channels do not work in the published package.
+ *
+ * A hand-written roster, and a roster-based check cannot see what its own roster omits: this list was
+ * written before the reading ladder existed, so the published package was checked for a helper nobody
+ * had added yet, and `zotero-pdf.mjs` was missing until 6f80323. The same held for every write-side
+ * helper named after that, and for `metadata.mjs`, which the disciplines name ten times.
+ *
+ * Two directions are checked, and only one of them is this list: `namedHelperProblems` derives the
+ * DEMAND side from the text a discipline hands an agent, and fails when this roster does not carry a
+ * helper it names. An entry here is therefore not a claim that the helper is named anywhere - the
+ * shared transport, the in-app snippet and the attachment tool are listed because a channel stops
+ * working without them.
+ */
 export const REQUIRED_HELPERS = [
   'preset-paths.js',
   'tools/arxiv.mjs',
   'tools/metadata.mjs',
   'tools/zotero-read.mjs',
   'tools/zotero-pdf.mjs',
+  'tools/zotero-write.mjs',
+  'tools/zotero-note.mjs',
+  'tools/zotero-edit.mjs',
+  'tools/zotero-collection.mjs',
+  'tools/zotero-section-note.mjs',
+  'tools/zotero-link-attachments.mjs',
   'tools/zotero-local-api.mjs',
   'tools/zotero-link-snippet.js',
 ]
@@ -160,6 +179,35 @@ export function documentedSelftests(readmeText, files) {
   }
 }
 
+/**
+ * The helpers a discipline hands an agent, against the roster the published-package check fetches.
+ *
+ * Why this exists: `REQUIRED_HELPERS` is written by hand, so it only ever contained the helpers someone
+ * remembered. It was written before the reading ladder, and `zotero-pdf.mjs` was missing from it while
+ * Revision 17's disciplines already told an agent to run that program (closed in 6f80323). That fix
+ * added the one helper the round had noticed and left the class open: every write-side helper, and
+ * `metadata.mjs`, were still outside the roster while the disciplines named them in commands.
+ *
+ * The guard is deliberately narrow. It reads ONE token, `{{presetTools}}`, because that is the only way
+ * a shipped discipline may address a helper at all; prose that names a path without the token is a
+ * documentation question, and a regex over every path-looking string would fire on fixtures too.
+ *
+ * @param {string[]} texts Discipline bodies in which a helper command appears.
+ * @param {string[]} roster Paths as {@link REQUIRED_HELPERS} spells them, e.g. `tools/arxiv.mjs`.
+ * @returns {string[]} One message per named helper the roster does not carry; empty when it carries all.
+ */
+export function namedHelperProblems(texts, roster) {
+  const known = new Set(roster)
+  const problems = new Set()
+  for (const text of texts) {
+    for (const match of String(text).matchAll(/\{\{presetTools\}\}\/([A-Za-z0-9._-]+)/g)) {
+      const path = `tools/${match[1]}`
+      if (!known.has(path)) problems.add(`${match[1]} is handed to an agent but REQUIRED_HELPERS omits ${path}`)
+    }
+  }
+  return [...problems]
+}
+
 const g = (args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim()
 
 /** One `PASS`/`FAIL` line per check, and the failures that decide the exit code. */
@@ -190,6 +238,12 @@ async function checkLocal() {
   failures += report('every self-test in tools/ is documented in the README', tests.undocumented.map((n) => `${n} exists but the README does not name it`))
   failures += report('the README names no self-test that is gone', tests.stale.map((n) => `${n} is documented but does not exist`))
   console.log(`         ${tests.documented.length} self-tests documented`)
+
+  // The demand side of the roster: what the skills actually tell an agent to run. Reading it here is
+  // what makes the roster fail when a discipline starts naming a helper nobody added.
+  const skillDir = join(ROOT, 'skills')
+  const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
+  failures += report('every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
 
   const dirty = g(['status', '--porcelain'])
   failures += report(
