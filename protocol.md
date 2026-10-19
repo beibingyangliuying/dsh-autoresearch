@@ -1,9 +1,17 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 18.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 20.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 18 gives the third channel the program the other two
+independent of any package version. Revision 20 makes the digest a **projection of the section
+notes**: one live `/digest` per record, synthesized from its `/section-N` notes rather than from the
+raw paper, refreshed in place after a backup and a version guard, and no longer a reading receipt —
+the receipt is the `refs/` index line and the item's `/done` tag. Revision 19 moves a note's identity
+out of the body: `/section-N`, `/imported`, `/digest`, `/retired` and `/replaces-KEY` are tags, no
+invisible marker is written or read, a note with no `/section-` tag is **unknown** until it is read
+and claimed, the mechanical prose repair is removed, and a pasted note may be rewritten in place
+while a claimed record is still retired and replaced. §4, §6, §8 and §9 state it. Revision 18 gives
+the third channel the program the other two
 already had: the bibliographic REST channel is now reached through a helper this preset ships and its
 discipline names, so §6's statement that the channels are reached through such programs holds for all
 three rather than for two of them. It adds one rule to §6 — a bibliographic count is quoted with the
@@ -210,11 +218,12 @@ the load-bearing part: they say when to stop rather than to make something work.
 ```text
 scoping      a vague topic becomes a decidable question; pseudo-questions are sent back
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
-sections     a paper already chosen for study becomes one explanation note per method section,
-             attached to its library record; background, case study and conclusion sections are
-             not written, an already-covered section is never written twice, counted per top-level
-             section — one carried as notes for its own subsections is covered in parts — and an
-             older note is repaired mechanically or not at all
+sections     a paper already chosen for study becomes one `/section-N` note per TOP-LEVEL method
+             section, attached to its library record; background, case study and conclusion
+             sections are not written, a claimed section is never written twice, a dotted key is
+             neither written nor read, a pasted note is claimed or rewritten in place, a wrong
+             record is retired rather than deleted, and a paper-level `/digest` is projected
+             from the notes
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code
@@ -339,30 +348,31 @@ These rules bound their use:
   and a record may carry several, so a reading states which one answered and what was not read. A
   channel that returns an empty text for an unindexed attachment, or a failure as if it were a record,
   is reporting about itself rather than about the work.
-- **A note written onto a record stays the owner's.** The channel's note writes are additive or
-  mechanical. Additive is not a licence to write the same thing twice: a digest the record already
-  reads with is reported as already recorded and nothing is written, and that comparison is on the text
-  a reader sees rather than byte for byte, because the reference manager rewrites the body of a note
-  its own application has edited. One reading is one sentence on the record, however many times the
-  round that produced it is run. A section a record already covers is refused rather than written twice, and **what is counted is the
-  top-level section**: a section carried as notes for its own subsections is covered in parts, a note for
-  the whole of it is refused, and a note for one of its parts is refused once the whole is there — while
-  a sibling part is not coverage, because what is missing is exactly what may be written next. Which
-  sections a record already covers is decided by **reading** its notes, not by a pattern: the channel
-  reports the sections it can read and names the notes it cannot, and those are read before anything is
-  written, because the notes an owner wrote by hand carry no marker and the ones this preset wrote may
-  have had it eaten by the application. A reading that disagrees with the note's own words stops the
-  round for the owner to settle; it is never written around. Repairing delimiters is content-preserving by construction: a span is converted
-  only when it carries LaTeX markup and sits inside one closed span of one text node, and every span
-  declined is reported. A change to a note's prose is a rewrite, and a rewrite is the owner's decision,
-  never a formatter's.
+- **A note written onto a record stays the owner's.** The channel's note writes are additive, a claim,
+  or a replacement of an import the owner pasted. Identity is a tag, not a comment in the body: a
+  section note carries `/section-N`, a paper-level digest carries `/digest`, a note out of service
+  carries `/retired`, and a note that came from outside carries `/imported`. The application may
+  rewrite a note's body and eat an invisible comment; it does not touch a tag. A note with no
+  `/section-` tag is **unknown**: it is read before anything is written, because the channel does not
+  parse prose and a note carrying no claim is not coverage. A reading that disagrees with a tag stops
+  the round for the owner to settle; it is never written around. A section a record already claims is
+  refused rather than written twice, and **what is counted is the top-level section**: a dotted key is
+  neither written nor read, and a note keyed to a subsection is unknown until it is merged into its
+  top-level section or retired. A note with no `/section-` tag, or `/section-N` + `/imported`, is an
+  import and may be rewritten in place, after a dry run, a backup, and a version guard. A `/section-N`
+  note without `/imported` is a record: its prose is not rewritten in place, and a change to it is a
+  retirement and a replacement. There is no automatic prose repair.
 - **A note that is wrong is retired, not rewritten in place and not deleted.** Its body is left exactly
-  as it stands and a mark is added to it. A marked note is a tombstone rather than coverage, so the
+  as it stands and `/retired` is added. A retired note is a tombstone rather than coverage, so the
   section it claimed becomes writable again, and removing the mark restores the claim it made. The note
-  that replaces it names the one it replaced and why: that is the only record of a supersession once
-  the owner has cleaned up, and it is what a later reader needs to know that a section was written
-  twice on purpose. This is not the rewrite the paragraph above forbids — a rewrite replaces what a
-  note says, and retiring changes nothing it says.
+  that replaces it names the one it replaced and why: that is the record of a supersession. Only a
+  retired note is eligible for a deletion, and this round plans one rather than performing it.
+- **The digest is a projection of the section notes.** One record has one live `/digest` note,
+  synthesized from its `/section-N` notes; every sentence traces to a section note and it introduces
+  no fact those notes do not carry. It is refreshed in place — dry run, backup, version guard — and the
+  same visible text is reported as already recorded with nothing written. It is not a reading receipt:
+  the receipt is the `refs/` index line and the item's `/done` tag, and a paper with no section notes
+  has no digest.
 - **A reading states which rung of the ladder answered it.** The rungs, cheapest first, are the
   library's indexed text, the attachment's own text layer, and the page rendered as an image. A channel
   that returns an empty text for an attachment it never indexed is reporting about itself; a text layer
@@ -386,7 +396,7 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
   research/
     00_scoping.md      question, boundary, non-goals, decidability
     literature/        reconstruction notes — non-normative by construction
-    literature/refs/   the digest index: one line per reference actually read
+    literature/refs/   the reading receipt index: one line per reference actually read
     adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
@@ -435,13 +445,14 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
-| `INV-EVID-4` | A source already read at full-text grade is not read again to recover what it said; the digest is the record of that reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a digest is what makes one reading reusable. |
+| `INV-EVID-4` | A source already read at full-text grade is not read again to recover what its section notes or digest say; the section notes are the transcription of the reading, the digest is their paper-level projection, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round, and a transcript plus a projection is what makes one reading reusable. |
 | `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
-| `INV-NOTE-1` | One section has one **live** note: a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
+| `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
+| `INV-NOTE-2` | One record has one live `/digest`, and the digest is a projection of the record's section notes: every sentence traces to a `/section-N` note, it introduces no fact those notes do not carry, and a changed digest refreshes that note in place rather than appending to it or creating a second one. | A digest that can introduce its own facts is a second, unaudited reading; one that accumulates versions is no longer a projection of the notes it claims to summarize. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
@@ -468,7 +479,10 @@ Every row must be falsifiable: a check must exist that can fail.
   the application does go into that trash and is recoverable — on 2026-10-18 the trash held 473 items,
   315 of them notes — so removal stays the owner's act there. What this preset owes that act is an
   artifact rather than a capability: the list it hands over has a shape (§6, §7), and a section is
-  freed by retiring a note rather than by removing one (§6).
+  freed by retiring a note rather than by removing one (§6). A retired note is the only deletion
+  candidate; `--delete` states the plan and the irreversibility facts, and this round does not perform
+  the removal. A deletion through this channel is permanent, which is why the plan is separate from the
+  act.
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.

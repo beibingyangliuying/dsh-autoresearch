@@ -1,16 +1,17 @@
 # `research/adoption/` — what this study borrows, on what terms
 
 Produced by the `adoption-ruling` skill. One file per reference **actually read**: `<itemKey>.md`, keyed
-by the reference-library item key — the same key the digest index joins on. The reader is a future
+by the reference-library item key — the same key the reading receipt index joins on. The reader is a future
 implementer who will never open the paper.
 
 ## Why it exists
 
-A literature note says what the paper says, a digest says it was read, and a section note explains the
-method **in the paper's own terms, without evaluating**. None of them says what *we* take, under what
-condition it survives our data, into which module it goes, or how anyone would notice that the code
-implements a different formula. This directory answers that, one item at a time — and until it does, the
-only thing standing between a paper's equation and its implementation is memory.
+A section note explains the method **in the paper's own terms, without evaluating**; the `/digest` is
+their paper-level projection; and the `refs/` line plus the item's `/done` tag is the receipt that says
+the paper was read. None of them says what *we* take, under what condition it survives our data, into
+which module it goes, or how anyone would notice that the code implements a different formula. This
+directory answers that, one item at a time — and until it does, the only thing standing between a
+paper's equation and its implementation is memory.
 
 ## Conventions
 
@@ -60,12 +61,14 @@ Derived data: if it is lost, rebuild it from the per-reference files. Add a line
 - Nothing here is written from memory of the paper: a formula is transcribed from a slice actually read,
   and the slice offset is recorded.
 - A formula whose copy is ambiguous is `ambiguous` and blocked, **not reconstructed**.
-- This directory writes nothing into the reference library. Digests belong in the library (see
-  `../literature/refs/README.md`); section notes belong on the record.
+- This directory writes nothing into the reference library. The `/digest` note belongs on the record;
+  the receipt is the `../literature/refs/` line plus the item's `/done` tag; section notes belong on
+  the record.
 
 ## What is not in this directory
 
-- **Not the digest** — that is the library note plus the index line under `../literature/refs/`.
+- **Not the digest** — that is the record's `/digest` note, a projection of its section notes. The
+  receipt is the index line under `../literature/refs/` plus the item's `/done` tag.
 - **Not a literature note** — that is `../literature/<topic>.md`, and it is about the field.
 - **Not an experiment card** — that is `../experiments/<id>.md`, and it records a run that happened.
 

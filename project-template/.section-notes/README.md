@@ -9,6 +9,8 @@ reads it and drafts the note bodies here, and **only the parent writes to the re
   <recordKey>/
     manifest.md        what the child returned: one row per note it drafted
     s2.html            the body of the note for §2
+    rewritten-<noteKey>-<date>.html   the old body, before an in-place import rewrite
+    digest-<date>.html                the old body, before a /digest refresh
 ```
 
 ## Rules
@@ -16,6 +18,9 @@ reads it and drafts the note bodies here, and **only the parent writes to the re
 - **Nothing here carries authority.** A draft is `[unverified]` until the parent reads it back from the
   library. A file here is never evidence, never a record, and never quoted as one; deleting one needs no
   permission and no ceremony.
+- **Backups are the exception to that rule.** `rewritten-*` and `digest-*` files are the old body of a
+  note that was changed in place. They are the only copy of what was replaced, because this library's
+  API cannot undo a note write. Keep them until the change has been read back and accepted.
 - **One directory per record, named by the library's own key**, so a draft is findable from the record
   and cannot collide with another record's.
 - **A manifest is what a child returns.** One row per note: section ordinal · the paper's own heading ·

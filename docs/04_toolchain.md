@@ -77,46 +77,52 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 **出处**：`tools/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give`
 
-#### `zotero-note.mjs` — 在记录上留一条 digest（读过的记录）
+#### `zotero-note.mjs` — 在记录上留一条 `/digest` 投影（原地刷新）
 
 **能做**
 
-- 追加到带 `DIGEST_MARKER` 的那条笔记；没有就新建一条
+- 没有 `/digest` 笔记就创建；有就原地刷新（干跑、备份、版本守卫）
+- 同一可见文本 → `ALREADY RECORDED`，不写
 
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
-- 内容该笔记已经读过 → `ALREADY RECORDED`，**什么都不写**（exit 0）
-- 没有 marker 的笔记**从不触碰**
+- 没有 `/digest` 的笔记**从不触碰**
+- 一条记录有多条活 `/digest` → `REFUSED`
+- 被 `/retired` 的 digest 不当目标，新建一条
 
 **撞上怎么办**
 
-- 一轮被重跑时，它不会把同一句话写第二遍——所以重跑是安全的
+- 节笔记变了 → 刷新同一条，不追加、不换 key，旧正文留在工作区备份里
 
-**出处**：`tools/zotero-note.mjs` · `DIGEST_MARKER` · `ALREADY RECORDED` · `never touched`
+**出处**：`tools/zotero-note.mjs` · `DIGEST_TAG` · `ALREADY RECORDED` · `refresh in place` · `findDigestNote`
 
-#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划 · 写 · 归退 · 机械修
+#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除干跑
 
 **能做**
 
-- `--plan` / `--plan --json`：这条记录覆盖了哪些节、哪些笔记读不出、哪些是墓碑
-- 写一条节的解释笔记（干跑默认，写后回读）
-- `--retire --note <key> --reason "<why>"`：把讲错的笔记变成**墓碑**，那一节重新可写，`--undo` 可逆
+- `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、digest
+- 写一条节的解释笔记（干跑默认，写后回读 `/section-N`）
+- `--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`
+- `--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（备份 + 版本守卫）
+- `--retire --note <key> --reason "<why>"`：任何笔记都可变成**墓碑**，`--undo` 可逆
 - `--replaces <旧key>`：新笔记带走"我取代了谁"的指针
-- `--tidy`：只做 4 类机械修复，修不了的跨度报出来
+- `--delete --note <key>`：只对 `/retired` 干跑，不发 DELETE
 
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
-- 已被覆盖的节（三种形态，`REFUSED: §…`）——**不要绕过它**
-- 点号序号 `--section 3.1`：**读得到、写不了**（计数单位是顶层节）
-- 不是节笔记的笔记：**从不修改**
+- 已被 claim 的顶层节（`REFUSED: §…`）——**不要绕过它**
+- 点号序号 `--section 3.1`：**不写也不读**（计数单位是顶层节）
+- 带 `/section-N` 但没有 `/imported` 的记录：**不原地改写**，走退休 + 新写
+- 多条 `/section-` tag 的笔记：`ambiguous`，不计覆盖
 - `--replaces` 的对象没退休，或它讲的是另一节
 
 **撞上怎么办**
 
-- 要改正一条已有笔记：**先 `--retire`，再 `--replaces`**——不删、不重写，正文一个字不动
-- 公式分隔符坏了 → `--tidy`；它猜不出的，交给人或写新笔记
+- 要改正一条已有记录：**先 `--retire`，再 `--replaces`**——不删、不重写，正文一个字不动
+- 网页版粘贴的笔记：读 → `--claim` 或 `--rewrite`；垃圾 → `--retire`，以后可 `--delete` 干跑
+- 没有 `--tidy`；公式坏了由 agent 读文字层/页图后重写
 
-**出处**：`tools/zotero-section-note.mjs` · `RETIRE_TAG = '/retired'` · `REPLACES_TAG_PREFIX = '/replaces-'` · `REFUSED: §` · `the body is NOT touched` · `rewrite wearing a formatter's clothes`
+**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched`
 
 #### `zotero-edit.mjs` — 改一条记录的字段与标签
 

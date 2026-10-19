@@ -14,7 +14,7 @@
 |---|---|---|
 | 理解课题、收敛问题 | 收敛 | 一份可判定的问题书：问题/边界/非目标/可判定性/记号 |
 | 搜参考文献 | 文献 + 元数据 + 三条外部通道 | 文献重建笔记（非规范）+ 元数据行 |
-| **读透一篇方法论文** | **逐节笔记（新）** | 条目上的逐节解释笔记：每节一条，只写方法/推导/算法节，掐头去尾 |
+| **读透一篇方法论文** | **逐节笔记（新）** | 条目上的逐节解释笔记：每个顶层方法节一条（`/section-N` tag），掐头去尾；写完再从这些笔记合成一条 `/digest` 投影 |
 | **裁定这篇能借什么** | **借鉴（新）** | 逐项台账：原文定位（节 · 公式号 · 切片）＋ 成立条件与"在这里怎么验" ＋ 原文式／归一化式**分栏** ＋ 目标模块 ＋ **数值锚点**（测试能断言的数），另列拒用及理由 |
 | 思维碰撞、质疑 | 质疑 | 裁定请求：反例/矛盾证据/证伪路径，或诚实地说"无法质疑" |
 | 开子 agent 探索 / 写代码 | 交接 | 子代理报告**文件** + 父代理**自己重新导出**后才成为事实 |
@@ -80,7 +80,7 @@ node tools\zotero-read-selftest.mjs                    # 参考库读取：命�
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）
 node tools\zotero-note-selftest.mjs                    # 笔记：哪条是我们的 / 追加不覆盖 / 同一段不重复 / CLI 对 stub 库不写（离线）
-node tools\zotero-section-note-selftest.mjs            # 逐节笔记：哪一节被点名 / 覆盖按顶层节计 / stubbed 判据（不连库）
+node tools\zotero-section-note-selftest.mjs            # 逐节笔记：tag 身份 / claim/rewrite/retire / 删除干跑（不连库）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
 node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝（不连库）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设

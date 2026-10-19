@@ -35,13 +35,16 @@ a `literature-recon` note already covers.
 
 Read-only, before writing anything:
 
-1. **The digest** — the record's own note and `research/literature/refs/`, which one line per reference
-   read. Only grade `A` can carry an adoption: an item built on an abstract is a guess in a table.
+1. **The receipt and the digest** — `research/literature/refs/` is the receipt: one line per reference
+   read, with its grade. The record's `/digest` note is the paper-level projection of its section
+   notes, not the receipt. Only grade `A` can carry an adoption: an item built on an abstract is a
+   guess in a table. A paper with no section notes has no digest.
 2. **The record's section notes, which are the primary input.**
    `{{presetTools}}/zotero-section-note.mjs --item <recordKey>` reports the readable attachment, and for
-   every note on the record its **first paragraph** and the section it could be read as, then `read here`
-   and `judge these`. Read those paragraphs yourself: the tool reads markers and unambiguous forms, it
-   cannot tell a section note from a whole-paper summary, and what it read is a claim about a note.
+   every note its **tags** and **first paragraph**, then `covered`, `retired`, `digest`, `unknown` and
+   `ambiguous`. Read the `unknown` notes yourself: the tool does not parse prose, and a note with no
+   `/section-` tag is not coverage until it is read and claimed. A tag is a claim about a note, not a
+   guarantee that the note explains that section.
 3. **The study's own constraints** — the scoping document (what the study is for), and the study
    `AGENTS.md` for domain invariants, notation and units. **An adoption that violates a domain invariant
    is not admissible**, however good the paper is.

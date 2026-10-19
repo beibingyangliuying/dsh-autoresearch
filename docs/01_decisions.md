@@ -1633,5 +1633,62 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 当时本机代理已关闭、直连 `github.com` 也不通（两条路都实测不通），按 junhan 的"不要纠结"停手。
 它与发布无关：`v0.6.0`、`622f981` 及其之前的提交都已推送并已从远端核验；下次能联网时 `git push origin main` 即可收尾。
 
+---
+
+## 58. 笔记身份改为 tag，digest 改为章节笔记的投影（Revision 19/20，2026-10-19）
+
+**起因**：junhan 连续追问五件事——隐形 marker 为什么会被应用吃掉、首段正则该不该删、网页版粘贴的笔记能不能原地改写、`--tidy` 该不该保留、digest 到底该从哪来；并指出库里"好像还会走子节生成"。这一轮把五个问题合成一次身份模型的重写。
+
+### 58.1 实测（只读，2026-10-19）
+
+| 口径 | 数值 |
+|---|---|
+| live 笔记 | 378 |
+| 带 section marker | 225（其中 **38 条是点号子节**） |
+| 无 marker | **153（40.5%）** |
+| 带 digest marker | **0**（回收站也是 0） |
+| 带 `/retired` | 34 |
+| 带 `/replaces-` | 15 条 |
+| 带任意 tag | 49 |
+| 回收站 | 481 项 / 323 note |
+
+点号子节分布：`EEBHNSV9` 10 · `78LSP7TE` 5 · `D6JR2EQT` 5 · `4394NKWC` 4 · `JLWH377B` 4 · `9QQJJVVK` 3 · `JSZEALS3` 3 · `QVD59DT6` 2 · `CYY7DAH7` 2。
+
+四个结论：
+
+1. **40.5% 的节笔记已经丢了 marker**；378 条 live 笔记全部是节笔记——tag 身份不是优化，是修复。
+2. **38 条旧子节笔记还在库里**，和 §41.3 记的"全库 0 条"不一致；以这次普查为准。当前工具不再新建点号，但仍会读并折回父节；新方案不再读。
+3. **digest 从未落过一条**：live 0、回收站 0；153 条无 marker 笔记的首段也没有 digest 形态。改它的语义没有迁移成本。
+4. 34 条 `/retired` + 15 条 `/replaces-` 说明归退/替换已经在用；删除干跑一上线就有真实样本。
+
+### 58.2 裁定（junhan，2026-10-19）
+
+1. **身份 = `/section-N` tag**；不再写、不再读任何隐形 marker。应用改正文会吃掉注释，tag 是 item 元数据，实测活过一次改写。
+2. **不解析正文**：带 `/section-N` 才是覆盖；没有 tag 的笔记进 `unknown`，由 agent 读。覆盖的裁定权回到阅读。
+3. **粘贴笔记**：claim 前可 `--rewrite` 原地改写；claim 后带 `/imported` 仍可原地刷新；`/section-N` 不带 `/imported` 是记录，走 `--retire` + 新写。
+4. **`--tidy` 完全删除**：写笔记只由 agent 提供正文，工具不自动修公式。
+5. **`--retire` 任何笔记**；`--delete` 只对 `/retired` 开放，本轮只干跑。
+6. **digest 是章节笔记的投影**：一条论文一条 `/digest`，从 `/section-N` 合成；原地刷新（备份 + 版本守卫），不产生墓碑；回执 = `refs/` 一行 + `/done` tag。
+7. **不写也不读点号**；38 条旧子节迁移时合并/退休，不自动转 tag。
+8. **`adoption-ruling` 按需**，不进主流程。
+
+### 58.3 落地
+
+- [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)：`/section-N`、`/imported`、`/digest`、`/retired`、`/replaces-`；`--claim`、`--rewrite`、`--retire`、`--delete` 干跑；删除 marker、首段正则、`--tidy` 与 `normalizeMath`；plan 输出改为 `covered`/`retired`/`digest`/`unknown`/`ambiguous`。
+- [`tools/zotero-note.mjs`](../tools/zotero-note.mjs)：digest 身份改为 `/digest`，`findDigestNote` 跳过 `/retired`；追加改为原地刷新（备份 + 版本守卫）；无 marker、无 append。
+- [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)：身份、claim/rewrite/retire、digest 合成、报告与清单重写；删除 §3.4 机械修复。
+- [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)：读完写回执（`refs/` 一行 + `/done`），digest 交给 `section-notes`。
+- [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md)：digest 是投影，plan 词汇改为 `covered`/`unknown`。
+- [`protocol.md`](../protocol.md)：Revision 20；§4、§6、§8、§9；`INV-NOTE-1` 改为"一条活 claim"，新增 `INV-NOTE-2`（digest 投影），`INV-EVID-4` 改为"章节笔记是转写，digest 是投影"。
+- 自测：`zotero-section-note-selftest` 增加**第一条 CLI 级 stub 测试**（plan/claim/rewrite/delete 干跑，全部只发 GET）；`zotero-note-selftest` 改为 create/refresh/no-op + stub CLI；全套 20 项离线自测通过。
+
+### 58.4 未做 / 边界
+
+- **旧笔记迁移（Phase 7）**：225 条 marker（187 顶层脚本 + 38 点号人工合并）、153 条无 marker 候选 + agent 抽查、34 条 retired 的删除干跑。**尚未批量写库**；旧笔记先只打 `/retired` 入口，批量整理其次。
+- **`--delete --write` 未实现**：本轮只到干跑；API 删除永久、不进回收站，实写要另一轮授权。
+- **digest 原地刷新的旧版只在工作区备份**，不在库里；这是"派生视图可刷新"的代价。
+- **其他库的旧 digest 笔记**可能仍带 marker；需要先补 `/digest` tag，本库为 0。
+- 计划与分阶段见 [`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md)。
+
 
 

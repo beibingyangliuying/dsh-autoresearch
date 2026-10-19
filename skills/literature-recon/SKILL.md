@@ -90,7 +90,7 @@ Literature that contradicts your expectation or the target claim gets its own se
 | Literature contradicting the claim was found | It must go into the contradicting-evidence section. Never hide it. |
 | It is a preprint / not peer reviewed | Mark it explicitly. |
 | "Many studies show" with no concrete references | Either supply the concrete references, or downgrade to "insufficient evidence found". |
-| The record already carries notes but none carries the digest marker | Read one before writing: the marker is an invisible comment, and the application drops it when the owner edits a note there, so the previous digest may be one of these notes. The note tool would create a **second** digest note. Report which note reads like the digest and stop. |
+| The record already carries a note that reads like a digest but has no `/digest` tag | Read it; if it is the digest, add the tag with `zotero-edit.mjs --item <noteKey> --add-tag /digest --write` (after reading it), then refresh it with `zotero-note.mjs`. Otherwise the note tool creates a **second** digest. If you cannot tell, report both readings and stop. |
 
 ## 5. Wording discipline
 
@@ -189,27 +189,23 @@ Fixed sections:
   `--grep` locates the term and the tool reports the passages around it.
 
   A full text pulled for one paragraph is context spent for nothing.
-- **Check the digest index before reading anything.** `research/literature/refs/` holds one line per reference already read (key · year · grade · tags · one-line digest). A hit means the reading is already done; a `B` line means only the abstract was read and the full text is still owed.
-- **After reading, leave a digest behind.** Write the durable digest as a **note on the library item**, so
-  it travels with the library and appears in the library's own UI, and tag the item with its read state.
-  Both are one write each, and each is a dry run until you add `--write`; the reference manager asks the
-  owner to Allow every write separately.
+- **Check the reading receipt index before reading anything.** `research/literature/refs/` holds one line per reference already read (key · year · grade · tags · one-line takeaway). A hit means the reading is already done; a `B` line means only the abstract was read and the full text is still owed.
+- **After reading, record the receipt; the digest comes later.** The receipt is one line in
+  `research/literature/refs/` plus the item's `/done` tag. It says "this was read, at what grade". It is
+  **not** the paper-level digest: that is written by `section-notes` after the section notes exist, and
+  a paper with no section notes has no digest (§4 of that discipline).
 
   ```powershell
-  node "{{presetTools}}/zotero-note.mjs" --item "<itemKey>" --text "<p>Read 3: the load-bearing assumption is named in the section read.</p>"          # dry run
-  node "{{presetTools}}/zotero-note.mjs" --item "<itemKey>" --text "<p>Read 3: the load-bearing assumption is named in the section read.</p>" --write
   node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write
   ```
 
-  The note tool appends to the one note on a record that carries its marker, and creates that note when
-  there is none — a note **without** the marker is never touched, so someone else's note stays theirs.
-  **A re-run adds nothing, and says so.** The new digest is compared against what the note already
-  reads with — as the text a reader sees, not byte for byte, because the library rewrites a note the
-  application has edited — and one already recorded is reported `ALREADY RECORDED` with nothing written.
-  `ALREADY RECORDED` is the expected answer on a re-run, not a failure to write; a digest that really is
-  a second reading has to say what is new, and the same sentence is not a second reading.
-  Then append one line to the digest index. Without this step the next round pays the same reading cost
-  again.
+  Then append one line to the reading receipt index: `<itemKey> | <year> | <grade> | <tags> | <one-line takeaway>`.
+  A `B` line means only the abstract was read and the full text is still owed; a full-text reading
+  upgrades it to `A`. The index is the fast receipt, not a paper-level summary.
+- **The digest is one `/digest` note per record, from the section notes.** `section-notes` writes it
+  after the notes; `zotero-note.mjs --item <recordKey> --file <digest.html>` creates it or refreshes it
+  in place. Do not write a digest from the raw PDF in the literature round, and do not treat the
+  `refs/` line as the digest. If the record has no section notes, stop after the receipt.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.
 - Do not fill in unread passages to make the note look complete.
 
@@ -241,7 +237,7 @@ Two rules bound rung 3:
   of what was tried is an instruction with extra steps.
 - **Receiving a file is not permission to store it.** Adding it to the library stays the owner's
   authorization, given in the reference manager, and a file that arrived but was not read appears in
-  neither the evidence table nor the digest index.
+  neither the evidence table nor the reading receipt index.
 
 The lookup mechanics for rung 2 belong to `metadata-query`; retrieving and reading a copy belongs to the
 reading channels above. This skill decides which rung is reachable, and records what each answered.

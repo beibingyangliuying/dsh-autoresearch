@@ -1,13 +1,17 @@
-# `research/literature/refs/` — the digest index
+# `research/literature/refs/` — the reading receipt index
 
-One line per reference **actually read**. The durable digest lives in the reference library as a note
-on the item; this file is only a **fast lookup**, so that nobody re-reads a paper to rediscover what
-it said. It is derived data: if it is lost, rebuild it from the library.
+One line per reference **actually read**. This line plus the item's `/done` tag is the **receipt**:
+it says "this was read, at what grade, and what it settled". It is the thing that stops the next round
+from paying the same reading cost again.
+
+The **digest is a different artifact**: one `/digest` note on the record, synthesized by `section-notes`
+from that record's `/section-N` notes. It is a paper-level projection, not a receipt, and a paper with
+no section notes has no digest. Do not put a paper-level summary here and call it the digest.
 
 ## Format
 
 ```
-<itemKey> | <year> | <grade> | <tags> | <one-line digest> | note: zotero
+<itemKey> | <year> | <grade> | <tags> | <one-line takeaway>
 ```
 
 | Field | Meaning |
@@ -15,31 +19,24 @@ it said. It is derived data: if it is lost, rebuild it from the library.
 | `itemKey` | The library item key (8 characters) — the join back to the library |
 | `year` | Publication year |
 | `grade` | `A` = full text read · `B` = abstract/introduction only (the literature discipline's grades) |
-| `tags` | The same tags set on the library item, comma-separated |
-| digest | **One line.** The longer digest belongs in the library note, not here |
+| `tags` | The read-state tags set on the library item, comma-separated |
+| takeaway | **One line.** The receipt; the longer projection belongs in the `/digest` note, not here |
 
 Example:
 
 ```
-ABCD1234 | 2017 | A | transformer,attention,baseline | Self-attention replaces recurrence; 8 authors; no DOI on arXiv | note: zotero
+ABCD1234 | 2017 | A | done | Self-attention replaces recurrence; 8 authors; no DOI on arXiv
 ```
 
 ## Rules
 
-- **Look here before reading anything.** A hit means you already know what this paper says.
+- **Look here before reading anything.** A hit means you already know what this paper settles.
 - **Append only after reading.** Never write a line for a paper you merely saw cited.
 - A `B` line is a **lead, not evidence**; upgrade it to `A` once the full text is read, or delete it.
-- The library note is the durable copy. This file must never become the only copy of a digest.
-- When the two disagree, the library wins — then fix this file.
-
-## Writing the library note
-
-The note is a child item of the reference, so it travels with the library and is visible in the
-library's own UI and plugins:
-
-```json
-{ "itemType": "note", "parentItem": "<itemKey>", "note": "<p>…digest…</p>", "tags": [{"tag": "read:A"}] }
-```
-
-`POST` it to the local API the same way a reference is created (see the write tool). Tag the item
-with its read state so the library itself can be filtered by "have I read this".
+- **This line is the receipt, not the digest.** It is what `INV-EVID-4` reads for "already read";
+  the `/digest` note is derived from the section notes and is not a substitute for it.
+- **A paper with no section notes has no digest.** The receipt here is the whole record; say so in the
+  one-line takeaway rather than writing a paper-level summary into this file.
+- When the digest and this line disagree about what the paper settles, the digest is a projection and
+  this line is the receipt: re-read the notes, then fix whichever one is wrong. Do not paper over the
+  difference.

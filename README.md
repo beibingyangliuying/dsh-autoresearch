@@ -168,12 +168,14 @@ and the page rendered to an image — the rung that answers mathematics no text 
 helper can do, what it refuses, and what to do when the refusal lands is one page**:
 [`docs/04_toolchain.md`](docs/04_toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
-write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` leaves a digest
-on one and writes nothing when the note already reads with it, `zotero-section-note.mjs` leaves one
-explanation note per method section, counted per top-level section — its first step is a read-only report
-of what the record already covers, printing each note's first paragraph and naming the ones it cannot
-read, and it refuses a duplicate rather than trusting a pattern (it repairs an older note's damaged
-formula delimiters too, mechanically and only), `zotero-edit.mjs` changes its fields and tags,
+write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` keeps one `/digest` note
+per record — the paper-level projection of its section notes, refreshed in place — and
+`zotero-section-note.mjs` leaves one explanation note per top-level method section. Its identity is a
+`/section-N` tag rather than an invisible marker (the application eats comments in the body); its first
+step is a read-only report of what the record already claims and which notes are **unknown**, and those
+are read before anything is written. A pasted note can be claimed (`--claim`) or rewritten in place
+(`--rewrite`, with a backup); a claimed record is retired rather than rewritten; `--tidy` is gone; and
+`--delete` only plans the removal of a `/retired` note. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
 not one of the seven: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
@@ -204,7 +206,8 @@ into that trash and can be undone: on 2026-10-18 it held 473 items, 315 of them 
 stays the owner's act there, and what the preset owes that act is the artifact rather than the button — a
 wrong note is **retired**, so the section it claimed becomes writable again while the note itself is left
 untouched and one later write puts it back; a removal the owner still wants is handed over as a list with
-a fixed shape rather than as prose.
+a fixed shape rather than as prose. Only a `/retired` note is a deletion candidate: `--delete --note <key>`
+states the plan and the irreversibility facts, and this round does not send the request.
 
 One thing about that trash is worth knowing before you query it:
 `GET /api/users/0/items/trash?itemType=note` answers `200` with `Total-Results: 0` while the trash holds
@@ -230,7 +233,7 @@ elsewhere; the layout is the same.
   research/
     00_scoping.md      question, boundary, non-goals, decidability
     literature/        reconstruction notes — non-normative by construction
-    literature/refs/   the digest index: one line per reference actually read
+    literature/refs/   the reading receipt index: one line per reference actually read
     adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
                        into which module, and the number that proves the code
     rulings/           challenges and the rulings on them
@@ -313,8 +316,8 @@ node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment ch
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
-node tools\zotero-note-selftest.mjs       # which note is ours, and what gets appended
-node tools\zotero-section-note-selftest.mjs  # the section a note claims, and the mechanical repair
+node tools\zotero-note-selftest.mjs       # which note is the /digest, and the in-place refresh
+node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion plan
 node tools\zotero-link-selftest.mjs       # the attachment-link planner
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 
