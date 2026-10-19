@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Turn a paper already chosen for study into one explanation note per TOP-LEVEL method section, attached to the library record, and then a paper-level digest synthesized from those notes. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place, a wrong record is retired first and may be deleted only after that; the digest is refreshed in place and its old body stays in the library. Use after reading a method-heavy paper you will build on, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
+description: Turn the method sections of a paper the study will build on into one explanation note per TOP-LEVEL method section, attached to the library record, and then a paper-level digest synthesized from those notes. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place, a wrong record is retired first and may be deleted only after that; the digest is refreshed in place and its old body stays in the library. Use after a reading round finishes a method section, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
 ---
 
 # section-notes — one explanation note per method section, plus the digest

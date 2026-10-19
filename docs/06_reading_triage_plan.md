@@ -100,12 +100,16 @@ verdict | basis | re-open if | date`），单元格内容按课题自己的语�
 
 1. 起点：`zotero-section-note.mjs --item <recordKey>` —— 一次调用，看这条记录有没有笔记。
 2. **有笔记**（别的课题读过）：该输出已打印每条笔记的 tags + **首段**（`firstBlockText`，取第一个 `<p>/<h>/<li>` 块）。读首段判够不够；
-   不够再 `zotero-read.mjs --item <noteKey> --limit 7000` 读整条；仍不够，进下一节。
-3. **无笔记**：`zotero-read.mjs --fulltext <key> --offset 0 --limit 7000` 逐片推进（库未索引时用 `zotero-pdf --extract`，参数相同）。
+   不够再 `zotero-read.mjs --item <noteKey> --limit 12000` 读整条；仍不够，进下一节。
+3. **无笔记**：`zotero-read.mjs --fulltext <key> --offset 0 --limit 12000` 逐片推进（库未索引时用 `zotero-pdf --extract`，参数相同）。
 4. 每读完一个**方法节**且判定为继续，写一条 `/section-N` 笔记——这是留给下一个课题的资产。
 5. 判断必须能落成一句"**这篇供的是 ___，落在 Q{t} 的 ___**"；写不出就是 `stop`。
 
-**切片为什么是 7000**：配置里的结果裁剪器写 `thresholdChars: 8192 / headChars: 4096 / tailChars: 1024`，本轮实测一次 14,999 字符结果完整到达、未被裁剪——两者不一致，尚未查清。7000 + 工具头部 ≈ 7400，在两种解释下都安全，所以取 7000。
+**切片为什么取工具的默认 12000**：起草时按配置里的裁剪阈值（`thresholdChars: 8192 / headChars: 4096 /
+tailChars: 1024`）取过 7000，理由是"两种解释下都安全"。实施时改了主意：本轮实测一次 14,999 字符的结果
+**完整到达、没被裁剪**，与配置对不上，而工具自己的默认就是 12000、既有文档也全用 12000。**为一个没查清的
+配置再引入第二个切片数**，只会让仓库里同时存在两个数字；所以沿用 12000，并把"报告里写明实际读到多少字符"
+写成硬要求——被裁的片要看得见。**未决**：配置与该实测仍不一致。
 
 ### 4.2 跳读（可选，带硬护栏）
 
@@ -149,7 +153,7 @@ description: Advance through one reference section by section for one named rese
 
 1. **When to use** — 四种触发；不适用情形；声明"筛读不评价论文质量"。
 2. **First step: read the ruler** — `00_scoping.md` 的候选问题 id、本课题台账现状、该记录的 `--item` 计划。
-3. **Criteria** —（文献 × 子命题）为单位；depth/verdict 闭集；named target；grade 与 depth 两轴；顺序读为默认、跳读护栏；7000 切片；复用笔记的三级阶梯。
+3. **Criteria** —（文献 × 子命题）为单位；depth/verdict 闭集；named target；grade 与 depth 两轴；顺序读为默认、跳读护栏；12000 切片；复用笔记的三级阶梯。
 4. **Do vs don't** — 含 §7 的排除条件表。
 5. **Wording discipline** — "这篇对 Q1 供的是 X"是判定；"看起来不相关""不够创新"都不是；不评价论文质量。
 6. **Report shape** — 台账行 + 日志行 + 短报告（Record / Question / Depth / Verdict / Basis / Not judged）。
@@ -232,7 +236,7 @@ description: Advance through one reference section by section for one named rese
 4. **`stop` 变成永久盲点**：靠复看条件兜底。
 5. **并发写同一记录**：两个课题同时给同一节写笔记时，`section-notes` 的"已 claim 即拒绝"是护栏；单用户下概率低但会以 `REFUSED` 出现，不是数据损坏。
 6. **跳读在 OCR 件上静默出错**：护栏要求打印命中的标题行原文；做不到就退回顺序读。
-7. **切片大小与裁剪器的不一致未查清**（§4.1）：取 7000 是保守值，不依赖任何一边的解释。
+7. **切片大小与裁剪器的不一致未查清**（§4.1）：沿用工具默认 12000；若裁剪器真的生效，12000 的片会掉中间——这是**已知未决缺陷**，两条修法（把阈值抬到 16000，或把默认降到 7000）都还没定。
 8. **列级边界工具不拦**：只有一句文本约定；报告要说明"这一行谁写的"。
 
 ## 11. 已裁定（2026-10-19，junhan）

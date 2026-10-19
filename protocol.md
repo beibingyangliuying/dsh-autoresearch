@@ -100,7 +100,9 @@ artifact from the digest `INV-EVID-4` speaks of, and neither replaces the other;
 already covers is never written twice, including coverage recorded only in a note's own opening line;
 and repairing an older note's damaged formula delimiters is **mechanical only** — a repair that guesses
 at what a broken formula meant is a rewrite, and a rewrite is not a repair. §4 and §6 are restated
-accordingly. Revision 10 records what authorizes a write into the reference
+accordingly. Revision 23 later moves that discipline's trigger: what starts a section note is the end of
+a method section in a reading round, not the paper's selection for study. Revision 10 records what
+authorizes a write into the reference
 library. The reference manager raises its dialog on every request for a key — the local API has no
 "this application is already trusted" path, so the answer "Always Allow" chooses the kind of key issued
 and never whether the owner is asked again — and this preset then discarded that lasting key when the
@@ -251,8 +253,8 @@ triage       one paper is advanced section by section for one named question, an
              row is never deleted, `enough` and `stop` are different answers, a verdict that would
              move the research direction is the owner's, and the reading reuses the section notes
              another question already wrote
-sections     a paper already chosen for study becomes one `/section-N` note per TOP-LEVEL method
-             section, attached to its library record; background, case study and conclusion
+sections     a method section a reading round has just finished becomes one `/section-N` note per
+             TOP-LEVEL section, attached to its library record; background, case study and conclusion
              sections are not written, a claimed section is never written twice, a dotted key is
              neither written nor read, a pasted note is claimed or rewritten in place, a wrong
              record is retired rather than deleted, and a paper-level `/digest` is projected

@@ -115,10 +115,10 @@ an outline mapped to a position.
 1. **Start with the reuse probe** (§2.3). If the record already carries notes for the sections this
    question needs, read their first paragraphs from that one output.
 2. **A reusable note, three rungs.** The first paragraph is often enough. If it is not, read the whole
-   note: `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 7000` and follow the printed offset.
+   note: `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000` and follow the printed offset.
    If the note still does not answer, go to the paper itself for the next section. Say in `basis` which
    rung decided it.
-3. **No reusable note**: `{{presetTools}}/zotero-read.mjs --fulltext "<recordKey>" --offset 0 --limit 7000`,
+3. **No reusable note**: `{{presetTools}}/zotero-read.mjs --fulltext "<recordKey>" --offset 0 --limit 12000`,
    then the offset it names, and so on. When the library has not indexed the attachment, the same
    arguments work with `{{presetTools}}/zotero-pdf.mjs --extract`.
 4. **When a method section is finished and the reading continues, write its `/section-N` note** —
@@ -127,11 +127,14 @@ an outline mapped to a position.
 5. **At each section boundary, judge.** Met the need → `enough`. Still possible → continue. Settled that
    it cannot serve this question → `stop`.
 
-**Why 7,000 characters.** This preset configures a tool-result pruner at 8,192 characters (head 4,096,
-tail 1,024), which would silently drop the middle of a larger result — yet a measured 14,999-character
-result arrived intact. The two are inconsistent and the inconsistency is unresolved, so the slice is
-chosen to be safe under either reading: 7,000 characters plus the tool's own header stays under the
-threshold.
+**Why slices, and why 12,000.** A paper's whole indexed text arrives as one result — measured at 33k to
+88k characters for the papers this discipline is used on — so it is read in slices. 12,000 is the
+reader's own default, and a measured 14,999-character result arrived intact in this harness, while the
+composition configures a result pruner that is meant to keep only a result's head and tail above 8,192
+characters: the configured threshold and the observed behaviour already disagree, and that
+inconsistency is unresolved. The slice stays at the tool's default rather than inventing a second
+number, and every reading states how many characters it actually got — a truncated slice is then
+visible in the record instead of being assumed away.
 
 ### 3.6 Jumping is the exception, and it has three gates
 
@@ -155,7 +158,7 @@ is stated in the report.
 ### 3.7 What reuse is actually worth
 
 A record that another question has already read carries `/section-N` notes. One `--item` call returns
-every note's tags and first paragraph; reading a fresh 40,000-character paper at 7,000 characters a
+every note's tags and first paragraph; reading a fresh 40,000-character paper at 12,000 characters a
 slice costs five to eight calls and the context that goes with them. **The reusable object is the note,
 not the previous question's ledger row** — the row is a hint about where to look, and it is written
 about a different question.
