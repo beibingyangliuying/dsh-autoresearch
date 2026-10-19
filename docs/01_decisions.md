@@ -1690,5 +1690,26 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - **其他库的旧 digest 笔记**可能仍带 marker；需要先补 `/digest` tag，本库为 0。
 - 计划与分阶段见 [`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md)。
 
+---
+
+## 59. 发布 0.7.0：笔记身份换成 tag，digest 成为章节笔记的投影（2026-10-19）
+
+**范围**：§58 的 Phase 1–6，加上 187 条顶层 marker 的 tag 迁移。
+
+**流程**（`preset-release` §7）：
+
+- 版本 `0.6.0 → 0.7.0`，**单独一个提交**（`e888219`，只改 `package.json` 一行），使 tag 指向的树恰好是这一版；**契约 Revision 仍是 20**，与包版本互不绑定。
+- 发布前在最终树上重跑 Phase 1：**20 项离线自测 + `preset-selftest` 全绿**；`release-check --local` **PASS**（干净树、声明 0.7.0）。
+- **注解 tag** `v0.7.0` → `e888219`；**先推分支**（`c69f46f..e888219`），**再推 tag**。
+- **从远端复核** `node tools/release-check.mjs --tag v0.7.0`：**PASS** —— 发布件声明 0.7.0 · 组合不挂 MCP、不启外部命令 · **三条通道需要的 helper 全在发布包里** · `v0.7.0` 与 `main` 同点 `e888219`。
+- **§2 的反方向重扫命中并修掉**：`project-template/research/owner_actions.md` 的示例仍写"mechanical repair declined 4 spans"；[`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md) 仍写 `in parts`、"当前工具仍读点号"、"三种拒绝"；E6 与 archive 仍有本机路径。
+- **机器痕迹**：E6 的 `file:///D:/OneDrive/...` 改为 `file:///<library>/...`；`docs/archive/PLAN.md` 的 checkout 路径改为 `<checkout>`；`docs/05` 的 9 个库 key 改为计数，只保留"9 条记录，最多 10 条"。
+
+**未做 / 边界**：
+
+- Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍未迁移（junhan 选择暂停；187 条已迁）。
+- `--delete --write` 仍未实现；发布不改变工作区的迁移状态。
+- digest 原地刷新的旧版只在工作区备份；其他库带 marker 的旧 digest 仍需先补 `/digest` tag。
+
 
 
