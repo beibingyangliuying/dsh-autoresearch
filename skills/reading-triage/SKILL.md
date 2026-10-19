@@ -179,6 +179,39 @@ Reuse only pays where a note exists. `section-notes` writes notes for method sec
 that an earlier question stopped inside its introduction or its review has no note to reuse; that
 question's row says `stop` and this one starts from the paper. Say which happened in the report.
 
+### 3.8 One round's reading budget, and whose hands read it
+
+A round that spans papers is not split by counting papers. What costs context is the source text pulled
+in, and that number is on screen before the first slice is read.
+
+1. **Screen in batches of five** — one call per record,
+   `node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --offset 0 --limit 3000`. Its
+   `text:` line gives the paper's whole length, its `rung:` line says whether the index answers, and
+   the slice itself is the paper's own abstract. Five records cost about 15,000 characters — under the
+   shell's 16,000-character clip and small against what one paper costs. **A queue of one or two is
+   not screened**: they would never be handed over, so screening them buys nothing.
+2. **The budget is eight slices of source text (≈96,000 characters) per round**, screening included.
+   The figure is not a preference: it is above the largest paper measured for this discipline
+   (88,000 characters), so **one paper is always read inline**, and it is 8 × the 12,000 the tool
+   returns in one result. A paper's bill is the offsets it actually covered — read them off the slices,
+   never off the screening.
+3. **A record that already carries notes is cheaper than its length says.** `--item <recordKey>` on
+   `zotero-section-note.mjs` names the sections another question transcribed, and reading a note costs
+   one slice, not a paper. Bill it at the notes.
+4. **Decide at a boundary, and only about papers not yet started.** Before starting the next paper, add
+   up what this round has read. If the next one would cross eight slices, hand **it and the remaining
+   ones, one per child**, while every library write and every ledger row stays here. A paper already
+   started is finished here: a half-read paper handed over is read twice.
+5. **The estimate is revised, never trusted.** Screening estimates what the round will cost; a paper
+   that stops at §3 refunds what it did not read, and the refund may keep the next one inline. State
+   the estimate, the budget and the actual bill in the report — "screened 5 → 3 relevant, 2 stop at the
+   abstract; 5 notes estimated, 168,000 characters; budget 8 slices → first paper inline, 2 to
+   children" — so that a later reader can check the split against what was read.
+
+A child under this rule reads and reports; it does not judge and it does not write (§3.7, §7). One
+paper is never split between two children: a note defines each symbol where it first appears, and two
+readers of the same paper disagree quietly about notation.
+
 ## 4. Do vs don't
 
 ### 4.1 Do
@@ -189,6 +222,8 @@ question's row says `stop` and this one starts from the paper. Say which happene
 - State which sections were read and which were not reached
 - Prefer an existing note over a fresh read of the same section, and say which rung answered
 - Append a `## Reading log` line when a verdict changes, and leave the old judgement in place
+- When the round spans papers, report what was screened, the round's estimate against the eight-slice
+  budget, and the bill as read — before handing anything to a child (§3.8)
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
 
@@ -223,7 +258,9 @@ The artifact is the row and the log line. The report is what the next round read
 
 1. `## Record` — `itemKey`, title, and which attachment the reading used.
 2. `## Question` — the question id and, in one line, the claim or number this paper was read for.
-3. `## Depth` — the sections read, their own ordinals and headings, and the offset range each slice covered.
+3. `## Depth` — the sections read, their own ordinals and headings, and the offset range each slice
+   covered. When the round spans papers, also the screening result, the estimate against the
+   eight-slice budget, and the bill as read (§3.8).
 4. `## Verdict` — `enough` · `stop` · `park` · in progress, and the named target sentence (§3.3).
 5. `## Basis` — the section and the sentence that decided it; the rung that answered, when a note was
    reused.
@@ -250,8 +287,9 @@ answer to the owner.
   ledger's columns reads as a judgement that was made.
 - **A row is never deleted.** A judgement that changes gets a dated `## Reading log` line beside it, so
   the history of why it changed survives.
-- **A subagent may read; it may not judge.** If a round fans paper-reading out, the child returns the
-  sections and the sentences, and the parent writes the row — one pair of hands on the ledger.
+- **A subagent may read; it may not judge.** When §3.8 crosses the round's budget, the child returns
+  the sections, the sentences and the offsets it covered, and the parent writes the row — one pair of
+  hands on the ledger.
 - **A workspace file carries no resolved helper path.** Name the program; the path comes from this
   discipline through the token.
 
@@ -269,6 +307,9 @@ answer to the owner.
 - [ ] Sections not reached are reported as not reached, not as "no note needed"
 - [ ] Every slice is named by the offsets it covered, and nothing was quoted from a pruned slice
 - [ ] A changed verdict produced a dated `## Reading log` line, and no row was deleted
+- [ ] A round spanning papers reported its screening, its estimate against the eight-slice budget, and
+  the bill as read; no paper was started inline after the budget was crossed, and none was handed over
+  once started
 - [ ] No library write was performed by this skill
 
 ## 9. Don't

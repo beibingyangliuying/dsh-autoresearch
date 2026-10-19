@@ -342,11 +342,12 @@ The artifact is the notes and the digest on the library record. The report is wh
   indexed, and it reads broken mathematics just as wrongly, because it is the same encoding table.
   `--render --pages 3` writes page images into the study's draft directory — the rung for mathematics
   no text layer holds — and those are read as images, never quoted as text.
-- **Whose write is it.** One paper is done inline. From three papers onward, hand each paper to one
-  child under `subagent-contract` — the child reads the text and writes the note bodies to files under
-  `<workspace>/.section-notes/<recordKey>/` and returns a manifest, and **the parent performs every
-  library write and every read-back**. A library change is the gated, auditable act, and keeping it in
-  one pair of hands is what makes "no duplicate, no overwritten note" checkable.
+- **Whose write is it.** One pair of hands performs every library write and every read-back, and that
+  is the parent's. A child under `subagent-contract` drafts note bodies into
+  `<workspace>/.section-notes/<recordKey>/` and returns a manifest; it never touches the library. Who
+  *reads* is the round's reading budget — eight slices of source text — and `reading-triage` §3.8
+  states it. A library change is the gated, auditable act, and keeping it in one pair of hands is what
+  makes "no duplicate, no overwritten note" checkable.
 - **Workspace drafts are working files**, not deliverables; they carry no authority and need no
   authority to delete. The layout lives in `<workspace>/.section-notes/README.md`.
 - **A workspace file does not carry the resolved helper path.** Name the program, say the path comes

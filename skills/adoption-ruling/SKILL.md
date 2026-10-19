@@ -270,10 +270,12 @@ The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes
 - **This discipline writes no library note.** A ledger is a workspace document and needs no
   authorization. If the round also produces a digest or a section note, those writes follow their own
   disciplines and their own `--write` + read-back + authorization rules (`INV-EVID-3`).
-- **One paper is done inline. From three papers onward, hand one paper per child** under
-  `subagent-contract`: the child reads the section notes and writes **candidate items** to files under
-  `<workspace>/.adoption/<recordKey>/` and returns a manifest. **The parent rules, writes the doc, and
-  asks the owner** — a child never issues a ruling and never writes into `research/adoption/`.
+- **The parent rules and writes; a child may only read.** The round's reading budget is
+  `reading-triage` §3.8's eight slices, counted in whatever the round reads — here, the section notes.
+  When it would cross, hand one record's notes to one child per record under `subagent-contract`: the
+  child writes **candidate items** to files under `<workspace>/.adoption/<recordKey>/` and returns a
+  manifest. **The parent rules, writes the doc, and asks the owner** — a child never issues a ruling
+  and never writes into `research/adoption/`.
 - **Workspace drafts are working files**: no authority, no permission needed to delete.
 
 ## 8. Acceptance checklist
