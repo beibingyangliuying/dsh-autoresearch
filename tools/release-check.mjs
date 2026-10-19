@@ -27,10 +27,11 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const DEFAULT_REPO = 'beibingyangliuying/dsh-autoresearch'
 
-/** Helpers whose absence means the two external channels do not work in the published package. */
+/** Helpers whose absence means the external channels do not work in the published package. */
 export const REQUIRED_HELPERS = [
   'preset-paths.js',
   'tools/arxiv.mjs',
+  'tools/metadata.mjs',
   'tools/zotero-read.mjs',
   'tools/zotero-pdf.mjs',
   'tools/zotero-local-api.mjs',
