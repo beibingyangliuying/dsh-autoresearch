@@ -341,7 +341,7 @@ The artifact is the notes on the library record. The report is what a later roun
 - [ ] Every retirement is reported with its reason and its successor
 - [ ] A note an earlier version tagged `/digest` was reported as legacy and left alone, never claimed
 - [ ] Every deletion was a `/retired` note, planned first, and the report quotes its read-back 404
-- [ ] `## Owner actions` is reported, and written to the study's `research/owner_actions.md` when anything is left for the owner
+- [ ] `## Owner actions` is reported, and written to the study's `<layer root>/owner_actions.md` (`research/` where the study has one, else its root) when anything is left for the owner
 
 ## 9. Don't
 

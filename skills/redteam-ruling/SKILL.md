@@ -80,7 +80,8 @@ State what was received, what was not, and therefore which parts the challenge *
 
 ## 6. Report shape
 
-Artifact: `<workspace>/research/rulings/ruling_<target>_<YYYYMMDD>.md`.
+Artifact: `<layer root>/rulings/ruling_<target>_<YYYYMMDD>.md`, where the **layer root** is `research/` if
+the study has one and the study root otherwise (protocol §7).
 
 Fixed sections:
 

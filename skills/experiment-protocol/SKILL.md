@@ -21,8 +21,9 @@ own question.
 
 ## 2. First step: read the declared boundary as a ruler
 
-1. Read the project `AGENTS.md`: its invariants (§2), its document authority (§3), its environment
-   (§6). **Never run against a read-only input or baseline.**
+1. Read the study's `AGENTS.md`, if it has one: its invariants (§2), its document authority (§3), its
+   environment (§6). **Never run against a read-only input or baseline.** With no such file there is no
+   declared boundary to read, and the round says so rather than writing a card against an assumed one.
 2. Read any existing execution protocol (for example a `specs/` directory) and follow it; do not
    invent a parallel one.
 3. Fix the **reference population** before looking at outcomes. A denominator chosen after seeing
@@ -35,8 +36,9 @@ own question.
 
 ### 3.1 Every run is a protocol and a card
 
-**The protocol** is written **before** the run — `research/experiments/protocols/<id>.md`, or the
-project's own location — and carries exactly what must not be decided after seeing the data:
+**The protocol** is written **before** the run — `<layer root>/experiments/protocols/<id>.md`, or the
+project's own location — where the **layer root** is `research/` if the study has one and the study root
+otherwise (protocol §7). It carries exactly what must not be decided after seeing the data:
 
 | Field | Meaning |
 |---|---|
@@ -53,7 +55,7 @@ card and hand it to the owner.
 A run executed before this convention has no protocol. **Register the gap** rather than writing one now;
 which runs those are is itself a dated fact.
 
-**The card** is written after the run — `research/experiments/<id>.md`, or the project's own
+**The card** is written after the run — `<layer root>/experiments/<id>.md`, or the project's own
 location — with these fields:
 
 | Field | Meaning |

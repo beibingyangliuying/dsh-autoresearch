@@ -107,7 +107,8 @@ the attribution.
 - Continuable children can be woken with `send_message`; stop one with `interrupt_agent`; never leave
   a child running unnoticed.
 - Long experiments inside a child are still experiments: `experiment-protocol` applies to the child
-  too, and its cards land in the same `research/experiments/`.
+  too, and its cards land in the same `<layer root>/experiments/` (`research/` where the study has one,
+  else its root — protocol §7).
 - **Budget the round trip.** Give the child a reading budget along with its deliverable, and require the report as a file. A child that returns everything it read has spent the parent's context, which is the opposite of the point.
 - Do not let a child write outside the workspace, or to a read-only input.
 

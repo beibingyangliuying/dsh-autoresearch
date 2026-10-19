@@ -33,12 +33,13 @@ serve this question*, each with the sentence that decided it.
 
 ## 2. First step: read the ruler
 
-Read-only, before reading the paper:
+Read-only, before reading the paper. Paths below are relative to the study's **layer root** — `research/`
+where that directory exists, the study root otherwise (protocol §7):
 
-1. **The question.** `research/00_scoping.md` carries the candidate questions with their ids. A
+1. **The question.** `<layer root>/00_scoping.md` carries the candidate questions with their ids. A
    judgement is per **(question × paper)**; with no named question there is no unit to judge, and the
    round stops and asks which question it is for.
-2. **The question's own ledger** — `research/literature/<topic>.md`, the `## Reference ledger`. Does a
+2. **The question's own ledger** — `<layer root>/references/<topic>.md`, the `## Reference ledger`. Does a
    row for this `itemKey` already exist? What is its `depth` and `verdict`, and does its `re-open if`
    now hold? A current `enough` or `stop` with no change is a closed question: do not open it again.
 3. **Whether the record already carries notes** — `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`

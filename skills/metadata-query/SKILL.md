@@ -26,7 +26,9 @@ library). Neither is this skill's instrument: this one asks bibliographic source
 
 ## 2. First step: read the declared conventions as a ruler
 
-1. Read the study's citation convention (`AGENTS.md` §4 and `research/literature/README.md`).
+1. Read the study's citation convention — `AGENTS.md` §4 if the study has one, and
+   `<layer root>/references/README.md`. The **layer root** is `research/` where that directory exists and
+   the study root otherwise (protocol §7).
 2. Decide which of the three questions you are answering: **find a work**, **resolve an
    identifier**, or **expand references/citations**. They use different endpoints.
 3. Note the retrieval date — citation counts are a snapshot, not a stable property.
@@ -128,7 +130,7 @@ Whether a copy is fetched and read is the reading channels' business, not this s
 
 ## 6. Report shape
 
-Append to `research/literature/<topic>.md` as evidence-table rows, e.g.:
+Append to `<layer root>/references/<topic>.md` as evidence-table rows, e.g.:
 
 ```
 | Source | Grade | What it actually says | Relation to this study |
@@ -147,7 +149,7 @@ If the study has its own convention, follow it.
   helper, and a hand-built request carries none of them.
 - Do not paste credentials into conversation text; these sources need none beyond the contact address.
 - Never present a metadata lookup as if it were reading the paper.
-- Do not modify anything under `research/` other than appending evidence rows.
+- Do not modify anything under the layer root other than appending evidence rows.
 
 ## 8. Acceptance checklist
 

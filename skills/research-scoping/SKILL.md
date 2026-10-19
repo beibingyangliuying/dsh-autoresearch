@@ -81,7 +81,7 @@ Start the file with a one-line summary (≤5 lines): the question + the suggeste
 - Every "has this been done" judgement must come from a **read-only search** and cite a **file path**. Never from memory.
 - **Do not modify any workspace file** except the artifact this skill produces.
 - If the workspace already has a document hierarchy (directory convention, authority order, archiving rules), **follow it**: put the artifact where it belongs; do not create a parallel structure and do not rename existing directories.
-- The default location `<workspace>/research/00_scoping.md` is used **only when the project has no existing convention**.
+- The default location is `<layer root>/00_scoping.md` — the study's `research/` if it already has that directory, its own root otherwise (protocol §7) — used **only when the project has no existing convention**.
 
 ## 8. Acceptance checklist
 
@@ -98,4 +98,4 @@ Start the file with a one-line summary (≤5 lines): the question + the suggeste
 - **Do not choose the study for the user**: ranking candidates and advising is fine, but the choice is theirs; confirm decision points item by item with the question tool.
 - Do not write experiment or implementation plans (downstream)
 - Do not write literature review prose (that is `literature-recon`)
-- Do not introduce domain-specific conclusions; domain constraints come from the project's `AGENTS.md`
+- Do not introduce domain-specific conclusions; domain constraints come from the study's `AGENTS.md`, when it has one

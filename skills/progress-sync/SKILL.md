@@ -51,10 +51,13 @@ If any direction was rejected this round, **you must** record "what was rejected
 
 ### 3.3 Where pitfalls and experiment cards go
 
+Paths here are relative to the study's **layer root** — `research/` where that directory exists, the study
+root otherwise (protocol §7).
+
 | Content | Destination | Why not the obvious alternative |
 |---|---|---|
-| A pitfall: symptom → cause → fix → environment + date | `research/pitfalls/` (append-only, symptom-indexed) | **Not** mnemon: pitfalls are numerous, short, looked up by symptom, and pruned when the environment changes |
-| An experiment: prediction, command, config/seed, artifacts, validity, verdict | `research/experiments/<id>.md` (`experiment-protocol` owns the fields) | **Not** the journal: a card is a re-runnable record, a journal line is a log entry |
+| A pitfall: symptom → cause → fix → environment + date | `<layer root>/pitfalls/` (append-only, symptom-indexed) | **Not** mnemon: pitfalls are numerous, short, looked up by symptom, and pruned when the environment changes |
+| An experiment: prediction, command, config/seed, artifacts, validity, verdict | `<layer root>/experiments/<id>.md` (`experiment-protocol` owns the fields) | **Not** the journal: a card is a re-runnable record, a journal line is a log entry |
 | The few rules you must obey every round | runtime memory | It is auto-injected, and hard-capped — long lists do not fit |
 
 ## 4. Do vs don't
@@ -87,7 +90,7 @@ If any direction was rejected this round, **you must** record "what was rejected
 
 ### 6.1 Workspace journal (append-only)
 
-`<workspace>/research/journal/<YYYYMMDD>_<short-topic>.md`, fixed sections:
+`<layer root>/journal/<YYYYMMDD>_<short-topic>.md`, fixed sections:
 
 1. `## Goal of this round`
 2. `## What was done`

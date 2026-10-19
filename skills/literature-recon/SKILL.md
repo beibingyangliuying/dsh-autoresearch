@@ -115,13 +115,15 @@ Literature that contradicts your expectation or the target claim gets its own se
 
 ## 6. Report shape
 
-Artifact: `<workspace>/research/literature/<topic>.md` (follow the project's location if it has one).
+Artifact: `<layer root>/references/<topic>.md`, relative to the study's **layer root** — `research/`
+where that directory exists, the study root otherwise (protocol §7). A study with its own document
+hierarchy wins over both: put the file where that hierarchy puts it.
 
 Fixed sections:
 
 1. `## Search question` — what I am answering, the query and its scope
 2. `## Summary of findings` — ≤10 lines, each carrying a source id and its grade
-3. `## Reference ledger` — the nine columns of `research/literature/README.md`. This round appends
+3. `## Reference ledger` — the nine columns of `<layer root>/references/README.md`. This round appends
    `itemKey | year | found via | grade | depth` per candidate; `verdict | basis | re-open if | date`
    stay empty, because they are a reading round's to write.
 4. `## Contradicting evidence` — literature conflicting with the summary; if none, write "none found" and state the search scope
@@ -212,12 +214,12 @@ Fixed sections:
   `--grep` locates the term and the tool reports the passages around it.
 
   A full text pulled for one paragraph is context spent for nothing.
-- **Check the topic's ledger before reading anything.** `research/literature/<topic>.md` holds one row
+- **Check the topic's ledger before reading anything.** `<layer root>/references/<topic>.md` holds one row
   per paper. A row whose `verdict` is empty is **queued**: the paper is in scope and nobody has judged it
   for this question yet. A row that carries a `verdict` — `park` · `enough` · `stop` — plus its `depth`
   says where the last reading stopped and why, which is the state this round starts from. Before opening
   a paper for this question, look for its row; before opening one for another question, look for it in
-  that question's file (`grep -r "<itemKey>" research/literature/*.md`).
+  that question's file (`grep -r "<itemKey>" <layer root>/references/*.md`).
 - **After reading, record what was read in that row.** Append the row if this is
   the paper's first appearance, then fill `grade` and `depth` from what was actually retrieved — `B` +
   `abstract` for a screening read, `A` + `§N` or `full` for the sections actually read. Nothing else
