@@ -1802,11 +1802,12 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 **实现**：
 
 - **S1（`1431fa3`）**：`research/literature/README.md` 的 `## Evidence table` 换成九列 `## Reference ledger`（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）+ `## Reading log`；`A` 的定义从"读了全文"改成"读了这句话靠的那几段"，`depth` 才是"读到哪"。`literature-recon` 只追加候选行、不再决定"是否值得读"；`section-notes` 接受**中途停下**的阅读（没走到的节报 `not reached`，不报"不需要笔记"）；`adoption-ruling` 改读台账行，`§4.2` 那条"digest 是 B 级就停"改成 depth/grade 判定——它对"读到 §3、digest 合理地短"的论文会合法地误判。
-- **S2（本次）**：删除 `project-template/research/literature/refs/`；`protocol.md` 升 Revision 22，`INV-EVID-4` 的判据从"查索引"改成"查本课题台账行，再看记录上的笔记"，新增 `INV-EVID-6`；`README.md` / `AGENTS.md.template` / `docs/02_coverage.md` / `adoption/README.md` 的三处布局与回执句同步；`tools/zotero-note.mjs` 头部注释里的"回执在 `refs/`"改掉。
+- **S2（`21ce6bc`）**：删除 `project-template/research/literature/refs/`；`protocol.md` 升 Revision 22，`INV-EVID-4` 的判据从"查索引"改成"查本课题台账行，再看记录上的笔记"，新增 `INV-EVID-6`；`README.md` / `AGENTS.md.template` / `docs/02_coverage.md` / `adoption/README.md` 的三处布局与回执句同步；`tools/zotero-note.mjs` 头部注释里的"回执在 `refs/`"改掉。
+- **S3（本次）**：新 discipline [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md)，契约升 **Revision 23**，§4 加 `triage` 一条；persona 路由加一条并改写 `literature-recon` / `section-notes` 两条触发语（前者不再"决定是否值得读"，后者改为"读轮刚读完一个方法节"也可触发）；`skills-selftest` 10→11、`preset-selftest` 路由数组与计数 11、`surface.md` / `docs/02_coverage.md` / `README.md` 各加/改一行。
 
 **未做**：
 
-- **`reading-triage` discipline 本身**还没写（下一步，Revision 23）：契约与模板先落地，是为了让"写 discipline"时它描述的每一格都已经存在。
 - **`refs/` 只在模板里废除**。已经按旧布局建好的研究工作区里那份 `refs/` 不会自动迁移：它现在是一份**无人读取的旧文件**，删不删由 owner 决定，工具不会碰。
 - 判定"复用记录上已有的 `/section-N` 笔记"这条路径的**成本对比是估算**（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。
 - 结果裁剪器配置写 8,192/4,096/1,024，而本轮实测一次 14,999 字符的工具结果**完整到达、未被裁剪**——两者不一致，**未查清**。切片大小取 7,000，在两种解释下都安全。
+- 台账的**列级归属只有一句文本约定**，没有工具校验（`preset-release` 的"一条不能被违反的边界"在这一格上是 prose）：报告里要求说明"这一行谁写的"，这是唯一的防线。

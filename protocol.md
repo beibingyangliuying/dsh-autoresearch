@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 22.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 23.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 22 removes the **study-level reading receipt index**. A
+independent of any package version. Revision 23 adds one on-demand discipline, because two existing ones
+each owned half of the same question. **How far a paper is worth reading** belonged to nobody: the
+search round could only screen by abstract, before reading it, and the section-note round assumed the
+paper had already been chosen for study — so "read to §2 and judged it irrelevant to this question" had
+no legal exit and left no record, and every later round either re-read the paper or re-made the
+judgement. The new discipline advances one paper section by section for **one named question**, records
+the depth the reading reached and the verdict that stopped it in that question's own ledger, requires
+the sentence that decided it and the condition that would reopen it, and reuses the section notes
+another question already wrote rather than reading that paper again. It evaluates no paper's quality,
+writes no library note, and its verdicts are `enough` and `stop` — never "unclear". §4 and §7 state it.
+Revision 22 removes the **study-level reading receipt index**. A
 study has several questions in flight, and one line per reference could say only that a paper had been
 read — not for which question, nor how far — so a paper one question stopped at its third section and
 another read to the end had one blurry row between them. How far a paper was read is now recorded in
@@ -236,6 +246,11 @@ the load-bearing part: they say when to stop rather than to make something work.
 ```text
 scoping      a vague topic becomes a decidable question; pseudo-questions are sent back
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
+triage       one paper is advanced section by section for one named question, and that question's
+             own ledger records the depth the reading reached and the verdict that stopped it: a
+             row is never deleted, `enough` and `stop` are different answers, a verdict that would
+             move the research direction is the owner's, and the reading reuses the section notes
+             another question already wrote
 sections     a paper already chosen for study becomes one `/section-N` note per TOP-LEVEL method
              section, attached to its library record; background, case study and conclusion
              sections are not written, a claimed section is never written twice, a dotted key is
