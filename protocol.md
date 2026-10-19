@@ -1,9 +1,17 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 23.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 24.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 23 adds one on-demand discipline, because two existing ones
+independent of any package version. Revision 24 narrows one requirement of Revision 23 and closes one
+gap it left. Revision 23 read as if **every** verdict carried a re-open condition, but requiring one
+where the reading did reach the end of the paper produces filler, and a cell filled with "if we need
+more" is worse than an empty one — so the condition is required for `park`, for `stop`, and for
+`enough` reached **short of the full text**, and may stay empty only for `enough` at `depth: full`. The
+gap: a study scaffolded before Revision 22 still carries `research/literature/refs/`, and Revision 22
+abolished the directory without saying what happens to a copy that already exists. Nothing reads it;
+the search round **reports it and does not delete it**, because removing a file from the owner's
+workspace is not a reading round's act. §4 and §7 state both. Revision 23 adds one on-demand discipline, because two existing ones
 each owned half of the same question. **How far a paper is worth reading** belonged to nobody: the
 search round could only screen by abstract, before reading it, and the section-note round assumed the
 paper had already been chosen for study — so "read to §2 and judged it irrelevant to this question" had
@@ -250,9 +258,10 @@ scoping      a vague topic becomes a decidable question; pseudo-questions are se
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
 triage       one paper is advanced section by section for one named question, and that question's
              own ledger records the depth the reading reached and the verdict that stopped it: a
-             row is never deleted, `enough` and `stop` are different answers, a verdict that would
-             move the research direction is the owner's, and the reading reuses the section notes
-             another question already wrote
+             row is never deleted, `enough` and `stop` are different answers, a re-open condition is
+             required for `park`, `stop` and every `enough` short of the full text, a verdict that
+             would move the research direction is the owner's, and the reading reuses the section
+             notes another question already wrote
 sections     a method section a reading round has just finished becomes one `/section-N` note per
              TOP-LEVEL section, attached to its library record; background, case study and conclusion
              sections are not written, a claimed section is never written twice, a dotted key is
@@ -454,6 +463,10 @@ The scaffold offers a study the minimum it needs to be auditable. Roles, not jus
     archive/           retired documents, and a README saying what they were and what replaced them
   .agents/skills/      study-level discipline, if the domain needs one
 ```
+
+A study scaffolded before Revision 22 may still carry `research/literature/refs/`. No discipline reads
+it — a ledger now sits in each question's own literature file — and a round that finds it reports it and
+proposes removing it rather than removing it: the owner's workspace is not a round's to tidy.
 
 The authority order is part of the contract: domain constraints outrank the scoping document, which
 outranks non-normative notes; a journal is a record and never grounds a claim; a pitfall entry

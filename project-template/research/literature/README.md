@@ -43,7 +43,7 @@ record.
 | `depth` | the round that read it | how far the paper was read: `—` / `abstract` / `§N` / `full` |
 | `verdict` | a reading round | why the reading stopped: `park` / `enough` / `stop`; empty = nobody has judged it yet |
 | `basis` | a reading round | the section, and the sentence, that decided it; name the note when the judgement came from one |
-| `re-open if` | a reading round | what change would make this row be judged again |
+| `re-open if` | a reading round | what change would make this row be judged again; required for `park`, `stop`, and every `enough` short of `full` |
 | `date` | a reading round | the date the verdict last changed |
 
 The search round fills `grade` and `depth` with what it actually retrieved — a screening pass that read

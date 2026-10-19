@@ -84,6 +84,11 @@ and neither can overwrite the other. Nothing is shared between the files — the
 says it was not. A reader of the ledger is deciding what to read next, and that is the difference they
 need.
 
+`re-open if` is required for `park`, for `stop`, and for every `enough` reached **short of `full`**: a
+sufficiency claim made at `abstract` or at `§3` is exactly the one that has to say what would reopen it.
+For `enough` at `depth: full` the cell may stay empty — a condition invented there ("if we need more")
+is filler, and an empty cell is honest where the reading did go all the way.
+
 ### 3.3 The named-target rule
 
 Before a `verdict` is written, the round must be able to state, in one sentence:
@@ -256,7 +261,7 @@ answer to the owner.
 - [ ] `verdict` is one of `park`, `enough`, `stop`, or empty for a reading still in progress
 - [ ] The named target sentence exists for every verdict, and its absence produced `stop`
 - [ ] `basis` names a section and a sentence, not an impression
-- [ ] `re-open if` is written for every `park` and every `stop`
+- [ ] `re-open if` is written for every `park`, every `stop`, and every `enough` short of `full`
 - [ ] A reused note is reported with the rung that decided it, or its absence is reported
 - [ ] Sections not reached are reported as not reached, not as "no note needed"
 - [ ] Every slice is named by the offsets it covered, and nothing was quoted from a pruned slice

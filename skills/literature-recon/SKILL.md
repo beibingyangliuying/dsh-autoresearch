@@ -143,6 +143,11 @@ Fixed sections:
   - its output states `total` beside what it showed, so "10 shown" is never read as "10 exist". A
     printed row is always a real record, because an upstream failure is refused rather than printed;
     and `0 results` means the query was answered and matched nothing — a finding, not a failure.
+- **A study scaffolded before Revision 22 may still carry `research/literature/refs/`.** Nothing reads
+  it: the study-level receipt index was abolished, and a ledger now lives in each question's own
+  literature file. Report it in the round's result and propose removing it — but **do not delete it**.
+  Tidying the owner's workspace is not a search round's act, and a stale index that is silently gone is
+  worse than one that was named out loud and left in place.
 - **Search the library in full-text mode.** `{{presetTools}}/zotero-read.mjs --search "<query>"` defaults
   to the mode that matters: `qmode=everything` looks in abstracts, notes and **attachment full text**,
   while the library's own default searches titles, creators and years only — so a paywalled paper the
