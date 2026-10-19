@@ -1411,11 +1411,11 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
    对照：§29/§31 删掉的两条 MCP 行是 77,586 字符 ≈ 21.5k token/请求 ⇒ 现在整个面是当年的一半。
 2. **mnemon 是最大的单项**：17 个工具 15,112 字符 ≈ **4.2k token/请求（占 44 个工具 token 的 39%）**，
    是 persona（4,726 字符 ≈ 1.3k）的 **3.7 倍**。
-3. **实际调用**（`.tmp/mnemon-usage.mjs`，57 个 autoresearch 会话 / 6,081 次 `tool/call`）：
-   mnemon 共 **88 次 = 1.4%**，来自 **17 个里的 6 个**——`runtime_memory` 49 · `document_search` 15 ·
-   `document_create` 11 · `document_manage` 7 · `recall` 4 · `remember` 2；**其余 11 个一次也没被调用**
-   （`forget` · `link` · `memory_bodies` · `memory_body_create/merge/update` · `related` · `status` ·
-   `subagent_result` · `view_action` · `view_route`）。
+3. **实际调用**（现已转正为 [`tools/session-tool-usage.mjs`](../tools/session-tool-usage.mjs)；57 个 autoresearch 会话）：
+   mnemon 共 **88 次 = 1.4%**（当轮）／**89 次**（转正后复测），来自 **17 个里的 6 个**——`runtime_memory` 49→50 ·
+   `document_search` 15 · `document_create` 11 · `document_manage` 7 · `recall` 4 · `remember` 2；
+   **其余 11 个一次也没被调用**。**语料会动**：同一批 57 个会话在约 40 分钟内从 6,081 次调用涨到 **6,161** 次
+   （有一个会话还在追加），所以稳定的是"6/17"与那个比例，不是总数——重跑时按工具打印的数字读，不要拿总数对差。
 4. **常驻散文与工具集是解耦的**（`.tmp/mnemon-resident-names.mjs`，同一批 57 个会话）：
    它们的**系统提示里出现的 mnemon 工具名 = 0 个，57/57**。那段协议块由 profile 级的
    `dsh-mnemon-strategy-default-three-tier` 按 **mnemon View 的 offers** 拼出来，`mnemon_recall` /
@@ -1468,8 +1468,10 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 - **命名空间保留是宽容方向的判据**，与"窄到可信、命中就响亮拒绝"的护栏偏好方向相反；
   它之所以可接受，是因为它只放宽**一个具名前缀**，且解析结果每轮入报告。若将来出现第二个前缀，
   该按同一标准逐项裁定，不要合成一张前缀表。
-- **A 的探针是 `.tmp/` 下的一次性脚本**（gitignored）：重跑配方就是上面两条命令与两个脚本名；
-  脚本本身不进发布件，因此这里的数字在重跑之前是**测量**，重跑不了时就退化为**断言**（§53 同一条规矩）。
+- **A 的探针已转正**为 [`tools/session-tool-usage.mjs`](../tools/session-tool-usage.mjs) 与
+  [`tools/session-prompt-names.mjs`](../tools/session-prompt-names.mjs)（共用 `dump-session.mjs` 的
+  `readSession`）。它们不是通道 helper、不进 `REQUIRED_HELPERS`，但**能被重跑**——所以上面的数字是测量而不是断言
+  （§53 同一条规矩：重跑不了的数字会退化）。
 
 ---
 
@@ -1561,7 +1563,7 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 非法组合只能在**运行时**被拒绝。改成子命令（`read item <key>`）能让非法状态**不可表示**——这是"函数式"那一侧
 的正确方向，但要不要付这笔钱，得先看它今天有没有在流血。
 
-**先验（本次实测，`.tmp/zotero-mode-misuse.mjs`，57 个 autoresearch 会话）**：
+**先验（本次实测，[`tools/session-helper-modes.mjs`](../tools/session-helper-modes.mjs)，57 个 autoresearch 会话）**：
 
 - **283 段**命令行调用了 `zotero-read.mjs`；其中**双模式 0 次**（`--item` + `--fulltext` 这类组合一次都没有）。
   `zotero-pdf.mjs` 在这 57 个会话里**一次都没被调用**。
@@ -1581,7 +1583,7 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 
 **触发条件**（写不出来就不该登记，所以写成可判定的）：
 
-1. 真实执行里**第一次**命中那两条拒绝信息（探针配方同 `.tmp/zotero-mode-misuse.mjs`），或
+1. 真实执行里**第一次**命中那两条拒绝信息（探针 = `tools/session-helper-modes.mjs --preset autoresearch`），或
 2. 出现一次把 `zotero-pdf` 的 `--pages` 用错归属的真实调用，或
 3. `zotero-pdf.mjs` 开始被实际使用（当前 57 个会话 **0 次**），且其梯级误用率可测。
 
