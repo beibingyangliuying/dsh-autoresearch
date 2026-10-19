@@ -1740,3 +1740,24 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 
 
 
+
+---
+
+## 61. 发布 0.8.0：删除实写与 digest 库内历史（2026-10-19）
+
+**范围**：§60 的三项（删除实写、digest 旧版留库、取消 `--rewrite` 工作区备份），契约升 **Revision 21**。
+
+**流程**（`preset-release` §7）：
+
+- 版本 `0.7.0 → 0.8.0`，**单独一个提交**（`47c4956`，只改 `package.json` 一行）；契约 Revision 21 与包版本互不绑定。
+- 发布前在最终树上重跑：**20 项离线自测 + `preset-selftest`（fresh dump）全绿**；`toolchain-page --check` 24 条引用成立；`release-check --local` **PASS**（干净树、声明 0.8.0）。
+- **注解 tag** `v0.8.0` → `47c4956`；**先推分支**（`08565ad..47c4956`），**再推 tag**。
+- **从远端复核** `node tools/release-check.mjs --tag v0.8.0`：**PASS** —— 发布件声明 0.8.0 · 组合不挂 MCP、不启外部命令 · 三条通道需要的 helper 全在发布包里 · tag 与 `main` 同点 `47c4956`。
+
+**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/03_revision_plan.md`](03_revision_plan.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/02_coverage.md`](02_coverage.md)、[`docs/05_note_pipeline_plan.md`](05_note_pipeline_plan.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/04_toolchain.md`](04_toolchain.md) 由工具源重新生成。
+
+**未做 / 边界**：
+
+- Phase 7 的 **38 条点号 / 153 条无 marker / 34 条 retired** 仍暂停；0.8.0 只是给 34 条 retired 的处置开了出口，没有自动执行任何一条。
+- 没有在真库上执行一次删除或 digest 刷新：新路径由 stub 覆盖（DELETE + 404、快照先于 PATCH），真库写仍要下一次逐条授权。
+- 工作区不再保留 `rewritten-*` / `digest-*` 备份；`.section-notes/` 仍用于草稿与 `--render` 页面图。
