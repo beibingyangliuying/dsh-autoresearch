@@ -4,7 +4,7 @@
 Phase 7 已跑 187 条顶层 tag 迁移。迁移余量（38 条点号 / 153 条无 marker / 34 条 retired）已移入
 [`../backlog.md`](../backlog.md) §2，本文件不再重复。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。
 实施记录见 [`docs/decisions.md` §58](../decisions.md) 与 §60。
-**本文件描述的"回执 = `research/literature/refs/` 一行 + `/done` tag"已被 Revision 22 取代**（[§62](../decisions.md)）：读态现在记在**每个课题自己的台账**里，`refs/` 与"回执"这个概念都废除了。其余（tag 身份、claim/rewrite、digest 投影）仍然有效。
+**本文件描述的"回执 = `research/literature/refs/` 一行 + `/done` tag"已被 Revision 22 取代**（[§62](../decisions.md)）：读态现在记在**每个课题自己的台账**里，`refs/` 与"回执"这个概念都废除了。**本文 §5 的 digest 投影已被 Revision 25 废除**（[§64](../decisions.md)）：它从未落库、也没有下游消费者；余下 §3–§4（tag 身份、claim/rewrite）仍然有效。
 
 ## 0. 一句话
 
@@ -139,6 +139,9 @@ Phase 7 已跑 187 条顶层 tag 迁移。迁移余量（38 条点号 / 153 条�
 这张表是"工具不再解析散文"的回报：类型是显式的，规则按类型分，不用猜。
 
 ## 5. digest：章节笔记的投影
+
+> **历史（2026-10-19，Revision 25）**：本节描述的 digest 已被废除——它从未落库，且没有下游消费者。
+> 定义见 [`../decisions.md` §64](../decisions.md)；本节只保留为当时的设计记录，不再执行。
 
 ### 5.1 语义
 
