@@ -228,6 +228,12 @@ between "searched and absent" and "not searched at all".
 The scaffolder is PowerShell today, so this step is Windows-only. Copy `project-template/` by hand
 elsewhere; the layout is the same.
 
+It creates the scoping document and one literature layer, and nothing else — **the first thing you write
+is the study's `AGENTS.md`**: what this domain forbids, the order its documents take, the notation, the
+environment. The scaffold deliberately leaves that file absent rather than prefilled, because a
+placeholder in its place is read as an authority table while saying nothing. Every other directory the
+study turns out to need is created by whichever discipline first writes there.
+
 ### What a study looks like
 
 ```text

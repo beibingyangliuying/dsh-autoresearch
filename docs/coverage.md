@@ -81,10 +81,11 @@
 
 ### 1. 读之前：先看这个课题自己的台账
 
-台账在课题自己的文件里：`research/literature/<topic>.md` 的 `## Reference ledger`，一篇文献一行
+台账在课题自己的文件里：层根下的 `references/<topic>.md` 的 `## Reference ledger`——层根是课题的
+`research/`（若它有这个目录），否则就是课题根（[`../protocol.md`](../protocol.md) §7）——一篇文献一行
 （`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）。`depth` 说读到哪
 （`—` · `abstract` · `§N` · `full`），`verdict` 说为什么停（`park` · `enough` · `stop`，空 = 还没人判过）。
-**别的课题读到哪，用 `grep -n "<itemKey>" research/literature/*.md` 看**：同一篇被两个课题读过是正常的，
+**别的课题读到哪，用 `grep -n "<itemKey>" <层根>/references/*.md` 看**：同一篇被两个课题读过是正常的，
 两个课题各记各的；记录上已有的 `/section-N` 笔记反而是两个课题**共用**的资产；
 条目的 `/done` tag 只是你自己打的一个标记，**任何判断都不读它**。
 
@@ -213,7 +214,7 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 
 ### 9. 读完之后的下一步：这篇能借什么
 
-笔记回答"它说了什么"，台账回答"**我们拿什么**"：`research/adoption/<recordKey>.md`，一条一项，
+笔记回答"它说了什么"，台账回答"**我们拿什么**"：`<层根>/adoption/<recordKey>.md`，一条一项，
 `adopt` / `adopt-modified` / `reference-only` / `reject` 四选一，每项带原文定位、成立条件与"在这里怎么验"、
 原文式与我们的归一化式（**分栏，不合并**）、目标模块，以及**测试能断言的数值锚点**。没有锚点的项只能停在
 `candidate`——一个抄对的公式和一个实现错的公式，在散文里同形。裁定**是你的**：agent 出候选表，3–5 项一批问你。
