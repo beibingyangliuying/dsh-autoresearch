@@ -74,18 +74,21 @@ and neither can overwrite the other. Nothing is shared between the files — the
 
 | `verdict` | Needs `depth` | Means |
 |---|---|---|
-| `park` | `—` | not started; waiting on a stated condition, which goes in `re-open if` |
+| `park` | `—`, or `abstract` | `—`: not started; `abstract`: screened and worth reading once the condition in `re-open if` holds |
 | `enough` | `§N` | §N answered the question; stop reading |
-| `stop` | `§N`, or `—` when the record carries no readable text and the bibliographic record is all the evidence there is | §N settled that it is irrelevant to this question |
-| (empty) | `§N` | reading in progress |
+| `stop` | `abstract`, or `§N`, or `—` when the record carries no readable text and the bibliographic record is all the evidence there is | the abstract settled that the paper cannot serve this question; a section settled it; or nothing is readable |
+| (empty) | `—`, `abstract`, or `§N` | not judged yet: in the queue (`—`), screened and still queued (`abstract`), or being read (`§N`) |
 | (empty) | `full` | every method section read, no verdict yet |
+
+**`enough` is never written at `abstract`.** An abstract can rule a paper out for a question; it cannot
+establish that the question's need was met — that claim needs the section it rests on.
 
 `enough` and `stop` are different answers and are never merged: one says the need was met, the other
 says it was not. A reader of the ledger is deciding what to read next, and that is the difference they
 need.
 
 `re-open if` is required for `park`, for `stop`, and for every `enough` reached **short of `full`**: a
-sufficiency claim made at `abstract` or at `§3` is exactly the one that has to say what would reopen it.
+sufficiency claim made at `§3` is exactly the one that has to say what would reopen it.
 For `enough` at `depth: full` the cell may stay empty — a condition invented there ("if we need more")
 is filler, and an empty cell is honest where the reading did go all the way.
 
@@ -193,7 +196,7 @@ question's row says `stop` and this one starts from the paper. Say which happene
 |---|---|
 | No named question (the candidate questions are not yet decided) | Ask which question this is for. No judgement — a verdict without a unit is a guess in a table. |
 | The record has no readable attachment | Report "no readable text"; `depth=—`, `verdict=stop`, whose `basis` states that the bibliographic record is the whole evidence. Never report it as read. |
-| Only the abstract is available | `depth=abstract`, `grade ≤ B`. Write what the full text could change, and `park` if the full text would decide it. |
+| Only the abstract is available | `depth=abstract`, `grade ≤ B`. `stop` if the abstract already settles that the paper cannot serve the question; `park` if the full text would decide it. Write what the full text could change. |
 | The outline is missing, or `--grep` does not hit the heading | **Do not jump.** Fall back to sequential reading (§3.5). |
 | `--grep` hits in several places | Take the first, print every hit's position, or fall back to sequential reading. |
 | The text layer is unreadable, or a formula exists only in an image | Climb to the rendered page (`--render --pages N` + `read_image`) and say which rung answered. **A verdict built on text that was never read does not stand.** |
@@ -209,8 +212,8 @@ question's row says `stop` and this one starts from the paper. Say which happene
 - **`basis` names a section and a sentence**, not an impression: "§3 and Fig. 4 give the threshold law
   Q1 needs" — with the section ordinal the paper itself uses.
 - **Never grade the paper.** The grades here are about our sentence's footing, not the work's quality.
-- **Distinguish "read and irrelevant" from "not readable" from "not read".** They are `stop` with a
-  section, `stop` at `—`, and no verdict at all.
+- **Distinguish "read and irrelevant" from "not readable" from "not read".** They are `stop` at the
+  depth that settled it (`abstract` or `§N`), `stop` at `—`, and no verdict at all.
 - **A `stop` is not a verdict on the paper.** Say what it was judged against: the question, and the
   section that settled it.
 
@@ -275,8 +278,8 @@ answer to the owner.
   ...]`; re-fetch that offset and quote from the live text
 - Do not evaluate the paper's quality, novelty, or writing
 - Do not read past the section that settles the question: `stop` and `enough` both stop the reading
-- Do not write a `verdict` from a digest, a note's first paragraph alone, or an abstract, when the
-  question needed the paper's own text
+- Do not write `enough` from a digest, a note's first paragraph, or an abstract — an abstract can rule
+  a paper out for a question, never in. A `stop` may rest on the abstract, and `basis` then says so.
 - Do not edit, retire, or claim a section note from here; that is `section-notes`' act, with its own
   rules
 - Do not change a research direction, and do not report a field-level absence from one paper's `stop`

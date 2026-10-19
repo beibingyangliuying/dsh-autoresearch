@@ -51,9 +51,14 @@ the abstract appends `B | abstract` — and it writes no `verdict`, no `basis` a
 round may correct `grade` and `depth` in either direction, because it read the paper; what no round does
 is remove a row or rewrite its provenance.
 
-**`verdict` empty is the unscreened state.** The row exists, `depth` says what is already in hand, and
-nobody has judged this paper for this question yet. That is not "no papers found" and it is not a
-judgement; it is the queue.
+**A screening pass that judges is a reading round's, not the search round's.** When a reading round
+screens a queue before dividing it, the paper's own abstract may already settle that it cannot serve the
+question: the round then writes `stop` with `depth: abstract`, its `basis` naming the abstract, and a
+`re-open if`. The search round still writes no verdict at all — it is the queue, not a judgement.
+
+**`verdict` empty is not a judgement.** The row exists, `depth` says what is already in hand — nothing
+(`—`), an abstract, or sections — and nobody has ruled this paper out for this question yet. That is not
+"no papers found"; it is the queue.
 
 ### The two vocabularies
 
@@ -70,11 +75,14 @@ judgement; it is the queue.
 
 | `verdict` | Needs `depth` | Means |
 |---|---|---|
-| `park` | `—` | not started; waiting on a stated condition |
+| `park` | `—`, or `abstract` | `—`: not started; `abstract`: screened and worth reading once the condition holds |
 | `enough` | `§N` | §N answered the question; stop reading |
-| `stop` | `§N`, or `—` when the record carries no readable text and the bibliographic record is all the evidence there is | §N settled that it is irrelevant to this question |
-| (empty) | `§N` | reading in progress |
+| `stop` | `abstract`, or `§N`, or `—` when the record carries no readable text and the bibliographic record is all the evidence there is | the abstract settled that the paper cannot serve this question; a section settled it; or nothing is readable |
+| (empty) | `—`, `abstract`, or `§N` | not judged yet: in the queue (`—`), screened and still queued (`abstract`), or being read (`§N`) |
 | (empty) | `full` | every method section read, no verdict yet |
+
+**`enough` is never written at `abstract`.** An abstract can rule a paper out for a question; it cannot
+establish that the question's need was met.
 
 `enough` and `stop` are kept apart on purpose: one says the need was met, the other says it was not, and
 that difference is what the next question most needs to read.
