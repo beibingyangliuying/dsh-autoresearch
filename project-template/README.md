@@ -13,7 +13,8 @@ contract rather than copied here. A second copy of the same map is a second thin
    exists, a round that needs an invariant says it is missing and stops rather than inventing one.
 2. [`00_scoping.md`](00_scoping.md) — what we are asking, and what would answer it.
 3. [`references/README.md`](references/README.md) — the one layer this scaffold pre-creates: how a
-   question's literature is read, and what a reading is allowed to say. Its `ledger.md` starts empty.
+   question's literature is read, and what a reading is allowed to say. Its `ledger.md` is the empty
+   table the first round copies to `references/<topic>.md`.
 
 Every other directory a study needs is created by the discipline that first writes there, and that round
 reports the path it used. Do not pre-create one to have somewhere to put something later.

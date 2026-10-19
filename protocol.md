@@ -1,9 +1,15 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 27.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 28.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 27 adds one on-demand discipline, because the step before
+independent of any package version. Revision 28 states which file a reading fills, because the scaffold
+and four disciplines had come to name different ones: the scaffold's `references/ledger.md` is the
+table's **shape** and nothing else, and a question's ledger is `references/<topic>.md` — the file every
+discipline names — which the first round creates by copying that shape. §7's layout note had read as if
+a reading filled `ledger.md` itself, so a study scaffolded by Revision 26 and swept by Revision 27 would
+have left the file the disciplines look for empty and the file it was given behind. §7 states it.
+Revision 27 adds one on-demand discipline, because the step before
 the reading round had none. The three steps around it existed — a source is graded by what was read, one
 paper is advanced through for one named question, a note is written at a method section's end — and
 nothing turned **a collection** into "these candidates, in this order, with the ones that cannot serve us
@@ -482,7 +488,8 @@ used to. Roles, not just paths:
   references/          one archive per research question, non-normative by construction: which record
                        was consulted, how far the reading got, and the verdict that stopped it
     README.md          this layer's rules: pointers only, no new judgement, adoption decided elsewhere
-    ledger.md          the ledger's shape, one row per question and paper, empty until a reading fills it
+    ledger.md          the ledger's shape, one row per question and paper; the first reading copies it
+                       to `references/<topic>.md` and writes its rows there
   .section-notes/      what a round drafts before writing to the library; working files, no authority
 ```
 

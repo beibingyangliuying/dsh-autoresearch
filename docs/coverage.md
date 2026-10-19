@@ -84,7 +84,8 @@
 
 台账在课题自己的文件里：层根下的 `references/<topic>.md` 的 `## Reference ledger`——层根是课题的
 `research/`（若它有这个目录），否则就是课题根（[`../protocol.md`](../protocol.md) §7）——一篇文献一行
-（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）。`depth` 说读到哪
+（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）。模板里的
+`references/ledger.md` **只是这张表的空壳**，第一轮复制成 `<topic>.md` 再写行，不往空壳里写。`depth` 说读到哪
 （`—` · `abstract` · `§N` · `full`），`verdict` 说为什么停（`park` · `enough` · `stop`，空 = 还没人判过）。
 **别的课题读到哪，用 `grep -n "<itemKey>" <层根>/references/*.md` 看**：同一篇被两个课题读过是正常的，
 两个课题各记各的；记录上已有的 `/section-N` 笔记反而是两个课题**共用**的资产；

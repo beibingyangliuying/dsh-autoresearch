@@ -1861,3 +1861,31 @@ Revision 22 划走的职责；判决归读轮）。
   没有写过任何一行台账、没有碰库。
 - `--screen` 的 `INCOMPLETE` 分支只有上限 2000 行这一段代码，没有被一个真的超大分类触发过。
 - `--screen` 不解码 HTML 实体（`&amp;` 原样打印）：摘要里出现实体时，读者看到的是实体。
+
+---
+
+## 69. 台账是课题自己的文件，模板里的 `ledger.md` 只是空壳（Revision 28，2026-10-19）
+
+**起因**：发布前核对两次改动（Rev 25 删 digest / Rev 26 收脚手架 / Rev 27 加初筛）时发现一处接缝：
+Rev 26 的模板给了 `references/ledger.md`，而四条纪律与覆盖地图都说台账是 `references/<topic>.md`；
+契约 §7 那句 "empty until a reading fills it" 又把 `ledger.md` 说成会被填的那份。一个刚脚手架出来的课题，
+第一轮会新建 `<topic>.md`，`ledger.md` 永远空着——而**没有任何纪律点名 `ledger.md`**。
+
+**先验**：`ledger.md` 只出现在 `README.md`、`protocol.md` §7、`project-template/README.md` 三处；
+`<topic>.md` 出现在 `literature-recon` §6、`coverage.md` §1、`reading-triage` 与 `adoption-ruling`
+的台账落点共四处。冲突时契约赢，所以照字面执行反而会让四条纪律"错"。
+
+**裁定（junhan 选 1）**：`ledger.md` **只作骨架**；第一轮把它复制成 `<topic>.md`，此后只写 `<topic>.md`。
+
+**实现**：
+
+- 契约升 **Revision 28**：头段说明这份文件是谁的，§7 布局块那一行改为"the first reading copies it to
+  `references/<topic>.md`"。
+- `README.md` 布局块、`project-template/README.md` 的入口第 3 条、`project-template/references/README.md`
+  两处（开头与台账段尾）同步；`coverage.md` §1 补一句"空壳，不往里写行"。
+
+**未做／边界**：
+
+- 不改文件名、不迁移旧课题：已有 `references/<topic>.md` 的课题不受影响；旧课题若在用别的文件名，
+  "已有层级优先"照旧。
+- 没有新增护栏：`ledger.md` 是否被误填，只能靠纪律与阅读，机器校不了这一句。

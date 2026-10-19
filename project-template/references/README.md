@@ -1,8 +1,8 @@
 # `references/` — where a question's literature is read, and what a reading may say
 
-One archive per research question. This file and `ledger.md` are the scaffold's; a round may add one file
-per question once a study has more than one in flight. **Nothing here is authoritative**, and nothing here
-decides whether a paper is used.
+One archive per research question: `<topic>.md`. This file states the rules, `ledger.md` carries the
+empty table, and the first round copies it to `<topic>.md`. **Nothing here is authoritative**, and
+nothing here decides whether a paper is used.
 
 ## Rules
 
@@ -40,8 +40,8 @@ One row per (research question × paper), keyed by the library `itemKey`:
 
 The `depth` and `verdict` vocabularies, and which combinations are legal, are stated **once** — by the
 `reading-triage` skill — and are deliberately not copied here: a second copy is a second thing to keep
-true. `ledger.md` in this directory holds the current state; a judgement that changes is appended to its
-reading log rather than overwriting the row's history.
+true. The question's ledger is `<topic>.md`; `ledger.md` is only the shape it starts from, and a
+judgement that changes is appended to that file's reading log rather than overwriting the row's history.
 
 A **screening** pass writes one row per item it rules out, and writes the abstract's own sentence as the
 `basis`: a paper that cannot serve the question is a judgement, and an unjudged item is the queue, not a

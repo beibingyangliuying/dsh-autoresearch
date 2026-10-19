@@ -245,7 +245,8 @@ study turns out to need is created by whichever discipline first writes there.
   references/          one archive per research question, non-normative by construction: which record
                        was consulted, how far the reading got, and the verdict that stopped it
     README.md          this layer's rules: pointers only, no new judgement, adoption decided elsewhere
-    ledger.md          the ledger's shape, one row per question and paper, empty until a reading fills it
+    ledger.md          the ledger's shape; the first reading copies it to `references/<topic>.md`
+                       and writes its rows there
   .section-notes/      what a round drafts before writing to the library; working files, no authority
 ```
 
