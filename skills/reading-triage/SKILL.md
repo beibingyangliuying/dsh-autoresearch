@@ -128,13 +128,17 @@ an outline mapped to a position.
    it cannot serve this question → `stop`.
 
 **Why slices, and why 12,000.** A paper's whole indexed text arrives as one result — measured at 33k to
-88k characters for the papers this discipline is used on — so it is read in slices. 12,000 is the
-reader's own default, and a measured 14,999-character result arrived intact in this harness, while the
-composition configures a result pruner that is meant to keep only a result's head and tail above 8,192
-characters: the configured threshold and the observed behaviour already disagree, and that
-inconsistency is unresolved. The slice stays at the tool's default rather than inventing a second
-number, and every reading states how many characters it actually got — a truncated slice is then
-visible in the record instead of being assumed away.
+88k characters for the papers this discipline is used on — so it is read in slices of 12,000 characters,
+the reader's own default. Nothing cuts a result at 8,192 characters as it arrives: the shell tool clips
+a single command's output at 16,000 characters and says so, spilling the rest to a file, so a
+12,000-character slice comes back whole. The composition's result pruner acts elsewhere — when the
+context is **compacted**, it rewrites any tool result over 8,192 characters down to its first 4,096 and
+last 1,024 around a `[... tool result middle pruned ...]` marker.
+
+A slice is therefore read in full once, and **a slice needed a second time is re-fetched by its offset,
+never recalled from a pruned result**. A heading quoted verbatim, or the sentence that decided a verdict,
+comes from a live read or it does not go in the record. Name the offsets the reading covered: "read to
+§3" is a claim about a range of the text, and the offsets are what the next reader can check.
 
 ### 3.6 Jumping is the exception, and it has three gates
 
@@ -211,7 +215,7 @@ The artifact is the row and the log line. The report is what the next round read
 
 1. `## Record` — `itemKey`, title, and which attachment the reading used.
 2. `## Question` — the question id and, in one line, the claim or number this paper was read for.
-3. `## Depth` — the sections read, their own ordinals and headings, and how many characters of the text.
+3. `## Depth` — the sections read, their own ordinals and headings, and the offset range each slice covered.
 4. `## Verdict` — `enough` · `stop` · `park` · in progress, and the named target sentence (§3.3).
 5. `## Basis` — the section and the sentence that decided it; the rung that answered, when a note was
    reused.
@@ -255,12 +259,15 @@ answer to the owner.
 - [ ] `re-open if` is written for every `park` and every `stop`
 - [ ] A reused note is reported with the rung that decided it, or its absence is reported
 - [ ] Sections not reached are reported as not reached, not as "no note needed"
+- [ ] Every slice is named by the offsets it covered, and nothing was quoted from a pruned slice
 - [ ] A changed verdict produced a dated `## Reading log` line, and no row was deleted
 - [ ] No library write was performed by this skill
 
 ## 9. Don't
 
 - Do not judge a paper without a named question, and do not merge two questions' verdicts into one row
+- Do not quote a heading or a sentence from a slice whose middle reads `[... tool result middle pruned
+  ...]`; re-fetch that offset and quote from the live text
 - Do not evaluate the paper's quality, novelty, or writing
 - Do not read past the section that settles the question: `stop` and `enough` both stop the reading
 - Do not write a `verdict` from a digest, a note's first paragraph alone, or an abstract, when the

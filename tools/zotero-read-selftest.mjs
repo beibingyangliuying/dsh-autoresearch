@@ -231,7 +231,7 @@ check(search.limit === 10, 'a search defaults to ten rows', String(search.limit)
 check(search.qmode === 'everything', 'the default mode is full text, because the other default hides paywalled text')
 const read = parseArgs(['--fulltext', 'k', '--limit', '300'])
 check(read.mode === 'fulltext' && read.limit === 300, 'a read takes a character count beyond the page size', String(read.limit))
-check(parseArgs(['--fulltext', 'k']).limit === 12000, 'a read defaults to 12000 characters, inside the result pruner')
+check(parseArgs(['--fulltext', 'k']).limit === 12000, 'a read defaults to 12000 characters, inside the shell tool clip')
 check(parseArgs(['--fulltext', 'k', '--grep', 'term']).grep === 'term', 'a read can look for one term')
 check(parseArgs(['--collections']).mode === 'collections' && parseArgs(['--tags']).mode === 'tags', 'the argument-less modes parse')
 

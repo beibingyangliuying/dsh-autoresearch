@@ -324,8 +324,9 @@ The artifact is the notes and the digest on the library record. The report is wh
   plan does: every note's tags, section, retired/imported/digest state, and the `unknown` and
   `ambiguous` lists. Assemble the owner-action table from that, never by parsing the prose.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
-  88k characters for the papers this discipline is used on — while this preset's result pruner keeps
-  only a result's head and tail above 8,192 characters. Read in slices:
+  88k characters for the papers this discipline is used on — while the shell tool clips one command's
+  output at 16,000 characters and the result pruner reduces any tool result over 8,192 to its head and
+  tail once the context is compacted. Read in slices:
 
   ```powershell
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --limit 12000

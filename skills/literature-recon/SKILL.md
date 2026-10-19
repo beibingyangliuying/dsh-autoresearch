@@ -155,8 +155,9 @@ Fixed sections:
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
 - **Reading a long full text without destroying the context.** The library answers with an attachment's
   whole indexed text in one response — measured **76,908 characters** for a 17-page paper — which is far
-  above this preset's tool-result pruner threshold (8,192 characters, which keeps the head and the tail
-  and silently drops the middle). Read it in slices, and let the tool do the arithmetic:
+  above the 16,000 characters the shell tool returns from one command, and far above the 8,192-character
+  point at which the result pruner reduces a tool result to its head and tail when the context is
+  compacted. Read it in slices, and let the tool do the arithmetic:
 
   ```powershell
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<itemKey>" --limit 12000

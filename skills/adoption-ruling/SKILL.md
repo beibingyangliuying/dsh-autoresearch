@@ -261,9 +261,10 @@ The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes
   `{{presetTools}}/zotero-section-note.mjs --item <recordKey>` lists a record's notes with their first
   paragraphs and writes nothing without `--write`; `{{presetTools}}/zotero-read.mjs --item <noteKey>`
   reads one note's body. Everything else is `read` / `write` on the study workspace.
-- **Reading is a budget.** A note or a full text comes back whole and this preset's result pruner keeps
-  only the head and the tail above 8,192 characters. Read in slices with `--limit 12000` and the printed
-  offset; never pull a full text to find one equation — `--grep` locates the passage.
+- **Reading is a budget.** A note or a full text comes back whole, and a tool result over 8,192
+  characters loses its middle when the context is compacted — so what is needed twice is re-fetched by
+  offset. Read in slices with `--limit 12000` and the printed offset; never pull a full text to find one
+  equation — `--grep` locates the passage.
 - **Never re-read the paper to recover what a section note already says** (`INV-EVID-4`). The section
   notes are the transcription; this discipline's job is the ruling, not a second reading.
 - **This discipline writes no library note.** A ledger is a workspace document and needs no

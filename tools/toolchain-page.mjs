@@ -69,8 +69,8 @@ export const FACTS = [
     cites: [cite('docs/02_coverage.md', '字体编码坏掉的数学'), cite('tools/zotero-pdf.mjs', '(4) the page as an image')],
   },
   {
-    says: '单次工具结果超过 **8,192 字符**会被裁剪器掐掉中间（留头 4,096 + 尾 1,024）⇒ 长文本必须切片读。',
-    cites: [cite('docs/02_coverage.md', '8,192')],
+    says: '结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。',
+    cites: [cite('docs/02_coverage.md', '8,192'), cite('docs/02_coverage.md', '16,000')],
   },
   {
     says: '本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。',

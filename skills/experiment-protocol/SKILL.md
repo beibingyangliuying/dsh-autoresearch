@@ -152,7 +152,8 @@ rejected path and why.
 - Never mutate, migrate, overwrite, or vacuum an original input database or its manifest.
 - Keep the artifact, not just the summary: a number without its file cannot be audited later.
 - If a subagent runs the experiment, it hands back **paths and commands**, never a long inline
-  report — see `subagent-contract` for why (tool results are pruned at 8192 characters).
+  report — see `subagent-contract` for why (a long tool result loses its middle when the context is
+  compacted).
 - Long-running work goes to a background job rather than blocking the turn.
 - **A run budget is also a reading budget.** Do not pull a whole artifact into context to check one number: grep it, or read the range. An artifact that exists is not an invitation to paste it.
 

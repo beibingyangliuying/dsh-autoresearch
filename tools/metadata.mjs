@@ -24,9 +24,10 @@
 //     measured minutes apart. A count without the source that gave it is not a number a report can
 //     defend, so the source sits on the count's own line.
 //   * THE PAYLOADS DO NOT FIT. One OpenAlex work record measured 24,580 characters and a three-row
-//     search 65,619, while the preset's tool-result pruner keeps about 8,192 (head 4,096 + tail
-//     1,024). Printing the response would arrive silently truncated, so every mode converges to a
-//     fixed field set first - `--json` prints that record, not the payload.
+//     search 65,619, while the shell tool returns only the first 16,000 characters of one command and
+//     the result pruner reduces any tool result over 8,192 to its head and tail once the context is
+//     compacted. Printing the response would cost a slice nobody can read back, so every mode converges
+//     to a fixed field set first - `--json` prints that record, not the payload.
 //   * HTTP 404 FROM UNPAYWALL IS HTML, NOT JSON (`<!doctype html> ... <h1>404 Not Found</h1>`).
 //     "This DOI is not in the index", "the body is not JSON", "the channel is rate-limiting us" and
 //     "the request failed" must never print the same thing: `classifyResponse` keeps them apart, and

@@ -48,8 +48,9 @@ const REQUEST_TIMEOUT_MS = 30_000
 /** Default page size, matching the API's own default so nothing is silently widened. */
 const DEFAULT_MAX = 10
 /**
- * Ours, not arXiv's. The API allows 2,000 per slice, but the preset's tool-result pruner keeps only
- * about 8,192 characters (head 4,096 + tail 1,024), so a larger page arrives silently truncated.
+ * Ours, not arXiv's. The API allows 2,000 per slice, but the shell tool returns only the first 16,000
+ * characters of one command, and the result pruner reduces any tool result over 8,192 to its head and
+ * tail once the context is compacted — so a wider page is paid for in slices that cannot be re-read.
  */
 const MAX_RESULTS_CAP = 100
 /** Per-entry abstract characters, and the budget for a whole response. 10 x (400 + ~120 header) fits the pruner. */

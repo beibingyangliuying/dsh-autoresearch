@@ -24,7 +24,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 回收站端点**静默忽略 `itemType`**：`?itemType=note` 会答 `Total-Results: 0`，而回收站里可能躺着几百条 note。 | `README.md` · `ignores the type filter silently` |
 | 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
 | 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/02_coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
-| 单次工具结果超过 **8,192 字符**会被裁剪器掐掉中间（留头 4,096 + 尾 1,024）⇒ 长文本必须切片读。 | `docs/02_coverage.md` · `8,192` |
+| 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/02_coverage.md` · `8,192`<br>`docs/02_coverage.md` · `16,000` |
 | 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/02_coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
 | **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |

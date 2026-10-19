@@ -62,7 +62,7 @@ const QMODES = ['everything', 'titleCreatorYear']
 /** The library's own maximum page size for /items. */
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 10
-/** Characters of one attachment's text per read. Chosen to stay inside this preset's result pruner. */
+/** Characters of one attachment's text per read. Inside the shell tool's 16,000-character clip, so one slice arrives whole. */
 const DEFAULT_READ_LIMIT = 12_000
 /** A ceiling on `--limit` in fulltext mode, where the unit is characters rather than rows. */
 const MAX_READ_LIMIT = 100_000
