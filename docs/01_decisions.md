@@ -1374,4 +1374,25 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 **已知边界（登记）**：`docs/04_toolchain.md` 里的链接路径**不在** `doc-selftest DOC-8` 的扫描范围内（那份检查只读 `protocol.md` / `surface.md` / `README.md` / `docs/02_coverage.md`）；该页的 helper 名册由 `toolchain-selftest` 自己对着仓库校验（重命名会红）。
 
+---
+
+## 53. 发布 0.5.0：能力单页成为可安装的东西（2026-10-19）
+
+**为什么是 0.5.0 而不是 0.4.1**：这一版交给用户的是**新产物**（`docs/04_toolchain.md` 与它的生成器、自测）和**新的检查**（`REQUIRED_HELPERS` 补上 `zotero-pdf.mjs`），不是修一个坏掉的 0.4.0。这一点事先实测过，没有靠感觉：`git ls-tree v0.4.0 -- tools` 里 `zotero-pdf.mjs` **在**——名册缺的是"检查看不见自己名册之外"，不是"发布件缺件"。
+
+**流程**（`preset-release` §4 / §7）：
+
+- 版本号 `0.4.0 → 0.5.0`，**单独一个提交**（`5ea7690`，只改 `package.json` 一行），使 tag 指向的树恰好是这一版；**契约 Revision 仍是 17**，与包版本互不绑定。
+- 提交前在最终树上重跑：**18 项离线自测 + `preset-selftest` 全绿**；`toolchain-page.mjs --check` 报 *current and every citation holds (20 claims)*；`release-check --local` **PASS**（含干净树这条 tag 前置条件，并报出 7 个提交尚未推到远端）。
+- **注释 tag** `v0.5.0` → `5ea7690`（tag 对象 `712519a`）；**先推分支、再推 tag**。这次推上去的是 **7 个提交**：0.4.0 发布后写的 5 个（含 M6 那四个）此前**一直只在本地**，`--local` 的那行计数是唯一提前说出来的地方。
+- **从远端复核** `node tools/release-check.mjs --tag v0.5.0`：**PASS** —— 发布件声明 0.5.0 · 组合不挂 MCP、不启外部命令 · 通道需要的 helper 全部在发布包里 · `v0.5.0` 与 `main` 同点 `5ea7690`。
+
+**关于这个检查本身的一条性质**：`--tag` 的最后一项走 `git ls-remote`，因此**继承调用者的 git 配置**。这一次本机配置的代理不可达，该项报的是 **ERROR**（其余三项已 OK）；把代理在单次调用里覆盖掉后即为 PASS。这不是发布件的性质，但它决定了失败时该怎么读：**先分辨"远端没有"与"本机连不上"**，否则会把一次网络故障当成一次发布缺陷。
+
+**同一轮的仓库卫生**：`.tmp/` 从 **112.8 MB / 978 个文件**降到 **0.81 MB / 88 个文件**。删的是大件（`node_modules` 83.5 MB · 会话 `.jsonl` 约 25 MB · 库正文副本 · 渲染图 · composed dump · 日志与提交信息草稿）；留的是证据与未采纳草案（§4.3.1 的探针配方与输出 · 四份普查报告 · 那 39 条的待办清单 `notes-to-delete.md` · `scaffold-revision/` 提案 · 三条会话的笔记产物 · 候选技能 `adoption-ruling.SKILL.md`）。§4.3.1 因此补上了重跑命令——**删掉 `node_modules` 只在配方与输出都留着时才安全**，否则那一节的数字就从测量退化成断言。
+
+**登记项独立成一节**：`docs/03_revision_plan.md` §12 把"已登记"与"不做"分开，三项各带自己的触发条件（写回库索引 · 父条目退路 · Python 运行时）。其中一条是我给自己定的规矩：**触发条件写不出来的，就不是 backlog，而是一条尚未做出的裁定，该送回 §10**。
+
+**明确搁置、记在这里免得下次重新考古**：三条文献会话工作区里的 **39 条**（清单 `.tmp/notes-to-delete.md`，不进库）——junhan 裁定**先不动**；它们的收法已经是现成的（讲错的 `--retire` → 那一节变可写 → `--replaces` 写新稿），不需要新的工具。
+
 

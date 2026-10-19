@@ -336,7 +336,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/01_decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
 | 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
 | 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | ✅ `v0.4.0` → `57a3f3e`，远端复核 PASS（见 `docs/01_decisions.md` §51.5） | `57a3f3e` · `3106120` |
-| 13 **M6 的发布**（这份单页要不要单独发一个版本） | 待 junhan 定 | — |
+| 13 **M6 的发布**（这份单页要不要单独发一个版本） | ✅ junhan 裁定**发 0.5.0**；已发布并**从远端复核 PASS**（见 `docs/01_decisions.md` §53） | `5ea7690`（tag `v0.5.0`） |
 | — | 清理 `.tmp/` 的往轮遗留（junhan 裁定：**留证据、删大件**） | ✅ **112.8 MB → 0.81 MB**（978 → 88 个文件）。保留：§4.3.1 的探针配方与输出 · 四份普查报告与 `notes-to-delete.md`（那 39 条的待办清单）· 未采纳的脚手架提案 `scaffold-revision/` · 三条会话的笔记产物 `section-notes/` · 候选技能 `adoption-ruling.SKILL.md`。删除的是大件：`node_modules` 83.5 MB、会话 `.jsonl` 约 25 MB、库正文副本、渲染图、composed dump、日志与提交信息草稿 | `.tmp` 不进库 |
 
 ---
