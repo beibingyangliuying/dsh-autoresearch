@@ -1849,3 +1849,21 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - `69893d2` — 契约升 **Revision 24**：`re-open if` 的必填范围收窄到"停得早于全文"，并补给旧工作区残留 `refs/` 的处理（报告不删）；§4 `triage` 一条写明必填范围，§7 加一段；`literature-recon` 加"报告但不删"的护栏；台账 README 的列说明、`reading-triage` 的裁决表与检查单同步。
 
 **未做**：复用的成本对比仍是估算（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。
+
+---
+
+## 64. 0.9.0 发布（2026-10-19）
+
+**版本**：`0.9.0`，提交 `938f607`，注解 tag `v0.9.0` 与 `main` 同指。
+
+**相对 0.8.0 的八条提交**：S1 `1431fa3` · S2 `21ce6bc` · S3 `d104312` · S4 `5a441bd`（§62）＋ 机制更正 `cb60923` ＋ Revision 24 `69893d2` ＋ 记录 `96fe167` ＋ 版本提交本身。
+
+**发布前的门**（都在最终树上跑过）：
+
+- 20 项离线自测全绿，`preset-selftest` 用的 dump 是版本提交后重新生成的（72,732 字节，persona 5,060 字符）。
+- `release-check --local` 在干净树上 PASS：声明版本 0.9.0、组合不挂载 MCP、每个行名经 `exports` 解析、20 个自测都在 README 里有名。
+- `release-check --tag v0.9.0` 从**远端** PASS：发布物声明 0.9.0、组合不挂载 MCP 也不启动进程、每个通道要的 helper 都在包内、`v0.9.0` 与 `main` 同指 `938f607`。这是唯一能看见"47 条本地绿灯但没人装得上"那类缺陷的检查。
+
+**顺手改掉一处陈旧计数**：`package.json` 的 description 由 "ten on-demand research disciplines" 改成 "eleven"。0.8.0 发布时确实是十条，`reading-triage` 是它之后加的，计数没跟上——与 §36 抓到的那类陈旧计数同型，靠发布前通读一遍抓住。
+
+**一次环境故障，不记为缺陷**：本机 git 全局代理当时不可用，`push` 与检查内部的 `git ls-remote` 都报 `Failed to connect ... port 443`；改用一次性覆盖（`git -c http.proxy= …` 与 `GIT_CONFIG_*` 环境变量）后推送与复核都成功。仓库与发布物未改动。
