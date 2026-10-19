@@ -1,9 +1,24 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 26.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 27.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 26 shrinks the **study scaffold** to the one layer that two
+independent of any package version. Revision 27 adds one on-demand discipline, because the step before
+the reading round had none. The three steps around it existed — a source is graded by what was read, one
+paper is advanced through for one named question, a note is written at a method section's end — and
+nothing turned **a collection** into "these candidates, in this order, with the ones that cannot serve us
+already ruled out". A collection was therefore read in whatever order the library listed it, or screened
+by hand with nothing recorded, and the next round either re-screened it or opened a paper an earlier round
+had already rejected. The discipline enumerates the collection, judges a handful of records at a time at
+the abstract, writes one row per record in that question's own ledger — a ruled-out paper keeping a row
+that names the abstract's own sentence and the condition that would reopen it — queues the rest with no
+verdict, and hands that queue on in a stated order. It reads no paper, writes no library note, and decides
+no adoption; it reuses the reading vocabulary rather than starting a second one, so `enough` is never
+written from an abstract. The same revision records what its enumeration instrument measured, because both
+facts change what a sweep may claim: the library honours an offset, so a collection larger than one page is
+read rather than truncated, and a collection does **not** contain its subcollections' items, so a subtree
+is swept one collection at a time. §4 states the discipline, and the row it writes is the one §7's
+literature layer defines. Revision 26 shrinks the **study scaffold** to the one layer that two
 real studies had independently defined the same way. The scaffold used to pre-create seven directories and
 an authority table a study inherited; neither of the two studies this preset was measured against had used
 any of them, and each had grown its own shape instead, so the template was stating a shape rather than a
@@ -276,6 +291,11 @@ the load-bearing part: they say when to stop rather than to make something work.
 ```text
 scoping      a vague topic becomes a decidable question; pseudo-questions are sent back
 literature   sources are graded by what was actually read; contradicting evidence is mandatory
+collection   one whole collection becomes a candidate queue for one named question: every record is
+             enumerated, the ones an abstract already settles as unable to serve the question are
+             ruled out and keep a row saying which sentence decided it, the rest are queued with no
+             verdict, a row that already carries a current verdict is left alone, and nothing is
+             claimed about a record's text from a missing abstract
 triage       one paper is advanced section by section for one named question, and that question's
              own ledger records the depth the reading reached and the verdict that stopped it: a
              row is never deleted, `enough` and `stop` are different answers, a re-open condition is

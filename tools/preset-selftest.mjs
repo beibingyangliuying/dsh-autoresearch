@@ -247,10 +247,10 @@ if (!existsSync(composedFile)) {
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
     ok(rules.length === 11, 'eleven numbered discipline rules', `found ${rules.length}`)
     const flatPersona = composedPersona.replace(/\s+/g, '')
-    const bullets = ['research-scoping', 'literature-recon', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
+    const bullets = ['research-scoping', 'literature-recon', 'collection-sweep', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
       (n) => flatPersona.includes(`→\`${n}\``),
     )
-    ok(bullets.length === 11, 'eleven skill-routing bullets', `found ${bullets.length}`)
+    ok(bullets.length === 12, 'twelve skill-routing bullets', `found ${bullets.length}`)
     ok(composedPersona.includes('{{model}}'), '{{model}} placeholder intact')
     // Retired on purpose, and named so it cannot come back: 0.2.0 registered `cwd` as a prompt
     // variable and 0.2.1 replaced it with the REQUIRED runtime context "Current working directory:
@@ -266,7 +266,7 @@ if (!existsSync(composedFile)) {
         ? 'could not read the kernel registry (@deepseek-ai/dsh-agent-loop, from the profile)'
         : `${referenced.map((n) => `{{${n}}}`).join(', ') || '(none)'} / kernel registers: ${registered.join(', ') || '(none)'}`,
     )
-    for (const name of ['research-scoping', 'literature-recon', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
+    for (const name of ['research-scoping', 'literature-recon', 'collection-sweep', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
       ok(composedPersona.includes(name), `routing names: ${name}`)
     }
 
