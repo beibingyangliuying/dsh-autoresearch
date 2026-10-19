@@ -1267,7 +1267,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 | E3 | `GET /api/users/0/items/trash?itemType=note` | **200 + `Total-Results: 0`**（`?itemType=book` 同为 0），而回收站实有 315 条 note；对照 `GET /items?itemType=note` 正常答 360 ⇒ **该端点静默忽略 `itemType`** |
 | E4 | `GET /api/users/0/items?itemType=note&limit=1` | `data` 键＝`dateAdded/dateModified/itemType/key/note/parentItem/relations/tags/version` ⇒ **无 `deleted`**；`includeTrashed=1`／`trashed=1` 被静默忽略（360→360，首条 key 相同） |
 | E5 | 官方文档两页 | Web API *Deleting an Item* 只写 `204 The item was deleted`，**未说**永久还是进回收站；Local API 页只说支持 DELETE，且"does not attempt to replicate every implementation detail" |
-| E6 | `GET /api/users/0/items/<attachmentKey>/file` | **302 → `file:///D:/OneDrive/Zotero/<title>.pdf`** ⇒ agent 能拿到附件在磁盘上的真实路径 |
+| E6 | `GET /api/users/0/items/<attachmentKey>/file` | **302 → `file:///<library>/<title>.pdf`** ⇒ agent 能拿到附件在磁盘上的真实路径 |
 | E7 | 环境与先例 | 预设唯一依赖 `schemastery`；全仓 **0 个 `.py`/`pyproject.toml`/`uv.lock`**；`tools/release-check.mjs:69-70` 把 `command:`／`uvx` 判为问题；§34 记录旧发布版的 Python/`uvx` 依赖正是被修掉的缺陷 |
 | E8 | `.tmp/engine-probe/smoke.mjs`（真论文 `CPZ52NQV`，1.27 MB／8 页） | `@hyzyla/pdfium` 3.0.0：init 24 ms · load 4 ms · `getText()` 5,255 字符/7 ms · `render({scale:1.5,render:'bitmap'})` 892×1189／77 ms／裸 RGBA 4.24 MB · **自写 PNG 编码（`node:zlib`）24 ms → 324 KB/页**。包内唯一二进制 `pdfium.wasm` 5.05 MB、声明依赖为空。（`getOriginalSize()` 字段名是 `originalWidth/Height`） |
 | E9 | `.tmp/engine-probe/outline-census.mjs`（20 篇真论文，`pdfjs-dist` 的 `getOutline()`） | **自带大纲 11 篇（55%）**· 空/缺失 9 篇 · 读不出 0 篇。条目即论文自己的节标题，**并带论文自己的编号形式**（`I Introduction`／`II Measure of Stress`／`Appendix: Passive and Active Loading`）。而 **pdfium 给不了它**：该 WASM 只导出了渲染与文本那一小撮函数，`FPDFBookmark_*`、`FPDF_GetMetaText` 都不在其中 |

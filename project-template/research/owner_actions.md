@@ -25,5 +25,5 @@ claim, it is not evidence, and it is rewritten as items close rather than append
 | 1 | `<recordKey>` | `<noteKey>` | `<ordinal>` | retire · write replacement · delete in Zotero · decide | one line the owner can decide on | `.section-notes/<recordKey>/<file>.html` |
 
 <!-- EXAMPLE:BEGIN — the distinguishing part is an action the agent cannot take itself. Delete this block. -->
-| 1 | ABCD1234 | EFGH5678 | 3 | delete in Zotero, once the replacement is written | the retired note explains §3 badly: its formulas came back without delimiters and the mechanical repair declined 4 spans | `.section-notes/ABCD1234/s3.html` |
+| 1 | ABCD1234 | EFGH5678 | 3 | delete in Zotero, once the replacement is written | the retired note explains §3 badly: its formulas came back without delimiters and the text layer could not be read cleanly, so the replacement was written by hand | `.section-notes/ABCD1234/s3.html` |
 <!-- EXAMPLE:END -->

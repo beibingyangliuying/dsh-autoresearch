@@ -171,7 +171,7 @@ Loader 行 id `preset-autoresearch`，`name: '@deepseek-ai/dsh-agent-preset'`，
 |---|---|---|---|
 | modsearch 检索 | ✅ 已挂载 active | 无 | — |
 | 学术 MCP | ⚠️ **通道关闭**：包已装（`@deepseek-ai/dsh-mcp-client`、`dsh-mcp-manager`），但线上 profile 无任何 MCP 行（按包名查 Config 返回 0 条）；`dsh-mcp-manager` 在市场 `disabled` 列表；`mcp-manager.json` 唯一 server 亦 disabled | 先开通道，再配 server；用一次真实检索验证 | 只用 modsearch |
-| Zotero | ⚠️ 已装（`C:\Users\项目所有者\Zotero\zotero.sqlite`），但**未运行**，端口 `23119` 关闭 | 你让 Zotero 常驻 + 打开「允许本地应用通信」；先只读验证 API 可达 | 离线只读 sqlite / 导出 BibTeX |
+| Zotero | ⚠️ 已装（`<user>\Zotero\zotero.sqlite`），但**未运行**，端口 `23119` 关闭 | 你让 Zotero 常驻 + 打开「允许本地应用通信」；先只读验证 API 可达 | 离线只读 sqlite / 导出 BibTeX |
 
 ---
 
@@ -304,9 +304,9 @@ Loader 行 id `preset-autoresearch`，`name: '@deepseek-ai/dsh-agent-preset'`，
 | 4 个 skill 正文 + `description` | 中文 → 英文 | 覆盖 `~/.dsh/skills/<name>/SKILL.md`；**当轮即生效**（本会话 skill 目录已刷新为英文） |
 
 **关键发现：bundle 是 Junction，改源文件即生效。**
-`profiles/web/node_modules/@local/dsh-autoresearch-preset` 的 `LinkType` 是 **Junction**，指向 `D:\OneDrive\Desktop\dsh-autoresearch\autoresearch-preset`。因此直接改 patch 后，加载器读到的就是新内容——已在加载器可见路径上 grep 到 `## Research discipline (always in force)` 确认。
+`profiles/web/node_modules/@local/dsh-autoresearch-preset` 的 `LinkType` 是 **Junction**，指向 `<checkout>\autoresearch-preset`。因此直接改 patch 后，加载器读到的就是新内容——已在加载器可见路径上 grep 到 `## Research discipline (always in force)` 确认。
 
-**不要重复 `install_bundle`。** 第二次安装返回 `application: failed` / `ambiguous-install`：pnpm 日志显示它要把 `link:D:/…` 换成 `D:\…`「from a different source」。重试有把 Junction 变成**拷贝**的风险，那会破坏「改源文件即生效」的链路。当前功能正常（预设行仍 active），无需修复；但若将来要 `remove_bundle`，可能需要在 `profiles/web/package.json` 里手动清掉该依赖行。
+**不要重复 `install_bundle`。** 第二次安装返回 `application: failed` / `ambiguous-install`：pnpm 日志显示它要把 `link:<checkout>` 换成 `<checkout>`「from a different source」。重试有把 Junction 变成**拷贝**的风险，那会破坏「改源文件即生效」的链路。当前功能正常（预设行仍 active），无需修复；但若将来要 `remove_bundle`，可能需要在 `profiles/web/package.json` 里手动清掉该依赖行。
 
 **语言选择的代价（已接受）**：persona 常驻成本下降，但 skill 正文也变英文，以后审阅与维护这些纪律文本要用英文读。
 
@@ -317,7 +317,7 @@ Loader 行 id `preset-autoresearch`，`name: '@deepseek-ai/dsh-agent-preset'`，
 **做法**：`dsh --dump-config` 会把 **composed profile 树**打出来，那正是新会话将要挂载的东西。于是验收可以完全离线且可重复：
 
 ```powershell
-cd D:\OneDrive\Desktop\dsh-autoresearch
+cd <checkout>
 dsh --profile web --dump-config > .tmp\composed-web.txt
 node tools\preset-selftest.mjs .tmp\composed-web.txt   # 退出码 1 = 有检查失败
 ```

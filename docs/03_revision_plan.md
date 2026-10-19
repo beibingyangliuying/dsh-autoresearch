@@ -167,7 +167,7 @@
 
 | 验的是 | 结果 |
 | --- | --- |
-| `/items/<key>/file` → 真实路径（E6） | ✅ `302 → file:///D:/OneDrive/Zotero/<title>.pdf` |
+| `/items/<key>/file` → 真实路径（E6） | ✅ `302 → file:///<library>/<title>.pdf` |
 | `library.init()` / `loadDocument()` | ✅ 24 ms / 4 ms（1.27 MB、8 页论文） |
 | 文本 `page.getText()` | ✅ 第 1 页 **5,255 字符 / 7 ms**，头部就是正文；第 2 页 7,442 字符 |
 | 渲染 `page.render({scale:1.5, render:'bitmap'})` | ✅ 892×1189、**77 ms**、裸 RGBA 4.24 MB |

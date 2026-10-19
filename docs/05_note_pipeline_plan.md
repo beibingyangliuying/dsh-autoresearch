@@ -31,7 +31,7 @@
 | 应用包裹体 | 147 |
 | 回收站 | 481 项 / 323 note / 0 digest marker |
 
-点号 marker 的分布：`EEBHNSV9` 10 · `78LSP7TE` 5 · `D6JR2EQT` 5 · `4394NKWC` 4 · `JLWH377B` 4 · `9QQJJVVK` 3 · `JSZEALS3` 3 · `QVD59DT6` 2 · `CYY7DAH7` 2。
+点号 marker 的分布：9 条记录，最多 10 条，其次 5 · 5 · 4 · 4 · 3 · 3 · 2 · 2。
 
 结论：
 
@@ -39,7 +39,7 @@
 2. **没有证据表明 digest 曾落库**：live 0 条带 digest marker；153 条无 marker 笔记的首段没有 "Read" 形态；回收站 0 条。所以现在改它的语义没有迁移成本。
 3. 34 条 `/retired` + 15 条 `/replaces-` 说明归退/替换已经在用；删除干跑一上线就有真实样本。
 4. 无 marker 的笔记不是"10 条"，是 **153 条**；迁移是一次 378 条的战役，不是一次小修。
-5. **38 条旧子节笔记还在库里**（旧工具写的点号 marker）。当前工具不再新建点号，但仍会读它们并折回父节；新方案不写也不读点号，这 38 条进 `unknown`，迁移时合并成顶层节或退休。
+5. **38 条旧子节笔记还在库里**（旧工具写的点号 marker）。旧工具会读它们并折回父节；新方案不写也不读点号，这 38 条进 `unknown`，迁移时合并成顶层节或退休。
 
 ## 3. 状态模型
 
@@ -211,7 +211,7 @@ digest 走 `zotero-note.mjs`：
 ## 8. plan 输出
 
 ```text
-covered     : §2 · §3 (in parts: §3.1)
+covered     : §2 · §3
 retired     : §2 (KEY -> superseded by NEW) · (none: KEY)
 digest      : KEY (§2–§5)
 unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
@@ -246,7 +246,7 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 
 | 阶段 | 内容 | 测试 |
 |---|---|---|
-| 1 | tag 身份：`/section-N`、create、plan、covering、删 marker/正则 | tag 解析、三种拒绝、plan 形状、无正文解析 |
+| 1 | tag 身份：`/section-N`、create、plan、covering、删 marker/正则 | tag 解析、一种拒绝、plan 形状、无正文解析 |
 | 2 | 生命周期：`--claim` + `/imported`、删除 `--tidy`、retire 不限、`--replaces` 看 tag、digest 工具 `/digest` + 跳过 retired | claim/imported、retire/replaces、retired digest 跳过 |
 | 3 | `--rewrite`：无 tag 或 `/imported`、干跑 diff、自动备份、版本守卫 | 纯函数 + 第一条 CLI 级测试（`ZOTERO_LOCAL_API` stub） |
 | 4 | `--delete` 干跑：`/retired` 守卫、不可逆提示 | 干跑输出、无写请求、`gate.write('DELETE')` 意图断言 |
