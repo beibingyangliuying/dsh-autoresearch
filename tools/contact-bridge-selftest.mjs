@@ -32,7 +32,11 @@ console.log('prompt bridge self-test')
 check(contactLine(undefined) === undefined, 'contactLine(undefined) has nothing to announce')
 check(contactLine('   ') === undefined, 'a whitespace-only address has nothing to announce')
 check(String(contactLine('a@b.c')).includes('a@b.c'), 'contactLine carries the address')
-check(String(contactLine('a@b.c')).includes('mailto='), 'contactLine tells the agent how to use it')
+check(String(contactLine('a@b.c')).includes('--mailto'), 'contactLine tells the agent how to pass it')
+check(
+  !String(contactLine('a@b.c')).includes('&mailto='),
+  'and no longer asks the agent to build the request itself, because the helper does that',
+)
 
 const throwing = () => { throw new Error('settings unavailable') }
 check(readContactAddress({ describe: throwing }) === '', 'a failing settings read yields an empty address, not a throw')

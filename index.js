@@ -37,7 +37,7 @@ export const Config = schema === undefined
         // settings panel and to `ctx.remote.settings`, which is exactly how it behaved.
         .volatile()
         .description(
-          'Contact address for the metadata APIs (the "polite pool"): OpenAlex and Crossref serve faster and rate-limit less when requests identify a contact. It is also passed to the reference-library writer. Leave empty to send none.',
+          'Contact address for the metadata APIs: the helper this preset ships sends it on the OpenAlex, Crossref and Unpaywall requests it makes, and the reference-library writer uses it too. Measured 2026-10-19: OpenAlex states that the parameter does not raise its shared daily budget, so this is identification rather than a quota lever. Leave empty to send none.',
         ),
       // Off by default: turning this on leads to writes in the reference library, and they are gated
       // by the owner in that application rather than by this preset.

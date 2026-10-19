@@ -63,9 +63,10 @@ export function contactLine(mailto) {
   if (address === '') return undefined
   return [
     `Contact address configured for this preset: ${address}.`,
-    'Append it as `&mailto=<address>` on OpenAlex and Crossref requests, and pass it as',
-    '`--mailto <address>` when running `tools/zotero-write.mjs`. If this line announces no address,',
-    'omit the parameter entirely — the requests are still valid, just unpolite.',
+    'Pass it as `--mailto <address>` to the command-line helpers this preset ships: `metadata.mjs` puts it',
+    'on the bibliographic requests it makes, and `zotero-write.mjs` uses it when it resolves metadata. Do',
+    'not build those requests by hand. If this line announces no address, omit the parameter entirely —',
+    'the requests are still valid, just unpolite.',
   ].join(' ')
 }
 

@@ -29,7 +29,7 @@ window.__ModuleLoader__.load({
         key: 'mailto',
         label: 'Contact address',
         placeholder: 'you@example.org',
-        hint: 'Sent as &mailto= on OpenAlex and Crossref requests, and passed to the reference-library writer. Identifying yourself gets faster service and gentler rate limits. Leave it empty to send no contact - everything still works.',
+        hint: 'Sent to the metadata helper this preset ships, which puts it on the OpenAlex, Crossref and Unpaywall requests it makes, and to the reference-library writer. Identification rather than a quota lever: measured 2026-10-19, OpenAlex states that the parameter does not raise its shared daily budget. Leave it empty to send no contact - everything still works.',
       },
       {
         type: 'checkbox',
