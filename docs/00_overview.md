@@ -68,7 +68,7 @@ flowchart LR
 
 ```powershell
 dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + 三条通道的反向护栏
+node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + 通道不挂 MCP 的反向护栏
 node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
