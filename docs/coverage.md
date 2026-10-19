@@ -1,10 +1,10 @@
 # 覆盖与边界地图 —— 每个部分管哪一段
 
 > **非规范文档。** 规范语义以 [`../protocol.md`](../protocol.md) 为准，概念与名字的索引在
-> [`../surface.md`](../surface.md)，流程回顾在 [`00_overview.md`](00_overview.md)，"为什么是现在这样"在
-> [`01_decisions.md`](01_decisions.md)。
+> [`../surface.md`](../surface.md)，流程回顾在 [`overview.md`](overview.md)，"为什么是现在这样"在
+> [`decisions.md`](decisions.md)。
 >
-> 本文是**被机械校验的第二份名单**。`00_overview.md` 立过一条规矩——"两处列同一批名字必然漂移"——它的病因
+> 本文是**被机械校验的第二份名单**。`overview.md` 立过一条规矩——"两处列同一批名字必然漂移"——它的病因
 > 不是名单多，而是**没有一份名单有仪器校**。所以这份地图的名册由 `tools/doc-selftest.mjs` 校验：纪律名册与
 > `skills/*/SKILL.md` **一一对应**（漏一条、多一条都失败），本文点名的每个路径都必须存在。它与 `surface.md`
 > 回答的不是同一个问题：那里是"概念 ↔ 名字"，这里是"部分 ↔ 覆盖什么、拒绝什么"。
@@ -65,7 +65,7 @@
 | 把"存储型附件"转成链接附件（增量） | [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) |
 | 整库迁移（**你在应用里自己跑**） | [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js) |
 
-每个 helper **能做什么、明确拒绝什么、撞上了怎么办**，逐条列在 [`docs/04_toolchain.md`](04_toolchain.md)：
+每个 helper **能做什么、明确拒绝什么、撞上了怎么办**，逐条列在 [`docs/toolchain.md`](toolchain.md)：
 那是一份**生成物**（`tools/toolchain-page.mjs`），每一行都挂着一条能被机械校验的出处，所以它不会比它描述的
 代码活得更久。本页回答"哪一部分归谁"，那份回答"手上这一件工具现在的边界在哪"。
 
@@ -222,5 +222,5 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 ## 五、这份地图不管什么
 
 它不重复**契约**（保证与不变式在 [`../protocol.md`](../protocol.md)）、不重复**安装与开发**
-（[`../README.md`](../README.md)）、不重复**为什么**（[`01_decisions.md`](01_decisions.md)）。脚手架、工具隔离、
+（[`../README.md`](../README.md)）、不重复**为什么**（[`decisions.md`](decisions.md)）。脚手架、工具隔离、
 诊断与发布这三块也在 README 里，此处只留指针，免得同一件事写成两份。

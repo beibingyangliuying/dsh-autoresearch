@@ -1,6 +1,6 @@
 # 06 — 筛读（reading-triage）：按课题顺序推进，每节一次"继续/停止"
 
-**状态：已实施并随 0.9.0 发布（2026-10-19）：S1–S4 全部落地。实施记录见 [`docs/01_decisions.md` §62](../01_decisions.md)；复审后补的五条裁定见 §11 续表、理由与更正的机制见 [§63](../01_decisions.md)、发布门见 [§64](../01_decisions.md)。**
+**状态：已实施并随 0.9.0 发布（2026-10-19）：S1–S4 全部落地。实施记录见 [`docs/decisions.md` §62](../decisions.md)；复审后补的五条裁定见 §11 续表、理由与更正的机制见 [§63](../decisions.md)、发布门见 [§64](../decisions.md)。**
 v2 相对 v1 的变化：判定词汇从四值降为"depth 载水位 + verdict 三值"；`refs/` 从"加一列"改为**废除**；
 读法从"入口节优先"改为**从前往后顺序读**（跳读降为带护栏的可选路径）；新增"复用已有笔记"路径。
 实施口径：台账落在英文模板文档里，九列表头用英文（`itemKey | year | found via | grade | depth |
@@ -197,7 +197,7 @@ description: Advance through one reference section by section for one named rese
 | `project-template/research/literature/refs/` | **删除目录**（`refs/README.md` 一并删） |
 | `protocol.md` | §7 布局删 `refs/`；`INV-EVID-4` 改写：判据从"查索引"变成"查本课题台账，再看记录上的笔记"；§6 的 notes 条款同步；一次 Revision（22） |
 | `README.md`（第 241 行）· `AGENTS.md.template` §3 表 | 布局同步（`scaffold-selftest` 会拦） |
-| `docs/02_coverage.md`（第 80、168 行） | 同步 |
+| `docs/coverage.md`（第 80、168 行） | 同步 |
 | `adoption/README.md`（两处） | 删掉指向 `refs/` 的句 |
 | `/done` tag | 保留但**降为人工标记**：任何判断不得读它；只在某课题做出终局判定时可打（三条 skill 的 `/done` 句一并降级） |
 
@@ -213,9 +213,9 @@ description: Advance through one reference section by section for one named rese
 | `tools/skills-selftest.mjs` | `10 → 11`（35）+ 期望名单（52–63） |
 | `tools/preset-selftest.mjs` | 路由数组（250）· `count===10`（253）· 名字数组（269） |
 | `protocol.md` | §4 清单 10→11；新增 `INV-EVID-6` |
-| `surface.md` · `docs/02_coverage.md` · `README.md` | 各加一行 |
-| `docs/04_toolchain.md` | 由 `toolchain-page.mjs` 重生成 |
-| `docs/01_decisions.md` | 新增一节：起因、已核实前提、裁定、否掉的方案 |
+| `surface.md` · `docs/coverage.md` · `README.md` | 各加一行 |
+| `docs/toolchain.md` | 由 `toolchain-page.mjs` 重生成 |
+| `docs/decisions.md` | 新增一节：起因、已核实前提、裁定、否掉的方案 |
 
 **不变式草案**
 

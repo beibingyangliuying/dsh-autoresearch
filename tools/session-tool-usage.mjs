@@ -4,7 +4,7 @@
 // and a keep-list entry that no session ever calls is a claim nobody has checked. Measured 2026-10-19
 // with this program, across 57 autoresearch sessions and 6,081 tool calls: the seventeen `mnemon_*`
 // tools answered 88 calls (1.4%) from six of them. That is why the keep-list keeps the NAMESPACE rather
-// than a stock-take of names (docs/01_decisions.md #54) - and why the number has to be re-measurable
+// than a stock-take of names (docs/decisions.md #54) - and why the number has to be re-measurable
 // instead of quoted from a scratch pad.
 //
 // Usage:

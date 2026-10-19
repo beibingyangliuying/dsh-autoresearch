@@ -3,8 +3,8 @@
 **状态：Phase 1–6 已实施（2026-10-19）；0.8.0（Revision 21）补上了删除实写与 digest 旧版的库内保留；
 Phase 7 已跑 187 条顶层 tag 迁移。迁移余量（38 条点号 / 153 条无 marker / 34 条 retired）已移入
 [`../backlog.md`](../backlog.md) §2，本文件不再重复。** 起草 2026-10-19 · 依据：本日对话 + 真库只读普查。
-实施记录见 [`docs/01_decisions.md` §58](../01_decisions.md) 与 §60。
-**本文件描述的"回执 = `research/literature/refs/` 一行 + `/done` tag"已被 Revision 22 取代**（[§62](../01_decisions.md)）：读态现在记在**每个课题自己的台账**里，`refs/` 与"回执"这个概念都废除了。其余（tag 身份、claim/rewrite、digest 投影）仍然有效。
+实施记录见 [`docs/decisions.md` §58](../decisions.md) 与 §60。
+**本文件描述的"回执 = `research/literature/refs/` 一行 + `/done` tag"已被 Revision 22 取代**（[§62](../decisions.md)）：读态现在记在**每个课题自己的台账**里，`refs/` 与"回执"这个概念都废除了。其余（tag 身份、claim/rewrite、digest 投影）仍然有效。
 
 ## 0. 一句话
 
@@ -237,8 +237,8 @@ unknown     : KEY · KEY        <- 无 claim 的笔记，读它们
 | `skills/adoption-ruling` | digest 是投影，节笔记仍是 primary input |
 | `project-template/research/literature/refs/README.md` | 索引行是回执；digest 写成后更新一行 |
 | `project-template/research/adoption/README.md` | "digest says it was read" 改成"digest 是节笔记的投影" |
-| `tools/toolchain-page.mjs` / `docs/04_toolchain.md` | 更新 claim 与引用字符串，重新生成 |
-| `README.md` / `docs/02_coverage.md` / `surface.md` | 笔记管线与流程同步 |
+| `tools/toolchain-page.mjs` / `docs/toolchain.md` | 更新 claim 与引用字符串，重新生成 |
+| `README.md` / `docs/coverage.md` / `surface.md` | 笔记管线与流程同步 |
 
 契约分三次升版：
 

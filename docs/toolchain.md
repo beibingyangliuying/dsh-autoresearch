@@ -19,13 +19,13 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 读不需要授权；写要参考管理器**当场**给一次授权，`Always Allow` 的长期 key 按 server id 存在本机。 | `tools/zotero-local-api.mjs` · `createWriteGate`<br>`README.md` · `standing grant` |
 | 写成功不只是 200：**204 无 body 也算成功**，把 200 当唯一成功会把已完成的写报成"被拒绝"。 | `tools/zotero-local-api.mjs` · `isWriteAccepted` |
 | 写后回读按**读者可见文本**比，不按字节：应用会给它碰过的笔记套 `<div data-schema-version>`，并吃掉隐形注释。 | `tools/zotero-local-api.mjs` · `visibleText`<br>`tools/zotero-section-note.mjs` · `isApplicationWrapped` |
-| **tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。 | `docs/01_decisions.md` · `tag 活过应用改写`<br>`tools/zotero-section-note.mjs` · `RETIRE_TAG = '/retired'` |
-| 记录的 `version` 可能是 0：那种记录上"别人改过没有"的守卫是**空转**，不是通过。 | `docs/01_decisions.md` · `39.3` |
+| **tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。 | `docs/decisions.md` · `tag 活过应用改写`<br>`tools/zotero-section-note.mjs` · `RETIRE_TAG = '/retired'` |
+| 记录的 `version` 可能是 0：那种记录上"别人改过没有"的守卫是**空转**，不是通过。 | `docs/decisions.md` · `39.3` |
 | 回收站端点**静默忽略 `itemType`**：`?itemType=note` 会答 `Total-Results: 0`，而回收站里可能躺着几百条 note。 | `README.md` · `ignores the type filter silently` |
 | 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
-| 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/02_coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
-| 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/02_coverage.md` · `8,192`<br>`docs/02_coverage.md` · `16,000` |
-| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/02_coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
+| 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
+| 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `16,000` |
+| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
 | **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
 | **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
@@ -238,7 +238,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 - 搜出候选 → 先 `--doi` 确认那一条；把搜索结果当元数据报告是不允许的
 - 免费副本 → 那是**线索不是取回**：没真取到就写"列在 <url>"，坏链按失败线索报
 
-**出处**：`tools/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation`<br>`docs/02_coverage.md` · `书目元数据`
+**出处**：`tools/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation`<br>`docs/coverage.md` · `书目元数据`
 
 ## 三、这套校验能证明什么、不能证明什么
 

@@ -217,7 +217,7 @@ if (!existsSync(composedFile)) {
   // 59,758 (~16.6k) for 35. Together 21,551 tokens per request, for the handful of tools the
   // disciplines actually call - and the MCP client has no field that filters a server's tool list, so
   // a re-added row is a silent cost nobody would notice from a bill. Every channel is a command-line
-  // helper now, at zero resident cost. See docs/01_decisions.md #29 and #31 for the measurements.
+  // helper now, at zero resident cost. See docs/decisions.md #29 and #31 for the measurements.
   const blockText = block.join('\n')
   for (const [row, spec] of [
     ['mcp-arxiv', 'arxiv-mcp-server'],

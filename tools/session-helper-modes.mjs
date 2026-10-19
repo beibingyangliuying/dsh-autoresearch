@@ -1,7 +1,7 @@
 // How the flag-multiplexed helpers are actually invoked, and whether their own refusals ever fired.
 //
 // Why this exists: it is the instrument behind the ruling that `zotero-read.mjs` and `zotero-pdf.mjs`
-// keep their flag grammar instead of moving each mode to a subcommand (docs/01_decisions.md #56). A
+// keep their flag grammar instead of moving each mode to a subcommand (docs/decisions.md #56). A
 // subcommand would make an illegal combination unrepresentable, which is worth paying for only if
 // illegal combinations happen. Measured 2026-10-19 across 57 autoresearch sessions: 283 command
 // segments invoked `zotero-read.mjs`, none used two modes, and neither program's refusal text appears

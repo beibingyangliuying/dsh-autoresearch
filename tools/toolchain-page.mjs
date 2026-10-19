@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
 /** Where the generated page lives, relative to the repository root. */
-export const PAGE_PATH = 'docs/04_toolchain.md'
+export const PAGE_PATH = 'docs/toolchain.md'
 
 /** A citation: a file that must exist, and literals that must appear in it. */
 const cite = (file, ...must) => ({ file, must })
@@ -50,11 +50,11 @@ export const FACTS = [
   },
   {
     says: '**tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。',
-    cites: [cite('docs/01_decisions.md', 'tag 活过应用改写'), cite('tools/zotero-section-note.mjs', "RETIRE_TAG = '/retired'")],
+    cites: [cite('docs/decisions.md', 'tag 活过应用改写'), cite('tools/zotero-section-note.mjs', "RETIRE_TAG = '/retired'")],
   },
   {
     says: '记录的 `version` 可能是 0：那种记录上"别人改过没有"的守卫是**空转**，不是通过。',
-    cites: [cite('docs/01_decisions.md', '39.3')],
+    cites: [cite('docs/decisions.md', '39.3')],
   },
   {
     says: '回收站端点**静默忽略 `itemType`**：`?itemType=note` 会答 `Total-Results: 0`，而回收站里可能躺着几百条 note。',
@@ -66,15 +66,15 @@ export const FACTS = [
   },
   {
     says: '抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。',
-    cites: [cite('docs/02_coverage.md', '字体编码坏掉的数学'), cite('tools/zotero-pdf.mjs', '(4) the page as an image')],
+    cites: [cite('docs/coverage.md', '字体编码坏掉的数学'), cite('tools/zotero-pdf.mjs', '(4) the page as an image')],
   },
   {
     says: '结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。',
-    cites: [cite('docs/02_coverage.md', '8,192'), cite('docs/02_coverage.md', '16,000')],
+    cites: [cite('docs/coverage.md', '8,192'), cite('docs/coverage.md', '16,000')],
   },
   {
     says: '本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。',
-    cites: [cite('docs/02_coverage.md', '不做 OCR'), cite('README.md', 'Eight helper programs')],
+    cites: [cite('docs/coverage.md', '不做 OCR'), cite('README.md', 'Eight helper programs')],
   },
   {
     says: 'helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。',
@@ -243,7 +243,7 @@ export const HELPERS = [
         'rebuilt from abstract_inverted_index',
         'one request per invocation',
       ),
-      cite('docs/02_coverage.md', '书目元数据'),
+      cite('docs/coverage.md', '书目元数据'),
     ],
   },
 ]

@@ -1,8 +1,8 @@
 > **Historical record — frozen.** This is the chronological development log of the preset, kept for
 > archaeology: it records what was tried, what was measured at the time, and which mistakes were made
 > and corrected. It is **not** an entry point and is no longer maintained.
-> Current documents: [../00_overview.md](../00_overview.md) (what it is),
-> [../01_decisions.md](../01_decisions.md) (why), [../../protocol.md](../../protocol.md) (contract),
+> Current documents: [../overview.md](../overview.md) (what it is),
+> [../decisions.md](../decisions.md) (why), [../../protocol.md](../../protocol.md) (contract),
 > [../../surface.md](../../surface.md) (names).
 # DSH Autoresearch 预设 —— 设计与实施方案（v0，待审）
 

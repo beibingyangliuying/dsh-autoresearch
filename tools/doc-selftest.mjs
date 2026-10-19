@@ -22,7 +22,7 @@ const ROOT = process.cwd()
 const PROTOCOL = join(ROOT, 'protocol.md')
 const SURFACE = join(ROOT, 'surface.md')
 const README = join(ROOT, 'README.md')
-const COVERAGE = join(ROOT, 'docs', '02_coverage.md')
+const COVERAGE = join(ROOT, 'docs', 'coverage.md')
 const SKILLS_DIR = join(ROOT, 'skills')
 const PATCH = join(ROOT, 'cordis.patch.yml')
 
@@ -234,7 +234,7 @@ const checks = [
         ['protocol.md', protocol],
         ['surface.md', surface],
         ['README.md', readme],
-        ['docs/02_coverage.md', coverage],
+        ['docs/coverage.md', coverage],
       ]) {
         for (const token of pathTokens(text)) {
           // A path that climbs out of the repository — `../protocol.md`, the label the review aids in

@@ -3,7 +3,7 @@
 // Why this exists: a tool can be masked at the tool registry while the prompt still names it, because
 // the text that names tools is assembled by plugins from their OWN state - the mnemon strategy plugin
 // builds its protocol block from what the memory View OFFERS and never consults the DSH tool registry
-// (measured 2026-10-19, docs/01_decisions.md #54). The state worth fearing is a resident line that tells
+// (measured 2026-10-19, docs/decisions.md #54). The state worth fearing is a resident line that tells
 // the agent to call a tool it cannot see, and this is the instrument that would see it: the isolation
 // filter can remove a tool, and nothing in the registry can remove a sentence.
 //

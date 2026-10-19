@@ -33,7 +33,7 @@
 | E4 | Item JSON 形状 | `data` 键＝`dateAdded/dateModified/itemType/key/note/parentItem/relations/tags/version`，**无 `deleted`**；`includeTrashed=1`／`trashed=1` 被静默忽略（360→360，首条 key 相同） | 这个 API **没有"放进回收站"这个动作**；只有"擦掉"或"不动" |
 | E5 | 官方文档 | Web API *Deleting an Item* 只写 `204 The item was deleted`，**未说**永久还是进回收站；本地 API 页只说支持 DELETE，且"does not attempt to replicate every implementation detail" | "API 删除是永久的"是**实测边界，不是文档承诺**（措辞需改，见 §6.5） |
 | E6 | 本地 API 新增能力（文档读到，**待实测**） | `GET /items/<key>/file`（与 `/file/view`）→ **302 到 `file://`**；`PUT /items/<key>/fulltext`（批量 `POST /fulltext` ≤10，需 `If-Unmodified-Since-Version`）**可写附件全文** | 梯级 ②④ 与"写回库索引"的技术前提 |
-| E7 | 环境与先例 | 预设唯一依赖＝`@deepseek-ai/schemastery`；**全仓 0 个 `.py`／`pyproject.toml`／`uv.lock`**；`tools/release-check.mjs:69-70` 明确把 `command:` 与 `uvx` 判为问题；`docs/01_decisions.md` §34 记录：**旧发布版需要 Python 环境（`uvx` MCP 行）正是被修掉的缺陷** | §4.3 依赖路线的裁定依据 |
+| E7 | 环境与先例 | 预设唯一依赖＝`@deepseek-ai/schemastery`；**全仓 0 个 `.py`／`pyproject.toml`／`uv.lock`**；`tools/release-check.mjs:69-70` 明确把 `command:` 与 `uvx` 判为问题；`docs/decisions.md` §34 记录：**旧发布版需要 Python 环境（`uvx` MCP 行）正是被修掉的缺陷** | §4.3 依赖路线的裁定依据 |
 
 ---
 
@@ -151,7 +151,7 @@
 
 **Python 为什么排在最后（而不是永不）**——依据是你们自己的记录，加上今天的裁定：
 
-- `docs/01_decisions.md` §34：旧发布版挂两个 `uvx` MCP 行、**需要 Python 环境**，那正是被修掉的缺陷；
+- `docs/decisions.md` §34：旧发布版挂两个 `uvx` MCP 行、**需要 Python 环境**，那正是被修掉的缺陷；
 - `tools/release-check.mjs:69-70`：组合里出现 `command:` 或 `uvx` 即判为问题；
 - 全仓 **0 个 `.py`**，唯一依赖是 `schemastery`；所有 helper 都是 `.mjs` + `*_selftest.mjs`；
 - **诚实限定**：那道守卫只扫**组合**，一个由 skill 正文调用的 `.py` 不会触发它。⇒ **若真走到 ③，必须先扩守卫**（扫 skill 正文里的 `.py` 引用；且运行时缺失要**响亮报错**并报"本功能不可用"，而不是静默降级——同 `INV-SCOPE-3` 的"没有隔离就响亮地说"）。
@@ -201,7 +201,7 @@ source  : library index (.zotero-ft-cache), indexed 41,238 chars — math glyphs
 source  : attachment text layer, read from <path> — same ToUnicode table as the index
 ```
 
-并明确：**扫描件 ⇒ "this preset does not OCR"**（`docs/02_coverage.md` §3 已有立场，此处把话说在工具输出里，而不是只在文档里）。
+并明确：**扫描件 ⇒ "this preset does not OCR"**（`docs/coverage.md` §3 已有立场，此处把话说在工具输出里，而不是只在文档里）。
 
 ---
 
@@ -252,7 +252,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 
 ### 6.4 其他自测与索引
 
-- `docs/02_coverage.md`：**必须同批更新**（它是 DOC-9 管的覆盖图：部分↔纪律，且要求出现"非规范"/`protocol.md`）；
+- `docs/coverage.md`：**必须同批更新**（它是 DOC-9 管的覆盖图：部分↔纪律，且要求出现"非规范"/`protocol.md`）；
 - `surface.md`：若新增 helper，按 `DOC-5`（双射）与 `DOC-1`（契约不出现符号名）同步；
 - `doc-selftest`：新增 **DOC-11**；若走 Python 路线则**先**扩 `release-check` 的守卫。
 
@@ -294,7 +294,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 
 ## 9. 执行顺序（按依赖拆多个逻辑提交）
 
-1. `docs`：本草案定稿 + `docs/02_coverage.md` 同步 + `docs/01_decisions.md` 记 E1–E7；
+1. `docs`：本草案定稿 + `docs/coverage.md` 同步 + `docs/decisions.md` 记 E1–E7；
 2. **M5**：`doc-selftest` DOC-11 + 修 `protocol.md:3` 头部版本（先立护栏，后改内容）；
 3. **Revision 17 契约**：`protocol.md` §6/§7/§8/§9 + `README.md` + `surface.md`；
 4. **P1 归退**：`zotero-section-note.mjs --retire/--undo` + `--plan` 墓碑行 + `zotero-read.mjs` 打 tag + 自测（含应用改写回归测试与父条目退路）；
@@ -315,7 +315,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 3 | **归退标记名** | **`/retired`**；库中已有的 `/section-note` 只读兼容，不造第三种写法 |
 | 4 | **清单默认落点** | **`<study>/research/owner_actions.md`**（进脚手架；已有 study 层级优先，`INV-PROJ-1` 原样适用） |
 | 5 | **写回库索引**（`PUT /fulltext`） | 本次**不做**，仅登记为后续可选项 |
-| 6 | **只读探针** | 探针命令固化进 `docs/01_decisions.md`，**脚本删除** |
+| 6 | **只读探针** | 探针命令固化进 `docs/decisions.md`，**脚本删除** |
 
 **由 1 产生的连带项**（写进执行清单，不是待裁定）：若最终走到 Python，**先扩 `release-check` 的守卫**（现只扫组合，扫不到 skill 正文里的 `.py` 引用），并规定**运行时缺失必须响亮报错**。
 
@@ -325,7 +325,7 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 
 | §9 步骤 | 状态 | 提交 |
 | --- | --- | --- |
-| 1 文档与决策记录 | ✅（本文件 · `docs/01_decisions.md` §50） | — |
+| 1 文档与决策记录 | ✅（本文件 · `docs/decisions.md` §50） | — |
 | 2 M5 版本护栏 + 头部 15→16 | ✅ | `6ec4d1d` |
 | 3 Revision 17 契约（§6 归退与梯级 · §7 清单产物 · §8 `INV-NOTE-1` · §9 删除理由 · README 删除段更正） | ✅ | `1754e83` |
 | 4 P1 归退：`--retire/--undo` · `--replaces` · `--plan` 墓碑行 · 21 条新断言 · 真库干跑 | ✅ | `423b37a` |
@@ -334,12 +334,12 @@ source  : attachment text layer, read from <path> — same ToUnicode table as th
 | 6 M1/M2/M3/M7：`.section-notes` 骨架 · 署名头 · 占位符换实例 · 不写解析后路径 | ✅ | `8697611` |
 | 7 M4 写侧窄守卫（点号序号读得到、写不了） | ✅ | `65491ef` |
 | 8 P3 读的梯级（组合 A：`@hyzyla/pdfium` + `pdfjs-dist`；`--outline`/`--extract`/渲染 + 保真度标签） | ✅ 引擎实测见 §4.3.1；三个梯级在真库跑通，渲染页已当图像读回 | `ae75e6d` · `1d78c9b` |
-| 9 M6 生成式能力单页 + 不漂移断言 | ✅ 见 `docs/01_decisions.md` §52 | `895298a`（+ `6f80323` 补 `REQUIRED_HELPERS` 缺口） |
+| 9 M6 生成式能力单页 + 不漂移断言 | ✅ 见 `docs/decisions.md` §52 | `895298a`（+ `6f80323` 补 `REQUIRED_HELPERS` 缺口） |
 | 10 `zotero-read.mjs --item` 增印笔记 tags | ✅ **本来就有**（`zotero-read.mjs:445` 一直打印 `tags :`；用带 `/retired` 的真笔记验过）——原列项是我记错的假待办 | — |
-| 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/01_decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
+| 11 **tag 活过应用改写**：真笔记归退 → 属主在应用里改一次 → 读回 → 撤销 | ✅ **成立且已闭环**（正文被重写、marker 被吃，tag 存活；详见 `docs/decisions.md` §51.2）。父条目标记退路经实证**不需要** | 见 §51.2 |
 | 11b 发布前清理：README 依赖声明 + 两处 fixture 去掉属主库痕迹 | ✅ | `ff46dbd` |
-| 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | ✅ `v0.4.0` → `57a3f3e`，远端复核 PASS（见 `docs/01_decisions.md` §51.5） | `57a3f3e` · `3106120` |
-| 13 **M6 的发布**（这份单页要不要单独发一个版本） | ✅ junhan 裁定**发 0.5.0**；已发布并**从远端复核 PASS**（见 `docs/01_decisions.md` §53） | `5ea7690`（tag `v0.5.0`） |
+| 12 **发布**：版本号 `0.4.0`（单独提交）· 注释 tag · 推分支与 tag · `release-check --tag` | ✅ `v0.4.0` → `57a3f3e`，远端复核 PASS（见 `docs/decisions.md` §51.5） | `57a3f3e` · `3106120` |
+| 13 **M6 的发布**（这份单页要不要单独发一个版本） | ✅ junhan 裁定**发 0.5.0**；已发布并**从远端复核 PASS**（见 `docs/decisions.md` §53） | `5ea7690`（tag `v0.5.0`） |
 | — | 清理 `.tmp/` 的往轮遗留（junhan 裁定：**留证据、删大件**） | ✅ **112.8 MB → 0.81 MB**（978 → 88 个文件）。保留：§4.3.1 的探针配方与输出 · 四份普查报告与 `notes-to-delete.md`（那 39 条的待办清单）· 未采纳的脚手架提案 `scaffold-revision/` · 三条会话的笔记产物 `section-notes/` · 候选技能 `adoption-ruling.SKILL.md`。删除的是大件：`node_modules` 83.5 MB、会话 `.jsonl` 约 25 MB、库正文副本、渲染图、composed dump、日志与提交信息草稿 | `.tmp` 不进库 |
 
 ---

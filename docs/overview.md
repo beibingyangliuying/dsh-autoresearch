@@ -56,12 +56,12 @@ flowchart LR
 
 | 我想知道… | 看哪 |
 |---|---|
-| **每个部分覆盖什么、拒绝什么**（含"指定一篇文献之后发生什么"） | [`02_coverage.md`](02_coverage.md) |
+| **每个部分覆盖什么、拒绝什么**（含"指定一篇文献之后发生什么"） | [`coverage.md`](coverage.md) |
 | 它**保证**什么、拒绝什么、边界在哪 | [`protocol.md`](../protocol.md)（normative） |
 | 某个概念**对应哪个名字** | [`surface.md`](../surface.md)（non-normative） |
 | 怎么装、怎么开发、有哪些已知约束 | [`README.md`](../README.md) |
-| 当初**为什么**这么做、否掉了什么 | [`01_decisions.md`](01_decisions.md) |
-| 当时的原始过程（含我犯的错） | [`archive/PLAN.md`](archive/PLAN.md)（冻结，不再维护） |
+| 当初**为什么**这么做、否掉了什么 | [`decisions.md`](decisions.md) |
+| 当时的原始过程（含我犯的错） | [`archive/plan-v0.md`](archive/plan-v0.md)（冻结，不再维护） |
 
 ## 现状怎么查（不写死在文档里）
 
@@ -96,6 +96,6 @@ node tools\session-helper-modes.mjs --preset autoresearch                  # 读
 
 三条边界必须一起记住：
 
-1. 这个保证是**工具层面**的：**激活时那一遍是保证**，`tools/change`（注册表宣布"工具集变了"）那一遍负责补**晚注册**的插件——实测晚注册的 config-manager 5 个工具是**逐个注册、逐个被挡下**的，`config_restore` 在其中，而激活那遍根本算不到它们（[`01_decisions.md`](01_decisions.md) §33）。该遍只在 deny 集合真的变化时才施加。
+1. 这个保证是**工具层面**的：**激活时那一遍是保证**，`tools/change`（注册表宣布"工具集变了"）那一遍负责补**晚注册**的插件——实测晚注册的 config-manager 5 个工具是**逐个注册、逐个被挡下**的，`config_restore` 在其中，而激活那遍根本算不到它们（[`decisions.md`](decisions.md) §33）。该遍只在 deny 集合真的变化时才施加。
 2. **skill 目录不受此机制保护**——注册表不提供限制调用，profile 里别的 bundle 的 skill 会一起出现在本预设的目录里；预设只能靠常驻纪律说明"目录里但不在路由表里的条目怎么对待"。
-3. 反过来，**预设自己行注册的工具永远屏蔽不掉**——包括它自带的**写工具**。所以参考库的写入门禁不能靠隔离，只能由契约（`INV-EVID-3`／§9）与常驻纪律承担；授权的粒度是**库**：首次写入由所有者在参考管理器对话框里授予，`Always Allow` 由工具按 `Zotero-Server-ID` 保存、可随时撤销（契约 Revision 10），见 [`01_decisions.md`](01_decisions.md) §31 与 §35。
+3. 反过来，**预设自己行注册的工具永远屏蔽不掉**——包括它自带的**写工具**。所以参考库的写入门禁不能靠隔离，只能由契约（`INV-EVID-3`／§9）与常驻纪律承担；授权的粒度是**库**：首次写入由所有者在参考管理器对话框里授予，`Always Allow` 由工具按 `Zotero-Server-ID` 保存、可随时撤销（契约 Revision 10），见 [`decisions.md`](decisions.md) §31 与 §35。

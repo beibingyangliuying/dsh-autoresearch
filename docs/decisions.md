@@ -1,7 +1,7 @@
 # 决策记录 —— 为什么是现在这样，以及否掉了什么
 
 > 只记**长期仍然成立**的决策与理由。会立刻过时的验证数字不在这里（跑自测即得）；
-> 原始时间线在 [`archive/PLAN.md`](archive/PLAN.md)。
+> 原始时间线在 [`archive/plan-v0.md`](archive/plan-v0.md)。
 
 ## 1. 分层：预设管"怎么研究"，工作区管"研究什么"
 
@@ -329,7 +329,7 @@ skill 里。
 
 **顺带否掉**：Zotero 插件路线（ZotMoov / Attanger：能自动转，但需验证 Zotero 10.0.6 兼容性，且把“我的库怎么组织”交给第三方代码）；Sci-Hub 类；通用爬虫（见 §21）。
 
-**落在何处**：[`index.js`](../index.js)（两个 volatile 字段）· [`client.js`](../client.js)（FIELDS + checkbox 渲染 + 类型化 draft）· [`contact-bridge.js`](../contact-bridge.js)（同一 section 增一条策略行）· [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) + 其自检 · [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。**`protocol.md` 不动**——这正是分工方案的目的。
+**落在何处**：[`index.js`](../index.js)（两个 volatile 字段）· [`client.js`](../client.js)（FIELDS + checkbox 渲染 + 类型化 draft）· [`contact-bridge.js`](../contact-bridge.js)（同一 section 增一条策略行）· [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) + 其自检 · [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md)。**`protocol.md` 不动**——这正是分工方案的目的。
 
 ## 23. 自带 CLI 脚本必须是绝对路径：agent 并不在这个仓库里（2026-10-14）
 
@@ -368,7 +368,7 @@ skill 里。
 
 **顺带否掉**：并存两个 MCP 行（常驻 ≈19.9k token，收益只是"旧行为逐字可复现"）；`ZOTERO_LOCAL_WRITE=false` 硬只读（那等于回到"我们自己写 collections 子命令"，而本轮选择是直接用上游写工具 + 门禁纪律）；把 `tools/` 复制进脚手架（见 §23）。
 
-**顺带清理（已执行，2026-10-14）**：profile 里有**两条同类的死 Junction** —— `@local/dsh-autoresearch-preset` → 已于 2026-10-12 上移掉的 `autoresearch-preset/`，以及 `@local/dsh-autoresearch-mcp` → 已卸载的 `mcp-academic/`。两条都实测为 `LinkType=Junction`、**目标不存在**、通过链接可见 **0** 条目、且 profile 自身文件**零引用**（`@local/` 下已无其它条目）⇒ 用 `cmd /c rmdir` 逐个删除（**只删链接，不触及目标**），清空后的 `@local/` 目录一并移除；健全的 `@beibingyangliuying/dsh-autoresearch-preset` → 本仓库经复核仍为 Junction 且目标存在 ✓。该清理在 profile 侧，不在本仓库。**教训**：`docs/00_overview.md` 曾把隔离写成"保留制"、这两条死链也曾长期存在——都是"旧布局的痕迹留在文档与 profile 里"，靠一次通读核不出来，只能靠"每次动作都复核目标是否存在"逐个发现。
+**顺带清理（已执行，2026-10-14）**：profile 里有**两条同类的死 Junction** —— `@local/dsh-autoresearch-preset` → 已于 2026-10-12 上移掉的 `autoresearch-preset/`，以及 `@local/dsh-autoresearch-mcp` → 已卸载的 `mcp-academic/`。两条都实测为 `LinkType=Junction`、**目标不存在**、通过链接可见 **0** 条目、且 profile 自身文件**零引用**（`@local/` 下已无其它条目）⇒ 用 `cmd /c rmdir` 逐个删除（**只删链接，不触及目标**），清空后的 `@local/` 目录一并移除；健全的 `@beibingyangliuying/dsh-autoresearch-preset` → 本仓库经复核仍为 Junction 且目标存在 ✓。该清理在 profile 侧，不在本仓库。**教训**：`docs/overview.md` 曾把隔离写成"保留制"、这两条死链也曾长期存在——都是"旧布局的痕迹留在文档与 profile 里"，靠一次通读核不出来，只能靠"每次动作都复核目标是否存在"逐个发现。
 
 ## 25. 预设源改动只有宿主重启才生效——"开新会话验证"是个陷阱（2026-10-14）
 
@@ -530,7 +530,7 @@ skill 里。
 
 **教训**：① 写工具的成功判据是"**任何 2xx + 回读**"，不是某一个状态码；② 这类**状态码知识必须住在共享层**——它曾经住在工具特有逻辑里，于是新路径没有继承，而 §31 抽公共模块正是为了让这种知识只存在一份；③ **"先做一次真实写入验收"这个决定本身抓到了缺陷**：四个 helper 的 dry-run 全绿、14 项自测全绿，只有真写才暴露了它。
 
-**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`isWriteAccepted`）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（新：2xx 判据 + "未 open 不许写"的门禁契约，后者在发请求前就抛，因此可离线测）· [`README.md`](../README.md) 与 [`docs/00_overview.md`](00_overview.md) 的自测清单。
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`isWriteAccepted`）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（新：2xx 判据 + "未 open 不许写"的门禁契约，后者在发请求前就抛，因此可离线测）· [`README.md`](../README.md) 与 [`docs/overview.md`](overview.md) 的自测清单。
 
 ## 33. 隔离的第二次 pass 从未运行；改听 `tools/change` 后晚注册的 config-manager 被逐个挡下（2026-10-15）
 
@@ -612,7 +612,7 @@ skill 里。
 
 **本条取代的旧前提**：§11 与 §12（“key 单次有效且不落盘”、“脚本也不保存 key”）、§21（“库写入的闸门不变：Zotero 原生逐次授权”）、§22（以“每次写入一个弹窗”为分工理由）、§24（以“逐次授权”为禁止 Always Allow 的理由）——它们的**结论**多数仍然成立，但**前提**已由本条取代。
 
-**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)。
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（凭据库 + 401 自愈 + 供自测注入的 `transport` 缝）· [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)（[3]–[10] 八组，**离线**计数弹窗）· 五个 helper（统一 `APP_NAME`、输出改述）· [`protocol.md`](../protocol.md)（Revision 10：§5／§6／INV-EVID-3／§9）· [`contact-bridge.js`](../contact-bridge.js)（`writeGateLine()` 与其 JSDoc、`attachmentLine()`）· [`tools/contact-bridge-selftest.mjs`](../tools/contact-bridge-selftest.mjs) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md)。
 
 ## 36. 发布 0.2.1，以及在发布复核里抓到的 checker 缺陷：一个通不过真路径的修法（2026-10-15）
 
@@ -668,7 +668,7 @@ skill 里。
 
 **本轮未做／未测（明确登记）**：`--tidy` 的**写入**路径本轮未执行（junhan 选择"先只做新笔记"，整理另行开轮）——其干跑路径已在真实笔记 `HUBAWKBF` 上验证（3574→3672 字符，19 处 `[]` + 36 处 `()` 转换，0 处 left alone）；05-2 的 `297FISBF` 缺附件无法做；批量 fan-out（≥3 篇）未跑；`ASAQH5A3` 的节号是**数顶层标题得来**的（原文编号不可读），若日后拿到带编号的版本需复核。
 
-**落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（九节骨架 + 选节表 + 模板 + 就地排除条件）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`--item` 读笔记正文，此前只能读到元数据——纪律点名了一把打不开的尺子）· [`cordis.patch.yml`](../cordis.patch.yml)（路由第 9 条）· `protocol.md`（Revision 11：§4／§6）· [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（8→9）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（路由 8→9）。
+**落在何处**：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（九节骨架 + 选节表 + 模板 + 就地排除条件）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与其 [自测](../tools/zotero-section-note-selftest.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`--item` 读笔记正文，此前只能读到元数据——纪律点名了一把打不开的尺子）· [`cordis.patch.yml`](../cordis.patch.yml)（路由第 9 条）· `protocol.md`（Revision 11：§4／§6）· [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（8→9）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（路由 8→9）。
 
 
 ### 37-补. 审阅一轮之后的收尾：行间公式改块状，以及"库会改写你的笔记"的三个后果（2026-10-16）
@@ -772,7 +772,7 @@ skill 里。
 - 自测：[`tools/zotero-note-selftest.mjs`](../tools/zotero-note-selftest.mjs) 新增 `[3]`（同一段 → 无操作且正文不动 · 空白差异 · 应用重写过的笔记仍匹配 · 两条 digest 中较旧的一条仍被认出 · **重述会被追加**（把边界钉成决定而不是意外）· 空 addition 不算重复 · 无我方笔记时仍是 create）、`[4]`（该分支在 `createWriteGate` **之前**）与 `[5]`——**命令行对 stub 库**：子进程起真 CLI、父进程当 stub，带 `--write` 重跑同一段 → `exit 0` ＋ 打印 `ALREADY RECORDED` ＋ **只发生两次 GET、没有任何写请求**；换一段新文字 → 计划 append 到本方笔记；条目只有所有者的笔记 → 计划 create 而不是追加到别人的笔记。子进程必须**异步** spawn：同进程既当服务器又同步等子进程＝死锁（第一版就是这么挂住的），并给 20s 护栏。
 - [`tools/zotero-local-api-selftest.mjs`](../tools/zotero-local-api-selftest.mjs)：`[11]` 钉住地址缝（缺省值 · 覆盖生效 · 非法值抛错 · 环境复原）。
 - **反向控制（两次）**：把判重那一行从工具里抽掉 → `zotero-note-selftest` **FAIL (5)**（`[3]`）；把整个 `ALREADY RECORDED` 分支抽掉 → **FAIL (3)**（`[5]`：exit 变成 1，且门禁被打开、多出第三次请求）；两次装回都即 PASS。
-- 文本：[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（§7 那条 bullet 写明"重跑不添加，并且会这么说" · §4.2 新增排除条件一行）· [`protocol.md`](../protocol.md)（**Revision 13**：头部、§6 笔记条款、`INV-EVID-4`）· [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)（自测清单那两行）。
+- 文本：[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md)（§7 那条 bullet 写明"重跑不添加，并且会这么说" · §4.2 新增排除条件一行）· [`protocol.md`](../protocol.md)（**Revision 13**：头部、§6 笔记条款、`INV-EVID-4`）· [`README.md`](../README.md) · [`docs/overview.md`](overview.md)（自测清单那两行）。
 
 **未做**：`refs/` 索引行的去重（另开一轮）· 用标签做 digest 笔记身份（需真库实测"标签是否留存"，另开一轮）· 库里既有 digest 笔记的整理。
 
@@ -825,7 +825,7 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 - 自测：[`tools/zotero-section-note-selftest.mjs`](../tools/zotero-section-note-selftest.mjs) 新增 `[2b]`（owner 库里真实使用的形态，含罗马数字与附录；以及**不得**被当成声明的"1. 一段话总结"与"N＋标题"）、`[2c]`（分句边界正反例）、`[2d]`（顶层计：整节盖子节 · 分条盖整节 · **兄弟不算覆盖** · 缺的那条仍可写）。
 - **反向控制**：让父子归并失效（提前 `return undefined`，等于退回字符串相等）⇒ `[2d]` 立刻变红；装回即 PASS。
 - **真库只读实证**：`--item 7X8RAWAH`——六条笔记的 marker **全被应用吃掉**，工具仍从第一段读出 §2–§7、`judge these: none`；干跑 `--section 3` 得到 `REFUSED: §3 is already covered - note JPNPC6VL claims §3 / read it as: §3 (第N节: "文章第3节")`，**exit 1 且未发任何写请求**。
-- 文本：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（§2 读体检并先报覆盖表 · §3.3 顶层是单位 · §4.2 三行新排除条件 · §6 新增 `## Coverage` · §7 判据归阅读 · §8 清单）· [`protocol.md`](../protocol.md)（**Revision 14**：头部、§4 sections 行、§6 笔记条款）· [`README.md`](../README.md) · [`docs/00_overview.md`](00_overview.md)（补上此前漏列的逐节笔记自测行）。
+- 文本：[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md)（§2 读体检并先报覆盖表 · §3.3 顶层是单位 · §4.2 三行新排除条件 · §6 新增 `## Coverage` · §7 判据归阅读 · §8 清单）· [`protocol.md`](../protocol.md)（**Revision 14**：头部、§4 sections 行、§6 笔记条款）· [`README.md`](../README.md) · [`docs/overview.md`](overview.md)（补上此前漏列的逐节笔记自测行）。
 
 **未做**：逐节笔记的 **CLI 级 stub 端到端测试**（digest 那条链有，这条还没有；逻辑已由纯函数自测覆盖）· `--tidy` 的判据随本次放宽而变宽（它复用同一个 claim 阅读：只碰"识别为逐节笔记"的笔记，识别范围现在包含"第一段点名了节"的手写笔记）· 回收站里那批笔记由 junhan 自行处置。
 
@@ -856,23 +856,23 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 
 ### 43.1 先验的三条（都是这一轮摸出来的，决定了它该长什么样）
 
-1. **缺口不是"忘了写"，是这份文档的读者从未被定义过。** 现有四份各答一个问题：README 的 "What you get"（段落级、英文、面向安装的人）· [`protocol.md`](../protocol.md) §4（规范上一行一条纪律，而且 DOC-1 **禁止它出现任何符号名**）· [`surface.md`](../surface.md)（概念 ↔ 名字的索引，不问覆盖）· [`docs/00_overview.md`](00_overview.md)（**一行一个"步骤"**，不是一行一个"部分"）。"谁负责"有了、"保证什么"有了、"为什么"有了，**"每个部分覆盖什么 / 拒绝什么 / 触发条件 / 产物落在哪"没有**。
+1. **缺口不是"忘了写"，是这份文档的读者从未被定义过。** 现有四份各答一个问题：README 的 "What you get"（段落级、英文、面向安装的人）· [`protocol.md`](../protocol.md) §4（规范上一行一条纪律，而且 DOC-1 **禁止它出现任何符号名**）· [`surface.md`](../surface.md)（概念 ↔ 名字的索引，不问覆盖）· [`docs/overview.md`](overview.md)（**一行一个"步骤"**，不是一行一个"部分"）。"谁负责"有了、"保证什么"有了、"为什么"有了，**"每个部分覆盖什么 / 拒绝什么 / 触发条件 / 产物落在哪"没有**。
 2. **每部分的细节此前只有一种成文形式：九份 `skills/*/SKILL.md`**（英文、面向模型的激活、合计约 1,100 行）。所以所有者要理解整体，除了问 agent 没有第二条路——这正是这次发生的事。抽查证实：读 PDF 那一侧的事实（附件按 `PDF → EPUB → HTML` 挑、**本预设不做 OCR**、读阶梯、单次结果超 8,192 字符在压缩后只剩头尾（裁剪时点已更正，见 §63）、覆盖靠读笔记第一段裁定）在中文读者文档里几乎一处也没有。
-3. **但"再手写一份名单"会撞上仓库自己立的规矩**：[`00_overview.md`](00_overview.md) 头部写着"本文不重复符号清单——两处列同一批名字必然漂移"，DOC-6 甚至禁止 README 正文重复符号，而 §36 那一轮刚抓到两处陈旧计数（`package.json` 写 "eight" 实际 9 条纪律；README 写 "Eight helper programs" 可它自己枚举 7 个）。⇒ **病因不是名单多，是没有一份名单有仪器校。**
+3. **但"再手写一份名单"会撞上仓库自己立的规矩**：[`overview.md`](overview.md) 头部写着"本文不重复符号清单——两处列同一批名字必然漂移"，DOC-6 甚至禁止 README 正文重复符号，而 §36 那一轮刚抓到两处陈旧计数（`package.json` 写 "eight" 实际 9 条纪律；README 写 "Eight helper programs" 可它自己枚举 7 个）。⇒ **病因不是名单多，是没有一份名单有仪器校。**
 
 **派生能力的边界（一条关键实测）**：九份 SKILL.md 第 8 行都是同一句式 "This skill does exactly one thing: …"，但**否定句写法不统一**——七份是 `It does not…`，`metadata-query` 与 `section-notes` 是 `It is not…`。所以可派生的**只有名册**，中文描述只能人写。护栏的边界因此被定死为：**名册与路径机器校，描述由阅读负责**——与"窄机械护栏 + 阅读裁定"那条规则设计偏好同构。
 
 ### 43.2 裁定（junhan 三项逐项定，均取推荐项）
 
-1. **新增 [`docs/02_coverage.md`](02_coverage.md)**：中文「覆盖与边界地图」＋ 一篇"指定一篇文献之后发生什么"的流程叙事。覆盖层级＝**纪律 + 两条外部通道 + 工具入口**。
+1. **新增 [`docs/coverage.md`](coverage.md)**：中文「覆盖与边界地图」＋ 一篇"指定一篇文献之后发生什么"的流程叙事。覆盖层级＝**纪律 + 两条外部通道 + 工具入口**。
 2. **新鲜度护栏扩展进 [`tools/doc-selftest.mjs`](../tools/doc-selftest.mjs)**，不另起文件（另起必然把 `documentedPathExists`／名册派生那套复制一份，正是仓库反对的漂移源）。
 3. **与 `00_overview` 那句话的冲突**：**保留原话**，改在地图头部声明它是"被机械校验的第二份名单"。两份名单各答一个问题——`surface.md` 由 DOC-5 校"概念↔名字"，地图由 DOC-9 校"部分↔skills/"，**都漂不了**；"必然漂移"说的是无人校的名单。
 
 ### 43.3 落点与验证
 
-- 新增 [`docs/02_coverage.md`](02_coverage.md)：常驻纪律一行（**不复述 §3 的条款**，只指过去，因为那正是会漂的那种复述）· 按需纪律表（覆盖什么／明确不做／何时加载／权威文本）· 两条通道与写侧工具入口（**一律不写计数**——上一轮的两处陈旧计数就是前车之鉴）· 流程叙事七步（先查 refs 索引 → 体检 → 建节表 → 判覆盖 → 只写没覆盖的方法节 → 干跑/授权/`--write`/回读 → digest 与读状态标签）· 最后一节写明它**不管**什么。
+- 新增 [`docs/coverage.md`](coverage.md)：常驻纪律一行（**不复述 §3 的条款**，只指过去，因为那正是会漂的那种复述）· 按需纪律表（覆盖什么／明确不做／何时加载／权威文本）· 两条通道与写侧工具入口（**一律不写计数**——上一轮的两处陈旧计数就是前车之鉴）· 流程叙事七步（先查 refs 索引 → 体检 → 建节表 → 判覆盖 → 只写没覆盖的方法节 → 干跑/授权/`--write`/回读 → digest 与读状态标签）· 最后一节写明它**不管**什么。
 - [`tools/doc-selftest.mjs`](../tools/doc-selftest.mjs)：`disciplineNames()` 从 `authoritativeSymbols()` 里析出（**无行为变化**的纯重构，DOC-5 语义不变）· **DOC-9** 名册一一对应（漏一条／多一条都失败）· **DOC-10** 地图必须自称非规范并指向契约 · **DOC-8** 把地图纳入路径检查 · 新增三条反向控制。
-- 同步：README（Layout 的 `docs/` 行 · Develop it 里 `doc-selftest` 的注释）· [`docs/00_overview.md`](00_overview.md)（"看哪里"表新增一行）· [`preset-release`](../.agents/skills/preset-release/SKILL.md) 第 2 步的读者文件清单，并写明**地图只有名册与路径被机器校**。
+- 同步：README（Layout 的 `docs/` 行 · Develop it 里 `doc-selftest` 的注释）· [`docs/overview.md`](overview.md)（"看哪里"表新增一行）· [`preset-release`](../.agents/skills/preset-release/SKILL.md) 第 2 步的读者文件清单，并写明**地图只有名册与路径被机器校**。
 
 **验证**：`doc-selftest --negative-controls` —— 10 条检查 PASS，9 条反向控制**全部咬住**。但在把它做绿之前，护栏抓到了我自己两个错，都记在这里：
 
@@ -930,11 +930,11 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 
 - 新增 [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md)：沿用九节骨架（触发 · 读 ruler · 判据（单位/词表/六字段/锚点/双栏/拒用/生命周期/形状）· do-don't 含 12 条就地排除条件 · 措辞 · 报告形状 · 仪器 · 清单 · don't）。
 - [`cordis.patch.yml`](../cordis.patch.yml)：路由第 10 行（接在逐节笔记之后——它**吃**节笔记）＋ 头部注释与 preset description 的循环叙事。
-- [`surface.md`](../surface.md) ＋ [`docs/02_coverage.md`](02_coverage.md) 各 +1 行（DOC-5／DOC-9 的机械要求，漏了自测会红）。
+- [`surface.md`](../surface.md) ＋ [`docs/coverage.md`](coverage.md) 各 +1 行（DOC-5／DOC-9 的机械要求，漏了自测会红）。
 - 新增 [`project-template/research/adoption/README.md`](../project-template/research/adoption/README.md)（含一条填好的示例项）＋ [`project-template/README.md`](../project-template/README.md) 的 Layout 两行。
 - [`protocol.md`](../protocol.md) **Revision 15**：§4 一行 · §7 布局与权威层级（**既不支撑结论、又约束代码**，两边各占一半）· §8 新增 `INV-ADOPT-1..4` · §9 拒绝"读过了就算可采用"。
 - [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs) 与 [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) 的计数 9→10。**注意**：`preset-selftest` 读的是**组合后的树**，必须先 `dsh --profile web --dump-config > .tmp\composed-web.txt` 重生成，否则它核对的是上一轮的现实（这次正是先红了 4 项才发现的）。
-- **语言分工**：纪律正文英文（与另九份同语言，`skills-selftest` 只读 front matter，语言不影响功能）；中文读者层在 `02_coverage.md` 与新的一节里。
+- **语言分工**：纪律正文英文（与另九份同语言，`skills-selftest` 只读 front matter，语言不影响功能）；中文读者层在 `coverage.md` 与新的一节里。
 - **验证**：`skills-selftest` PASS（`registered=10`）· `preset-selftest` PASS（`ten skill-routing bullets`，含新名）· `doc-selftest` PASS（含 10 条反向控制）· `isolation` / `client` / `contact-bridge` 自测 PASS · `new-project.ps1 -DryRun` 显示会创建 `research\adoption\README.md`。
 - **零新增工具**：读侧复用 `zotero-section-note.mjs --item <recordKey>`（计划态，不写库）与 `zotero-read.mjs --item <noteKey>`；不新造 helper，也就不新增工具自测。
 
@@ -964,7 +964,7 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
   靠散文维持；这也正是"不搬它的六层"的证据，而不是审美。
 - **同一个"列出目录"的动作，那边有三种写法**（契约用缩进树、README 用带文件名的树、权威表用 glob）。
   护栏必须做归一化——这一点在护栏第一版上直接表现为 **2 处假阳性**（见 §45.5）。
-- **P3 的初稿措辞与本仓库既有裁定冲突**：§11 记"给工作区上 git | **不上**"、`archive/PLAN.md:354` 记
+- **P3 的初稿措辞与本仓库既有裁定冲突**：§11 记"给工作区上 git | **不上**"、`archive/plan-v0.md:354` 记
   "**有意不做**：不含 git 初始化"、`AGENTS.md.template` 与契约 §9 都声明不对版本控制表态。⇒ 初稿那句
   "必须挺过 fresh clone"是**替课题假定版本控制**，已改写为不含 VCS 语义的可得性说法（"对这份记录的读者
   可得"，跑在外面的留一份副本在身边，取不到的就在记录上写成缺陷）。
@@ -986,7 +986,7 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
 | **P4** | 退休＝**移动 + 一份 README 说明**（从哪来、为什么、谁接替）；正文不更正、活指针照改、dated 记录不改 | `project-template/research/archive/` |
 | **P5** | 反复出现的坑**升格为带编号的规则**，带生效日期与**首例**，只约束今后、不追溯改写旧记录 | `pitfalls/README.md` + `AGENTS.md.template` §2.1 |
 | **P6** | **本轮不取**：mnemon Documents 与"课题自带规范层"的边界。那边自己的文档地图实测同一批阴性证据出现在 **5 处**（含两份 mnemon），所以重复是真的；但它需要单独一轮，**记为 open item，不是否决** | — |
-| **P7** | 新增 `tools/scaffold-selftest.mjs`：把契约 §7、本仓 README、课题继承的权威表**三份名单**互相校 | `tools/` + README + `00_overview.md` |
+| **P7** | 新增 `tools/scaffold-selftest.mjs`：把契约 §7、本仓 README、课题继承的权威表**三份名单**互相校 | `tools/` + README + `overview.md` |
 | **P8** | 新课题的根 README 取**课题口吻**（不再自称模板、不再教人建课题），且**不携带目录图**——因为名单只有一份，就是 `AGENTS.md` §3 | `project-template/README.md` + 本仓 README 承接脚手架自述 |
 
 ### 45.4 落点与验证（六个提交，每个都能跑绿）
@@ -1022,7 +1022,7 @@ junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课�
 3. **我自己的 PowerShell 正则改写把 `sim-build.mjs` 弄坏了**（`join(draft, 'proposed'), ...` 括号错位）。
    教训仍然成立：**别对代码做正则手术**，重写整个文件比修它便宜，也不会留下一个看着像对的中间态。
 4. **OneDrive 云同步让"已读过"的文件 mtime 变化**，版本守卫两次拒绝编辑（`skills/experiment-protocol/SKILL.md`、
-   `docs/02_coverage.md`）。README 的"已知约束"里本来就写着这一条——这次是它第一次咬到自己仓库的编辑。
+   `docs/coverage.md`）。README 的"已知约束"里本来就写着这一条——这次是它第一次咬到自己仓库的编辑。
 
 ### 45.6 未做与边界
 
@@ -1063,8 +1063,8 @@ junhan 要求发布新版本，并按 [`preset-release`](../.agents/skills/prese
 
 | 命中 | 处置 |
 |---|---|
-| [`00_overview.md:22`](00_overview.md) 仍写"实验卡：**假设**/命令/…" | **已修**：改成预注册＋实验卡两件，且卡引用协议 |
-| [`01_decisions.md`](01_decisions.md) §8 记的卡字段表（2026-10-13） | **不改写**（它是当时的决策记录），在 §45.7 写明被取代——"退役的主张不得以降级形态存活" |
+| [`overview.md:22`](overview.md) 仍写"实验卡：**假设**/命令/…" | **已修**：改成预注册＋实验卡两件，且卡引用协议 |
+| [`decisions.md`](decisions.md) §8 记的卡字段表（2026-10-13） | **不改写**（它是当时的决策记录），在 §45.7 写明被取代——"退役的主张不得以降级形态存活" |
 | [`preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的发布清单 | **漏两个自测**：`zotero-section-note-selftest.mjs`（§41 加的）与 `scaffold-selftest.mjs`（§45 加的）⇒ **加仪器** |
 
 处理第三处的方式值得记下来：那份清单是散文，没有任何东西校它，所以它已经漂了两次；而 **README 里同一
@@ -1173,7 +1173,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 
 ### 47.5 未做与边界
 
-- **没有回改 `docs/archive/PLAN.md`**：那是归档时间线，`{{cwd}}` 在那里是当时的记录。
+- **没有回改 `docs/archive/plan-v0.md`**：那是归档时间线，`{{cwd}}` 在那里是当时的记录。
 - `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（**已更正，2026-10-18 见 §49**）：它们位于内核**已不再读取**的旧预设目录，因此**不会运行、也不会"整轮失败"**——真正的问题是它们已经**不是可用预设**了。若将来要恢复它们，必须按 DSH 自带的 `editing-cordis-compositions` skill 的"Migrate a legacy preset"路径改成声明行，**到那一步**才需要处理正文里的 `{{cwd}}`（每文件 2 处，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 绝对路径）。
 - 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
 
@@ -1211,7 +1211,7 @@ junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，
 
 ### 48.5 §2 反方向重扫与 §6 痕迹扫描
 
-- 重扫口径＝本轮改动的三条声明（"标签交换不算变化"、"点号标记读不回来"、"本预设支持的 DSH 版本"）。结果：**相反说法只存在于实现里**（48.2 的两条），散文侧无一处陈述它们；[`docs/02_coverage.md:60`](02_coverage.md) 的"改条目的字段与标签"与 [`docs/00_overview.md:79`](00_overview.md) 的"无变化即不写"，在本次修复之后**才**完全成立，故不改写。
+- 重扫口径＝本轮改动的三条声明（"标签交换不算变化"、"点号标记读不回来"、"本预设支持的 DSH 版本"）。结果：**相反说法只存在于实现里**（48.2 的两条），散文侧无一处陈述它们；[`docs/coverage.md:60`](coverage.md) 的"改条目的字段与标签"与 [`docs/overview.md:79`](overview.md) 的"无变化即不写"，在本次修复之后**才**完全成立，故不改写。
 - `protocol.md` 不动：§3 的十一条纪律与路由未变，而 §6 的写入门禁与写后回读，正是被这两条修复**兑现**的东西。
 - §6 痕迹：本轮新增行（`engines.dsh`、README 一段、本节）不含本机路径、盘符或属主库标识。
 
@@ -1361,7 +1361,7 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 **背景**：三条文献会话各自花时间撞出这些 helper 的边界，其中一条把话说得很直白——"这套工具的接口边界只在源码注释里，不在任何 usage 里，撞上才知道"。M6 的答案是一页纸，但它先得解决一个更基本的问题：**怎么让一页纸不漂移。**
 
-**做法**（`tools/toolchain-page.mjs` · `tools/toolchain-selftest.mjs` · [`docs/04_toolchain.md`](04_toolchain.md)）：
+**做法**（`tools/toolchain-page.mjs` · `tools/toolchain-selftest.mjs` · [`docs/toolchain.md`](toolchain.md)）：
 
 - 页面**生成**，形状的唯一决定处是生成器里的 `renderPage()`；
 - **每条声明挂一条出处**：`{ file, must[] }`＝"这个文件里必须还能找到这几个字面量"。20 条声明、40 余条出处，覆盖 11 条通道事实与 9 个 helper；
@@ -1372,13 +1372,13 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 **同一轮抓到一个真缺口**：`tools/release-check.mjs` 的 `REQUIRED_HELPERS`——"缺了它，发布件里通道就不工作"的那张名册——写于梯级之前，**不含 `tools/zotero-pdf.mjs`**。而 Revision 17 的纪律已经把该 helper 写进交给 agent 的命令 ⇒ 一个不含它的发布件里，**有文档的一级梯级不可达**。这是名册式检查看不见自己名册之外的东西（`6f80323` 补上；随后用 `release-check --tag v0.4.0` **反向验证**：已发布的包里确实有它）。
 
-**已知边界（登记）**：`docs/04_toolchain.md` 里的链接路径**不在** `doc-selftest DOC-8` 的扫描范围内（那份检查只读 `protocol.md` / `surface.md` / `README.md` / `docs/02_coverage.md`）；该页的 helper 名册由 `toolchain-selftest` 自己对着仓库校验（重命名会红）。
+**已知边界（登记）**：`docs/toolchain.md` 里的链接路径**不在** `doc-selftest DOC-8` 的扫描范围内（那份检查只读 `protocol.md` / `surface.md` / `README.md` / `docs/coverage.md`）；该页的 helper 名册由 `toolchain-selftest` 自己对着仓库校验（重命名会红）。
 
 ---
 
 ## 53. 发布 0.5.0：能力单页成为可安装的东西（2026-10-19）
 
-**为什么是 0.5.0 而不是 0.4.1**：这一版交给用户的是**新产物**（`docs/04_toolchain.md` 与它的生成器、自测）和**新的检查**（`REQUIRED_HELPERS` 补上 `zotero-pdf.mjs`），不是修一个坏掉的 0.4.0。这一点事先实测过，没有靠感觉：`git ls-tree v0.4.0 -- tools` 里 `zotero-pdf.mjs` **在**——名册缺的是"检查看不见自己名册之外"，不是"发布件缺件"。
+**为什么是 0.5.0 而不是 0.4.1**：这一版交给用户的是**新产物**（`docs/toolchain.md` 与它的生成器、自测）和**新的检查**（`REQUIRED_HELPERS` 补上 `zotero-pdf.mjs`），不是修一个坏掉的 0.4.0。这一点事先实测过，没有靠感觉：`git ls-tree v0.4.0 -- tools` 里 `zotero-pdf.mjs` **在**——名册缺的是"检查看不见自己名册之外"，不是"发布件缺件"。
 
 **流程**（`preset-release` §4 / §7）：
 
@@ -1527,12 +1527,12 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 [`tools/metadata-selftest.mjs`](../tools/metadata-selftest.mjs)（fixture 是 2026-10-19 真捕获的响应，
 含 Unpaywall 那段逐字节的 404 HTML）· [`protocol.md`](../protocol.md)（Revision 18 + §6）·
 [`surface.md`](../surface.md)（第三条通道行）· [`README.md`](../README.md)（通道数、联系地址那条声明、
-新 helper 段落、自测清单、一条坑）· [`docs/02_coverage.md`](02_coverage.md) ·
+新 helper 段落、自测清单、一条坑）· [`docs/coverage.md`](coverage.md) ·
 [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md)（instrument 从 `web_fetch` 改成 helper）·
 [`contact-bridge.js`](../contact-bridge.js)（常驻行不再教模型手拼 `&mailto=`）·
 [`tools/release-check.mjs`](../tools/release-check.mjs)（`REQUIRED_HELPERS` 补上它）·
 [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs)（三通道分组 + 三条新事实）· 重生成的
-[`docs/04_toolchain.md`](04_toolchain.md)（20 → **24 条声明**）。
+[`docs/toolchain.md`](toolchain.md)（20 → **24 条声明**）。
 
 **顺手修掉一个会静默吞东西的地方**：`docs/04` 的通道分组原先写成"`zotero-*` 一类、其余一类"，
 新 helper 会被归进"预印本通道"。现在分组由 `CHANNELS` 显式声明，且**匹配数不等于 1 就抛错**——
@@ -1703,7 +1703,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - **注解 tag** `v0.7.0` → `e888219`；**先推分支**（`c69f46f..e888219`），**再推 tag**。
 - **从远端复核** `node tools/release-check.mjs --tag v0.7.0`：**PASS** —— 发布件声明 0.7.0 · 组合不挂 MCP、不启外部命令 · **三条通道需要的 helper 全在发布包里** · `v0.7.0` 与 `main` 同点 `e888219`。
 - **§2 的反方向重扫命中并修掉**：`project-template/research/owner_actions.md` 的示例仍写"mechanical repair declined 4 spans"；[`docs/plans/note-pipeline.md`](plans/note-pipeline.md) 仍写 `in parts`、"当前工具仍读点号"、"三种拒绝"；E6 与 archive 仍有本机路径。
-- **机器痕迹**：E6 的 `file:///D:/OneDrive/...` 改为 `file:///<library>/...`；`docs/archive/PLAN.md` 的 checkout 路径改为 `<checkout>`；`docs/05` 的 9 个库 key 改为计数，只保留"9 条记录，最多 10 条"。
+- **机器痕迹**：E6 的 `file:///D:/OneDrive/...` 改为 `file:///<library>/...`；`docs/archive/plan-v0.md` 的 checkout 路径改为 `<checkout>`；`docs/05` 的 9 个库 key 改为计数，只保留"9 条记录，最多 10 条"。
 
 **未做 / 边界**：
 
@@ -1754,7 +1754,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 - **注解 tag** `v0.8.0` → `47c4956`；**先推分支**（`08565ad..47c4956`），**再推 tag**。
 - **从远端复核** `node tools/release-check.mjs --tag v0.8.0`：**PASS** —— 发布件声明 0.8.0 · 组合不挂 MCP、不启外部命令 · 三条通道需要的 helper 全在发布包里 · tag 与 `main` 同点 `47c4956`。
 
-**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/plans/revision-17.md`](plans/revision-17.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/02_coverage.md`](02_coverage.md)、[`docs/plans/note-pipeline.md`](plans/note-pipeline.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/04_toolchain.md`](04_toolchain.md) 由工具源重新生成。
+**§2 的反方向重扫命中并修掉**：[`protocol.md`](../protocol.md) Revision 12 的"不做删除"改成"当时不做"，并加 Revision 21 的边界；[`docs/plans/revision-17.md`](plans/revision-17.md) §6.5 补"Revision 21 改了后半句"；[`project-template/research/owner_actions.md`](../project-template/research/owner_actions.md) 的"预设不做删除"改成"有界删除，整批仍在应用里"；[`README.md`](../README.md)、[`docs/coverage.md`](coverage.md)、[`docs/plans/note-pipeline.md`](plans/note-pipeline.md)、[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) 的"删除干跑 / 备份 / 不产生墓碑"逐条改成当前行为；[`docs/toolchain.md`](toolchain.md) 由工具源重新生成。
 
 **未做 / 边界**：
 
@@ -1776,7 +1776,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 | 切片打印 `next: --offset N`，且每片开头就是那一节的标题 ⇒ "读到第几节"由读到的文字自己给出 | `tools/zotero-read.mjs` `sliceText()` |
 | `--grep` 的命中项带字符 `index`，可直接当 `--offset` 用 | `tools/zotero-read.mjs` `findPassages()` |
 | `zotero-section-note.mjs --item <recordKey>` **一次**打印每条笔记的 tags + 首段（`firstBlockText` 取第一个 `<p>/<h>/<li>` 块） | `tools/zotero-section-note.mjs` |
-| OCR 件上的标题可能被认错（`P SOLUTIOCN`、`-P IZATION AND THE CORRECTOR`） | [§37](01_decisions.md) |
+| OCR 件上的标题可能被认错（`P SOLUTIOCN`、`-P IZATION AND THE CORRECTOR`） | [§37](decisions.md) |
 
 **裁定**（逐条经 junhan 确认）：
 
@@ -1802,8 +1802,8 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 **实现**：
 
 - **S1（`1431fa3`）**：`research/literature/README.md` 的 `## Evidence table` 换成九列 `## Reference ledger`（`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）+ `## Reading log`；`A` 的定义从"读了全文"改成"读了这句话靠的那几段"，`depth` 才是"读到哪"。`literature-recon` 只追加候选行、不再决定"是否值得读"；`section-notes` 接受**中途停下**的阅读（没走到的节报 `not reached`，不报"不需要笔记"）；`adoption-ruling` 改读台账行，`§4.2` 那条"digest 是 B 级就停"改成 depth/grade 判定——它对"读到 §3、digest 合理地短"的论文会合法地误判。
-- **S2（`21ce6bc`）**：删除 `project-template/research/literature/refs/`；`protocol.md` 升 Revision 22，`INV-EVID-4` 的判据从"查索引"改成"查本课题台账行，再看记录上的笔记"，新增 `INV-EVID-6`；`README.md` / `AGENTS.md.template` / `docs/02_coverage.md` / `adoption/README.md` 的三处布局与回执句同步；`tools/zotero-note.mjs` 头部注释里的"回执在 `refs/`"改掉。
-- **S3（本次）**：新 discipline [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md)，契约升 **Revision 23**，§4 加 `triage` 一条；persona 路由加一条并改写 `literature-recon` / `section-notes` 两条触发语（前者不再"决定是否值得读"，后者改为"读轮刚读完一个方法节"也可触发）；`skills-selftest` 10→11、`preset-selftest` 路由数组与计数 11、`surface.md` / `docs/02_coverage.md` / `README.md` 各加/改一行。
+- **S2（`21ce6bc`）**：删除 `project-template/research/literature/refs/`；`protocol.md` 升 Revision 22，`INV-EVID-4` 的判据从"查索引"改成"查本课题台账行，再看记录上的笔记"，新增 `INV-EVID-6`；`README.md` / `AGENTS.md.template` / `docs/coverage.md` / `adoption/README.md` 的三处布局与回执句同步；`tools/zotero-note.mjs` 头部注释里的"回执在 `refs/`"改掉。
+- **S3（本次）**：新 discipline [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md)，契约升 **Revision 23**，§4 加 `triage` 一条；persona 路由加一条并改写 `literature-recon` / `section-notes` 两条触发语（前者不再"决定是否值得读"，后者改为"读轮刚读完一个方法节"也可触发）；`skills-selftest` 10→11、`preset-selftest` 路由数组与计数 11、`surface.md` / `docs/coverage.md` / `README.md` 各加/改一行。
 
 **未做**：
 
@@ -1845,7 +1845,7 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 
 **实现**：
 
-- `cb60923` — 更正机制表述：六份 skill 正文（`reading-triage`、`section-notes`、`literature-recon`、`adoption-ruling`、`subagent-contract`、`experiment-protocol`）、`docs/02_coverage.md`、`docs/04_toolchain.md`（由 `toolchain-page.mjs --write` 重新生成，24 条断言仍全部有据）、`docs/plans/reading-triage.md` 的风险 7 与 §4.1；`arxiv.mjs` / `metadata.mjs` / `zotero-read.mjs` 的注释与 `zotero-read-selftest` 的一条断言说明。`reading-triage` 新增两条硬要求：报告**读到的 offset 区间**（取代"实际读到多少字符"）、**不得从被裁的片里引用**标题或句子。
+- `cb60923` — 更正机制表述：六份 skill 正文（`reading-triage`、`section-notes`、`literature-recon`、`adoption-ruling`、`subagent-contract`、`experiment-protocol`）、`docs/coverage.md`、`docs/toolchain.md`（由 `toolchain-page.mjs --write` 重新生成，24 条断言仍全部有据）、`docs/plans/reading-triage.md` 的风险 7 与 §4.1；`arxiv.mjs` / `metadata.mjs` / `zotero-read.mjs` 的注释与 `zotero-read-selftest` 的一条断言说明。`reading-triage` 新增两条硬要求：报告**读到的 offset 区间**（取代"实际读到多少字符"）、**不得从被裁的片里引用**标题或句子。
 - `69893d2` — 契约升 **Revision 24**：`re-open if` 的必填范围收窄到"停得早于全文"，并补给旧工作区残留 `refs/` 的处理（报告不删）；§4 `triage` 一条写明必填范围，§7 加一段；`literature-recon` 加"报告但不删"的护栏；台账 README 的列说明、`reading-triage` 的裁决表与检查单同步。
 
 **未做（已裁定不做）**：复用的成本对比仍只是估算（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。junhan 2026-10-19 裁定：**不需要这个精确数字，不实测**。理由是它不改变任何一条纪律的行为——纪律要求的是"先调 `--item` 看记录上已有什么"，全仓没有任何一处写"这样更省"的量化断言，所以缺的只是一个优化判断的输入，不是一条待兑现的承诺。日后若真有人要回答"扩面复用到底省多少"，实测入口仍在这里：同一条记录上，一次 `--item` 对比首次通读的切片数。

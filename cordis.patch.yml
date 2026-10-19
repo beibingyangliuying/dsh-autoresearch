@@ -10,7 +10,7 @@
 #     working directory is a REQUIRED runtime context now (`Current working directory: "<path>".`,
 #     refreshed at each assembly and kept current across `cd`), so dropping the suffix loses
 #     nothing. Do not put an unregistered `{{name}}` back: the self-test checks every placeholder
-#     against the kernel's registry. See #47 of docs/01_decisions.md.
+#     against the kernel's registry. See #47 of docs/decisions.md.
 #   - `present` and `tool-ralph` rows are dropped (not needed for research work).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
 #   - NO MCP server is mounted. All three external channels ship as command-line helpers named by the
@@ -18,11 +18,11 @@
 #     not use them. The two rows they replaced cost 21,551 tokens of prompt on EVERY request for 54
 #     tools, of which the disciplines called a handful; the DSH MCP client has no field that filters
 #     a server's tool list, so the only lever was not mounting the row. See #29 and #31 of
-#     docs/01_decisions.md, and do not add either row back - the preset's own self-test fails if one
+#     docs/decisions.md, and do not add either row back - the preset's own self-test fails if one
 #     reappears.
 #   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
 #     code-review, ...), keeping only the ones this preset deliberately retains.
-# Design record: ../docs/00_overview.md (what it is) and ../docs/01_decisions.md (why).
+# Design record: ../docs/overview.md (what it is) and ../docs/decisions.md (why).
 
 - insert:
     - id: preset-autoresearch
@@ -255,7 +255,7 @@
           # (protocol.md Revision 10); how a write may be authorized is stated by autoresearch-contact.
           #
           # Do NOT add either row back: tools/preset-selftest.mjs fails when one reappears. See #29
-          # (preprint) and #31 (reference library) of docs/01_decisions.md for the measurements.
+          # (preprint) and #31 (reference library) of docs/decisions.md for the measurements.
 
           # ── tool isolation（屏蔽 profile 级的其它 global 工具）──────────────
 

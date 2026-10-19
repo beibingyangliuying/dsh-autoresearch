@@ -145,7 +145,7 @@ identifier, holds the whole response to an abstract budget, and **refuses to pri
 as if it were a record** — the API answers an error inside a normal-looking feed, which is why that
 rule is written into the helper and its self-test. It returns metadata and abstracts, not full text:
 the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
-([`docs/01_decisions.md`](docs/01_decisions.md) #29).
+([`docs/decisions.md`](docs/decisions.md) #29).
 
 **What the bibliographic channel is.** `tools/metadata.mjs`, a helper over the free OpenAlex, Crossref
 and Unpaywall REST APIs: one request per invocation, no API key, no mounted row. It resolves a DOI or an
@@ -166,7 +166,7 @@ reads — search, one record, one note's body, an attachment's text in slices, t
 own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),
 and the page rendered to an image — the rung that answers mathematics no text layer holds. **What each
 helper can do, what it refuses, and what to do when the refusal lands is one page**:
-[`docs/04_toolchain.md`](docs/04_toolchain.md), generated from the tools themselves, with every line
+[`docs/toolchain.md`](docs/toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
 write has its own tool: `zotero-write.mjs` adds a record, `zotero-note.mjs` keeps one `/digest` note
 per record — the paper-level projection of its section notes, refreshed in place, with the body it
@@ -183,7 +183,7 @@ files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whol
 not one of the seven: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
 manager, at their own keyboard and under no API authorization at all. Together they replace an MCP row whose
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
-tools the disciplines call ([`docs/01_decisions.md`](docs/01_decisions.md) #31).
+tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
 
 Every write states the change first and is a **dry run until `--write` is given**; it carries the version
 the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
@@ -264,7 +264,7 @@ description of the scaffold.
 Three statements of the same layout is exactly the shape that drifts, so `tools/scaffold-selftest.mjs`
 holds the contract's version, the block above, and the authority table a study inherits to each other:
 a directory added to one of them and forgotten in the others is a failure rather than a silent
-divergence. (It found one on its first run — see [`docs/01_decisions.md`](docs/01_decisions.md) §45.)
+divergence. (It found one on its first run — see [`docs/decisions.md`](docs/decisions.md) §45.)
 
 ## Layout
 
@@ -328,7 +328,7 @@ node tools\zotero-link-selftest.mjs       # the attachment-link planner
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
-# RAN rather than the value its own record carries (docs/01_decisions.md #26)
+# RAN rather than the value its own record carries (docs/decisions.md #26)
 node tools\dump-session-selftest.mjs
 
 # release check: what the working tree says, and what a NEW user would install. The second form reads
@@ -340,7 +340,7 @@ node tools\release-check-selftest.mjs      # its pure halves, offline, with nega
 
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
 # candidate's surface gets measured before anyone mounts it, and how the two rows were measured
-# before they were dropped (docs/01_decisions.md #24, #29, #31).
+# before they were dropped (docs/decisions.md #24, #29, #31).
 $env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what a candidate server's tool schema would cost per request, and which version answered
@@ -350,7 +350,7 @@ node tools\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 $env:ZOTERO_LOCAL='true'; node tools\mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what this preset's OWN sessions actually call, and whether a masked tool is still named in a prompt.
-# The cost decisions rest on these numbers (docs/01_decisions.md #54, #56), so they are re-run rather
+# The cost decisions rest on these numbers (docs/decisions.md #54, #56), so they are re-run rather
 # than recalled: a keep-list entry no session calls is a claim nobody has checked, and the prompt text
 # that names tools is assembled from plugin state rather than from the tool registry.
 node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_
@@ -386,7 +386,7 @@ these before asking for another restart.
 the preset a session actually runs is recorded separately a moment later and again on every switch.
 `--scan` therefore reports the effective selection and shows the creation-time value beside it when the
 two differ; reading the first record alone reports the default for sessions that plainly ran a preset,
-which is what it did until 2026-10-15 ([`docs/01_decisions.md`](docs/01_decisions.md) §26). The tool
+which is what it did until 2026-10-15 ([`docs/decisions.md`](docs/decisions.md) §26). The tool
 names inside `request/header` remain the hard evidence for what an agent actually saw.
 
 **Do not re-run `install_bundle` on the preset.** The bundle entry is a link to this directory, so an
@@ -401,7 +401,7 @@ session created after an edit therefore still runs the previous composition: ver
 where a session opened after the edit reported the old server's tools and a prompt without the new
 lines, while the host process had started 90 minutes before the edit. `--dump-config` and the
 self-tests above describe what the NEXT start will mount, so they can pass in full while a running
-session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_decisions.md) §25.
+session still shows the earlier surface. See [`docs/decisions.md`](docs/decisions.md) §25.
 
 ## Known constraints
 
@@ -410,7 +410,7 @@ session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_de
   of unrelated sessions, and it is also why some hooks behave differently here than in a host-level
   plugin. One observed case: a preset-scoped listener never receives `agent/created`, while
   `agent/pre-step`, `tools/result` and `session/event` do arrive. Why that one is not delivered was
-  not established ([`docs/01_decisions.md`](docs/01_decisions.md) #33), so treat it as a measured
+  not established ([`docs/decisions.md`](docs/decisions.md) #33), so treat it as a measured
   absence rather than as a statement about event ordering.
 - **A plugin that waits on a late service registers its tools after the preset activates.** That case
   is covered: the filter is re-applied on every `tools/change`, the registry's own announcement that

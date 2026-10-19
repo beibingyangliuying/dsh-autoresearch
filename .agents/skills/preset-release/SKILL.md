@@ -29,21 +29,21 @@ see it.
 When behaviour changes, some reader-facing sentence elsewhere still states the old behaviour, and it is
 rarely in the file you edited. The two release-blocking defects found on 2026-10-15 were both of this
 kind: `README.md` still told a reader that a late-registering plugin is **not** masked (Revision 9 and
-§33 had just made it masked), and `docs/00_overview.md` still narrowed the guarantee to activation time
+§33 had just made it masked), and `docs/overview.md` still narrowed the guarantee to activation time
 while citing §17.
 
 Procedure — do it before the commit, not after the release:
 
 1. Name the claim you changed in one sentence, in its own words.
 2. Grep that sentence's phrasings across every reader-facing file: `README.md`, `protocol.md`,
-   `surface.md`, `docs/00_overview.md`, `docs/02_coverage.md`, `docs/01_decisions.md`, and the comments
+   `surface.md`, `docs/overview.md`, `docs/coverage.md`, `docs/decisions.md`, and the comments
    in `isolation.js` / `contact-bridge.js` / `skills.js`. The coverage map states in prose what each
    part covers and refuses, and only its **roster and paths** are machine-checked (`doc-selftest` DOC-8,
    DOC-9): a behaviour change that leaves a row's description stale is exactly what this step is for.
 3. Fix every hit, or record why it is history.
 
 **A normative claim lives in `protocol.md` and only there.** When the contract changes, bump its
-Revision, state in its header what changed, and record the reason in `docs/01_decisions.md`. The
+Revision, state in its header what changed, and record the reason in `docs/decisions.md`. The
 implementation is then corrected to match the contract — never the other way round. A retired claim
 must also not survive as a *demoted* one: state the correction in the revision log rather than leaving
 the old sentence to be read on its own.
@@ -51,7 +51,7 @@ the old sentence to be read on its own.
 ## 3. Evidence rules — each of these cost a real investigation
 
 - **`--dump-config` describes the NEXT start.** A running session can differ from the dump in every way
-  that matters ([`docs/01_decisions.md`](../../../docs/01_decisions.md) §25).
+  that matters ([`docs/decisions.md`](../../../docs/decisions.md) §25).
 - **Regenerate the dump before `preset-selftest`.** It refuses a dump older than `package.json` or
   `cordis.patch.yml`, on purpose: a stale dump reports both false passes and false failures.
 - **Read `isolation-report.json` before running `isolation-selftest`.** The test deletes it; it is a
@@ -143,7 +143,7 @@ measurement into an assertion.
    `package.json`, the published composition and the published helper programs over the network. This is
    the only check that can see the defect that mattered most here — 47 commits of green local work that
    nobody could install.
-6. Record the release in `docs/01_decisions.md` when it carries a contract-relevant change.
+6. Record the release in `docs/decisions.md` when it carries a contract-relevant change.
 
 ## 8. Before saying "published"
 
