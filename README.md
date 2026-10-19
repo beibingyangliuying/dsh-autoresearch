@@ -128,7 +128,7 @@ node tools\zotero-link-attachments.mjs --target D:\Zotero --write
 tools\zotero-link-snippet.js
 ```
 
-Two channels need setup outside this repository:
+One channel needs setup outside this repository:
 
 - the local reference library requires the desktop reference manager to be **running** with its local
   API enabled (Settings → Advanced → allow other applications on this computer to communicate with it).

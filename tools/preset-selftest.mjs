@@ -212,12 +212,12 @@ if (!existsSync(composedFile)) {
     ok(!topLevelRows.includes(id), `leak guard: ${id} is not a profile-level row`)
   }
 
-  // NEITHER EXTERNAL CHANNEL IS AN MCP ROW, and this fails if either comes back. `mcp-arxiv` cost
+  // NO EXTERNAL CHANNEL IS AN MCP ROW, and this fails if one comes back. `mcp-arxiv` cost
   // 17,828 characters (~4.95k tokens) of prompt on EVERY request for 19 tools; `mcp-zotero` cost
   // 59,758 (~16.6k) for 35. Together 21,551 tokens per request, for the handful of tools the
   // disciplines actually call - and the MCP client has no field that filters a server's tool list, so
-  // a re-added row is a silent cost nobody would notice from a bill. Both channels are command-line
-  // helpers now, at zero resident cost. See docs/01_decisions.md #29 and #31 for the measurements.
+  // a re-added row is a silent cost nobody would notice from a bill. Every channel is a command-line
+  // helper now, at zero resident cost. See docs/01_decisions.md #29 and #31 for the measurements.
   const blockText = block.join('\n')
   for (const [row, spec] of [
     ['mcp-arxiv', 'arxiv-mcp-server'],
