@@ -1605,3 +1605,50 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 **未做（已裁定不做）**：复用的成本对比仍只是估算（一次 `--item` 调用 vs 首次读 40k 字符正文的 5–8 次切片），没有在同一条记录上实测过。junhan 2026-10-19 裁定：**不需要这个精确数字，不实测**。理由是它不改变任何一条纪律的行为——纪律要求的是"先调 `--item` 看记录上已有什么"，全仓没有任何一处写"这样更省"的量化断言，所以缺的只是一个优化判断的输入，不是一条待兑现的承诺。日后若真有人要回答"扩面复用到底省多少"，实测入口仍在这里：同一条记录上，一次 `--item` 对比首次通读的切片数。
 
 ---
+
+## 65. 名册要两层：名单写在代码里，需求侧从纪律正文推出（2026-10-19）
+
+**缘起**：junhan 问"转存 PDF 那个功能的现状"。查现状时顺手核了 `release-check.mjs` 的
+`REQUIRED_HELPERS`——那张"缺了它，发布件里通道就不工作"的名册（`--tag` 模式逐条抓取它列的路径）——
+发现它**列着 `zotero-link-snippet.js`**（一条 agent 永远不会跑的 in-app 片段），却**不列**
+`zotero-link-attachments.mjs`，也不列任何写侧 helper。
+
+**先验前提（实测，不是推断）**：
+
+| 事实 | 是怎么知道的 |
+|---|---|
+| 纪律正文点名了 8 个 helper，其中 5 个不在名册里 | `{{presetTools}}/<name>` 计数：`zotero-read`(14) · `metadata`(10) · `zotero-section-note`(7) · `zotero-pdf`(5) · `zotero-write`(3) · `arxiv`(2) · `zotero-edit`(1) · `zotero-note`(1)；名册当时只有 6 条，含 `metadata.mjs` 在内 5 条缺席 |
+| **发布件不缺件**——这是检查的视野问题，不是坏件 | 逐条 `git cat-file -e v0.9.0:<path>`：13 条全部在 |
+| 同类的上次修补只修了"那一轮看见的那一个" | `6f80323` 补 `zotero-pdf.mjs`，其提交信息自己写着"名册式检查看不见自己名册之外"，然后留着一整类没动 |
+
+**裁定**：名册**扩到 13 条**（补 `metadata.mjs` ＋ 六个写侧/转存 helper），并**加一层需求侧推导**：
+`namedHelperProblems(texts, roster)` 从纪律正文的 `{{presetTools}}` 令牌取出"agent 被指使去跑什么"，
+名册不含即 FAIL。护栏刻意窄：只认那一个令牌（纪律寻址 helper 的唯一合法方式），裸路径的散文归文档问题，
+不对"像路径的字符串"做正则——判据一宽，就会在 fixture 与示例上开火。
+
+**否掉的方案**：
+
+- **只补条目、不加推导**：那正是 `6f80323` 的修法，下一次新增 helper 会再漏一遍。
+- **让护栏扫 README／注释里的路径**：会把"文档提到过"和"命令交给 agent"混成一类，且必然命中 fixture。
+- **让护栏扫 `contact-bridge.js` 的提示行**：那条命令行没有令牌，为它放宽判据等于把窄护栏变宽；它的问题
+  是另一类，见本节末。
+
+**实现**：`6f08057` —— [`tools/release-check.mjs`](../tools/release-check.mjs)（名册 6→13 · 新函数 ·
+`--local` 增一行报告）与 [`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs)
+（新第 5 节：四条反向控制 ＋ 名册路径存在性）。验证：自测 PASS · `--local` PASS（干净树）· 对已发布件
+反向验证 **13/13 OK**。**通道说明**：`--tag` 的 HTTP 路径在本机不通（`fetch failed`，即 §11 记录的
+`raw.githubusercontent.com` 不可达），故改用 tag 对象核同一命题——这仍是"对着发布件"而不是对着工作树。
+
+**同轮修掉的第二处（表面规则）**：`contact-bridge.js` 的转存提示行原本写
+`node tools/zotero-link-attachments.mjs --target <directory>`——**相对路径 ＋ 占位符**。同段 section 的
+helper 行本就要求绝对路径（"a relative `tools/...` path does not resolve in a study workspace"），
+`.agents/skills/preset-release` 的表面规则表也把"skill 或提示行里的相对 `tools/...` 路径"列为会悄悄坏的一类。
+改为 `node "<cliToolsDir>/zotero-link-attachments.mjs" --target "<configured directory>"`（`1f33fe1`）：
+两个值本来都在手边——前者来自本模块自身的 URL，后者来自设置行——把补全留给 agent，就是交给他一条在他
+通常所在的工作区里跑不通的命令。
+
+**顺带核到、但未改**：[`README.md`](../README.md) 的 Configure it 一节给属主的两条示例命令也是仓库相对
+路径（`node tools\zotero-link-attachments.mjs --target D:\Zotero`）。它的读者是站在检出目录里的人，
+与"agent 在课题工作区"不同，故本轮不动；若日后发现有人在课题工作区照抄，按同一理由一并改。
+
+---
