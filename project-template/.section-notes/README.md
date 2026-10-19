@@ -18,9 +18,9 @@ reads it and drafts the note bodies here, and **only the parent writes to the re
   library. A file here is never evidence, never a record, and never quoted as one; deleting one needs no
   permission and no ceremony.
 - **No changed note is backed up here.** A section note is a transcription of the paper, so the paper is
-  the source; a digest's previous body is kept in the library as a `/digest` + `/retired` note. An
-  in-place rewrite is shown by its plan (the old first block) and refused if the note moved, not
-  rescued from a file here.
+  the source; the body a rewrite replaces is kept in the library as a `/retired` note. An in-place
+  rewrite is shown by its plan (the old first block) and refused if the note moved, not rescued from a
+  file here.
 - **One directory per record, named by the library's own key**, so a draft is findable from the record
   and cannot collide with another record's.
 - **A manifest is what a child returns.** One row per note: section ordinal · the paper's own heading ·

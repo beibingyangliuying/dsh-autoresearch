@@ -86,7 +86,6 @@ node tools\zotero-read-selftest.mjs
 node tools\zotero-pdf-selftest.mjs
 node tools\zotero-edit-selftest.mjs
 node tools\zotero-collection-selftest.mjs
-node tools\zotero-note-selftest.mjs
 node tools\zotero-section-note-selftest.mjs
 node tools\zotero-link-selftest.mjs
 node tools\zotero-local-api-selftest.mjs

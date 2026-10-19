@@ -82,15 +82,16 @@ subagent from it); the change applies to agents created after the switch, not to
 - **A composition of its own.** The preset declares its own rows rather than inheriting the default
   surface, and a small isolation plugin masks the profile's other global tools so a research session
   is not buried in unrelated capabilities.
-- **Disciplines on demand.** Eleven written disciplines ship **inside the bundle** and the preset
+- **Disciplines on demand.** Twelve written disciplines ship **inside the bundle** and the preset
   registers them itself, so they are available to its agents — and to no other session in the
   profile — with no copying step.
 - **Three external channels.** A preprint index, the owner's local reference library (including
   paywalled full text), and a bibliographic-metadata channel over the free OpenAlex, Crossref and
   Unpaywall APIs. All three are **helper programs this preset ships**, not mounted servers, so an
   unused channel costs nothing; see [`protocol.md`](protocol.md) §6.
-- **A study scaffold.** A per-study directory layout with the journals, pitfalls, rulings and
-  literature indexes a study accumulates.
+- **A study scaffold.** The one layer two real studies defined the same way — a scoping document, a
+  non-normative literature layer, and a draft directory for section notes — with every other directory
+  created by the discipline that first writes there.
 
 ## Configure it
 

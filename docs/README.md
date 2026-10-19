@@ -36,7 +36,7 @@
 node tools\doc-selftest.mjs --negative-controls   # 契约 / 索引 / 覆盖图的分工、名册与路径
 node tools\toolchain-page.mjs --check             # toolchain.md 是否与生成器一致、每条出处是否还在
 node tools\toolchain-selftest.mjs                 # 同上，外加负向控制
-node tools\scaffold-selftest.mjs                  # 契约 §7 · README · 脚手架继承的权威表是同一份名单
+node tools\scaffold-selftest.mjs                  # 契约 §7 与 README 的布局块是同一份名单；模板里不许有 AGENTS.md
 ```
 
 `archive/plan-v0.md` 里的链接**按当时的布局**写，不保证可解析——它记录的是历史，改它等于改写历史。

@@ -76,7 +76,7 @@ node tools\isolation-selftest.mjs                      # 隔离的 deny 语义�
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
 node tools\doc-selftest.mjs                            # 契约/索引 的分工，以及覆盖地图的名册与路径
-node tools\scaffold-selftest.mjs                       # 脚手架布局：契约 §7 / 本仓 README / 课题继承的权威表必须是同一份名单
+node tools\scaffold-selftest.mjs                       # 脚手架布局：契约 §7 与本仓 README 是同一份名单；模板里不许有 AGENTS.md
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
