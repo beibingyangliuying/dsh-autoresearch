@@ -17,6 +17,7 @@
 | 0.7.0 | 2026-10-19 | §59 |
 | 0.8.0 | 2026-10-19 | §61 |
 | 0.9.0 | 2026-10-19 | §64 |
+| 0.10.0 | 2026-10-19 | §70 |
 
 ---
 
@@ -312,3 +313,33 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 **顺手改掉一处陈旧计数**：`package.json` 的 description 由 "ten on-demand research disciplines" 改成 "eleven"。0.8.0 发布时确实是十条，`reading-triage` 是它之后加的，计数没跟上——与 §36 抓到的那类陈旧计数同型，靠发布前通读一遍抓住。
 
 **一次环境故障，不记为缺陷**：本机 git 全局代理当时不可用，`push` 与检查内部的 `git ls-remote` 都报 `Failed to connect ... port 443`；改用一次性覆盖（`git -c http.proxy= …` 与 `GIT_CONFIG_*` 环境变量）后推送与复核都成功。仓库与发布物未改动。
+
+---
+
+## §70 · 0.10.0 发布：入口、裁剪，与一次"绿着不真"的回扫（2026-10-19）
+
+**版本**：`0.10.0`，注解 tag `v0.10.0` 指向版本提交。契约到 **Revision 28**；版本号与契约号互不绑定。
+
+**相对 0.9.0 的 25 个提交，两组改动**：
+
+1. **阅读链**（Rev 25→27）：废掉整篇 digest（3 条）→ 脚手架收缩到 `references/` 一层（3 条）→ 新增
+   `collection-sweep` 与 `--collection --screen`（2 条）→ 决策 §64／§67／§68 与两份草案归档（1 条）。
+2. **发布前回扫**：6 处旧说法（`1c68f00`）＋ 台账归属的契约更正（`e4459dd`，Revision 28）＋ 本文件。
+
+**发布前的门**（都在最终树上跑过）：19 项离线自测全绿；`preset-selftest` 用的 dump 在改动后重新生成；
+`release-check --local` 在干净树上 PASS；`release-check --tag v0.10.0` 从远端复核版本、组合与 helper。
+
+**这次检查抓到的三类**（都是测试看不见的散文）：
+
+- **计数又旧了一次**：README 与 `package.json` 都还写 "eleven"，实际十二。与 §36、§64 同型——第三次；
+  两次都是发布前通读抓住的，说明这条没有任何仪器。
+- **行为变了、句子没变**：README 的脚手架简介仍列着七个层；模板 `.section-notes/README.md` 还说改写前的
+  正文以 `/digest` 备份；两处中文索引仍说脚手架"继承权威表"。
+- **发布清单里留着一个已删的测试**：`preset-release` 的套件列着 `zotero-note-selftest.mjs`，照跑会 ENOENT。
+
+**一处真接缝（不是笔误）**：Rev 26 的模板给 `references/ledger.md`，Rev 22/27 的四条纪律却写
+`references/<topic>.md`，契约 §7 的原句把两者说成同一份。判为"空壳→复制"，升 Revision 28，见
+decisions §69。**这是两次改动里唯一需要改契约的地方。**
+
+**边界**：`--screen` 的 `INCOMPLETE` 分支与 HTML 实体仍未解（§68）；初筛纪律的"写行"路径仍未被真实跑过；
+`docs/` 里仍有属主课题真名，0.9.0 起就随包发出，本轮未处理。
