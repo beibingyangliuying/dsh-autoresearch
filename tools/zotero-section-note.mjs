@@ -1,122 +1,71 @@
 #!/usr/bin/env node
-// Leave ONE explanation note per method section on a record, and repair the math delimiters of the
-// section notes a record already carries.
+// Leave ONE explanation note per top-level method section on a record.
 //
-// WHY THIS FILE EXISTS
+// IDENTITY IS A TAG, NOT A COMMENT
 //
-// The literature discipline's digest is a single note per record: `zotero-note.mjs` appends to the one
-// note carrying its marker and never touches another. What a reading of the METHOD sections produces
-// is the opposite shape - one note per section, each standing on its own so a later round can find,
-// and revise, a single section without rewriting the rest. That is a different write, and giving the
-// digest tool a second personality would have made "which note is ours" ambiguous.
+// This tool used to open every note with an invisible HTML comment naming its section. Measured on
+// this library: when the Zotero application rewrites a note's body it keeps the content and drops the
+// comment, so 153 of 378 live notes had lost their identity. A TAG is item metadata, outside the
+// body: the application's note editor does not touch it, and `/retired` was measured to survive a real
+// application rewrite. Identity therefore travels in `/section-<N>`:
 //
-// The two modes are deliberately one file, because they are the same object: a section note.
+//   /section-3       this note claims TOP-LEVEL section 3
+//   /imported        this claim came from an imported/pasted note, so it may still be rewritten
+//   /digest          this note is the record's paper-level digest, not a section note
+//   /retired         out of service: not coverage, and the only note a delete may target
+//   /replaces-<key>  this note replaced a retired note
 //
-//   create   a NEW note for one section. Refused when that section is already covered - including by
-//            a note this tool did not write, which is most of them: the notes already in this library
-//            carry no marker. Coverage is READ from the note's first paragraph, and only in forms that
-//            cannot be a list marker or an ordinary sentence ("第N节", "Section N", "§N", a Roman
-//            numeral heading, an appendix label).
-//   tidy     a MECHANICAL repair of the math delimiters in one existing section note: the "<em>" that
-//            a Markdown underscore became, and "[ ... ]" / "( ... )" restored to "$$ ... $$" / "$...$".
-//            Display math also ends up on lines of its own ("$$\nx\n$$"), which is the shape the notes
-//            are read and edited in - and that rule is idempotent, so a note already in that shape is
-//            left byte-for-byte alone. It never rewrites prose, never guesses, and reports every span
-//            it refused to touch.
+// No dotted tag is written or read. A subsection-keyed note from an earlier round is `unknown` here
+// and is merged into its top-level section or retired by a later round; nothing is folded silently.
 //
-// COVERAGE IS COUNTED PER TOP-LEVEL SECTION
+// NO PROSE PARSING
 //
-// A section is written as ONE note, however long the section is. The discipline does not split a section
-// into notes keyed to its subsections: the key then has to be counted back into its parent, and it covers
-// nothing a long note would not have. The parent/child reading stays anyway, for two reasons - a library
-// can already carry notes keyed that way (this one did, and they can be restored from its trash), and
-// "which section is this" is a question about the PAPER rather than about how we chose to write it. So a
-// write is refused three ways - the section itself is claimed, a subsection is asked for whose parent is
-// covered as a whole, or a top-level section is asked for that is already covered in parts - while a
-// SIBLING subsection is never coverage, because the missing part is exactly what may be written next.
-// Comparing tokens as whole strings expresses none of that, which is why every comparison goes through
-// {@link parentSectionToken}.
+// A note with no `/section-` tag is UNKNOWN: this tool does not guess from its first paragraph. The
+// plan prints every note's first paragraph and names the unknown ones, and the discipline reads those
+// before writing. The judgement is the reader's; this tool only refuses what an explicit tag says is
+// already claimed. That is why the wide regex and the marker are both gone.
 //
-// WHY A CLAIM IS READ NARROWLY, AND WHAT CARRIES THE REST
+// NO AUTOMATIC REPAIR
 //
-// A bare leading number is NOT a claim, and that is measured rather than cautious: in the owner's
-// library, sixteen notes open "1. 一段话总结" (a whole-paper summary, not a note about section 1) while
-// "2 仿真结果及分析" is a real section note. No rule over "digit, dot, text" tells those apart. So the
-// plan prints every note's first paragraph and lists the keys it could not read, and the judgement is
-// made by a reader: the discipline reads those paragraphs against the paper's own section list, decides
-// which sections are covered, and reports the decision before writing. Where that reading disagrees with
-// this tool's, both readings are reported and the round stops - this tool refuses a claim it read, and
-// never overrules a reading.
-//
-// A title is attempted, not required: measured on this library, a `title` field on a note is refused
-// with HTTP 500 (while a `tags` patch on the same note answers 204), so the create path tries the
-// title and writes the same note without it if the library says no. A refused POST created nothing.
-//
-// WHAT "TIDY" WILL NOT DO, AND WHY THAT IS THE POINT
-//
-// A tidy is content-preserving by construction: a span is converted only when it carries LaTeX markup
-// (`\command` or a braced sub/superscript) and only when it is one closed span inside a single text
-// node. Anything else - a bracket split across paragraphs, a parenthesised prose aside, a bare
-// variable - is left exactly as it was and listed as "left alone". A repair that guesses at what a
-// broken formula meant is a rewrite wearing a formatter's clothes.
-//
-// RETIRING A NOTE THAT IS WRONG
-//
-// A section that a bad note explains cannot be written again while that note covers it, and this tool
-// performs no deletion - the library's local API has no way to put an item in the trash, so a delete
-// here is permanent. The third way out is the one this tool now offers: RETIRE the note. Its body is
-// left exactly as it stands, a `/retired` tag is added to it, the section it claimed becomes writable
-// again, and removing the tag puts the claim back. Nothing is deleted and nothing is rewritten, so what
-// the note said survives for whoever asks later why the section was written twice.
-//
-// The retirement mark is a TAG rather than the invisible comment this tool writes at the top of a note,
-// because that comment is not durable: measured on this library, the application drops it when it
-// rewrites a note's body. Whether a tag survives the same rewrite is not yet measured, which is why the
-// read-back below asserts the mark is there and why the reading that cannot find one is reported rather
-// than assumed.
+// `--tidy` is deleted with its math-delimiter rules. Writing a note is the agent's work, and a tool
+// that rewrote a formula because it looked like LaTeX was making a content decision while claiming to
+// format one. A damaged note is rewritten (`--rewrite`, for an import) or retired and written again.
 //
 // Usage:
 //   node tools/zotero-section-note.mjs --item <recordKey>                              # coverage plan
 //   node tools/zotero-section-note.mjs --item <recordKey> --section 2 --file n2.html    # dry run
 //   node tools/zotero-section-note.mjs --item <recordKey> --section 2 --file n2.html --write
+//   node tools/zotero-section-note.mjs --claim --note <noteKey> --section 2             # dry run
+//   node tools/zotero-section-note.mjs --claim --note <noteKey> --section 2 --write
+//   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html        # dry run
+//   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html --write
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"        # dry run
-//   node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" --write
-//   node tools/zotero-section-note.mjs --retire --note <noteKey> --undo --write          # put it back
-//   node tools/zotero-section-note.mjs --tidy --note <noteKey>                          # dry run
-//   node tools/zotero-section-note.mjs --item <recordKey> --tidy --write                # all its sections
+//   node tools/zotero-section-note.mjs --retire --note <noteKey> --undo --write
+//   node tools/zotero-section-note.mjs --delete --note <noteKey>                        # plan only
 //
-// Exit codes: 0 applied, or nothing to do | 1 refused (already covered, conflict, library error) | 2 usage.
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+// This tool performs no deletion; `--delete` states the plan and the irreversibility facts, and the
+// write path is not implemented in this round. Only a `/retired` note is a candidate.
+//
+// Exit codes: 0 applied, or nothing to do | 1 refused (already claimed, conflict, library error) |
+// 2 usage, or a write path this round does not implement.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
 
-/** The marker that identifies a section note this tool wrote. Invisible in the application's view. */
-export const SECTION_MARKER_PREFIX = '<!-- autoresearch-section:'
+/** The tag prefix that records which top-level section a note explains. */
+export const SECTION_TAG_PREFIX = '/section-'
 
-/**
- * The tag that retires a section note.
- *
- * A tag rather than a second comment, because the comment this tool already writes is not durable:
- * measured on this library, a note the application rewrites comes back with its invisible marker
- * comment gone. Whether a tag survives that same rewrite is NOT yet measured - it is the regression
- * test this change ships with - so the claim is read from the tag, and a reading that cannot see one
- * is reported rather than assumed away.
- *
- * `/section-note` is a tag an earlier round left on its notes. It says a note IS a section note, which
- * this tool reads from the note's own opening anyway: it is recognised and never written, and
- * retirement is a tag of its own, so the two cannot be confused for one another.
- */
+/** The tag that marks a claimed note as an import, which may still be rewritten in place. */
+export const IMPORTED_TAG = '/imported'
+
+/** The tag that marks a paper-level digest note. */
+export const DIGEST_TAG = '/digest'
+
+/** The tag that takes a note out of service. */
 export const RETIRE_TAG = '/retired'
 
-/**
- * The tag that names the note a new section note replaces.
- *
- * The retirement mark frees the section but says nothing about what took the retired note's place, and
- * the replacement is written after the retirement - so its key cannot be known when the mark is added.
- * The pointer therefore travels on the note that does the replacing, where it is durable, readable by
- * this tool, and visible in the library.
- */
+/** The tag that names the retired note a successor replaced. */
 export const REPLACES_TAG_PREFIX = '/replaces-'
 
 /** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
@@ -124,9 +73,14 @@ class UsageError extends Error {}
 
 const CHINESE_DIGITS = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
 
+/** A tag as it is compared: trimmed and lower-cased, because a tag is free text a person can edit. */
+function lowered(tag) {
+  return String(tag ?? '').trim().toLowerCase()
+}
+
 /**
  * A section ordinal as a comparable token, so "第三节" and "第3节" cannot both be written for one
- * section, and so a note read back from the library matches the ordinal it was asked for.
+ * section.
  *
  * @param {string|number} value The ordinal, in digits or Chinese numerals.
  * @returns {string} The ordinal as digits, or '' when there is no ordinal in the value.
@@ -137,9 +91,6 @@ export function normalizeSectionToken(value) {
     .replace(/^文?章?第/, '')
     .replace(/节$/, '')
     .trim()
-  // A dotted ordinal is a subsection's own number (3.1, 2.1.3), kept exactly as written because it comes
-  // from the paper. This skill does not write notes keyed that way any more, but a library can carry them
-  // from before (or from its trash), and then the number is how they are recognised.
   if (/^\d+(\.\d+)*$/.test(text)) return text
   const digits = /^(\d+)$/.exec(text)
   if (digits) return digits[1]
@@ -147,7 +98,6 @@ export function normalizeSectionToken(value) {
   if (chinese) {
     const parts = chinese[1].split('')
     if (parts.length === 1) return String(CHINESE_DIGITS[parts[0]] ?? '')
-    // 十 / 十一 / 二十 - enough for a paper's section count.
     const tens = parts[0] === '十' ? 1 : (CHINESE_DIGITS[parts[0]] ?? 0)
     const ones = parts[parts.length - 1] === '十' ? 0 : (CHINESE_DIGITS[parts[parts.length - 1]] ?? 0)
     return String(tens * 10 + ones)
@@ -156,30 +106,11 @@ export function normalizeSectionToken(value) {
 }
 
 /**
- * The marker line a section note opens with.
+ * A Roman numeral's value.
  *
- * @param {string} token A normalized ordinal, e.g. `2`.
- * @returns {string} The HTML comment.
- */
-export function sectionMarker(token) {
-  return `${SECTION_MARKER_PREFIX} ${token} -->`
-}
-
-/**
- * Which section a note claims, from the tool's own marker.
- *
- * @param {string} noteHtml Note body.
- * @returns {string} The ordinal, or '' when the note carries no marker.
- */
-export function readSectionMarker(noteHtml) {
-  const match = new RegExp(`${SECTION_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+(?:\\.\\d+)*)\\s*-->`).exec(
-    String(noteHtml ?? ''),
-  )
-  return match ? match[1] : ''
-}
-
-/**
- * A Roman numeral's value, for the "III. PROPOSED ..." heading form.
+ * The section-note write path no longer parses prose, but `zotero-pdf.mjs` reads the paper's own
+ * table of contents, where `III. PROPOSED ...` is a real heading. This stays exported for that one
+ * caller rather than duplicating a numeral parser.
  *
  * @param {string} text A Roman numeral.
  * @returns {number} Its value, or 0 when the text is not a well-formed numeral.
@@ -198,94 +129,46 @@ export function romanToNumber(text) {
 }
 
 /**
- * The first block of prose in a note, as a reader sees it.
+ * The tag that records a top-level section claim.
  *
- * "First block", not "first N characters": {@link visibleText} collapses every run of whitespace, so
- * the collapsed text has no line to measure a position against, and what makes a section number a claim
- * rather than a cross-reference is which PARAGRAPH it sits in. A note the application wrote is wrapped
- * in its own `<div>`, which is not prose, so the first `p` / `h1`-`h6` / `li` element is taken instead.
- * A note with no block element at all is read the old way, by its first 120 visible characters.
- *
- * @param {string} noteHtml Note body.
- * @returns {string} The visible text of the first paragraph, heading or list item.
+ * @param {string} token A normalized top-level ordinal.
+ * @returns {string} The tag.
  */
-export function firstBlockText(noteHtml) {
-  const html = String(noteHtml ?? '')
-  const block = /<(p|h[1-6]|li)\b[^>]*>([\s\S]*?)<\/\1>/i.exec(html)
-  return block ? visibleText(block[2]) : visibleText(html).slice(0, 120)
+export function sectionTag(token) {
+  return `${SECTION_TAG_PREFIX}${token}`
 }
 
 /**
- * The forms a section claim may take, in the order they are tried.
+ * The ordinal a `/section-` tag carries, or '' when the tag is not a top-level claim.
  *
- * Two conditions, both narrow on purpose, because this reading can REFUSE a write:
- *
- *   * the form itself cannot be a list marker or an ordinary sentence - so a bare leading number is
- *     never one, measured: "1. 一段话总结" (a whole-paper summary) and "2 仿真结果及分析" (a real
- *     section note) are the same shape on the owner's library, and no rule over "digit, dot, text"
- *     separates them;
- *   * the ordinal must BEGIN a clause - the start of the paragraph, right after whitespace or
- *     punctuation, or right after a document label. A section number in the middle of a sentence is a
- *     cross-reference ("这一节的内容与第2节相关"), while the notes that do name their own section name it
- *     at the start of one - sometimes glued to a label ("文章第2节标题是 ..."), sometimes after a colon
- *     ("解释文章的这一节（渲染好公式）：第二节 扰动后响应的推导").
+ * @param {string} tag One tag.
+ * @returns {string} The ordinal, in digits.
  */
-const CLAUSE_START = '(?:^|[\\s：:。；;！!？?、，,（(【「]|文\\s*章?|本\\s*文|论\\s*文|全\\s*文)'
-const CLAIM_FORMS = [
-  { rule: '第N节', pattern: new RegExp(`${CLAUSE_START}第\\s*(\\d+(?:\\.\\d+)*|[一二三四五六七八九十]+)\\s*节`), token: (match) => normalizeSectionToken(match[1]) },
-  { rule: 'Section N', pattern: new RegExp(`${CLAUSE_START}Section\\s+(\\d+(?:\\.\\d+)*)`, 'i'), token: (match) => normalizeSectionToken(match[1]) },
-  { rule: '§N', pattern: new RegExp(`${CLAUSE_START}§\\s*(\\d+(?:\\.\\d+)*)`), token: (match) => normalizeSectionToken(match[1]) },
-  // "II. DERIVING RESPONSE PROFILES ...", "III. PROPOSED ..." - the FORM was measured on the owner's
-  // library as the one a note uses where the Chinese label is absent; the wording here stands in for it,
-  // since what is parsed is the form. Two characters or more, so a bare
-  // "I." (a plausible list marker) is not read as a section.
-  { rule: '罗马数字', pattern: new RegExp(`${CLAUSE_START}([IVX]{2,6})\\.\\s*\\S`), token: (match) => String(romanToNumber(match[1]) || '') },
-  // "Appendix A.2". Read and reported, so a reader can see why a note looks like a section note; it can
-  // never equal a writable section, because this tool writes numerals only.
-  { rule: 'Appendix X', pattern: new RegExp(`${CLAUSE_START}Appendix\\s+([A-Z](?:\\.\\d+)*)\\b`, 'i'), token: (match) => match[1].toUpperCase() },
-]
-
-/**
- * Which section a note's own words say it is about.
- *
- * Only the first paragraph is read: a section number mentioned later in the prose is a cross-reference,
- * not a claim about which section this note is.
- *
- * This reading is a BACKSTOP, not the judgement. It catches the notes that say what they are; it cannot
- * catch the ones that merely look like they do, and those are not guessed at - the plan prints every
- * note's first paragraph, and the discipline decides coverage by reading them against the paper's own
- * section list. A wrong reading here is loud (a refusal naming the words it went by) rather than silent,
- * which is the direction that costs a look instead of a section.
- *
- * @param {string} noteHtml Note body.
- * @returns {{token: string, rule: string, evidence: string}|undefined} The section, the form that
- *   matched, and the words it was read from.
- */
-export function readSectionFromParagraph(noteHtml) {
-  const paragraph = firstBlockText(noteHtml)
-  for (const form of CLAIM_FORMS) {
-    const match = form.pattern.exec(paragraph)
-    if (!match) continue
-    const token = form.token(match)
-    if (token) return { token, rule: form.rule, evidence: match[0].trim() }
-  }
-  return undefined
+export function sectionTokenFromTag(tag) {
+  const text = String(tag ?? '').trim()
+  if (!lowered(text).startsWith(SECTION_TAG_PREFIX)) return ''
+  const token = text.slice(SECTION_TAG_PREFIX.length)
+  return /^\d+$/.test(token) ? token : ''
 }
 
 /**
- * Which section a note is a note ABOUT, however that is recorded.
+ * What a note's tags claim, with the ambiguity made explicit.
  *
- * @param {string} noteHtml Note body.
- * @returns {{token: string, by: 'marker'|'paragraph'|'none', rule: string, evidence: string}} The claim,
- *   how it was read, the form that matched, and the words it was read from - the last two so that a
- *   refusal can be audited without opening the note.
+ * Two `/section-` tags on one note are not a claim this tool can count: the plan names the note and
+ * the discipline fixes it. A dotted or empty tag is invalid and lands in `invalid`; it never becomes
+ * a top-level claim.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {{token: string, ambiguous: boolean, tags: string[], invalid: string[]}} The claim.
  */
-export function sectionClaim(noteHtml) {
-  const marked = readSectionMarker(noteHtml)
-  if (marked) return { token: marked, by: 'marker', rule: 'marker', evidence: sectionMarker(marked) }
-  const paragraph = readSectionFromParagraph(noteHtml)
-  if (paragraph) return { token: paragraph.token, by: 'paragraph', rule: paragraph.rule, evidence: paragraph.evidence }
-  return { token: '', by: 'none', rule: '', evidence: '' }
+export function readSectionTag(tags) {
+  const hits = (tags ?? [])
+    .map((tag) => String(tag).trim())
+    .filter((tag) => lowered(tag).startsWith(SECTION_TAG_PREFIX))
+  const tokens = [...new Set(hits.map(sectionTokenFromTag).filter(Boolean))]
+  const invalid = hits.filter((tag) => sectionTokenFromTag(tag) === '')
+  if (tokens.length > 1) return { token: '', ambiguous: true, tags: hits, invalid }
+  return { token: tokens[0] ?? '', ambiguous: false, tags: hits, invalid }
 }
 
 /**
@@ -299,7 +182,27 @@ export function sectionClaim(noteHtml) {
  * @returns {boolean} True when the note is a tombstone rather than coverage.
  */
 export function isRetired(tags) {
-  return (tags ?? []).some((tag) => String(tag).trim().toLowerCase() === RETIRE_TAG)
+  return (tags ?? []).some((tag) => lowered(tag) === RETIRE_TAG)
+}
+
+/**
+ * Whether a note came from outside and may still be rewritten in place.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {boolean} True when the note carries `/imported`.
+ */
+export function isImported(tags) {
+  return (tags ?? []).some((tag) => lowered(tag) === IMPORTED_TAG)
+}
+
+/**
+ * Whether a note is a paper-level digest rather than a section note.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {boolean} True when the note carries `/digest`.
+ */
+export function isDigest(tags) {
+  return (tags ?? []).some((tag) => lowered(tag) === DIGEST_TAG)
 }
 
 /**
@@ -329,7 +232,7 @@ export function replacesTag(noteKey) {
  * @returns {string} The retired note's key, or '' when this note names no predecessor.
  */
 export function replacesKey(tags) {
-  const hit = (tags ?? []).map((tag) => String(tag).trim()).find((tag) => tag.startsWith(REPLACES_TAG_PREFIX))
+  const hit = (tags ?? []).map((tag) => String(tag).trim()).find((tag) => lowered(tag).startsWith(REPLACES_TAG_PREFIX))
   return hit ? hit.slice(REPLACES_TAG_PREFIX.length) : ''
 }
 
@@ -345,29 +248,11 @@ export function successorOf(notes, noteKey) {
 }
 
 /**
- * The top-level section a token belongs to.
+ * The ordinal a NEW write may use, or a refusal.
  *
- * Coverage is counted per TOP-LEVEL section: a section is one note, and a note keyed to a subsection -
- * which this skill no longer writes, but a library may carry from before - belongs to the section it is
- * numbered under. Comparing tokens as whole strings cannot express that, because "3" and "3.1" are simply
- * different strings, so every comparison goes through this.
- *
- * @param {string} token A normalized ordinal, e.g. `3` or `3.1`.
- * @returns {string} Its top-level part (`3`), or '' for an empty token.
- */
-export function parentSectionToken(token) {
-  return String(token ?? '').split('.')[0]
-}
-
-/**
- * The ordinal a NEW note may be written for, or a refusal.
- *
- * The tool READS a dotted ordinal: a library can carry notes keyed to `3.1` from an earlier round, or
- * from its trash, and those have to be recognised for what they are so that coverage stays countable.
- * It never WRITES one. The unit this discipline counts is the top-level section, and a note keyed to a
- * subsection would have to be folded back into its parent afterwards - which is the shape that produced
- * a split section in the first place. Reading wide and writing narrow is the whole point: the refusal
- * is narrow enough to be trusted, and it says which ordinal to pass instead.
+ * The unit this discipline writes is the TOP-LEVEL section. A dotted ordinal is refused with the
+ * top-level one to pass instead; the note that already carries a dotted claim is `unknown` and is
+ * merged or retired in a migration, never folded silently.
  *
  * @param {string|number} value The `--section` value.
  * @returns {string} The ordinal to write.
@@ -377,82 +262,60 @@ export function sectionWriteToken(value) {
   const token = normalizeSectionToken(value)
   if (!token) throw new UsageError(`--section '${value}' carries no ordinal this tool can match`)
   if (token.includes('.')) {
-    const parent = parentSectionToken(token)
+    const parent = token.split('.')[0]
     throw new UsageError(
       `--section '${value}' names a subsection, and the unit this discipline writes is the TOP-LEVEL section: pass --section ${parent}. ` +
-        `A note already keyed to §${token} is still READ and still counts as covering that part of §${parent}.`,
+        `A note already keyed to §${token} is UNKNOWN to this tool and must be merged into §${parent} or retired.`,
     )
   }
   return token
 }
 
 /**
- * The note that already covers the section a write is for, and why.
+ * The note that already claims the section a write is for, and why.
  *
- * Three ways a section is covered, and each one refuses the write:
+ * Only an explicit `/section-N` tag counts. A retired note is a tombstone and does not cover its
+ * section; a digest is not a section note; an unknown note is read by the discipline rather than
+ * guessed at here. There is no parent/child folding: dotted keys are not part of this model.
  *
- *   * a note claims that very section;
- *   * the section asked for is a SUBSECTION whose parent is already covered as a whole;
- *   * the section asked for is TOP-LEVEL and is already covered in parts.
- *
- * A sibling subsection is not coverage: a note about 3.2 says nothing about 3.1.
- *
- * @param {Array<{key: string, claim: {token: string}}>} notes The record's child notes.
- * @param {string} token The section the write is for.
+ * @param {Array<{key: string, retired?: boolean, digest?: boolean, claim: {token: string}}>} notes The record's child notes.
+ * @param {string} token The top-level section the write is for.
  * @returns {{note: object, why: string}|undefined} The covering note and the reason, if any.
  */
 export function coveringNote(notes, token) {
-  // A retired note is a tombstone: it still claims the section it was written for, and it no longer
-  // covers it. That filter is the whole point of retiring, so it lives here rather than in each caller,
-  // and every question of the form "is this section covered" gets the same answer.
-  const covered = notes.filter((note) => note.claim.token && !note.retired)
+  const covered = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
   const same = covered.find((note) => note.claim.token === token)
-  if (same) return { note: same, why: `note ${same.key} claims §${token}` }
-
-  const parent = parentSectionToken(token)
-  const whole = covered.find((note) => note.claim.token === parent && parent !== token)
-  if (whole) return { note: whole, why: `note ${whole.key} covers §${parent} as a whole, and §${token} is part of it` }
-
-  const parts = parent === token
-    ? covered.filter((note) => parentSectionToken(note.claim.token) === parent && note.claim.token !== token)
-    : []
-  if (parts.length) {
-    return {
-      note: parts[0],
-      why: `§${parent} is already covered in parts by ${parts.map((note) => `${note.key} (§${note.claim.token})`).join(' · ')}, and §${parent} is the unit that is counted`,
-    }
-  }
-  return undefined
-}
-
-/** Whether a span carries a LaTeX command or a braced sub/superscript - enough to make it math. */
-function containsLatex(text) {
-  return /\\[a-zA-Z]+|[_^]\{/.test(text)
-}
-
-/** The looser test: a bare `_`/`^` with an operand is math too, while a lone letter is not. */
-function containsMathMarkup(text) {
-  return containsLatex(text) || /[_^]\*|[_^][A-Za-z0-9]/.test(text)
+  return same ? { note: same, why: `note ${same.key} claims §${token}` } : undefined
 }
 
 /**
- * The regions already delimited as display math, so the inline pass never nests `$` inside `$$`.
+ * The first block of prose in a note, as a reader sees it.
  *
- * @param {string} text One text node.
- * @returns {Array<{start: number, end: number}>} Half-open offsets of each `$$...$$` region.
+ * This is DISPLAY, not a claim: the plan prints it so the reader can decide. "First block", not "first
+ * N characters": {@link visibleText} collapses whitespace, so the collapsed text has no line to
+ * measure a position against, and what makes a paragraph readable is which block it is.
+ *
+ * @param {string} noteHtml Note body.
+ * @returns {string} The visible text of the first paragraph, heading or list item.
  */
-export function displayMathRegions(text) {
-  const marks = []
-  let at = text.indexOf('$$')
-  while (at !== -1) {
-    marks.push(at)
-    at = text.indexOf('$$', at + 2)
-  }
-  const regions = []
-  for (let index = 0; index + 1 < marks.length; index += 2) {
-    regions.push({ start: marks[index], end: marks[index + 1] + 2 })
-  }
-  return regions
+export function firstBlockText(noteHtml) {
+  const html = String(noteHtml ?? '')
+  const block = /<(p|h[1-6]|li)\b[^>]*>([\s\S]*?)<\/\1>/i.exec(html)
+  return block ? visibleText(block[2]) : visibleText(html).slice(0, 120)
+}
+
+/**
+ * Whether the APPLICATION has normalized this note already.
+ *
+ * Measured: a note the application has written carries its own `<div data-schema-version="...">`
+ * wrapper. The plan reports it as `app` rather than `API`; it is also why a read-back compares
+ * visible text instead of bytes.
+ *
+ * @param {string} html Note body.
+ * @returns {boolean} True when the body opens with the application's own wrapper.
+ */
+export function isApplicationWrapped(html) {
+  return /^\s*<div data-schema-version="\d+">/.test(String(html ?? ''))
 }
 
 /** Whether the body is HTML, because the library stores note bodies as HTML and a Markdown guess
@@ -461,300 +324,75 @@ export function looksLikeHtml(body) {
   return /<(p|div|h[1-6]|ul|ol|li|br|strong|em|code|pre|table|blockquote|hr)\b/i.test(String(body ?? ''))
 }
 
-/** Text nodes of an HTML string, with the tags left in place. */
-function textSegments(html) {
-  return String(html ?? '').split(/(<[^>]*>)/)
-}
-
 /**
- * Every closed `[open]` … `[close]` span at nesting depth zero, in order.
+ * The note body a section note is created with.
  *
- * @param {string} text One text node.
- * @returns {Array<{start: number, end: number, inner: string}>} Half-open offsets and the inner text.
- */
-export function topLevelSpans(text, open, close) {
-  const spans = []
-  const stack = []
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index]
-    if (char === open) stack.push(index)
-    else if (char === close && stack.length > 0) {
-      const start = stack.pop()
-      if (stack.length === 0) spans.push({ start, end: index + 1, inner: text.slice(start + 1, index) })
-    }
-  }
-  return spans
-}
-
-/**
- * The mechanical math repair: `$`/`$$` where the copy left plain brackets, and the underscore that
- * Markdown turned into `<em>`.
+ * No marker is prepended: the claim is the `/section-N` tag now, and a comment in the body would be
+ * eaten by the application while implying an identity the tool no longer reads.
  *
- * Content-preserving by construction. A span is converted only when it carries LaTeX markup and is
- * one closed span inside a single text node; a span inside one that already reads as display math is
- * skipped, because `$` inside `$$` is not valid MathJax; and everything else is reported as left
- * alone rather than guessed at.
- *
- * @param {string} html Note body as the library stores it.
- * @param {{lineBreaks?: boolean}} [options] `lineBreaks: false` skips the block-form rule, for a note
- *   whose body the application will store back on one line whatever this tool sends.
- * @returns {{html: string, applied: Array<{rule: string, count: number}>, changed: string[],
- *   skipped: number, leftAlone: string[]}} The repaired body, what was applied, the spans that were
- *   converted (so a reader can eyeball the heuristic), how many candidates were declined, and the
- *   declined spans worth naming.
- */
-export function normalizeMath(html, { lineBreaks = true } = {}) {
-  const applied = new Map()
-  const leftAlone = []
-  const bump = (rule, count = 1) => applied.set(rule, (applied.get(rule) ?? 0) + count)
-  // Every span that was a candidate and was NOT converted, whether or not it is worth reporting:
-  // "nothing to do" and "a span I declined" must not look the same.
-  let skipped = 0
-
-  // Rule 1 - "<em>x</em>" is a Markdown underscore that got rendered: the copy lost the "_" of
-  // "B'_{ij}" and kept the emphasis tag. Only inside something that reads as math.
-  let current = String(html ?? '').replace(/<em>([^<]*)<\/em>/g, (whole, inner) => {
-    if (!containsLatex(inner)) return whole
-    bump('underscore-as-emphasis')
-    return `_${inner}_`
-  })
-
-  // Rule 2/3 - brackets and parentheses, per text node, never across a tag boundary.
-  const changed = []
-  current = textSegments(current)
-    .map((segment, index) => {
-      if (index % 2 === 1) return segment // a tag
-      if (segment.includes('$')) return segment // already delimited; not this tool's business
-
-      // A node whose delimiters do not pair up lost one in the copy. Closing it is a guess, and
-      // converting the parentheses inside it would be a second guess: leave the whole node alone.
-      const count = (char) => segment.split(char).length - 1
-      if (count('[') !== count(']') || count('(') !== count(')')) {
-        leftAlone.push(`unbalanced delimiter in one text node: ${visibleText(segment).slice(0, 60)}`)
-        return segment
-      }
-
-      let text = segment
-
-      for (const span of topLevelSpans(text, '[', ']').reverse()) {
-        const inner = span.inner
-        if (!containsMathMarkup(inner)) {
-          skipped += 1
-          if (/\\/.test(inner) || /[_^]/.test(inner)) leftAlone.push(`[…] ${inner.trim().slice(0, 60)}`)
-          continue
-        }
-        changed.push(`[…] ${inner.trim().slice(0, 50)} -> $$…$$`)
-        text = `${text.slice(0, span.start)}$$${inner}$$${text.slice(span.end)}`
-        bump('bracket-to-display-math')
-      }
-
-      const display = displayMathRegions(text)
-      const parens = topLevelSpans(text, '(', ')').filter(
-        (span) => !display.some((region) => span.start >= region.start && span.end <= region.end),
-      )
-      for (const span of parens.reverse()) {
-        const inner = span.inner
-        const strict =
-          containsMathMarkup(inner) &&
-          inner.length <= 80 &&
-          !/[\u3400-\u9fff]/.test(inner) &&
-          !/\$/.test(inner) &&
-          !/^\d+[.,\d\s-]*$/.test(inner)
-        if (!strict) {
-          skipped += 1
-          if (containsMathMarkup(inner) || /\\/.test(inner)) leftAlone.push(`(…) ${inner.trim().slice(0, 60)}`)
-          continue
-        }
-        // The parentheses stay OUTSIDE the delimiters: "(S_{mn}^{max})^2" and "$S_{mn}^{max}$^2" are
-        // different expressions, and only one of them is what the paper said.
-        changed.push(`(${inner.trim().slice(0, 50)}) -> ($…$)`)
-        text = `${text.slice(0, span.start)}($${inner}$)${text.slice(span.end)}`
-        bump('parens-to-inline-math')
-      }
-
-      return text
-    })
-    .join('')
-
-  // Rule 4 - display math on lines of its own: "$$ x $$" becomes "$$\nx\n$$". This is how the note is
-  // read and edited, and it is idempotent, so a note written this way never changes again.
-  if (lineBreaks) {
-    current = current.replace(/\$\$([\s\S]*?)\$\$/g, (whole, inner) => {
-      const trimmed = inner.trim()
-      if (trimmed === '') return whole
-      const block = `$$\n${trimmed}\n$$`
-      if (whole !== block) bump('display-math-on-its-own-lines')
-      return block
-    })
-  }
-
-  return {
-    html: current,
-    applied: [...applied].map(([rule, count]) => ({ rule, count })),
-    changed,
-    skipped,
-    leftAlone: [...new Set(leftAlone)],
-  }
-}
-
-/**
- * Whether the repair has nothing left to do, i.e. re-running it would change nothing.
- *
- * @param {string} html Note body as the library stores it.
- * @param {{lineBreaks?: boolean}} [options] Must match the options the repair was planned with.
- * @returns {boolean} True when the body is already in the repaired shape.
- */
-export function repairConverged(html, options = {}) {
-  return normalizeMath(html, options).html === html
-}
-
-/**
- * Whether the APPLICATION has normalized this note already.
- *
- * Measured: a note the application has written carries its own `<div data-schema-version="...">`
- * wrapper and no longer carries this tool's invisible marker comment, while a note written only
- * through the local API stays bare. The difference matters for exactly one rule - the line breaks
- * around display math: on a wrapped note the library stores the body back on one line, so a repair
- * that kept asking for the break would write the same no-op on every run and report the same change
- * forever. That is the failure mode this predicate exists to prevent.
- *
- * @param {string} html Note body as the library stores it.
- * @returns {boolean} True when the body opens with the application's own wrapper.
- */
-export function isApplicationWrapped(html) {
-  return /^\s*<div data-schema-version="\d+">/.test(String(html ?? ''))
-}
-
-/**
- * The note body a section note is created with: the marker, then the explanation.
- *
- * @param {string} token The section ordinal.
  * @param {string} body The explanation, as HTML.
  * @returns {string} The body to send.
  */
-export function composeSectionNote(token, body) {
-  return `${sectionMarker(token)}\n${String(body ?? '').trim()}`
+export function composeSectionNote(body) {
+  return String(body ?? '').trim()
 }
 
 /** The write that creating a note is, so a plan can print it without doing it. */
 export function createWriteLine(itemKey) {
-  return `POST /api/users/0/items  [{itemType: note, parentItem: ${itemKey}, note: ...}]`
+  return `POST /api/users/0/items  [{itemType: note, parentItem: ${itemKey}, note: ..., tags: [...]}]`
 }
 
-function parseArgs(argv) {
-  const options = {
-    item: '', note: '', section: '', text: '', file: '', title: '', reason: '', replaces: '',
-    tidy: false, plan: false, write: false, retire: false, undo: false, json: false,
-  }
-  for (let index = 0; index < argv.length; index += 1) {
-    const flag = argv[index]
-    const next = argv[index + 1]
-    if (flag === '--write') {
-      options.write = true
-      continue
-    }
-    if (flag === '--tidy') {
-      options.tidy = true
-      continue
-    }
-    if (flag === '--plan') {
-      options.plan = true
-      continue
-    }
-    if (flag === '--json') {
-      options.json = true
-      continue
-    }
-    if (flag === '--retire') {
-      options.retire = true
-      continue
-    }
-    if (flag === '--undo') {
-      options.undo = true
-      continue
-    }
-    if (!['--item', '--note', '--section', '--text', '--file', '--title', '--reason', '--replaces'].includes(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
-    if (!next) throw new UsageError(`${flag} needs a value`)
-    options[flag.slice(2)] = next
-    index += 1
-  }
-  if (!options.item && !options.note) throw new UsageError('pass --item <recordKey>, or --tidy --note <noteKey>')
-  if (options.tidy && options.section) throw new UsageError('--tidy does not take --section: it repairs the notes that exist')
-  if (!options.tidy && options.section && Boolean(options.text) === Boolean(options.file)) {
-    throw new UsageError('pass --text or --file, not both')
-  }
-  if (!options.tidy && !options.section && (options.text || options.file)) {
-    throw new UsageError('a body was given without --section <ordinal>; say which section it explains')
-  }
-  if (options.retire) {
-    if (!options.note) throw new UsageError('--retire takes --note <noteKey>: one retirement, one write')
-    if (options.item || options.section || options.text || options.file || options.tidy || options.plan) {
-      throw new UsageError('--retire changes one note and nothing else; drop the other arguments')
-    }
-    if (!options.undo && String(options.reason).trim() === '') {
-      throw new UsageError('--retire needs --reason "<why>": the reason is the record of the change, and this tool stores no prose on the note')
-    }
-  } else {
-    if (options.undo) throw new UsageError('--undo belongs to --retire')
-    if (options.reason) throw new UsageError('--reason belongs to --retire')
-  }
-  if (options.replaces && !options.section) {
-    throw new UsageError('--replaces names the note a new section note replaces, so it goes with the --section that note is written for')
-  }
-  if (options.json && (options.section || options.tidy || options.retire)) {
-    throw new UsageError('--json prints the coverage plan; it goes with --item and nothing else')
-  }
-  return options
-}
-
-const USAGE =
-  'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan] [--json]\n' +
-  '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
-  '                                       [--title "<title>"] [--replaces <retiredNoteKey>] [--write]\n' +
-  '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
-  '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
-  '       node tools/zotero-section-note.mjs --tidy --note <noteKey> [--write]\n' +
-  '       node tools/zotero-section-note.mjs --item <recordKey> --tidy [--write]\n' +
-  '       --retire marks a wrong note as a tombstone instead of deleting it: the body is untouched, the\n' +
-  '       section it claimed becomes writable again, and --undo puts the claim back. The reason is\n' +
-  '       printed and must be written into the note that replaces it, because a tag cannot hold prose.\n' +
-  '       --section takes a TOP-LEVEL ordinal: a dotted subsection number is read from the notes that\n' +
-  '       carry one, and never written into a new note.\n' +
-  '       --title is attempted and, if the library refuses it (measured: a title patch on a note answers\n' +
-  '       HTTP 500 here), the same note is written WITHOUT it rather than not at all.'
-
-/** Every child note of a record, with the section it claims. */
+/** Every child note of a record, with the claim its tags carry. */
 async function noteChildren(itemKey) {
   const children = await childrenOf(itemKey)
   return children
     .filter((child) => child?.data?.itemType === 'note')
     .map((child) => {
       const tags = (child.data.tags ?? []).map((entry) => entry.tag)
-      const html = child.data.note ?? ''
-      return { key: child.key, html, tags, retired: isRetired(tags), claim: sectionClaim(html) }
+      return {
+        key: child.key,
+        html: child.data.note ?? '',
+        tags,
+        retired: isRetired(tags),
+        imported: isImported(tags),
+        digest: isDigest(tags),
+        claim: readSectionTag(tags),
+      }
     })
+}
+
+/** Whether two tag lists carry the same set, compared case-insensitively. */
+function sameTags(left, right) {
+  const a = new Set((left ?? []).map(lowered))
+  const b = new Set((right ?? []).map(lowered))
+  return a.size === b.size && [...a].every((tag) => b.has(tag))
+}
+
+/** The live notes whose tags name more than one section, which must be fixed before a write. */
+function ambiguousLive(notes) {
+  return notes.filter((note) => note.claim.ambiguous && !note.retired)
 }
 
 /**
  * The coverage plan as one object.
  *
- * The prose plan is written for a person deciding what to read next. A round that has to hand the owner
- * one list across several records needs the same facts in a shape it can join on, because prose joined
- * by hand is how each round ends up inventing its own list. This is that shape, and it carries only what
- * the tool can read: which sections are covered, by which note, which notes are tombstones and what
- * names itself their successor, and which notes it could not read at all.
+ * A round that has to hand the owner one list across several records needs the same facts in a shape
+ * it can join on, because prose joined by hand is how each round ends up inventing its own list.
  *
  * @param {{record: object, attachment: object|undefined, notes: Array<object>}} input The record's state.
  * @returns {object} A JSON-serializable plan.
  */
 export function planJson({ record, attachment, notes }) {
-  const live = notes.filter((note) => note.claim.token && !note.retired)
-  const retired = notes.filter((note) => note.claim.token && note.retired)
-  const sections = new Map()
+  const live = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
+  const retired = notes.filter((note) => note.retired)
+  const digests = notes.filter((note) => note.digest && !note.retired)
+  const unknown = notes.filter((note) => !note.retired && !note.digest && !note.claim.token && !note.claim.ambiguous)
+  const ambiguous = notes.filter((note) => note.claim.ambiguous && !note.retired)
+  const covered = new Map()
   for (const note of live) {
-    const top = parentSectionToken(note.claim.token)
-    if (!sections.has(top)) sections.set(top, [])
-    sections.get(top).push(note.claim.token)
+    const keys = covered.get(note.claim.token) ?? []
+    keys.push(note.key)
+    covered.set(note.claim.token, keys)
   }
   return {
     record: { key: record.key, itemType: record.itemType, title: record.title ?? '' },
@@ -765,22 +403,28 @@ export function planJson({ record, attachment, notes }) {
       origin: isApplicationWrapped(note.html) ? 'app' : 'API',
       tags: note.tags,
       retired: note.retired,
+      imported: note.imported,
+      digest: note.digest,
       section: note.claim.token,
-      sectionTop: parentSectionToken(note.claim.token),
-      claimRule: note.claim.rule,
-      claimEvidence: note.claim.evidence,
+      sectionTags: note.claim.tags,
+      invalidSectionTags: note.claim.invalid,
+      ambiguous: note.claim.ambiguous,
       replaces: replacesKey(note.tags),
     })),
     coverage: {
-      live: [...sections.entries()].map(([section, parts]) => ({ section, notes: parts })),
+      live: [...covered.entries()].map(([section, keys]) => ({ section, notes: keys })),
       retired: retired.map((note) => ({ section: note.claim.token, note: note.key, successor: successorOf(notes, note.key) })),
-      unreadable: notes.filter((note) => !note.claim.token).map((note) => note.key),
+      digest: digests.map((note) => ({ note: note.key })),
+      unknown: unknown.map((note) => note.key),
+      ambiguous: ambiguous.map((note) => note.key),
     },
     counts: {
       notes: notes.length,
       live: live.length,
       retired: retired.length,
-      unreadable: notes.length - live.length - retired.length,
+      digest: digests.length,
+      unknown: unknown.length,
+      ambiguous: ambiguous.length,
     },
   }
 }
@@ -788,11 +432,14 @@ export function planJson({ record, attachment, notes }) {
 /** The plan half of `--item …, no --section`: what this record covers, and what to go read. */
 async function runPlan(itemKey, { json = false } = {}) {
   const record = await readItem(itemKey)
+  if (record.itemType === 'note') throw new UsageError(`${itemKey} is itself a note; pass the record the note is about`)
   const children = await childrenOf(itemKey)
   const notes = await noteChildren(itemKey)
-  const attachment = children.find((child) => child.data?.itemType === 'attachment' && ['application/pdf', 'application/epub+zip', 'text/html'].includes(child.data?.contentType ?? ''))
-  // The machine plan is the whole output in this mode: a caller that has to parse one is a caller that
-  // will parse it wrongly, and this file is not the place to learn that.
+  const attachment = children.find(
+    (child) =>
+      child.data?.itemType === 'attachment' &&
+      ['application/pdf', 'application/epub+zip', 'text/html'].includes(child.data?.contentType ?? ''),
+  )
   if (json) {
     console.log(JSON.stringify(planJson({ record, attachment, notes }), null, 2))
     return
@@ -803,50 +450,58 @@ async function runPlan(itemKey, { json = false } = {}) {
   )
   console.log(`notes  : ${notes.length} child note(s)`)
 
-  // Every note is shown with the first paragraph a reader would see, because that is what the coverage
-  // decision is made from - and it is printed for the notes the tool DID read too, since "§2" is a
-  // reading, and a reading is only as good as the words behind it.
   for (const note of notes) {
-    const token = note.claim.token
-    const read = token
-      ? `§${token}${parentSectionToken(token) === token ? '' : ` → counts as §${parentSectionToken(token)}`}  (${note.claim.rule}: "${note.claim.evidence}")`
-      : '-'
-    console.log(`\n  ${note.key}  ${String(note.html.length).padStart(6)}c  ${isApplicationWrapped(note.html) ? 'app' : 'API'}  ${read}${note.retired ? '  RETIRED' : ''}`)
+    const label = note.digest
+      ? 'digest'
+      : note.claim.token
+        ? `§${note.claim.token}`
+        : note.claim.ambiguous
+          ? 'ambiguous'
+          : 'unknown'
+    const marks = [note.imported ? 'IMPORTED' : '', note.retired ? 'RETIRED' : ''].filter(Boolean).join(' ')
+    console.log(
+      `\n  ${note.key}  ${String(note.html.length).padStart(6)}c  ${isApplicationWrapped(note.html) ? 'app' : 'API'}  ${label}${marks ? `  ${marks}` : ''}`,
+    )
     console.log(`      ${firstBlockText(note.html).slice(0, 96)}`)
     if (note.tags.length) console.log(`      tags: ${note.tags.join(' · ')}`)
   }
 
-  // A retired note still claims the section it was written for and no longer covers it, so it is
-  // counted apart from the coverage: a plan that folded the two together would hide the one thing
-  // retiring is for - that the section is free to be written again.
-  const read = notes.filter((note) => note.claim.token && !note.retired)
-  const retired = notes.filter((note) => note.claim.token && note.retired)
-  const unread = notes.filter((note) => !note.claim.token)
-  const topLevel = [...new Set(read.map((note) => parentSectionToken(note.claim.token)))]
-  const describe = (parent) => {
-    const tokens = read.filter((note) => parentSectionToken(note.claim.token) === parent).map((note) => note.claim.token)
-    return tokens.length > 1 ? `§${parent} (in parts: ${tokens.map((token) => `§${token}`).join(' · ')})` : `§${parent}`
-  }
-  console.log(`\nread here   : ${topLevel.length ? topLevel.map(describe).join(' · ') : 'none'}`)
-  console.log(`retired     : ${retired.length ? retired.map((note) => `§${note.claim.token} (${note.key}${successorOf(notes, note.key) ? ` → superseded by ${successorOf(notes, note.key)}` : ' → nothing names a replacement yet'})`).join(' · ') : 'none'}`)
-  console.log(`judge these : ${unread.length ? unread.map((note) => note.key).join(' · ') : 'none'}`)
-  console.log('\nNOTE: `read here` is what this tool could read from a marker or a first paragraph, counted by')
-  console.log('TOP-LEVEL section - §3 covered as 3.1 and 3.2 is §3. `judge these` are the notes it could not')
-  console.log('read, and they are not guesses: read the first paragraph above (the whole note, with')
-  console.log('zotero-read.mjs --item <noteKey>, when it is not enough), say which section of THIS paper each')
-  console.log('one explains, and report the coverage before writing. Measured on one library: a note opening')
-  console.log('"1. 一段话总结" is a whole-paper summary while "2 仿真结果及分析" is a section note - the same')
-  console.log('shape, so the judgement is yours and this tool does not pretend to make it.')
-  console.log('A note marked RETIRED is a tombstone: it is listed above, it is NOT coverage, and its section')
-  console.log('can be written again. A live note carrying a /replaces- tag names the retired note it succeeded;')
-  console.log('where no live note names one, nothing has replaced the retired note yet.')
+  const live = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
+  const retired = notes.filter((note) => note.retired)
+  const digests = notes.filter((note) => note.digest && !note.retired)
+  const unknown = notes.filter((note) => !note.retired && !note.digest && !note.claim.token && !note.claim.ambiguous)
+  const ambiguous = notes.filter((note) => note.claim.ambiguous && !note.retired)
+  const sections = [...new Set(live.map((note) => note.claim.token))]
+  console.log(`\ncovered     : ${sections.length ? sections.map((token) => `§${token}`).join(' · ') : 'none'}`)
+  console.log(
+    `retired     : ${
+      retired.length
+        ? retired
+            .map((note) => {
+              const where = note.claim.token ? `§${note.claim.token}` : '(none)'
+              const successor = successorOf(notes, note.key)
+              return `${where} (${note.key}${successor ? ` -> superseded by ${successor}` : ' -> nothing names a replacement yet'})`
+            })
+            .join(' · ')
+        : 'none'
+    }`,
+  )
+  console.log(`digest      : ${digests.length ? digests.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log(`unknown     : ${unknown.length ? unknown.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log(`ambiguous   : ${ambiguous.length ? ambiguous.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log('\nNOTE: `covered` is what explicit /section-N tags claim, counted per TOP-LEVEL section.')
+  console.log('`unknown` notes have no claim: read the first paragraph above (the whole note with')
+  console.log('zotero-read.mjs --item <noteKey> when it is not enough), then --claim it, --rewrite it, or')
+  console.log('--retire it. A note marked RETIRED is a tombstone: it is NOT coverage, and only a retired')
+  console.log('note is deletable. A /digest note is the record\'s digest, not a section note.')
 }
 
-/** Create one section note, refusing when the section is already covered. */
+/** Create one section note, refusing when the section is already claimed. */
 async function runCreate(options) {
   const body = options.file ? readFileSync(options.file, 'utf8') : options.text
-  if (body.trim() === '') throw new UsageError('the note body is empty')
-  if (!looksLikeHtml(body)) {
+  const composed = composeSectionNote(body)
+  if (composed === '') throw new UsageError('the note body is empty')
+  if (!looksLikeHtml(composed)) {
     throw new UsageError('the note body is not HTML; the library stores note bodies as HTML and a Markdown guess would silently change what is stored')
   }
   const token = sectionWriteToken(options.section)
@@ -854,42 +509,45 @@ async function runCreate(options) {
   const record = await readItem(options.item)
   if (record.itemType === 'note') throw new UsageError(`${options.item} is itself a note; pass the record the note is about`)
   const notes = await noteChildren(options.item)
+  const ambiguous = ambiguousLive(notes)
+  if (ambiguous.length) {
+    console.error(`\nREFUSED: ${ambiguous.map((note) => note.key).join(' · ')} carry more than one /section- tag.`)
+    console.error('Fix the tags before writing: an ambiguous note is not coverage and cannot be counted.')
+    process.exitCode = 1
+    return
+  }
 
-  // A replacement names its predecessor, and the pair is refused while the predecessor is not retired:
-  // a note that still covers its section makes a second note for that section the exact duplicate this
-  // discipline exists to prevent, whatever the new note's tag says.
   const replacedKey = String(options.replaces ?? '').trim()
   if (replacedKey) {
     const old = await readItem(replacedKey)
     if (old.itemType !== 'note') throw new UsageError(`--replaces ${replacedKey} is a ${old.itemType}, not a note`)
-    if (!isRetired((old.tags ?? []).map((entry) => entry.tag))) {
+    const oldTags = (old.tags ?? []).map((entry) => entry.tag)
+    if (!isRetired(oldTags)) {
       throw new UsageError(`--replaces ${replacedKey} is not retired, so it still covers its section. Retire it first: --retire --note ${replacedKey} --reason "<why>" --write`)
     }
-    const oldSection = parentSectionToken(sectionClaim(old.note ?? '').token)
-    if (oldSection !== parentSectionToken(token)) {
-      throw new UsageError(`--replaces ${replacedKey} explains §${oldSection || '?'}, not §${parentSectionToken(token)}: retiring one section's note does not free another's`)
+    if (isDigest(oldTags)) throw new UsageError(`--replaces ${replacedKey} is a digest, not a section note`)
+    const oldClaim = readSectionTag(oldTags)
+    if (oldClaim.ambiguous) throw new UsageError(`--replaces ${replacedKey} carries more than one /section- tag; fix it first`)
+    if (oldClaim.token && oldClaim.token !== token) {
+      throw new UsageError(`--replaces ${replacedKey} explains §${oldClaim.token}, not §${token}: retiring one section's note does not free another's`)
     }
   }
 
   const covering = coveringNote(notes, token)
-  const composed = composeSectionNote(token, body)
-  const tags = replacedKey ? [{ tag: replacesTag(replacedKey) }] : []
+  const tags = [sectionTag(token), ...(replacedKey ? [replacesTag(replacedKey)] : [])]
 
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
-  console.log(`section : §${token}${parentSectionToken(token) === token ? '' : `  (counts as §${parentSectionToken(token)})`}`)
-  console.log(`notes   : ${notes.length} child note(s); covered: ${[...new Set(notes.filter((note) => note.claim.token).map((note) => `§${parentSectionToken(note.claim.token)}`))].join(' · ') || 'none'}`)
-  console.log(`body    : ${body.length} characters -> ${composed.length} with the marker`)
+  console.log(`section : §${token}`)
+  console.log(`notes   : ${notes.length} child note(s); claimed: ${[...new Set(notes.filter((note) => note.claim.token).map((note) => `§${note.claim.token}`))].join(' · ') || 'none'}`)
+  console.log(`body    : ${composed.length} characters; tags: ${tags.join(' · ')}`)
   if (options.title) console.log(`title   : "${options.title}" (attempted; the note is written without it if refused)`)
-  if (replacedKey) console.log(`replaces: ${replacedKey} (tag ${replacesTag(replacedKey)}) - it is retired, so §${parentSectionToken(token)} is free`)
+  if (replacedKey) console.log(`replaces: ${replacedKey} (tag ${replacesTag(replacedKey)}) - it is retired, so §${token} is free`)
   console.log(`write   : ${createWriteLine(options.item)}`)
 
   if (covering) {
     console.error(`\nREFUSED: §${token} is already covered - ${covering.why}.`)
-    console.error(`  read it as: §${covering.note.claim.token} (${covering.note.claim.rule}: "${covering.note.claim.evidence}")`)
-    console.error('Nothing was written. Use --tidy to repair that note\'s delimiters, a different --section, or write')
-    console.error('the part of a section that is missing when the coverage is in parts.')
-    console.error('If you have read that note and it is NOT a note about this section, report both readings and')
-    console.error('stop - do not work around this refusal.')
+    console.error('Nothing was written. Read that note: if it is NOT about this section, report both readings')
+    console.error('and stop. Do not work around this refusal.')
     process.exitCode = 1
     return
   }
@@ -900,119 +558,133 @@ async function runCreate(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
-  const withTitle = { itemType: 'note', parentItem: options.item, note: composed }
-  if (options.title) withTitle.title = options.title
-  if (tags.length) withTitle.tags = tags
+  const payload = { itemType: 'note', parentItem: options.item, note: composed, tags: tags.map((tag) => ({ tag })) }
+  const withTitle = options.title ? { ...payload, title: options.title } : payload
   let res = await gate.write('POST', '/api/users/0/items', [withTitle])
-  // A title this library refuses must cost the note, not the note's existence: a refused POST created
-  // nothing, so the same note is written again without it and the refusal is reported.
   if (res.status !== 200 && options.title) {
     console.log(`\nThe library refused the title (HTTP ${res.status}); writing the same note without it.`)
-    res = await gate.write('POST', '/api/users/0/items', [
-      { itemType: 'note', parentItem: options.item, note: composed, ...(tags.length ? { tags } : {}) },
-    ])
+    res = await gate.write('POST', '/api/users/0/items', [payload])
   }
   if (res.status !== 200) {
     console.error(`\nThe library refused the write (HTTP ${res.status}): ${res.text.slice(0, 300)}`)
     process.exitCode = 1
     return
   }
-  const payload = JSON.parse(res.text)
-  const saved = payload.successful?.['0'] ?? payload.success?.['0']
-  const noteKey = typeof saved === 'string' ? saved : saved?.key
+  const saved = JSON.parse(res.text)
+  const noteKey = saved.successful?.['0'] ?? saved.success?.['0']
   if (!noteKey) {
     console.error(`\nThe library reported no success: ${res.text.slice(0, 300)}`)
     process.exitCode = 1
     return
   }
   const back = await readItem(noteKey)
-  // Compared as TEXT, not bytes: the application rewrites a note it touches (wrapper added, marker
-  // comment dropped), so a byte comparison would call a delivered note undelivered.
-  if (!visibleText(back.note ?? '').includes(visibleText(body))) {
+  const backTags = (back.tags ?? []).map((entry) => entry.tag)
+  if (!visibleText(back.note ?? '').includes(visibleText(composed))) {
     console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the text that was sent.`)
     process.exitCode = 1
     return
   }
-  // The pointer to the retired note is a tag, and a tag is the one part of a write this tool cannot
-  // verify by reading text back. It is asserted separately, and a library that drops it is reported
-  // rather than assumed to have kept it.
-  if (tags.length && replacesKey((back.tags ?? []).map((entry) => entry.tag)) !== replacedKey) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${replacesTag(replacedKey)}.`)
-    console.error('The note exists and carries the text; the link to the note it replaces is what did not survive.')
+  if (readSectionTag(backTags).token !== token) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${sectionTag(token)}.`)
+    console.error(`Tags read back: ${backTags.length ? backTags.join(' · ') : '(none)'}`)
     process.exitCode = 1
     return
   }
-  console.log(
-    `\nOK - note ${noteKey} carries §${token} on ${options.item} (now ${back.note.length} characters, version ${back.version}).` +
-      (replacedKey ? ` It replaces ${replacedKey}.` : ''),
-  )
+  if (replacedKey && replacesKey(backTags) !== replacedKey) {
+    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${replacesTag(replacedKey)}.`)
+    process.exitCode = 1
+    return
+  }
+  console.log(`\nOK - note ${noteKey} carries §${token} on ${options.item} (now ${back.note.length} characters, version ${back.version}).` + (replacedKey ? ` It replaces ${replacedKey}.` : ''))
 }
 
-/** Repair one note's delimiters, refusing anything that is not a section note. */
-async function tidyOne({ noteKey, gate, write }) {
-  const note = await readItem(noteKey)
-  if (note.itemType !== 'note') throw new UsageError(`${noteKey} is a ${note.itemType}, not a note`)
-  const claim = sectionClaim(note.note ?? '')
-  const before = note.note ?? ''
-  // A note the application has already written keeps its display math on one line whatever is sent:
-  // the block-form rule is therefore not attempted on it, and that is SAID rather than silently
-  // skipped or retried forever.
-  const appOwned = isApplicationWrapped(before)
-  const repaired = normalizeMath(before, { lineBreaks: !appOwned })
-  console.log(`\nnote    : ${noteKey}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
-  console.log(`claim   : ${claim.token ? `§${claim.token} (${claim.rule}: "${claim.evidence}")` : 'NOT a section note - refusing to touch it'}`)
-  if (appOwned) {
-    console.log('          the application has normalized this note already; the display-math line break')
-    console.log('          is NOT attempted on it (measured: this library stores such a note back on one line)')
+/**
+ * Claim an existing note for a top-level section.
+ *
+ * The body is never touched. A note with no `/section-` tag receives `/imported` as well, because it
+ * came from outside this tool and remains an import that may be rewritten; an agent-created note
+ * never carries that tag and is a record.
+ */
+async function runClaim(options) {
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const token = sectionWriteToken(options.section)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  if (isRetired(tags)) throw new UsageError(`${options.note} is retired; run --retire --note ${options.note} --undo --write first`)
+  if (isDigest(tags)) throw new UsageError(`${options.note} is a digest, not a section note; a digest is not claimed for a section`)
+  if (!note.parentItem) throw new UsageError(`${options.note} has no parent item; a section note is a child of the record it explains`)
+  const claim = readSectionTag(tags)
+  if (claim.ambiguous) {
+    console.error(`\nREFUSED: ${options.note} carries more than one /section- tag (${claim.tags.join(' · ')}).`)
+    console.error('Fix the tags before claiming: an ambiguous note is not coverage.')
+    process.exitCode = 1
+    return
   }
-  console.log(`size    : ${before.length} -> ${repaired.html.length} characters`)
-  for (const rule of repaired.applied) console.log(`  applied: ${rule.rule} x${rule.count}`)
-  console.log(`  spans   : ${repaired.changed.length} converted, ${repaired.skipped} left as they were`)
-  for (const span of repaired.changed.slice(0, 10)) console.log(`  converted: ${span}`)
-  if (repaired.changed.length > 10) console.log(`  converted: ... and ${repaired.changed.length - 10} more`)
-  for (const span of repaired.leftAlone.slice(0, 8)) console.log(`  left alone: ${span}`)
-  if (repaired.leftAlone.length > 8) console.log(`  left alone: ... and ${repaired.leftAlone.length - 8} more`)
 
-  if (!claim.token) {
-    console.error('\nREFUSED: a note this tool did not identify as a section note is never modified.')
+  const notes = await noteChildren(note.parentItem)
+  const ambiguous = ambiguousLive(notes.filter((entry) => entry.key !== options.note))
+  if (ambiguous.length) {
+    console.error(`\nREFUSED: ${ambiguous.map((entry) => entry.key).join(' · ')} carry more than one /section- tag.`)
+    console.error('Fix those tags before claiming another note on this record.')
     process.exitCode = 1
-    return 0
+    return
   }
-  if (repaired.html === before) {
-    console.log('nothing to do - no span qualified for a mechanical repair.')
-    return 0
+  const covering = coveringNote(notes.filter((entry) => entry.key !== options.note), token)
+  if (covering) {
+    console.error(`\nREFUSED: §${token} is already claimed - ${covering.why}.`)
+    console.error('Nothing was written. Read both notes: if the existing claim is wrong, retire it first;')
+    console.error('if this note is about another section, claim that section instead.')
+    process.exitCode = 1
+    return
   }
-  if (!write) {
+
+  const addImported = claim.token === '' && !isImported(tags)
+  const kept = tags.filter((tag) => !lowered(tag).startsWith(SECTION_TAG_PREFIX))
+  const after = [...kept, sectionTag(token), ...(addImported || isImported(tags) ? [IMPORTED_TAG] : [])]
+    .filter((tag, index, list) => list.findIndex((entry) => lowered(entry) === lowered(tag)) === index)
+  const unchanged = claim.token === token && !addImported
+
+  console.log(`note    : ${options.note}  parent ${note.parentItem}  version ${note.version}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}${claim.tags.length ? ` (tags ${claim.tags.join(' · ')})` : ''}  ->  §${token}`)
+  console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
+  console.log(`change  : ${unchanged ? 'nothing (already claimed)' : addImported ? 'claim + /imported' : 'claim'}   (the body is NOT touched)`)
+  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{tags: [...]}]`)
+
+  if (unchanged) {
+    console.log('\nnothing to do - the note already claims this section, and this tool writes no no-op.')
+    return
+  }
+  if (!options.write) {
     console.log('\nDRY RUN - nothing was written. Re-run with --write.')
-    return 0
+    return
   }
-  const result = await patchItem({ gate, key: noteKey, patch: { note: repaired.html }, apply: true })
+
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  const result = await patchItem({ gate, key: options.note, patch: { tags: after.map((tag) => ({ tag })) }, apply: true })
   if (result.conflict) {
-    console.error(`\nCONFLICT: note ${noteKey} changed since this plan was read. Nothing was written.`)
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
     process.exitCode = 1
-    return 0
+    return
   }
   if (!result.applied) {
     console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
     process.exitCode = 1
-    return 0
+    return
   }
-  const readBack = result.after.note ?? ''
-  // Two conditions, because the application normalizes a note it rewrites (measured: a
-  // `<div data-schema-version="9">` wrapper appears and the invisible marker comment disappears), so a
-  // byte comparison would report a delivered repair as failed.
-  if (!repairConverged(readBack, { lineBreaks: !isApplicationWrapped(readBack) })) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} still has spans the repair would change.`)
+  const backTags = (result.after.tags ?? []).map((entry) => entry.tag)
+  if (readSectionTag(backTags).token !== token) {
+    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
+    console.error(`Tags read back: ${backTags.length ? backTags.join(' · ') : '(none)'}`)
     process.exitCode = 1
-    return 0
+    return
   }
-  if (visibleText(readBack) !== visibleText(repaired.html)) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the same visible text.`)
+  if (addImported && !isImported(backTags)) {
+    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
     process.exitCode = 1
-    return 0
+    return
   }
-  console.log(`\nOK - note ${noteKey} repaired (now ${result.after.note.length} characters, version ${result.after.version}).`)
-  return 1
+  console.log(`\nOK - note ${options.note} claims §${token}${addImported ? ' and is marked /imported' : ''} (version ${result.after.version}).`)
 }
 
 /** Retire one note, or put its claim back. One note, one write, and the body is never touched. */
@@ -1020,14 +692,14 @@ async function runRetire(options) {
   const note = await readItem(options.note)
   if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
   const tags = (note.tags ?? []).map((entry) => entry.tag)
-  const claim = sectionClaim(note.note ?? '')
+  const claim = readSectionTag(tags)
   const undo = options.undo === true
   const want = !undo
   const already = isRetired(tags)
   const after = retireTags(tags, { undo })
 
   console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
-  console.log(`claim   : ${claim.token ? `§${claim.token} (${claim.rule}: "${claim.evidence}")` : 'NOT a section note'}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : claim.ambiguous ? 'ambiguous tags' : 'none (not a section note)'}`)
   console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ') || '(none)'}`)
   console.log(`change  : ${already ? 'retired' : 'live'} -> ${want ? 'retired' : 'live'}   (the body is NOT touched)`)
   if (options.reason) {
@@ -1037,13 +709,6 @@ async function runRetire(options) {
   }
   console.log(`write   : PATCH /api/users/0/items/${options.note}  [{tags: [...]}]`)
 
-  if (!claim.token) {
-    console.error('\nREFUSED: a note this tool did not identify as a section note is never modified.')
-    console.error('Retiring is for a section note that is wrong. If this note IS a section note, report both')
-    console.error('readings and stop - do not work around this refusal.')
-    process.exitCode = 1
-    return
-  }
   if (already === want) {
     console.log(`\nnothing to do - the note is already ${already ? 'retired' : 'live'}, and this tool writes no no-op.`)
     return
@@ -1067,8 +732,6 @@ async function runRetire(options) {
     return
   }
   const back = (result.after.tags ?? []).map((entry) => entry.tag)
-  // Whether a tag survives the application rewriting a note's body is NOT measured yet. This read-back
-  // is where it gets measured, and a library that drops the mark is reported rather than believed.
   if (isRetired(back) !== want) {
     console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back ${want ? 'retired' : 'live'}.`)
     console.error(`Tags read back: ${back.length ? back.join(' · ') : '(none)'} - the mark did not survive the write.`)
@@ -1076,40 +739,275 @@ async function runRetire(options) {
     return
   }
   console.log(`\nOK - note ${options.note} is ${want ? 'retired' : 'live again'} (version ${result.after.version}).`)
-  console.log(
-    want
-      ? `§${claim.token} is writable again; the note itself is untouched and --undo puts the claim back.`
-      : `§${claim.token} is covered by it again; the note itself was never changed.`,
-  )
+  if (want && claim.token) console.log(`§${claim.token} is writable again; the note itself is untouched and --undo puts the claim back.`)
+  else if (want) console.log('It covered no section; it is now a tombstone and may be deleted.')
+  else if (claim.token) console.log(`§${claim.token} is covered by it again; the note itself was never changed.`)
+  else console.log('It is live again and covers no section.')
+}
+
+/**
+ * Rewrite a note's body in place.
+ *
+ * Only an import may be rewritten: a note with no `/section-` tag, or a `/section-N` + `/imported`
+ * note. A `/section-N` note without `/imported` is a record; changing its prose is a retirement and a
+ * new note. The old body is backed up under `.section-notes/` before the write, because this library's
+ * API cannot put an item in the trash.
+ */
+async function runRewrite(options) {
+  const body = options.file ? readFileSync(options.file, 'utf8') : options.text
+  const composed = composeSectionNote(body)
+  if (composed === '') throw new UsageError('the note body is empty')
+  if (!looksLikeHtml(composed)) {
+    throw new UsageError('the note body is not HTML; the library stores note bodies as HTML and a Markdown guess would silently change what is stored')
+  }
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  const claim = readSectionTag(tags)
+  if (isRetired(tags)) throw new UsageError(`${options.note} is retired; a tombstone is not rewritten`)
+  if (claim.ambiguous) throw new UsageError(`${options.note} carries more than one /section- tag; fix it before rewriting`)
+  if (claim.token && !isImported(tags)) {
+    throw new UsageError(
+      `${options.note} is a §${claim.token} record without ${IMPORTED_TAG}: a record's prose is not rewritten in place. Retire it and write the replacement, or claim an import.`,
+    )
+  }
+
+  const token = options.section ? sectionWriteToken(options.section) : ''
+  let after = tags
+  let addImported = false
+  if (token) {
+    if (!note.parentItem) throw new UsageError(`${options.note} has no parent item; a section note is a child of the record it explains`)
+    const notes = await noteChildren(note.parentItem)
+    const covering = coveringNote(notes.filter((entry) => entry.key !== options.note), token)
+    if (covering) {
+      console.error(`\nREFUSED: §${token} is already claimed - ${covering.why}.`)
+      process.exitCode = 1
+      return
+    }
+    addImported = claim.token === ''
+    after = [...tags.filter((tag) => !lowered(tag).startsWith(SECTION_TAG_PREFIX)), sectionTag(token)]
+    if (addImported || isImported(tags)) after.push(IMPORTED_TAG)
+    after = after.filter((tag, index, list) => list.findIndex((entry) => lowered(entry) === lowered(tag)) === index)
+  }
+
+  const backup = join(process.cwd(), '.section-notes', note.parentItem ?? 'standalone', `rewritten-${options.note}-${new Date().toISOString().replace(/[:.]/g, '-')}.html`)
+  console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}${isImported(tags) ? ' (imported)' : ''}`)
+  console.log(`size    : ${String(note.note ?? '').length} -> ${composed.length} characters`)
+  console.log(`old     : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
+  console.log(`new     : ${firstBlockText(composed).slice(0, 96)}`)
+  if (token || !sameTags(after, tags)) console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
+  console.log(`backup  : ${backup}`)
+  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{note: ...${token ? ', tags: [...]' : ''}}]`)
+
+  if (sameTags(after, tags) && visibleText(note.note ?? '') === visibleText(composed)) {
+    console.log('\nnothing to do - the body already reads the same and the tags would not change.')
+    return
+  }
+  if (!options.write) {
+    console.log('\nDRY RUN - nothing was written. Re-run with --write.')
+    return
+  }
+
+  try {
+    mkdirSync(dirname(backup), { recursive: true })
+    writeFileSync(backup, note.note ?? '', 'utf8')
+  } catch (error) {
+    console.error(`\nREFUSED: could not write the backup ${backup}: ${error instanceof Error ? error.message : String(error)}`)
+    process.exitCode = 1
+    return
+  }
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  const patch = { note: composed }
+  if (token) patch.tags = after.map((tag) => ({ tag }))
+  const result = await patchItem({ gate, key: options.note, patch, apply: true })
+  if (result.conflict) {
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written; the backup is at ${backup}.`)
+    process.exitCode = 1
+    return
+  }
+  if (!result.applied) {
+    console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
+    process.exitCode = 1
+    return
+  }
+  const afterText = visibleText(result.after.note ?? '')
+  if (afterText !== visibleText(composed)) {
+    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back with the text that was sent.`)
+    console.error(`The old body is at ${backup}.`)
+    process.exitCode = 1
+    return
+  }
+  const backTags = (result.after.tags ?? []).map((entry) => entry.tag)
+  if (token && readSectionTag(backTags).token !== token) {
+    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
+    process.exitCode = 1
+    return
+  }
+  if (token && addImported && !isImported(backTags)) {
+    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
+    process.exitCode = 1
+    return
+  }
+  console.log(`\nOK - note ${options.note} rewritten (now ${result.after.note.length} characters, version ${result.after.version}).`)
+  console.log(`The old body is at ${backup}.`)
+}
+
+/** Plan a deletion of a retired note. This round does not perform one. */
+async function runDelete(options) {
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  const claim = readSectionTag(tags)
+  if (!isRetired(tags)) {
+    console.error(`\nREFUSED: ${options.note} does not carry ${RETIRE_TAG}. Only a retired note may be deleted.`)
+    console.error(`Retire it first: --retire --note ${options.note} --reason "<why>" --write`)
+    process.exitCode = 1
+    return
+  }
+  const notes = note.parentItem ? await noteChildren(note.parentItem) : []
+  const successor = successorOf(notes, options.note)
+  const digest = isDigest(tags)
+
+  console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none (not a section note)'}`)
+  console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}`)
+  console.log(`size    : ${String(note.note ?? '').length} characters`)
+  console.log(`body    : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
+  console.log(`successor: ${successor ? `${successor} names itself this note's replacement` : 'nothing names a replacement yet'}`)
+  if (digest) console.log('DIGEST  : this note is a /digest; deleting it removes the record of what was read.')
+  if (!successor) console.log('WARNING : nothing names a replacement; deleting removes the last record of what this note said.')
+  console.log(`write   : DELETE /api/users/0/items/${options.note}`)
+  console.log('\nThis channel cannot put an item in the trash: DELETE is permanent, the record answers 404')
+  console.log('afterwards, and the trash neither grows nor keeps the key. The body cannot be recovered.')
+  if (options.write) {
+    console.error('\nREFUSED: the write path is not implemented; this round only plans a deletion.')
+    process.exitCode = 2
+    return
+  }
+  console.log('\nDRY RUN - nothing was written. Deletion is not implemented in this round.')
+}
+
+const USAGE =
+  'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan] [--json]\n' +
+  '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
+  '                                       [--title "<title>"] [--replaces <retiredNoteKey>] [--write]\n' +
+  '       node tools/zotero-section-note.mjs --claim --note <noteKey> --section <ordinal> [--write]\n' +
+  '       node tools/zotero-section-note.mjs --rewrite --note <noteKey> (--text "<html>" | --file <path>) [--section <ordinal>] [--write]\n' +
+  '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
+  '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
+  '       node tools/zotero-section-note.mjs --delete --note <noteKey>\n' +
+  '       Identity is a tag: /section-N claims a top-level section, /imported marks an import that may\n' +
+  '       still be rewritten, /digest marks the paper-level digest, /retired takes a note out of service.\n' +
+  '       No invisible marker is written or read, and no prose is parsed: a note with no /section- tag\n' +
+  '       is UNKNOWN and is read before anything is written. --tidy does not exist; a damaged body is\n' +
+  '       rewritten by the agent or retired and written again. --delete is a plan only in this round.'
+
+function parseArgs(argv) {
+  const options = {
+    item: '', note: '', section: '', text: '', file: '', title: '', reason: '', replaces: '',
+    claim: false, rewrite: false, delete: false, retire: false, undo: false,
+    plan: false, json: false, write: false,
+  }
+  const valued = new Set(['--item', '--note', '--section', '--text', '--file', '--title', '--reason', '--replaces'])
+  const switches = new Set(['--claim', '--rewrite', '--delete', '--retire', '--undo', '--plan', '--json', '--write'])
+  for (let index = 0; index < argv.length; index += 1) {
+    const flag = argv[index]
+    if (switches.has(flag)) {
+      options[flag.slice(2)] = true
+      continue
+    }
+    if (!valued.has(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
+    const next = argv[index + 1]
+    if (next === undefined) throw new UsageError(`${flag} needs a value`)
+    options[flag.slice(2)] = next
+    index += 1
+  }
+
+  const modes = ['claim', 'rewrite', 'delete', 'retire'].filter((mode) => options[mode])
+  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --rewrite, --delete, --retire')
+  if (options.undo && !options.retire) throw new UsageError('--undo belongs to --retire')
+  if (options.reason && !options.retire) throw new UsageError('--reason belongs to --retire')
+  if (options.title && !options.section) throw new UsageError('--title belongs to a --section create')
+  if (options.replaces && !options.section) throw new UsageError('--replaces goes with the --section it replaces')
+  if (options.json && (modes.length || options.section || options.text || options.file || options.title || options.replaces || options.note)) {
+    throw new UsageError('--json prints the coverage plan; it goes with --item and nothing else')
+  }
+
+  if (options.claim) {
+    if (!options.note) throw new UsageError('--claim takes --note <noteKey>')
+    if (!options.section) throw new UsageError('--claim takes --section <ordinal>')
+    if (options.item || options.text || options.file || options.title || options.reason || options.replaces || options.plan) {
+      throw new UsageError('--claim changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.rewrite) {
+    if (!options.note) throw new UsageError('--rewrite takes --note <noteKey>')
+    if (Boolean(options.text) === Boolean(options.file)) throw new UsageError('pass --text or --file, not both')
+    if (options.item || options.title || options.reason || options.replaces || options.plan) {
+      throw new UsageError('--rewrite changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.delete) {
+    if (!options.note) throw new UsageError('--delete takes --note <noteKey>')
+    if (options.item || options.section || options.text || options.file || options.title || options.reason || options.replaces || options.plan) {
+      throw new UsageError('--delete takes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.retire) {
+    if (!options.note) throw new UsageError('--retire takes --note <noteKey>')
+    if (!options.undo && String(options.reason).trim() === '') {
+      throw new UsageError('--retire needs --reason "<why>": the reason is the record of the change, and this tool stores no prose on the note')
+    }
+    if (options.item || options.section || options.text || options.file || options.title || options.replaces || options.plan) {
+      throw new UsageError('--retire changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.plan) {
+    if (!options.item) throw new UsageError('--plan takes --item <recordKey>')
+    if (options.section || options.text || options.file || options.title || options.replaces || options.note || options.write) {
+      throw new UsageError('--plan prints a record; it does not take a body or a write')
+    }
+    return options
+  }
+  if (options.section) {
+    if (!options.item) throw new UsageError('a --section write takes --item <recordKey>')
+    if (Boolean(options.text) === Boolean(options.file)) throw new UsageError('pass --text or --file, not both')
+    return options
+  }
+  if (options.note) throw new UsageError('--note belongs to --claim, --rewrite, --delete or --retire')
+  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--rewrite/--delete/--retire')
+  if (options.write) throw new UsageError('--write belongs to --section or one of the note modes')
+  return options
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  if (options.claim) {
+    await runClaim(options)
+    return
+  }
+  if (options.rewrite) {
+    await runRewrite(options)
+    return
+  }
+  if (options.delete) {
+    await runDelete(options)
+    return
+  }
   if (options.retire) {
     await runRetire(options)
     return
   }
-  if (options.plan || options.json || (!options.tidy && !options.section)) {
+  if (options.plan || options.json || !options.section) {
     await runPlan(options.item, { json: options.json })
     return
   }
-
-  if (options.tidy) {
-    const targets = options.note
-      ? [options.note]
-      : (await noteChildren(options.item)).filter((note) => note.claim.token).map((note) => note.key)
-    if (targets.length === 0) {
-      console.log(`${options.item} carries no note this tool identifies as a section note; nothing to tidy.`)
-      return
-    }
-    const gate = options.write ? createWriteGate({ appName: APP_NAME }) : null
-    if (gate) await gate.open()
-    let repaired = 0
-    for (const target of targets) repaired += await tidyOne({ noteKey: target, gate, write: options.write })
-    console.log(`\n${targets.length} note(s) examined, ${repaired} repaired.`)
-    return
-  }
-
   await runCreate(options)
 }
 

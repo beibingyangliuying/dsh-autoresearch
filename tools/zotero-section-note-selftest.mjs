@@ -1,393 +1,248 @@
-// Unit self-test for the section-note tool, runnable without a library.
-//
-// Usage: node tools/zotero-section-note-selftest.mjs
-//
-// Three things are load-bearing, and every one of them is tested with its negative control:
-//   1. a section note that already exists is FOUND - including the notes in this library that were
-//      written before the tool existed and carry no marker, whose claim is read from their opening
-//      phrase. Missing one creates a duplicate note on someone else's reading.
-//   2. the mechanical math repair converts only what it can prove, and says what it left alone.
-//      A repair that guesses at a broken formula is a rewrite wearing a formatter's clothes.
-//   3. it never produces `$` inside `$$`, which is not valid MathJax and would render as prose.
-// Nothing here touches a library: every function under test is pure.
-import { readFileSync } from 'node:fs'
-import { visibleText } from './zotero-local-api.mjs'
+// The section-note tool's offline suite: identity is a tag, nothing is parsed from prose, and the
+// mechanical repair is gone. Runnable with no library and no authorization.
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { createServer } from 'node:http'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   composeSectionNote,
   coveringNote,
-  displayMathRegions,
   firstBlockText,
   isApplicationWrapped,
+  isDigest,
+  isImported,
   isRetired,
   looksLikeHtml,
-  normalizeMath,
   normalizeSectionToken,
-  parentSectionToken,
   planJson,
-  readSectionMarker,
-  repairConverged,
+  readSectionTag,
   replacesKey,
   replacesTag,
   retireTags,
-  romanToNumber,
-  sectionClaim,
-  sectionMarker,
+  sectionTag,
+  sectionTokenFromTag,
   sectionWriteToken,
   successorOf,
-  topLevelSpans,
 } from './zotero-section-note.mjs'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
-  console.log(`  ${condition ? 'OK  ' : 'FAIL'} ${label}${detail ? `  ${detail}` : ''}`)
-  if (!condition) failures += 1
+  if (condition) {
+    console.log(`  PASS  ${label}`)
+    return
+  }
+  failures += 1
+  console.log(`  FAIL  ${label}${detail ? ` — ${detail}` : ''}`)
 }
-
 const same = (actual, expected, label) => check(actual === expected, label, actual === expected ? '' : `got ${JSON.stringify(actual)}`)
-
-/** Run something that must be refused, print the message it was refused with, and return that message. */
 const refused = (run, label) => {
   try {
-    const value = run()
-    check(false, label, `it returned ${JSON.stringify(value)} instead of refusing`)
-    return ''
+    run()
   } catch (error) {
-    check(true, label, String(error.message).slice(0, 96))
-    return String(error.message)
+    return error.message
   }
+  check(false, label, 'it did not throw')
+  return ''
 }
 
-console.log('section-note self-test')
-
-// --- the ordinal -------------------------------------------------------------------------------
-
-console.log('\n[1] the ordinal a note claims')
+console.log('\n[1] the ordinal a write may use')
 same(normalizeSectionToken('2'), '2', 'digits pass through')
 same(normalizeSectionToken('二'), '2', 'a Chinese numeral becomes digits')
-same(normalizeSectionToken('十'), '10', 'ten is ten')
 same(normalizeSectionToken('十二'), '12', 'twelve is twelve')
 same(normalizeSectionToken('第三节'), '3', 'a wrapped phrase is unwrapped')
 same(normalizeSectionToken('文章第7节'), '7', 'the article prefix is unwrapped too')
 same(normalizeSectionToken('Methodology'), '', 'no ordinal means no token - negative control')
-same(normalizeSectionToken(''), '', 'empty means empty')
-same(normalizeSectionToken('3.1'), '3.1', 'a dotted subsection number is kept as written')
-same(normalizeSectionToken('第3.1节'), '3.1', 'a dotted number is unwrapped too')
-same(sectionClaim('<p>文章第3.1节标题是 “Entropic degree”。</p>').token, '3.1', 'a subsection note claims its own number')
-same(sectionClaim('<p>文章第3节标题是 “X”。</p>').token, '3', 'and it is not confused with the section itself')
-
-const marked = composeSectionNote('2', '<p>解释</p>')
-check(marked.startsWith(sectionMarker('2')), 'a composed note opens with its marker')
-same(readSectionMarker(marked), '2', 'the marker reads back as the ordinal')
-same(readSectionMarker(sectionMarker('3.1')), '3.1', 'a dotted marker reads back too')
-same(readSectionMarker('<p>文章第2节标题是 “X”</p>'), '', 'an unmarked note has no marker')
-
-console.log('\n[2] what a note says it is about')
-
-same(sectionClaim('<p>文章第2节标题是 “X”，即…</p>').token, '2', 'the opening phrase is read (文章第2节标题是)')
-same(sectionClaim('<p>第三节题为 Methodology（方法论）…</p>').token, '3', 'the shortened opening phrase is read (第三节题为)')
-same(sectionClaim('<p>第二节标题是 GSDF…</p>').token, '2', 'the other shortened form is read (第二节标题是)')
-same(sectionClaim(marked).by, 'marker', 'a marker outranks the opening phrase')
-same(sectionClaim('<p>这一节讨论的是…</p>').token, '', 'a note that names no section claims none')
-same(
-  sectionClaim('<p>这一节的内容与第2节相关，但本节讲的是算法。</p>').token,
-  '',
-  'a section number mentioned later is a cross-reference, not a claim - negative control',
-)
-same(sectionClaim('<p>文章第3节给出的因子…</p>').by, 'paragraph', 'a phrase claim is attributed to the paragraph')
-
-// The forms measured on the owner's library. Every one of these is a note that a real record carries
-// and that the previous, stricter reader called "not a section note" - so each is a duplicate it would
-// have written.
-console.log('\n[2b] the forms the owner\'s own notes actually use, and the ones they do not')
-
-same(
-  sectionClaim('<p>解释文章的这一节（渲染好公式）：II. DERIVING RESPONSE PROFILES AFTER DISTURBANCES 第二节 扰动后响应的推导</p>').token,
-  '2',
-  'a section named after a label is still a claim (第N节 inside the first paragraph)',
-)
-same(
-  sectionClaim('<p>解释文章的这一节（渲染好公式）：III. PROPOSED PROPAGATION MODEL 第三节 所提传播模型</p>').token,
-  '3',
-  'and the Roman numeral beside it does not change the answer',
-)
-same(
-  sectionClaim('<p>解释文章的这一节：II. WEAK LINK IDENTIFICATION IN A NETWORK 网络中的弱环节识别</p>').token,
-  '2',
-  'a Roman numeral heading alone is a claim (II. is 2)',
-)
-same(sectionClaim('<p>Section 2 Methodology</p>').token, '2', 'the English section form is read')
-same(sectionClaim('<p>§3.1 The model</p>').token, '3.1', 'a section sign with a dotted ordinal is read')
-same(sectionClaim('<p>Appendix A.2. Re-Dispatch Strategy</p>').token, 'A.2', 'an appendix label is recorded rather than dropped')
-same(romanToNumber('III'), 3, 'III is 3')
-same(romanToNumber('IX'), 9, 'IX is 9')
-same(romanToNumber('IIII'), 0, 'a malformed numeral is not a number - negative control')
-
-// The sixteen "1. 一段话总结" notes on the owner's queue are why a bare leading number is NOT a claim:
-// "1. 一段话总结" (a whole-paper summary) and "2 仿真结果及分析" (a real section note) are the same
-// shape, so a rule that accepted one would claim §1 for all sixteen.
-same(sectionClaim('<p>1. 一段话总结 该研究为改善电力系统脆弱性…</p>').token, '', 'a numbered paragraph is not a claim - the measured false positive')
-same(sectionClaim('<p>2 仿真结果及分析 详细解释 本节是文章的验证核心</p>').token, '', 'and neither is a bare "N + title", which is why it is only a hint')
-same(
-  sectionClaim('<p>综述如下。</p><p>第2节给出模型。</p>').token,
-  '',
-  'a section number outside the FIRST paragraph is a cross-reference, not a claim - negative control',
-)
-same(
-  sectionClaim('<div data-schema-version="9"><p>解释：第三节 模型</p><p>第5节的表格见下。</p></div>').token,
-  '3',
-  'the application wrapper is skipped, and the first paragraph is what is read',
-)
-
-console.log('\n[2c] the boundary: a claim begins a clause, a cross-reference does not')
-same(
-  sectionClaim('<p>这一节的内容与第2节相关，但本节讲的是算法。</p>').token,
-  '',
-  'a section number inside a sentence is a cross-reference - the measured negative control',
-)
-same(
-  sectionClaim('<p>网络模型见 第3节，此处不重复。</p>').token,
-  '3',
-  'right after a space it IS a claim, which is the price of catching the notes that name it after a label',
-)
-same(sectionClaim('<p>解释文章的这一节（渲染好公式）：第二节 扰动后响应的推导</p>').token, '2', 'after a colon it is a claim')
-same(sectionClaim('<p>综述。第4节 结论与展望</p>').token, '4', 'at the start of a clause after a full stop it is a claim')
-
-console.log('\n[2d] coverage is counted per TOP-LEVEL section')
-
-same(parentSectionToken('3'), '3', 'a top-level section is its own parent')
-same(parentSectionToken('3.1'), '3', 'a subsection belongs to the section it is numbered under')
-same(parentSectionToken('2.1.3'), '2', 'however deep the numbering goes')
-same(parentSectionToken(''), '', 'an empty token has no parent', )
-same(parentSectionToken('A.2'), 'A', 'an appendix label belongs to its letter')
-
-/** A record's notes, as the create path sees them: a key and the section it claims. */
-const claiming = (...tokens) => tokens.map((token) => ({ key: `N${token.replace('.', '')}`, claim: { token } }))
-
-same(coveringNote([], '2'), undefined, 'nothing on the record covers nothing - negative control')
-same(coveringNote(claiming('1'), '2'), undefined, 'a different section is not coverage - negative control')
-same(coveringNote(claiming('3.2'), '3.1'), undefined, 'a SIBLING subsection is not coverage of 3.1 - negative control')
-same(coveringNote(claiming('3.1'), '3.1').note.key, 'N31', 'the same section is coverage')
-
-const wholeCoversPart = coveringNote(claiming('3'), '3.1')
-same(wholeCoversPart?.note.key, 'N3', 'a whole section covers the subsection asked for')
-check(/as a whole/.test(wholeCoversPart?.why ?? ''), 'and the refusal says which way it was covered', wholeCoversPart?.why)
-
-const partsCoverWhole = coveringNote(claiming('3.1', '3.2'), '3')
-check(partsCoverWhole !== undefined, 'a top-level section already covered in parts is not written again')
-check(/in parts/.test(partsCoverWhole?.why ?? ''), 'and the refusal names the parts', partsCoverWhole?.why)
-check(
-  coveringNote(claiming('3.1'), '3.2') === undefined,
-  'so the MISSING part is still writable: a record with 3.1 can take 3.2 - the split is a writing shape',
-)
-check(
-  coveringNote(claiming('3.1', '3'), '3.1') !== undefined && coveringNote(claiming('3.1', '3'), '3') !== undefined,
-  'and a record that carries both the part and the whole refuses either, whichever is asked for',
-)
-
-console.log('\n[2e] retiring a note frees its section without deleting anything')
-
-check(!isRetired([]), 'no tags means live - negative control')
-check(!isRetired(['/section-note']), "the earlier round's /section-note tag says a note IS a section note; it is not a retirement")
-check(isRetired(['/retired']), 'the retire tag retires')
-check(isRetired(['/Retired']), 'and a hand-typed capitalisation counts too - a silently un-retired note is the worst failure here')
-
-same(retireTags(['/section-note']).join(' '), '/section-note /retired', 'retiring keeps every tag the note already had')
-same(retireTags(['/retired', '/section-note']).join(' '), '/section-note /retired', 'and it is idempotent: one mark, however often it is asked for')
-same(retireTags(['/retired', '/x'], { undo: true }).join(' '), '/x', 'undo removes the mark and nothing else')
-same(retireTags(['/x'], { undo: true }).join(' '), '/x', 'undo on a live note changes nothing - negative control')
-
-const retiredNote = (token, extra = {}) => ({ key: `N${token.replace('.', '')}`, retired: true, claim: { token }, ...extra })
-const liveNote = (token, extra = {}) => ({ key: `N${token.replace('.', '')}`, retired: false, claim: { token }, ...extra })
-
-same(coveringNote([retiredNote('3')], '3'), undefined, 'a retired note does not cover its section, so the section is writable again')
-same(coveringNote([retiredNote('3')], '3.1'), undefined, 'and a retired whole does not cover its subsections either')
-same(coveringNote([liveNote('3')], '3').note.key, 'N3', 'a live note still covers it - the negative control for that filter')
-same(coveringNote([liveNote('3.1'), retiredNote('3.2')], '3').note.key, 'N31', 'a section covered in parts counts only its live parts')
-same(coveringNote([liveNote('3.1'), retiredNote('3.2')], '3.2'), undefined, 'so the part whose note was retired is writable again')
-
-same(replacesTag('ABCD1234'), '/replaces-ABCD1234', 'a successor names the note it replaces')
-same(replacesKey(['/replaces-ABCD1234']), 'ABCD1234', 'and that name reads back')
-same(replacesKey(['/section-note']), '', 'an identity tag names no predecessor - negative control')
-same(successorOf([liveNote('3', { tags: ['/replaces-OLD'] })], 'OLD'), 'N3', 'the successor of a retired note is found by its tag')
-same(successorOf([liveNote('3')], 'OLD'), '', 'and where nothing names one, nothing is reported')
-
-console.log('\n[2f] a subsection ordinal is read, and never written')
-
-same(normalizeSectionToken('3.1'), '3.1', 'READING still accepts a dotted ordinal: a library carries such notes, and the trash can give one back')
+same(normalizeSectionToken('3.1'), '3.1', 'a dotted number is kept only to be refused by the write path')
 same(sectionWriteToken('3'), '3', 'writing a top-level ordinal is what happens')
 same(sectionWriteToken('三'), '3', 'a Chinese numeral is written as digits')
 same(sectionWriteToken('第7节'), '7', 'and a wrapped phrase is unwrapped')
 const dotted = refused(() => sectionWriteToken('3.1'), 'WRITING a dotted ordinal is refused')
 check(/pass --section 3\./.test(dotted), 'and the refusal says which ordinal to pass instead', dotted)
-refused(() => sectionWriteToken('3.1.4'), 'however deep the dotted number goes')
-refused(() => sectionWriteToken('Methodology'), 'a value with no ordinal is refused as before - the negative control for the guard above')
 
-console.log('\n[3] the body must be HTML')
+console.log('\n[2] identity is a /section-N tag')
+same(sectionTag('2'), '/section-2', 'a claim is a tag')
+same(sectionTokenFromTag('/section-2'), '2', 'and the ordinal reads back')
+same(sectionTokenFromTag('/Section-2'), '2', 'case does not matter')
+same(sectionTokenFromTag('/section-note'), '', "the earlier round's /section-note tag is not a claim")
+same(sectionTokenFromTag('/section-3.1'), '', 'a dotted tag is not a top-level claim')
+same(readSectionTag(['/section-2']).token, '2', 'one tag is one claim')
+same(readSectionTag(['/Section-2']).token, '2', 'case is ignored when reading')
+same(readSectionTag(['/section-2', '/section-3']).ambiguous, true, 'two section tags are ambiguous, not a guess')
+same(readSectionTag(['/section-2', '/section-2']).ambiguous, false, 'the same tag twice is still one claim')
+check(readSectionTag(['/section-3.1']).invalid.includes('/section-3.1'), 'a dotted tag is reported as invalid')
+same(readSectionTag([]).token, '', 'no tag is no claim - negative control')
+
+console.log('\n[3] retire, imported and digest are different marks')
+check(!isRetired([]), 'no tags means live - negative control')
+check(isRetired(['/retired']), 'the retire tag retires')
+check(isRetired(['/Retired']), 'and a hand-typed capitalisation counts too')
+check(!isRetired(['/section-note']), "the earlier round's tag does not retire")
+same(retireTags(['/section-2']).join(' '), '/section-2 /retired', 'retiring keeps every tag the note already had')
+same(retireTags(['/retired', '/section-2']).join(' '), '/section-2 /retired', 'and it is idempotent')
+same(retireTags(['/retired', '/x'], { undo: true }).join(' '), '/x', 'undo removes the mark and nothing else')
+check(isImported(['/imported']), 'an imported note carries /imported')
+check(!isImported(['/section-2']), 'a native record does not')
+check(isDigest(['/digest']), 'a digest carries /digest')
+check(!isDigest(['/section-2']), 'a section note does not')
+
+console.log('\n[4] claiming a section, and what covers it')
+const live = (token, extra = {}) => ({ key: `N${token}`, retired: false, digest: false, claim: { token }, ...extra })
+const retired = (token, extra = {}) => ({ key: `R${token}`, retired: true, digest: false, claim: { token }, ...extra })
+same(coveringNote([], '2'), undefined, 'nothing covers nothing - negative control')
+same(coveringNote([live('1')], '2'), undefined, 'a different section is not coverage - negative control')
+same(coveringNote([live('3.1')], '3'), undefined, 'a dotted claim is not folded into its parent: no parent/child reading')
+same(coveringNote([live('2')], '2').note.key, 'N2', 'the same top-level claim is coverage')
+same(coveringNote([retired('2')], '2'), undefined, 'a retired note does not cover its section')
+same(coveringNote([{ ...live('2'), digest: true }], '2'), undefined, 'a digest is not a section note')
+same(coveringNote([{ ...live('2'), retired: true }], '2'), undefined, 'and a retired claim is writable again')
+
+console.log('\n[5] the successor pointer and the body shape')
+same(replacesTag('ABCD1234'), '/replaces-ABCD1234', 'a successor names the note it replaces')
+same(replacesKey(['/replaces-ABCD1234']), 'ABCD1234', 'and that name reads back')
+same(replacesKey(['/section-2']), '', 'a section tag names no predecessor - negative control')
+same(successorOf([{ key: 'NEW', tags: ['/replaces-OLD'] }], 'OLD'), 'NEW', 'the successor of a retired note is found by its tag')
+same(successorOf([{ key: 'NEW', tags: ['/section-2'] }], 'OLD'), '', 'and where nothing names one, nothing is reported')
+same(composeSectionNote('  <p>解释</p>  '), '<p>解释</p>', 'a composed note is the body, with no marker')
 check(looksLikeHtml('<p>解释</p>'), 'a paragraph is HTML')
 check(looksLikeHtml('<div data-schema-version="9"><ul><li>x</li></ul></div>'), 'a Zotero note shape is HTML')
 check(!looksLikeHtml('## Markdown heading\n\n- a bullet'), 'Markdown is refused - the library stores HTML')
-check(!looksLikeHtml('plain prose'), 'plain prose is refused')
-
-// --- the mechanical repair ----------------------------------------------------------------------
-
-console.log('\n[4] the mechanical math repair, and its refusals')
-const bracket = normalizeMath('<p>[ \\alpha = a P^L_{ij} + b Q^L_{ij} ]</p>')
-same(
-  bracket.html,
-  '<p>$$\n\\alpha = a P^L_{ij} + b Q^L_{ij}\n$$</p>',
-  'a bracket span with LaTeX becomes display math, on lines of its own',
-)
-same(bracket.applied.filter((r) => r.rule === 'bracket-to-display-math')[0]?.count, 1, 'the rule is counted once')
-same(
-  bracket.applied.filter((r) => r.rule === 'display-math-on-its-own-lines')[0]?.count,
-  1,
-  'the block-form rule is counted too',
-)
-same(normalizeMath('<p>[ \\alpha = \\beta ]</p>').applied.length, 2, 'two rules applied, two entries')
-
-const nested = normalizeMath('<p>[ [\\Delta P; \\Delta Q] = M [\\Delta \\theta; \\Delta V] ]</p>')
-same(
-  nested.html,
-  '<p>$$\n[\\Delta P; \\Delta Q] = M [\\Delta \\theta; \\Delta V]\n$$</p>',
-  'nested brackets are one display span, not two',
-)
-
-// The block form is the whole point of the rule, and it must not move a note that already has it.
-const blockShaped = normalizeMath('<p>$$\n\\alpha = \\beta\n$$</p>')
-same(blockShaped.html, '<p>$$\n\\alpha = \\beta\n$$</p>', 'a note already in block form is untouched - idempotent')
-same(blockShaped.applied.length, 0, 'nothing is applied to a note already in block form')
-const twice = normalizeMath(normalizeMath('<p>[ \\alpha = \\beta ]</p>').html)
-same(twice.applied.length, 0, 'running the repair on its own output changes nothing')
-same(
-  normalizeMath('<p>行内 $x_i$ 与 $\\lambda$ 不动。</p>').html,
-  '<p>行内 $x_i$ 与 $\\lambda$ 不动。</p>',
-  'inline math is left inline - negative control',
-)
-
-const emphasis = normalizeMath("<p>P_i = -\\sum B'<em>{ij}\\theta_j + \\sum</em>{j\\in S_B} G_{ij}V_j</p>")
-check(emphasis.html.includes("B'_{ij}"), 'the underscore a Markdown emphasis ate is restored')
-check(!emphasis.html.includes('<em>'), 'no emphasis tag is left behind')
-same(
-  normalizeMath('<p>这是一段<em>普通的强调</em>文字。</p>').html,
-  '<p>这是一段<em>普通的强调</em>文字。</p>',
-  'prose emphasis is left alone - negative control',
-)
-
-const citation = normalizeMath('<p>详见文献 [1,2] 与 [3]。</p>')
-same(citation.html, '<p>详见文献 [1,2] 与 [3]。</p>', 'a citation bracket is not math - negative control')
-same(citation.applied.length, 0, 'nothing was applied to a citation')
-
-const unmatched = normalizeMath('<p>[ \\min \\sum_{g\\in S_G} f_g(p_g^G)</p>')
-same(unmatched.html, '<p>[ \\min \\sum_{g\\in S_G} f_g(p_g^G)</p>', 'an unclosed bracket is never closed by guesswork')
-check(unmatched.leftAlone.length === 1, 'the node it could not balance is reported as left alone', `leftAlone=${unmatched.leftAlone.length}`)
-same(
-  unmatched.applied.length,
-  0,
-  'and nothing inside that node is converted either - the parentheses are still prose parens',
-)
-
-const inline = normalizeMath('<p>其中 (\\theta_i - \\theta_j) 是相角差。</p>')
-same(inline.html, '<p>其中 ($\\theta_i - \\theta_j$) 是相角差。</p>', 'a parenthesised LaTeX span becomes inline math')
-same(normalizeMath('<p>见公式 (40) 与式 (41)。</p>').html, '<p>见公式 (40) 与式 (41)。</p>', 'an equation number is not math')
-same(normalizeMath('<p>矩阵 (M^*) 的逆。</p>').html, '<p>矩阵 ($M^*$) 的逆。</p>', 'a bare sub/superscript counts as markup')
-same(normalizeMath('<p>对一个 (A) 求逆。</p>').html, '<p>对一个 (A) 求逆。</p>', 'a lone letter is not enough - negative control')
-
-// The parentheses stay outside the delimiters, because "(S^max)^2" and "$S^max$^2" differ.
-const power = normalizeMath('<p>[ (S_{mn}^{\\max,c})^2 \\le 1 ]</p>')
-same(power.html, '<p>$$\n(S_{mn}^{\\max,c})^2 \\le 1\n$$</p>', 'inside display math, parens stay parens')
-check(
-  normalizeMath('<p>取 (S_{mn}^{\\max})^2 为限值。</p>').html === '<p>取 ($S_{mn}^{\\max}$)^2 为限值。</p>',
-  'a superscript applied to a parenthesised term keeps its parentheses',
-)
-check(!power.html.replace(/\$\$/g, '').includes('$'), 'never `$` inside `$$` - it is not valid MathJax')
-check(power.changed.length === 1, 'a conversion is reported, so the heuristic can be eyeballed', `changed=${power.changed.length}`)
-same(normalizeMath('<p>见 [Smith 2019] 与 [12] 的讨论。</p>').skipped, 2, '"nothing to do" and "a span I declined" are counted apart')
-
-const alreadyDelimited = normalizeMath('<p>见 $x_i$ 与 (A_i) 的关系。</p>')
-same(alreadyDelimited.html, '<p>见 $x_i$ 与 (A_i) 的关系。</p>', 'a node already using $ is not this tool\'s business')
-
-const acrossTags = normalizeMath('<p>[ \\min \\sum_{g</p><p>} f_g ]</p>')
-same(acrossTags.html, '<p>[ \\min \\sum_{g</p><p>} f_g ]</p>', 'a span split across paragraphs is not converted')
-
-const pair = topLevelSpans('[a [b] c]', '[', ']')
-same(pair.length, 1, 'only the outermost bracket pair is a span')
-same(pair[0].inner, 'a [b] c', 'the inner text keeps the nested pair')
-same(displayMathRegions('$$a$$ and $$b$$').length, 2, 'two display regions are found')
-same(displayMathRegions('no math here').length, 0, 'no delimiter means no region')
-
-// --- the read-back, which must not cry wolf ------------------------------------------------------
-
-console.log('\n[4b] a read-back that survives the application rewriting the note')
-same(
-  visibleText('<!-- autoresearch-section: 2 -->\n<p>文章<strong>第二节</strong>。</p>'),
-  '文章 第二节 。',
-  'tags and the invisible marker are not part of what a reader sees',
-)
-same(
-  visibleText('<div data-schema-version="9"><p>$$\nx\n$$</p></div>'),
-  visibleText('<p>$$\nx\n$$</p>'),
-  'the wrapper the application adds does not change the visible text',
-)
-check(repairConverged('<p>$$\nx\n$$</p>'), 'a repaired body has nothing left to do')
-check(!repairConverged('<p>$$x$$</p>'), 'a one-line display block is not converged - negative control')
-check(repairConverged('<p>行内 $x_i$ 不动。</p>'), 'a body with no display math is converged')
-check(
-  repairConverged('<div data-schema-version="9"><p>$$x$$</p></div>', { lineBreaks: false }),
-  'on a note the application owns, a one-line block IS converged - it is not asked for',
-)
-check(
-  isApplicationWrapped('<div data-schema-version="9"><p>x</p></div>'),
-  'the application wrapper is recognized',
-)
+same(firstBlockText('<p>文章第2节标题是 “X”。</p><p>下一段</p>'), '文章第2节标题是 “X”。', 'the first block is what a reader sees first')
+check(isApplicationWrapped('<div data-schema-version="9"><p>x</p></div>'), 'the application wrapper is recognised')
 check(!isApplicationWrapped('<p>x</p>'), 'a note written through the API alone is not wrapped - negative control')
 
-// --- the file itself ---------------------------------------------------------------------------
-
-console.log('\n[5] the tool reads its own documentation the way the disciplines will')
-const source = readFileSync(new URL('./zotero-section-note.mjs', import.meta.url), 'utf8')
-check(source.includes('REFUSED: §'), 'the refusal names the section it refuses')
-check(!/require\(/.test(source), 'the tool is ESM, like the rest of the suite')
-check(source.includes('--retire --note'), 'the usage states the retirement form')
-check(!/['"]DELETE['"]/.test(source), 'this tool never sends a DELETE: a wrong note is retired, not removed')
-check(source.includes('the body is NOT touched'), 'and the plan says in so many words that the body is left alone')
-
 console.log('\n[6] the machine plan a round joins records on')
-
-const planNote = (key, token, extra = {}) => ({
+const planNote = (key, { section = '', retired: isRet = false, digest = false, imported = false, ambiguous = false, invalid = [], tags = [], html = '<p>x</p>' } = {}) => ({
   key,
-  html: '<p>x</p>',
-  tags: [],
-  retired: false,
-  claim: { token, rule: 'marker', evidence: `<!-- autoresearch-section: ${token} -->` },
-  ...extra,
+  html,
+  tags,
+  retired: isRet,
+  imported,
+  digest,
+  claim: { token: section, ambiguous, tags, invalid },
 })
 const plan = planJson({
   record: { key: 'REC1', itemType: 'journalArticle', title: 'A paper' },
-  attachment: { key: 'ATT1', data: { contentType: 'application/pdf' } },
+  attachment: { key: 'PDF1', data: { contentType: 'application/pdf' } },
   notes: [
-    planNote('N2', '2'),
-    planNote('N31', '3.1'),
-    planNote('N32', '3.2'),
-    planNote('OLD', '4', { retired: true, tags: ['/retired'] }),
-    planNote('NEW', '4', { tags: ['/replaces-OLD'] }),
-    planNote('SUM', '', { claim: { token: '', rule: 'none', evidence: '' } }),
+    planNote('LIVE2', { section: '2', tags: ['/section-2'] }),
+    planNote('LIVE3', { section: '3', imported: true, tags: ['/section-3', '/imported'] }),
+    planNote('NEW4', { section: '4', tags: ['/section-4', '/replaces-OLD4'] }),
+    planNote('OLD4', { section: '4', retired: true, tags: ['/section-4', '/retired'] }),
+    planNote('DIG', { digest: true, tags: ['/digest'] }),
+    planNote('SUM', { tags: [] }),
+    planNote('AMB', { ambiguous: true, tags: ['/section-2', '/section-3'] }),
+    planNote('DOT', { invalid: ['/section-3.1'], tags: ['/section-3.1'] }),
   ],
 })
-
 same(plan.record.key, 'REC1', 'the record is named')
-same(plan.record.title, 'A paper', 'with its title, so a list of records is readable without a second read')
 same(plan.file.contentType, 'application/pdf', 'and the file a reading would use')
-same(plan.counts.notes, 6, 'every child note is counted')
-same(plan.counts.live, 4, 'the live notes are counted apart from the tombstones')
+same(plan.counts.notes, 8, 'every child note is counted')
+same(plan.counts.live, 3, 'the live claims are counted apart from the tombstones')
 same(plan.counts.retired, 1, 'the retired note is a tombstone, not coverage')
-same(plan.counts.unreadable, 1, 'and the note it could not read is named as unreadable rather than folded into the rest')
+same(plan.counts.digest, 1, 'the digest is counted apart')
+same(plan.counts.unknown, 2, 'the unclaimed notes are named')
+same(plan.counts.ambiguous, 1, 'and a note with two claims is counted apart')
 same(plan.coverage.live.map((entry) => entry.section).sort().join(' '), '2 3 4', 'the live coverage is per top-level section')
-same(plan.coverage.live.find((entry) => entry.section === '3').notes.sort().join(' '), '3.1 3.2', 'a section covered in parts keeps its parts')
-same(plan.coverage.retired[0].note, 'OLD', 'the tombstone is reported')
-same(plan.coverage.retired[0].successor, 'NEW', 'with the note that names itself its successor')
-same(plan.notes.find((note) => note.key === 'NEW').replaces, 'OLD', 'and the successor carries that pointer on itself')
-same(plan.coverage.unreadable.join(' '), 'SUM', 'the note the tool could not read is listed, never guessed at')
-same(plan.notes.find((note) => note.key === 'OLD').origin, 'API', 'and how each note was written is stated')
+same(plan.coverage.retired[0].successor, 'NEW4', 'the tombstone points at its successor')
+same(plan.coverage.digest[0].note, 'DIG', 'the digest is reported as a digest')
+same(plan.coverage.unknown.sort().join(' '), 'DOT SUM', 'unknown notes are listed, never guessed at')
+same(plan.coverage.ambiguous.join(' '), 'AMB', 'ambiguous notes are listed, never guessed at')
+same(plan.notes.find((note) => note.key === 'LIVE3').imported, true, 'the imported claim is stated')
+same(plan.notes.find((note) => note.key === 'DOT').invalidSectionTags.join(' '), '/section-3.1', 'an invalid tag is reported')
 
-console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
+console.log('\n[7] the tool still says what it is doing')
+const source = readFileSync(fileURLToPath(new URL('./zotero-section-note.mjs', import.meta.url)), 'utf8')
+check(source.includes('REFUSED: §'), 'the refusal names the section it refuses')
+check(!source.includes('SECTION_MARKER_PREFIX'), 'no invisible marker constant remains')
+check(!source.includes('CLAIM_FORMS'), 'no prose claim regex remains')
+check(!source.includes('sectionClaim'), 'no prose claim reader remains')
+check(!source.includes('normalizeMath'), 'no mechanical math repair remains')
+check(!source.includes('options.tidy'), 'no --tidy mode remains')
+check(!/gate\.write\(\s*['"]DELETE['"]/.test(source), 'this tool never sends a DELETE: a retired note is planned, not removed')
+check(source.includes('DELETE /api/users/0/items/'), 'but the plan states the request a future round would send')
+check(source.includes('the body is NOT touched'), 'and the plan says in so many words that the body is left alone')
+
+console.log('\n[8] the command line refuses usage errors before it reads a library')
+const tool = fileURLToPath(new URL('./zotero-section-note.mjs', import.meta.url))
+const run = (...args) => spawnSync(process.execPath, [tool, ...args], { encoding: 'utf8' })
+same(run('--claim').status, 2, '--claim without --note is a usage error')
+same(run('--delete').status, 2, '--delete without --note is a usage error')
+same(run('--tidy', '--note', 'X').status, 2, '--tidy is gone')
+
+console.log('\n[9] the command line against a stub library, not the owner\'s')
+const stubItems = {
+  REC1: { key: 'REC1', itemType: 'journalArticle', title: 'A paper', version: 1 },
+  LIVE2: { key: 'LIVE2', itemType: 'note', note: '<p>第2节</p>', tags: [{ tag: '/section-2' }], version: 2, parentItem: 'REC1' },
+  UNK: { key: 'UNK', itemType: 'note', note: '<p>一段话总结</p>', tags: [], version: 3, parentItem: 'REC1' },
+  DIG: { key: 'DIG', itemType: 'note', note: '<p>digest</p>', tags: [{ tag: '/digest' }], version: 4, parentItem: 'REC1' },
+  OLD: { key: 'OLD', itemType: 'note', note: '<p>old</p>', tags: [{ tag: '/section-3' }, { tag: '/retired' }], version: 5, parentItem: 'REC1' },
+}
+const stubChildren = ['LIVE2', 'UNK', 'DIG', 'OLD'].map((key) => ({ key, data: stubItems[key] }))
+const requests = []
+const server = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+  requests.push(`${req.method} ${url.pathname}`)
+  const send = (status, body) => {
+    res.writeHead(status, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(body))
+  }
+  if (url.pathname === '/api/users/0/items/REC1/children') {
+    send(200, stubChildren)
+    return
+  }
+  const match = /^\/api\/users\/0\/items\/([A-Z0-9]+)$/.exec(url.pathname)
+  if (match && stubItems[match[1]]) {
+    send(200, { data: stubItems[match[1]] })
+    return
+  }
+  send(404, { error: 'not found' })
+})
+await new Promise((done) => server.listen(0, '127.0.0.1', done))
+const origin = `127.0.0.1:${server.address().port}`
+const runAsync = (args) =>
+  new Promise((done) => {
+    const child = spawn(process.execPath, [tool, ...args], { env: { ...process.env, ZOTERO_LOCAL_API: origin } })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (chunk) => (stdout += chunk))
+    child.stderr.on('data', (chunk) => (stderr += chunk))
+    child.on('close', (status) => done({ status, stdout, stderr }))
+  })
+
+const planRun = await runAsync(['--item', 'REC1', '--json'])
+same(planRun.status, 0, 'the plan exits 0')
+const machine = JSON.parse(planRun.stdout)
+same(machine.counts.live, 1, 'the plan sees the tagged claim')
+same(machine.counts.unknown, 1, 'and the untagged note')
+same(machine.counts.digest, 1, 'and the digest')
+same(machine.counts.retired, 1, 'and the tombstone')
+same(machine.coverage.unknown.join(' '), 'UNK', 'the untagged note is named, not guessed at')
+
+const claimRun = await runAsync(['--claim', '--note', 'UNK', '--section', '5'])
+same(claimRun.status, 0, 'claiming an untagged note is a dry run')
+check(claimRun.stdout.includes('/section-5'), 'the plan shows the tag it would write')
+check(claimRun.stdout.includes('/imported'), 'and the /imported mark that keeps it rewritable')
+
+const scratch = mkdtempSync(join(tmpdir(), 'section-note-'))
+const bodyFile = join(scratch, 'new.html')
+writeFileSync(bodyFile, '<p>new body</p>', 'utf8')
+const rewriteRun = await runAsync(['--rewrite', '--note', 'UNK', '--file', bodyFile])
+same(rewriteRun.status, 0, 'rewriting an import is a dry run')
+check(rewriteRun.stdout.includes('backup'), 'and it names the backup it would make')
+const nativeRewrite = await runAsync(['--rewrite', '--note', 'LIVE2', '--file', bodyFile])
+same(nativeRewrite.status, 2, 'a native record is not rewritten in place')
+
+const deleteRun = await runAsync(['--delete', '--note', 'OLD'])
+same(deleteRun.status, 0, 'a retired note has a deletion plan')
+check(deleteRun.stdout.includes('DELETE /api/users/0/items/OLD'), 'the plan states the request')
+check(deleteRun.stdout.includes('permanent'), 'and that the channel cannot undo it')
+const liveDelete = await runAsync(['--delete', '--note', 'LIVE2'])
+same(liveDelete.status, 1, 'a live note is refused')
+
+check(requests.every((line) => line.startsWith('GET ')), 'every dry run sent GET only: nothing was written', requests.join(' | '))
+server.close()
+
+console.log(failures === 0 ? '\nPASS - section-note identity is tags, and no prose is parsed' : `\nFAIL (${failures})`)
 process.exit(failures === 0 ? 0 : 1)
