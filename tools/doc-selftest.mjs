@@ -144,12 +144,27 @@ const files = {
   coverage: existsSync(COVERAGE) ? readFileSync(COVERAGE, 'utf8') : null,
 }
 
+/**
+ * Whether a document names a public symbol, as opposed to merely containing its letters inside a longer
+ * path token.
+ *
+ * The contract states the study scaffold's layout, and one of the directories a study carries is named
+ * after the discipline that fills it (`.section-notes/`). A substring test cannot tell that path from a
+ * mention of the discipline, and reporting it would push the contract into describing the layout without
+ * naming one of its own directories. A symbol is therefore matched only where it stands as a word: not
+ * glued to the `/`, `.` or `-` of a surrounding path segment.
+ */
+function mentionsSymbol(text, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\w./-])${escaped}(?![\\w/-])`, 'm').test(text)
+}
+
 const checks = [
   {
     id: 'DOC-1',
     label: 'the contract names no public symbol',
     run: ({ protocol, symbols }) => {
-      const leaked = symbols.filter((name) => protocol.includes(name))
+      const leaked = symbols.filter((name) => mentionsSymbol(protocol, name))
       return leaked.length === 0 ? null : `leaked: ${leaked.join(', ')}`
     },
   },

@@ -232,36 +232,27 @@ elsewhere; the layout is the same.
 
 ```text
 <study>/
-  AGENTS.md            domain constraints: invariants, authority order, notation, environment
-  research/
-    00_scoping.md      question, boundary, non-goals, decidability
-    literature/        reconstruction notes — non-normative by construction; one file per research
-                       question, each carrying that question's own reading ledger: one row per paper,
-                       the depth the reading reached and the verdict that stopped it
-    adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
-                       into which module, and the number that proves the code
-    rulings/           challenges and the rulings on them
-    journal/           the round-by-round record; never a conclusion
-    owner_actions.md   what this preset asks the owner to do and cannot do itself: one row per item,
-                       naming the record, the note, the section, the action, why, the replacement
-                       draft's path and its status; a request, never a record
-    experiments/       a run's prediction, what it actually did, and what proves it — the
-                       prediction is written before the run, so it lives in its own file
-      protocols/       one pre-registration per run, named by the run's id
-      evidence/        copies of the cited artifacts a run wrote outside the study's own record
-    pitfalls/          symptom-indexed operational record; pruned when obsolete
-    archive/           retired documents, and a README saying what they were and what replaced them
-  .agents/skills/      study-level discipline, if the domain needs one
+  AGENTS.md            domain constraints: invariants, authority order, notation, environment — the
+                       owner writes it; the scaffold leaves it absent rather than prefilled
+  00_scoping.md        question, boundary, non-goals, decidability
+  references/          one archive per research question, non-normative by construction: which record
+                       was consulted, how far the reading got, and the verdict that stopped it
+    README.md          this layer's rules: pointers only, no new judgement, adoption decided elsewhere
+    ledger.md          the ledger's shape, one row per question and paper, empty until a reading fills it
+  .section-notes/      what a round drafts before writing to the library; working files, no authority
 ```
 
-The contract states this layout itself in [`protocol.md`](protocol.md) §7. **The study's own README
-carries no map** — the authority table lives in the study's `AGENTS.md` §3, so that one list has one
-home, and `project-template/README.md` is the entry point a new study inherits rather than a
-description of the scaffold.
+Two things about this block are the point of it. It is **one layer**, because one layer is what two real
+studies had independently defined the same way — everything else is created by the discipline that first
+writes there, and that round reports the path it used, so the scaffold stops guessing what a study will
+look like. And it does not prescribe where a study keeps them: a study that already has a `research/`
+directory keeps its layers under it, a study without one keeps them at its root, and a study carrying both
+stops the round with a question instead of being quietly adapted.
 
-Three statements of the same layout is exactly the shape that drifts, so `tools/scaffold-selftest.mjs`
-holds the contract's version, the block above, and the authority table a study inherits to each other:
-a directory added to one of them and forgotten in the others is a failure rather than a silent
+The contract states this layout itself in [`protocol.md`](protocol.md) §7, and the scaffold's own README
+says what to do first rather than repeating the map. Two statements of one layout is still the shape that
+drifts, so `tools/scaffold-selftest.mjs` holds the contract's version and the block above to each other and
+to what is on disk: a directory added to one and forgotten in the other is a failure rather than a silent
 divergence. (It found one on its first run — see [`docs/decisions.md`](docs/decisions.md) §45.)
 
 ## Layout

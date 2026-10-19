@@ -1757,3 +1757,61 @@ Revision 22 划走的职责；判决归读轮）。
 - 别的库可能仍有 `/digest` 笔记：工具只认、不算覆盖、不迁移、不删除；本库 0 条。
 - 删掉写入路径后，旧 digest 只能手工改；纪律已禁止再写，所以这不是日常路径。
 
+
+---
+
+## 67. 脚手架只留唯一确定的一层：`references/`，其余交给"第一次写它的人"（Revision 26，2026-10-19）
+
+**起因**：junhan 说模板和他真实课题的形状"压根不一样"，准备把自己仓库里的研究区规划整个删了重来；
+他最关心的两点是**参考文献的渐进式读取**与**布局**。所以这一刀不是"把模板做全"，是"把模板里没人用过的
+部分剪掉"。
+
+**先验（本轮只读核对，不是回忆）**：
+
+| 事实 | 出处 |
+|---|---|
+| 模板预建 7 个层（`adoption/` `rulings/` `journal/` `experiments/` `pitfalls/` `archive/` `owner_actions.md`），两个真实课题**一个都没用** | `doc/地震后区域电网…/` 与 `doc/局部电气设备减隔震…/` 的目录列表 |
+| 只有 `references/` 在两边各有一份**可比的层定义**，且两份 `README.md` 规则一致：非规范、只指向、照抄等级、不新增判定、不改写被指向的笔记 | 两份 `references/README.md` |
+| 目录名另有重叠（`audit/` `design/` `prospects/` `specs/`），但 A 没有课题根 `README.md`，那几层在 A 侧没有可比的层定义 | 同上 |
+| `AGENTS.md.template` 的 17 处 `research/` 路径与两个真实课题**零重合** | 模板全文 vs 两个课题的目录 |
+| 护栏一直"绿着不真"：`scaffold-selftest` 只比三份名单**互相一致**，不比它们是否描述真实用法 | 三处名单长期一致，而两个课题一处都没用上 |
+| 台账两套词表（`depth`／`verdict`）在模板 `literature/README.md` 里有第二份拷贝 | 与 Revision 25 定下的"定义只在纪律里"相抵 |
+
+**裁定（junhan 逐项确认）**：
+
+1. 模板只留 **`references/`（`README.md` + `ledger.md`）、`00_scoping.md`、`.section-notes/`**。
+2. **`AGENTS.md` 整份不进模板**：不变式、权威顺序、记号只能由属主写；预填的骨架会被当成权威表读。
+3. **去掉 `research/` 这层包装**：层直接落在课题根。
+4. **层根规则**（替代"课题声明"这层间接）：`<study>/research/` 存在就用它，否则用 `<study>/`；
+   两种同时存在 ⇒ **停下问**。它由文件系统可判，不需要先读某份文档。
+5. 其余层**不预建**，由第一次往那里写的纪律创建，并在报告里写出用了哪个路径。
+
+**否掉的方案**：14 个文件全量重写成 `doc/<课题>/…`（把一个课题的形状换成另一个课题的形状，是同一类错误）
+· 保留 `AGENTS.md.template` 只改内容（预填的不变式会被读成权威）· 用"课题声明文件"做路径间接（多一层要
+先读的文档，而目录结构本身可判）· 把两套词表留在模板里（第二份拷贝就是第二个要维持的真相）。
+
+**实现**：
+
+- 契约升 **Revision 26**：§7 换成新布局块 + "层根"两段；权威顺序一段补"没有约束文件时，需要不变式的
+  那一轮说它缺并停下"。
+- `project-template/`：新增 `references/{README.md,ledger.md}`；`00_scoping.md` 上移到根；
+  删除 `AGENTS.md.template`、`.agents/`、`research/` 全部；`README.md` 改写成"先写 `AGENTS.md`"的入口。
+- `tools/scaffold-selftest.mjs`：解析器从 `research/` 起点改为 `<study>/` 根；名单降为两份（§7 + README）；
+  **S5 反转**为"模板里不许有 `AGENTS.md*`"；**S3 加强**为"名单点名的文件也必须在盘上存在"（原来带扩展名的
+  一律跳过）；S2 覆盖根级文件（`README.md` 显式豁免）。
+- `tools/new-project.ps1`：删改名段；"Next:" 改为"先写 `AGENTS.md`"。
+- `tools/doc-selftest.mjs`：**DOC-1 收紧**为"作为词提及"，不再是子串命中——`.section-notes/` 是路径，
+  把它当成纪律名提及会让契约无法描述自己的布局。负控制仍用"注入一个符号"验证它还能红。
+- 10 份纪律的 26 处 `research/` 路径改为层根相对路径；4 处对课题 `AGENTS.md` 的引用改为"若有"。
+
+**落点**：[`protocol.md`](../protocol.md) §7 · [`README.md`](../README.md) 布局块 ·
+`project-template/` · [`scaffold-selftest`](../tools/scaffold-selftest.mjs) ·
+[`new-project.ps1`](../tools/new-project.ps1) · [`doc-selftest`](../tools/doc-selftest.mjs) ·
+[`coverage.md`](coverage.md) · [`revision-26.md`](plans/revision-26.md)。
+
+**未做／边界**：
+
+- **旧课题零迁移**：不删、不搬、不改写；有 `research/` 的课题由层根规则指回原处。
+- 新课题在属主写出 `AGENTS.md` 之前**没有不变式可读**，这是已知且已接受的代价；两处提示 + 纪律不编造。
+- 没有拿一个真实新课题跑过 `new-project.ps1` 的完整流程（只做了 `-DryRun`）；
+  "层根规则"只在文件结构上推理过，还没被一次真实纪律执行踩过。

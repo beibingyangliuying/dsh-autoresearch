@@ -1,9 +1,21 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 25.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 26.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 25 removes the **paper-level digest**. Every discipline
+independent of any package version. Revision 26 shrinks the **study scaffold** to the one layer that two
+real studies had independently defined the same way. The scaffold used to pre-create seven directories and
+an authority table a study inherited; neither of the two studies this preset was measured against had used
+any of them, and each had grown its own shape instead, so the template was stating a shape rather than a
+minimum. What survives is the scoping document and one non-normative literature layer — the only layer
+whose rules two independent studies wrote identically: pointers only, the grade the reading was given
+copied and never refined, and no verdict about adoption. Every other layer is now created by the
+discipline that first writes there, and that round names the path it used. The revision also stops
+requiring the `research/` wrapper: a study's layer root is `research/` where that directory exists and the
+study's own root where it does not, and a study carrying both is not silently adapted — it stops the round,
+which asks which tree is the study's. The prefilled constraint file goes with them, because an authority
+table is its owner's to write and a discipline that needs an invariant now says it is missing instead of
+reading a placeholder. §7 states all of it. Revision 25 removes the **paper-level digest**. Every discipline
 step that wrote one, the invariant that bounded it, and the helper that maintained it are gone: a
 projection that introduces no fact its section notes do not carry adds a write per paper and answers
 nothing a reader of those notes cannot answer, and this preset's own library had never produced one.
@@ -439,31 +451,32 @@ it is a program the agent runs, which is why an unused channel costs nothing on 
 
 ## 7. The study scaffold
 
-The scaffold offers a study the minimum it needs to be auditable. Roles, not just paths:
+The scaffold offers a study the minimum it needs to be auditable — one pre-created layer, not the seven it
+used to. Roles, not just paths:
 
 ```text
 <study>/
-  AGENTS.md            domain constraints: invariants, authority order, notation, environment
-  research/
-    00_scoping.md      question, boundary, non-goals, decidability
-    literature/        reconstruction notes — non-normative by construction; one file per research
-                       question, and each file carries that question's own reading ledger: one row
-                       per paper, the depth the reading reached and the verdict that stopped it
-    adoption/          one ruled ledger per reference read: what may be borrowed, on what terms,
-                       into which module, and the number that proves the code
-    rulings/           challenges and the rulings on them
-    journal/           the round-by-round record; never a conclusion
-    owner_actions.md   what this preset asks the owner to do, and cannot do itself: one row per item,
-                       naming the record, the note, the section, the action, why, the replacement
-                       draft's path and its status; a request, never a record
-    experiments/       what a run was predicted to do, what it did, and what proves it: the
-                       prediction is written before the run, so it lives in its own file
-      protocols/       one pre-registration per run, named by the run's id
-      evidence/        copies of the cited artifacts a run wrote outside the study's own record
-    pitfalls/          symptom-indexed operational record; pruned when obsolete
-    archive/           retired documents, and a README saying what they were and what replaced them
-  .agents/skills/      study-level discipline, if the domain needs one
+  AGENTS.md            domain constraints: invariants, authority order, notation, environment — the
+                       owner writes it; the scaffold leaves it absent rather than prefilled
+  00_scoping.md        question, boundary, non-goals, decidability
+  references/          one archive per research question, non-normative by construction: which record
+                       was consulted, how far the reading got, and the verdict that stopped it
+    README.md          this layer's rules: pointers only, no new judgement, adoption decided elsewhere
+    ledger.md          the ledger's shape, one row per question and paper, empty until a reading fills it
+  .section-notes/      what a round drafts before writing to the library; working files, no authority
 ```
+
+**The layer root.** A study that keeps its layers under `research/` — every study scaffolded before
+Revision 26 does — keeps them there: a layer sits at `research/<layer>/`. A study without that directory
+keeps them at its own root. A study carrying both is not guessed at: the round stops and asks which tree
+is the study's. The rule is decidable from the filesystem, so no document has to be read to learn it, and
+a study scaffolded either way needs no migration.
+
+**Only the literature layer and the scoping document are created up front.** Every other layer a
+discipline writes into — adoption ledgers, rulings, the journal, the owner-action list, the experiments,
+the pitfalls, the archive — is created by the discipline that first writes there, and that round names the
+path it used in its report. A scaffold that pre-built all of them stated a shape none of the studies it
+was measured against had adopted, and a directory made for later says nothing by being empty.
 
 A study scaffolded before Revision 22 may still carry `research/literature/refs/`. No discipline reads
 it — a ledger now sits in each question's own literature file — and a round that finds it reports it and
@@ -476,7 +489,9 @@ adoption ledger sits on both sides of that line and the contract says which is w
 claim, like a note, and it **binds the code**, so a module that disagrees with a ruled item is a defect
 rather than a difference of opinion. An owner-action list is a third kind of thing: a request, which
 states what the round could not do itself, carries the reason and the replacement with it, and grounds
-nothing.
+nothing. Where a study has no constraint file yet, nothing stands at the top of that order: a round that
+needs an invariant says the study has none and stops rather than inventing one, because the order it would
+be inventing is the one thing the study's owner has not yet stated.
 
 A retired document is moved into the study's archive with a note saying what it was and what replaced
 it, and is not rewritten there; a live pointer into it is updated, a dated record inside it is not. The
