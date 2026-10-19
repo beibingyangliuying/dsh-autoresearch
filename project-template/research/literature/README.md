@@ -9,10 +9,9 @@ file, and the two readings are independent of each other.
 
 - **Citation format**: TODO (default: title · authors · year · venue · DOI/arXiv id/URL).
 - **One row per (research question × paper)**, keyed by the library `itemKey`.
-- **Evidence grades are about the sentence, not the paper**: `A` the specific passages the claim rests
-  on were read · `B` only the abstract or the introduction · `C` a second-hand paraphrase. The
-  ledger's `depth` column is what says how far the paper itself was read; a grade never claims more
-  than a reading did.
+- **Evidence grades are defined by the `literature-recon` discipline (§3.1)**: they are about the
+  sentence, never about the paper, and the ledger's `depth` column is what says how far the paper
+  itself was read. A grade never claims more than a reading did.
 - Every claim carries a source, or is marked `[exploratory]`.
 - Contradicting evidence gets its own section. "None found" must state the search scope.
 - Files here are **non-normative**: they never ground an experiment or a conclusion on their own.
@@ -39,7 +38,7 @@ record.
 | Column | Written by | Means |
 |---|---|---|
 | `itemKey` `year` `found via` | the search round, append-only | which library record, which year, and which query or channel produced it |
-| `grade` | the round that read it | how firmly our sentence about this paper stands: `A` / `B` / `C` |
+| `grade` | the round that read it | how firmly our sentence about this paper stands: the grade `literature-recon` §3.1 defines |
 | `depth` | the round that read it | how far the paper was read: `—` / `abstract` / `§N` / `full` |
 | `verdict` | a reading round | why the reading stopped: `park` / `enough` / `stop`; empty = nobody has judged it yet |
 | `basis` | a reading round | the section, and the sentence, that decided it; name the note when the judgement came from one |

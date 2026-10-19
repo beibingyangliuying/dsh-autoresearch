@@ -67,6 +67,9 @@ on §3 read line by line is `A` while the reading stopped at `§3`: the ledger c
 `depth=§3`, and neither is a lie about the other. **`A` does not mean "the whole paper was read"** — the
 column that says where a reading stopped is `depth`.
 
+**This table is the definition of the grades.** The study template, the triage discipline and the
+adoption discipline cite it; none of them restates it, so a change lands in one place.
+
 ### 3.2 Every citation must be locatable
 
 Give title · authors · year · venue or preprint server · one retrievable identifier (DOI / arXiv id / URL). **If it has no retrievable identifier, it does not go in.**
@@ -101,7 +104,7 @@ Literature that contradicts your expectation or the target claim gets its own se
 | Literature contradicting the claim was found | It must go into the contradicting-evidence section. Never hide it. |
 | It is a preprint / not peer reviewed | Mark it explicitly. |
 | "Many studies show" with no concrete references | Either supply the concrete references, or downgrade to "insufficient evidence found". |
-| The record already carries a note that reads like a digest but has no `/digest` tag | Read it; if it is the digest, add the tag with `zotero-edit.mjs --item <noteKey> --add-tag /digest --write` (after reading it), then refresh it with `zotero-note.mjs`. Otherwise the note tool creates a **second** digest. If you cannot tell, report both readings and stop. |
+| The record already carries a note that reads as a whole-paper summary | Read it; it is **not** a section note and must not be claimed for one. A note an earlier version tagged `/digest` is this case: report it as a legacy digest, leave it, and do not create a second one. |
 
 ## 5. Wording discipline
 
@@ -215,12 +218,12 @@ Fixed sections:
   says where the last reading stopped and why, which is the state this round starts from. Before opening
   a paper for this question, look for its row; before opening one for another question, look for it in
   that question's file (`grep -r "<itemKey>" research/literature/*.md`).
-- **After reading, record what was read in that row; the digest comes later.** Append the row if this is
+- **After reading, record what was read in that row.** Append the row if this is
   the paper's first appearance, then fill `grade` and `depth` from what was actually retrieved — `B` +
   `abstract` for a screening read, `A` + `§N` or `full` for the sections actually read. Nothing else
   records how far a paper was read, and both cells are written from the text in front of you or not at
-  all. The row is **not** the paper-level digest: that is written by `section-notes` after the section
-  notes exist, and a paper with no section notes has no digest (§4 of that discipline).
+  all. Turning a method section into a note is `section-notes`' act, and a paper nobody wrote notes for
+  is still recorded here: the row is the record, not a summary.
 
   ```powershell
   node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write
@@ -228,10 +231,6 @@ Fixed sections:
 
   The item's `/done` tag is a **marker, not a record**: it carries neither a grade nor a depth, and no
   judgement reads it. What the next round reads is the ledger row.
-- **The digest is one `/digest` note per record, from the section notes.** `section-notes` writes it
-  after the notes; `zotero-note.mjs --item <recordKey> --file <digest.html>` creates it or refreshes it
-  in place. Do not write a digest from the raw PDF in the literature round, and do not treat the ledger
-  row as the digest. If the record has no section notes, stop after the row.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.
 - Do not fill in unread passages to make the note look complete.
 

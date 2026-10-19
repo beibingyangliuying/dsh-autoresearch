@@ -6,10 +6,10 @@ implementer who will never open the paper.
 
 ## Why it exists
 
-A section note explains the method **in the paper's own terms, without evaluating**; the `/digest` is
-their paper-level projection; and the question's ledger row says how far the paper was read and why the
-reading stopped. None of them says what *we* take, under what condition it survives our data, into
-which module it goes, or how anyone would notice that the code implements a different formula. This
+A section note explains the method **in the paper's own terms, without evaluating**; the question's
+ledger row says how far the paper was read and why the reading stopped. None of them says what *we*
+take, under what condition it survives our data, into which module it goes, or how anyone would notice
+that the code implements a different formula. This
 directory answers that, one item at a time — and until it does, the only thing standing between a
 paper's equation and its implementation is memory.
 
@@ -61,14 +61,13 @@ Derived data: if it is lost, rebuild it from the per-reference files. Add a line
 - Nothing here is written from memory of the paper: a formula is transcribed from a slice actually read,
   and the slice offset is recorded.
 - A formula whose copy is ambiguous is `ambiguous` and blocked, **not reconstructed**.
-- This directory writes nothing into the reference library. The `/digest` note belongs on the record;
-  the reading record is the question's ledger row in `../literature/<topic>.md`; section notes belong on
-  the record.
+- This directory writes nothing into the reference library. The section notes belong on the record;
+  the reading record is the question's ledger row in `../literature/<topic>.md`; the `/digest` note an
+  earlier version wrote is legacy and is not replaced here.
 
 ## What is not in this directory
 
-- **Not the digest** — that is the record's `/digest` note, a projection of its section notes. The
-  reading record is the question's ledger row under `../literature/<topic>.md`.
+- **Not the section notes** — those live on the record, one per top-level method section.
 - **Not a literature note** — that is `../literature/<topic>.md`, and it is about the field.
 - **Not an experiment card** — that is `../experiments/<id>.md`, and it records a run that happened.
 

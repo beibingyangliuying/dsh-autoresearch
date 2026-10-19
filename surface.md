@@ -10,7 +10,7 @@ mounts no MCP server. This file answers one question only — *which name implem
 | Scoping discipline — a topic becomes a decidable question (§4) | `research-scoping` |
 | Literature discipline — sources graded by what was read (§4) | `literature-recon` |
 | Reading-triage discipline — how far one paper is worth reading for one named question, recorded in that question's own ledger (§4) | `reading-triage` |
-| Section-notes discipline — one `/section-N` explanation note per top-level method section, plus the paper-level `/digest` projection (§4) | `section-notes` |
+| Section-notes discipline — one `/section-N` explanation note per top-level method section (§4) | `section-notes` |
 | Adoption discipline — what a paper read may lend, under what condition, into which module (§4) | `adoption-ruling` |
 | Challenge discipline — objections, or an honest refusal (§4) | `redteam-ruling` |
 | Settlement discipline — conclusions, rejections and rulings (§4) | `progress-sync` |

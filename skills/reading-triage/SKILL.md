@@ -43,7 +43,7 @@ Read-only, before reading the paper:
    now hold? A current `enough` or `stop` with no change is a closed question: do not open it again.
 3. **Whether the record already carries notes** — `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`
    prints every child note's tags **and its first paragraph** in one call, plus `covered`, `retired`,
-   `digest`, `unknown` and `ambiguous`. This is the reuse probe: another question may already have
+   `legacy`, `unknown` and `ambiguous`. This is the reuse probe: another question may already have
    transcribed the sections this one needs.
 4. **What the question needs** — the exact claim or number this paper is supposed to supply, in one
    sentence, before the first slice is read. A reading that starts without it cannot know when to stop.
@@ -105,13 +105,12 @@ round knows where to resume if the question changes.
 ### 3.4 `grade` and `depth` are two axes, and both are honest
 
 - `depth` says how far the **paper** was read.
-- `grade` says how firmly **the sentence we wrote about it** stands: `A` the specific passages the
-  sentence rests on were read · `B` only the abstract or the introduction · `C` a second-hand
-  paraphrase.
+- `grade` says how firmly **the sentence we wrote about it** stands. Its three values are defined by
+  `literature-recon` §3.1 and are not restated here; what matters on this axis is that a grade never
+  claims more than the reading did, and `depth` is the column that says where the reading stopped, so
+  `A` never means "the whole paper was read".
 
 Reading §3 line by line and stopping there is `grade=A, depth=§3`. That is a complete and honest row.
-A grade never claims more than the reading did, and `depth` is the column that says where the reading
-stopped, so `A` never means "the whole paper was read".
 
 ### 3.5 Sequential reading is the default, and it is free
 
@@ -319,8 +318,9 @@ answer to the owner.
   ...]`; re-fetch that offset and quote from the live text
 - Do not evaluate the paper's quality, novelty, or writing
 - Do not read past the section that settles the question: `stop` and `enough` both stop the reading
-- Do not write `enough` from a digest, a note's first paragraph, or an abstract — an abstract can rule
-  a paper out for a question, never in. A `stop` may rest on the abstract, and `basis` then says so.
+- Do not write `enough` from a whole-paper summary, a note's first paragraph, or an abstract — an
+  abstract can rule a paper out for a question, never in. A `stop` may rest on the abstract, and
+  `basis` then says so.
 - Do not edit, retire, or claim a section note from here; that is `section-notes`' act, with its own
   rules
 - Do not change a research direction, and do not report a field-level absence from one paper's `stop`

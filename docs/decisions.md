@@ -1696,3 +1696,64 @@ Revision 22 划走的职责；判决归读轮）。
 至今没在真实的多篇轮次上跑过，它的第一次执行同时就是它的第一次验收。筛选 5 篇 ≈15k 字符是估算
 （每篇约 3k 输出），未在真实队列上计时。
 
+---
+
+## 64. 废除 digest、保留两套裁定、A/B/C 定义收敛（Revision 25，2026-10-19）
+
+**缘起**：junhan 盘这套预设时提出三件事——(1) digest 生成规范还在，但已经有逐节笔记，"感觉鸡肋"；
+(2) "裁决笔记"也像鸡肋，因为他自己按 `doc/<课题>/references` 安排哪些文献值得参考；(3) A/B/C 评级
+标准是从哪来的，值得保留。
+
+**先验（本轮实读，不是回忆）**：
+
+| 事实 | 出处 |
+|---|---|
+| digest 在真库 **0 条**，回收站也是 0 | [`plans/note-pipeline.md` §2](plans/note-pipeline.md) · 本文 §58 |
+| digest 的定义禁止它引入节笔记没有的事实 ⇒ 信息量 ≤ 节笔记 | `skills/section-notes/SKILL.md` §4（删除前） |
+| 没有纪律把它当主输入：`reading-triage` 禁止凭它判 `enough`，`adoption-ruling` 以节笔记为 primary input | 两份纪律 §3.4 / §2 |
+| 写一次 digest = 两次库写入（retired 快照 + PATCH），刷新会累积墓碑 | `protocol.md` §6（删除前）· `plans/note-pipeline.md` §12.3 |
+| 两套裁定早已是"按需、不进主流程"，不加载时零成本 | `plans/note-pipeline.md` §14 裁定 8 · `cordis.patch.yml` 路由 |
+| A/B/C 是本预设自定，不是外部量表；Rev 22 把 `A` 从"读了全文"改成"读了这句话靠的那几段" | `skills/literature-recon/SKILL.md` §3.1 · 本文 §62 S1 |
+
+**裁定（junhan 逐项确认）**：
+
+| # | 项 | 裁定 |
+|---|---|---|
+| 1 | digest | **彻底删除**（不是降级为可选）：不再有任何纪律步骤、不变量或工具写它 |
+| 2 | 两套裁定 | **都保留**，补"按需、不是读文献的步骤"的触发边界 |
+| 3 | A/B/C | **保留定义，收敛到单一权威源**：`literature-recon` §3.1 是定义，其余四处改成引用 |
+| 4 | `doc/<课题>/references` | 他的工作区里 Markdown 笔记与索引都有；那是 study 自己的布局，预设不改模板 |
+
+**否掉的方案**：
+
+- **digest 降级为可选**：仍留一条"什么时候该写"的判断与一次两写的路径，而它的信息量上限就是节笔记；
+  0 条使用说明它不会被写。
+- **A/B/C 加工具枚举校验**：与 §63 裁定 5（列级归属先不加机器校验）相抵，且工具不是 `grade` 的写者。
+- **删掉两套裁定**：它们不占运行时成本，且是"结论要对抗""代码要有数值锚点"的唯一闸门。
+- **把 `doc/<课题>/references` 写进模板**：那是 study 的布局；契约已有"已有层级优先"（§2）。
+
+**实现**：
+
+- 契约升 **Revision 25**：删 §6 的 digest 条款、§8 的 `INV-NOTE-2`、`INV-EVID-4` 里的"projection"；
+  §4 的 `sections` 行与 §6 的标签清单同步；`/digest` 只作 legacy 识别（旧笔记不算覆盖、不可 claim、
+  不再写）。
+- `skills/section-notes`：删原 §4（digest 一节），后续编号顺延；frontmatter、报告、清单、Don't 同步；
+  §2 的 plan 输出加 `legacy` 行。
+- `skills/literature-recon`：删 §7 的 digest 步骤与 §4.2 的"补 `/digest` tag"规则；§3.1 声明
+  "这张表就是定义，其他文档只引用"。
+- `skills/reading-triage` / `skills/adoption-ruling`：`grade` 定义改成指向 `literature-recon` §3.1；
+  plan 输出 `digest` → `legacy`；删 digest 相关句子。
+- `skills/redteam-ruling` / `skills/adoption-ruling`：各加一段 "On demand, never a step in reading"；
+  `docs/coverage.md` 加同一条。
+- `tools/zotero-note.mjs` 与其自测**删除**；`release-check` 与 `zotero-local-api-selftest` 的名册同步；
+  `zotero-section-note.mjs` 保留 `/digest` 的**只读 legacy 识别**（只防止旧整篇总结被当成节笔记/
+  覆盖，不写、不刷新）。
+- `docs/toolchain.md` 由生成器重写；`README.md` / `docs/overview.md` / `docs/coverage.md` /
+  `surface.md` / 台账 README 同步；`docs/plans/note-pipeline.md` §5 标为历史。
+
+**未做／边界**：
+
+- **没 bump 版本、没打 tag**：这是契约修订；版本提交与发布按 `preset-release` §7 单独走。
+- 别的库可能仍有 `/digest` 笔记：工具只认、不算覆盖、不迁移、不删除；本库 0 条。
+- 删掉写入路径后，旧 digest 只能手工改；纪律已禁止再写，所以这不是日常路径。
+

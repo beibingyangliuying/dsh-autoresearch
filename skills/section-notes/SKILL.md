@@ -1,18 +1,18 @@
 ---
 name: section-notes
-description: Turn the method sections of a paper the study will build on into one explanation note per TOP-LEVEL method section, attached to the library record, and then a paper-level digest synthesized from those notes. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place, a wrong record is retired first and may be deleted only after that; the digest is refreshed in place and its old body stays in the library. Use after a reading round finishes a method section, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
+description: Turn the method sections of a paper the study will build on into one explanation note per TOP-LEVEL method section, attached to the library record. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place; a wrong record is retired first and may be deleted only after that. Use after a reading round finishes a method section, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
 ---
 
-# section-notes — one explanation note per method section, plus the digest
+# section-notes — one explanation note per method section
 
-This skill does two things on one record: it turns **reading a paper's method** into one durable
-explanation note per top-level section, and then it turns those notes into **one paper-level digest**.
-It is not a summary of the paper, not a digest of what was read, and not a review prose exercise.
+This skill does one thing on one record: it turns **reading a paper's method** into one durable
+explanation note per top-level section. It is not a summary of the paper, not a reading record, and
+not a review prose exercise.
 
 It exists because a paper's value to a study is concentrated in two or three of its sections. A note
 that explains Introduction and Numerical results costs the same to write as the one that explains the
 derivation, and a later round pays the same cost to read it. **The head and the tail are cut off on
-purpose.** The digest is the one-page projection of what was kept.
+purpose.**
 
 ## 1. When to use
 
@@ -31,10 +31,9 @@ candidate and screens it; how far a paper is worth reading is a reading round's 
 a topic-level literature note (also `literature-recon`), or a one-off "what does this section say"
 question that nothing later will depend on.
 
-**A section note is not the digest, and the digest is not the reading record.** The reading record is
-the topic's ledger row: `depth` says how far the paper was read, `verdict` says why it stopped, `grade`
-how firmly we may speak about it. The section note explains one section; the digest is their paper-level
-projection (§4).
+**A section note is not the reading record.** The reading record is the topic's ledger row: `depth`
+says how far the paper was read, `verdict` says why it stopped, `grade` how firmly we may speak about
+it. The section note explains one section.
 
 ## 2. First step: read the current state
 
@@ -47,7 +46,7 @@ Read-only, before writing anything:
    |---|---|
    | `covered` | what live `/section-N` tags claim, per top-level section |
    | `retired` | notes marked `/retired` (tombstones), each with the note that names itself its successor |
-   | `digest` | the live `/digest` note, if any |
+   | `legacy` | a whole-paper summary an earlier version tagged `/digest`; never a section note, never written now |
    | `unknown` | notes with no `/section-` tag; **read these** |
    | `ambiguous` | notes carrying more than one `/section-` tag; fix them first |
 
@@ -64,7 +63,7 @@ Read-only, before writing anything:
    | a usable explanation of §N, in any format | `--claim --note <key> --section N` — only tags are written; the body is untouched; a note with no section tag also gets `/imported` |
    | about §N but needs our format or prose | `--rewrite --note <key> --section N --file <draft>` — dry run first; no backup is written |
    | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone; it may be erased later with `--delete --write` |
-   | a digest, a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one |
+   | a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one. A note an earlier version tagged `/digest` is this case: the plan lists it as `legacy`, and it is never claimed for a section |
 
 3. **State the coverage table before writing.** One line per section you are considering: the paper's
    own ordinal and heading · the note key that already covers it, or `none` · what it was judged on.
@@ -186,8 +185,8 @@ is in the report — and **never split a section to stay inside that range**.
   section. `--retire --undo` puts the claim back. **Deleting is a separate act**: only a `/retired`
   note is eligible, `--delete` prints the plan and the irreversibility facts, and `--write` erases it
   permanently — the channel has no trash. Do not delete what you have not read and retired.
-- **The digest is not a section note.** One `/digest` per record, synthesized from the section notes
-  after they exist (§4). It is not counted as coverage and is never claimed for a section.
+- **A note an earlier version tagged `/digest` is not a section note.** It is a whole-paper summary;
+  the plan lists it as `legacy`, it is not counted as coverage, and it is never claimed for a section.
 - Notes are created in section order, so the record reads in the order the paper reads.
 
 ### 3.4 Rewriting an import is the agent's work; there is no tidy
@@ -207,43 +206,17 @@ is in the report — and **never split a section to stay inside that range**.
   layer is unreadable, climb the reading ladder and read the rendered page as an image (§7) before
   writing the formula.
 
-## 4. The digest, after the notes
+## 4. Do vs don't
 
-The digest is **the paper-level projection of the section notes**, not a reading record and not a
-summary of the whole paper.
-
-- **Write it after the section notes exist.** Every sentence in it must be traceable to a `/section-N`
-  note; it introduces no fact those notes do not carry. That provenance rule is what makes it safe to
-  build the digest from notes rather than from a raw, badly encoded PDF in one pass.
-- **It covers the sections that have notes.** Say which ones, and say that results, conclusions and
-  background are outside it. It is not a whole-paper summary; writing notes for the head and the tail
-  would break the rule this skill exists for.
-- **One record, one live `/digest`.** Write it with
-  `{{presetTools}}/zotero-note.mjs --item <recordKey> --file <digest.html>`. When the synthesis changes,
-  the same note is refreshed in place under a version guard, and the body it replaces is kept in the
-  library: before the patch, the old body is written as a `/digest` + `/retired` child note. That
-  snapshot takes part in no coverage and can be deleted later like any other retired note. The same
-  visible text is `ALREADY RECORDED` and writes nothing.
-- **A record with no section notes has no digest.** A survey, an abstract-only reading, or a paper whose
-  reading stopped before the first method section is recorded in the topic's ledger row and gets no
-  digest: a `stop` writes no notes, so there is nothing to project.
-- **The reading record is elsewhere.** The topic's ledger row says how far the paper was read (`depth`)
-  and why the reading stopped (`verdict`); the item's `/done` tag is a marker the owner may set and no
-  judgement reads it. The digest says "this is what the sections that were read amount to". Do not use
-  the digest as the reading record, and never write a `verdict` from a digest.
-
-## 5. Do vs don't
-
-### 5.1 Do
+### 4.1 Do
 
 - Report the section list **before** writing: ordinal, the paper's own heading, and note / no-note with
   the reason for each.
 - Read every `unknown` note before writing; say which ones you claimed, rewrote, or retired.
 - Keep one note per top-level section, and name the section by the ordinal the paper itself uses.
 - Say which attachment the text came from, and how many characters of it were read.
-- Write the digest only after the notes, and cite the notes it projects.
 
-### 5.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
+### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
 
 | Hit | Action |
 |---|---|
@@ -259,7 +232,7 @@ summary of the whole paper.
 | The section is claimed by a note that is **wrong** | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never edit its prose; deleting it is a separate act, allowed only once it is retired. |
 | The text layer is unreadable, or a formula only exists in the image | Read the rendered page as an image (`--render` + `read_image`); say which rung answered. Do not trust the text layer for mathematics. |
 
-## 6. Wording discipline
+## 5. Wording discipline
 
 - The note explains the paper's method; it does not evaluate it. "This section derives X" is the
   note's register; "this is a good approach" is not in it.
@@ -269,9 +242,9 @@ summary of the whole paper.
 - No numbers that the section did not produce. A constant that appears in the paper is quoted with its
   section; a constant that follows from the note's own arithmetic is marked as the reader's.
 
-## 7. Report shape
+## 6. Report shape
 
-The artifact is the notes and the digest on the library record. The report is what a later round needs:
+The artifact is the notes on the library record. The report is what a later round needs:
 
 1. `## Record` — key, title, the attachment read and how many characters of it.
 2. `## Coverage` — one line per section of the paper that matters: ordinal · the paper's heading ·
@@ -282,23 +255,21 @@ The artifact is the notes and the digest on the library record. The report is wh
    the reason. A section the reading never reached is `not reached`, and the line names the ledger's
    `verdict` that stopped the reading.
 5. `## Notes written` — note key · section · characters, one line each, or "none".
-6. `## Digest` — the `/digest` note key, the sections it covers, and the section notes it projects; or
-   "none, because no section note was written".
-7. `## Refusals and what was left alone` — every duplicate, ambiguous tag, missing file, unreadable
+6. `## Refusals and what was left alone` — every duplicate, ambiguous tag, missing file, unreadable
    boundary, and any note left as an import.
-8. `## Read-back` — each note key and size as it read back after the write, which is the only evidence
+7. `## Read-back` — each note key and size as it read back after the write, which is the only evidence
    that the write happened.
-9. `## Retired` — one line per note retired this round: note key · the section it claimed · **the
+8. `## Retired` — one line per note retired this round: note key · the section it claimed · **the
    reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
    was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
    stored nowhere else: this section is where it is written down.
-10. `## Owner actions` — one row per thing the round cannot do itself: the record · the note · the
-    section · the action (retire · write the replacement · delete in Zotero · decide) · **why** · the
-    draft's path. A deletion the preset may not perform lands here: a note that was never retired, or
-    anything the owner would have to do in the application instead. A retired note the round deleted
-    itself is reported under `## Retired`, not here.
+9. `## Owner actions` — one row per thing the round cannot do itself: the record · the note · the
+   section · the action (retire · write the replacement · delete in Zotero · decide) · **why** · the
+   draft's path. A deletion the preset may not perform lands here: a note that was never retired, or
+   anything the owner would have to do in the application instead. A retired note the round deleted
+   itself is reported under `## Retired`, not here.
 
-## 8. Instrument discipline (where this skill most easily goes wrong)
+## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - **Writing is one section per invocation, dry run first.** `{{presetTools}}/zotero-section-note.mjs`
   states the change, refuses a claimed section, and writes only with `--write`; it reads back what it
@@ -307,9 +278,7 @@ The artifact is the notes and the digest on the library record. The report is wh
   and first paragraph and names the `unknown` ones. A tag is a claim; a note with no tag is read. Where
   your reading and the tag disagree, report both and stop.
 - **A write needs the owner's authorization** (`INV-EVID-3`). "Allow" covers one write; a lasting grant
-  for that library means no dialog at all, and it is revoked in the reference manager, not here. A
-  digest refresh is two writes — the retired snapshot, then the patch — so a single-use `Allow` is
-  asked once for each, and one lasting grant covers both.
+  for that library means no dialog at all, and it is revoked in the reference manager, not here.
 - **Retiring is one note, one write, and it states its reason before it acts.** Dry run first, then
   `--write`; the read-back asserts that `/retired` came back. Whether a tag survives the application
   rewriting a note's body is measured: it does (`/retired`, 2026-10-18). A missing tag is reported, not
@@ -321,7 +290,7 @@ The artifact is the notes and the digest on the library record. The report is wh
   the owner's act in the application.
 - **When the round spans records, ask for the plan as JSON.**
   `{{presetTools}}/zotero-section-note.mjs --item <recordKey> --json` prints the same facts the prose
-  plan does: every note's tags, section, retired/imported/digest state, and the `unknown` and
+  plan does: every note's tags, section, retired/imported/legacy state, and the `unknown` and
   `ambiguous` lists. Assemble the owner-action table from that, never by parsing the prose.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
   88k characters for the papers this discipline is used on — while the shell tool clips one command's
@@ -353,7 +322,7 @@ The artifact is the notes and the digest on the library record. The report is wh
 - **A workspace file does not carry the resolved helper path.** Name the program, say the path comes
   from this discipline, and pass a resolved path to a child in its prompt when one round needs it.
 
-## 9. Acceptance checklist
+## 8. Acceptance checklist
 
 - [ ] The section list was reported before any write, each with note / skipped and a reason
 - [ ] Every `unknown` note was read, and the report says what was done with it
@@ -368,13 +337,13 @@ The artifact is the notes and the digest on the library record. The report is wh
 - [ ] Each note ends with a summary naming its contribution and its hand-off to the next section
 - [ ] Any note outside the 1,500–5,000 signal range is explained
 - [ ] Each write was a dry run first, and its read-back is quoted
-- [ ] The digest was written after the notes, cites the sections it covers, and every sentence traces to a section note
 - [ ] No section is claimed twice; every skip is reported
 - [ ] Every retirement is reported with its reason and its successor
+- [ ] A note an earlier version tagged `/digest` was reported as legacy and left alone, never claimed
 - [ ] Every deletion was a `/retired` note, planned first, and the report quotes its read-back 404
 - [ ] `## Owner actions` is reported, and written to the study's `research/owner_actions.md` when anything is left for the owner
 
-## 10. Don't
+## 9. Don't
 
 - Do not summarize the paper. The unit is the method section, not the paper.
 - Do not write a note keyed to a subsection, and do not fold a dotted note silently: merge it or retire it.
@@ -387,4 +356,5 @@ The artifact is the notes and the digest on the library record. The report is wh
   `/imported` note is rewritten in place.
 - Do not use `--tidy`: there is no automatic repair. Read the text or the page image and write the body.
 - Do not let a child write into the reference library.
-- Do not turn the note or the digest into review prose, a grade, or a judgement of the paper's quality.
+- Do not turn the note into review prose, a grade, or a judgement of the paper's quality.
+- Do not claim a legacy `/digest` note for a section, and do not write one.

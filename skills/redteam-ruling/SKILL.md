@@ -15,6 +15,11 @@ This skill does exactly one thing: raise a **testable** objection to a claim and
 
 **Not applicable**: the claim has not formed yet (use `research-scoping` first); it is merely a wording disagreement (that is an editorial matter, not a scientific challenge).
 
+**On demand, never a step in reading.** Reading a paper, writing a section note, or producing a routine
+result does not trigger this discipline; it exists for the moment a formed claim is about to carry work
+or leave the room. With no formed claim, load nothing — and an unused challenge costs nothing, because
+it is not in the request.
+
 ## 2. First step: read the thing being challenged as a ruler
 
 1. Read the **claim as written**. Never challenge a paraphrase or a summary.

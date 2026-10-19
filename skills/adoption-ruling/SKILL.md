@@ -38,18 +38,23 @@ satisfied *that question*; it says nothing about whether the sections carry anyt
 `verdict: stop` says nothing about the paper's quality. The evidence grade is a separate cell, and only
 `grade: A` read at `depth: §N` or `full` can carry an adoption.
 
+**On demand, never a step in reading.** This discipline is loaded when code is about to be built from a
+paper, or when code already cites one. Reading a paper does not trigger it, and a study that never
+implements from papers never loads it — which is why it is absent from the reading flow, and why not
+having run it says nothing about a paper. When it does not trigger it costs nothing.
+
 ## 2. First step: read the ruler
 
 Read-only, before writing anything:
 
-1. **The ledger row and the digest** — the topic's reference ledger (`research/literature/<topic>.md`)
+1. **The ledger row** — the topic's reference ledger (`research/literature/<topic>.md`)
    holds one row per paper: `grade` is the evidence grade, `depth` how far it was read, `verdict` why
-   the reading stopped. The record's `/digest` note is the paper-level projection of its section notes,
-   not the reading record. Only grade `A` read at `depth: §N` or `full` can carry an adoption: an item
-   built on an abstract is a guess in a table. A paper with no section notes has no digest.
+   the reading stopped. The grade vocabulary is defined by `literature-recon` §3.1 and is not restated
+   here. Only grade `A` read at `depth: §N` or `full` can carry an adoption: an item built on an
+   abstract is a guess in a table.
 2. **The record's section notes, which are the primary input.**
    `{{presetTools}}/zotero-section-note.mjs --item <recordKey>` reports the readable attachment, and for
-   every note its **tags** and **first paragraph**, then `covered`, `retired`, `digest`, `unknown` and
+   every note its **tags** and **first paragraph**, then `covered`, `retired`, `legacy`, `unknown` and
    `ambiguous`. Read the `unknown` notes yourself: the tool does not parse prose, and a note with no
    `/section-` tag is not coverage until it is read and claimed. A tag is a claim about a note, not a
    guarantee that the note explains that section.
@@ -164,7 +169,7 @@ a result that depends on data      we do not have that data
 - **Item IDs are stable**: `A-<itemKey>-NN`. Never renumber. A deleted candidate leaves its number
   unused and the doc says so.
 - **A re-run that changes nothing reports `already recorded` and writes nothing** — the same rule a
-  digest follows, so re-running a round cannot turn one judgement into two.
+  section-note write follows, so re-running a round cannot turn one judgement into two.
 - **Staleness is counted, not hidden**: items marked `implemented` whose test no longer exists, and
   candidates with no target, are reported as counts. A ledger that claims more than the code does is a
   defect, and it is the failure this document exists to prevent.
@@ -213,7 +218,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 | Hit | Action |
 |---|---|
-| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — that is `section-notes`' work — then rule. A thin digest is not the test: the digest covers only the sections that have notes, and a paper read to §3 legitimately has a short one. |
+| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — that is `section-notes`' work — then rule. |
 | The needed equation is in no section note | Record it under Gaps and leave the item a candidate. **Never re-derive it here.** |
 | The copy's formula is ambiguous or a symbol is undefined | `ambiguous`, blocked, reported. Never reconstruct, never fill in. |
 | A precondition cannot be checked here | Mark `not checked`; the item stays a candidate. Never adopt with an uncheckable condition stated as if it were checked. |
@@ -244,8 +249,8 @@ The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes
 
 1. `## Record` — key, title, the ledger's `grade` and `depth`, the attachment read and how many
    characters, the section notes read and the sections not covered.
-2. `## Ruler` — what was checked: digest, notes, scoping document, domain invariants, existing adoption
-   doc, existing rulings.
+2. `## Ruler` — what was checked: the ledger row, the section notes, scoping document, domain invariants,
+   existing adoption doc, existing rulings.
 3. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
 4. `## Rulings` — what the owner ruled this round, dated, item by item.
 5. `## Refusals and gaps` — every ambiguous formula, undefined symbol, uncheckable precondition, missing
@@ -268,8 +273,8 @@ The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes
 - **Never re-read the paper to recover what a section note already says** (`INV-EVID-4`). The section
   notes are the transcription; this discipline's job is the ruling, not a second reading.
 - **This discipline writes no library note.** A ledger is a workspace document and needs no
-  authorization. If the round also produces a digest or a section note, those writes follow their own
-  disciplines and their own `--write` + read-back + authorization rules (`INV-EVID-3`).
+  authorization. If the round also produces a section note, that write follows its own discipline and
+  its own `--write` + read-back + authorization rules (`INV-EVID-3`).
 - **The parent rules and writes; a child may only read.** The round's reading budget is
   `reading-triage` §3.8's eight slices, counted in whatever the round reads — here, the section notes.
   When it would cross, hand one record's notes to one child per record under `subagent-contract`: the

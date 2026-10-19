@@ -27,10 +27,10 @@
 | 部分 | 覆盖什么 | 明确不做 | 何时加载 | 权威文本 |
 |---|---|---|---|---|
 | 收敛 `research-scoping` | 一个模糊话题变成**可判定的问题**：问题 / 边界 / 非目标 / 可判定性 / 前置 / 记号 / 未决项 | 不设计实验，不写文献综述；伪问题（无可证伪条件、方法冒充问题、旧符号新义）**当场退回** | 开一项研究、话题只有一句话、承诺动手之前、要定"什么算回答了它" | [`skills/research-scoping/SKILL.md`](../skills/research-scoping/SKILL.md) |
-| 文献 `literature-recon` | 文献重建笔记：每条断言带可定位来源，每个来源按**那句话实际靠什么**分级（读了那几段 / 只读摘要 / 二手转述），**矛盾证据必须记**，笔记自称非规范 | 不写综述散文，不宣判领域共识，**不决定一篇该读到哪** | 判断"有没有人做过"、为方法选择找依据、起草 related work、为裁定供证 | [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) |
-| 筛读 `reading-triage` | 一篇文献对**一个具名课题**该读到哪：`depth` 记读到第几节（`—` / `abstract` / `§N` / `full`），`verdict` 记为什么停（`park` / `enough` / `stop`），判定按（课题 × 文献）写进**该课题自己的台账行**，并带判定依据；复看条件在 `park`、`stop` 与**没读到全文的 `enough`** 上是必填，只有读完全文才说"够了"的 `enough` 可空；默认从前往后顺序读，可复用一个别的课题已经写下的 `/section-N` 笔记 | 不评价论文质量，不解释某一节，不决定借什么，不写库笔记；跨篇轮次的分派见 §9（按读进去的源文本片数，不按篇数）；**没有具名课题就不判定**；跳读只在"大纲有这一节 + `--grep` 命中标题 + 打印命中的标题行原文"三条同时成立时允许 | 即将为一篇文献花时间读、读到某节末要决定是否继续、一条 `park` 的复看条件成立、一条 `stop` 正被质疑 | [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md) |
+| 文献 `literature-recon` | 文献重建笔记：每条断言带可定位来源，每个来源按**那句话实际靠什么**分级（三级的定义只在纪律 §3.1，本文不复述），**矛盾证据必须记**，笔记自称非规范 | 不写综述散文，不宣判领域共识，**不决定一篇该读到哪** | 判断"有没有人做过"、为方法选择找依据、起草 related work、为裁定供证 | [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) |
+| 筛读 `reading-triage` | 一篇文献对**一个具名课题**该读到哪：`depth` 记读到第几节（`—` / `abstract` / `§N` / `full`），`verdict` 记为什么停（`park` / `enough` / `stop`），判定按（课题 × 文献）写进**该课题自己的台账行**，并带判定依据；复看条件在 `park`、`stop` 与**没读到全文的 `enough`** 上是必填，只有读完全文才说"够了"的 `enough` 可空；默认从前往后顺序读，可复用一个别的课题已经写下的 `/section-N` 笔记 | 不评价论文质量，不解释某一节，不决定借什么，不写库笔记；跨篇轮次的分派见 §8（按读进去的源文本片数，不按篇数）；**没有具名课题就不判定**；跳读只在"大纲有这一节 + `--grep` 命中标题 + 打印命中的标题行原文"三条同时成立时允许 | 即将为一篇文献花时间读、读到某节末要决定是否继续、一条 `park` 的复看条件成立、一条 `stop` 正被质疑 | [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md) |
 | 元数据 `metadata-query` | 书目元数据：DOI / 刊物 / 年份 / 作者 / 引用数 / 参考文献表，走 OpenAlex 与 Crossref 的 REST | **只有元数据**：没有全文，也不给证据等级 | 解析或确认一条参考文献、找规范标识符、扩展谁引谁 | [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) |
-| 逐节笔记 `section-notes` | 一个读轮刚读完的**方法节** → **每个顶层节一条 `/section-N` 解释笔记**，写完再从这些笔记合成一条 `/digest` 投影；身份是 tag，不是隐形 marker；粘贴笔记可 claim / 原地改写，错笔记先退休、之后才可永久删除；阅读中途停下时，没走到的节报 `not reached` | 不写摘要、引言、背景、综述、案例、结果、讨论、结论、附录；不写整篇总结；**不拆节**；不写子节键（旧子节笔记迁移时合并/退休）；不改写已 claim 的记录（retire + 新写）；**不做机械公式修复** | 一个读轮刚读完某个方法节、或要据一篇方法论文建东西时 | [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) |
+| 逐节笔记 `section-notes` | 一个读轮刚读完的**方法节** → **每个顶层节一条 `/section-N` 解释笔记**；身份是 tag，不是隐形 marker；粘贴笔记可 claim / 原地改写，错笔记先退休、之后才可永久删除；阅读中途停下时，没走到的节报 `not reached`；旧版本留下的 `/digest` 整篇总结只作 legacy 识别，不再写 | 不写摘要、引言、背景、综述、案例、结果、讨论、结论、附录；不写整篇总结；**不拆节**；不写子节键（旧子节笔记迁移时合并/退休）；不改写已 claim 的记录（retire + 新写）；**不做机械公式修复** | 一个读轮刚读完某个方法节、或要据一篇方法论文建东西时 | [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) |
 | 借鉴 `adoption-ruling` | 一篇**读过全文（A 级）**的文献 → 逐项台账"能借什么"：每条带原文定位（节 · 公式号 · 读到哪一片）、成立条件与"在这里怎么验"、原文式与我们的归一化式**分栏**、意图目标、**数值锚点**（测试能断言的那个数），拒用单列并带理由；读者是**没读过这篇论文的实现者** | 不评证据等级、不解释论文、不选方向、**不替所有者裁定**、不写代码、**不在这里重推原文公式** | 读定一篇要据以建东西的文献之后、按论文公式写代码之前、审计已有代码引用的公式是否真被这篇支持 | [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) |
 | 质疑 `redteam-ruling` | 对一个已成形的主张提出**可检验**的反驳，写成"请人裁定"的文件（反例 / 矛盾证据 / 可证伪路径至少其一，且指到具体句子） | **不发出裁定本身**；不许写"值得进一步研究" | 承诺一个方案之前、结论要出这个房间之前、两条路线冲突 | [`skills/redteam-ruling/SKILL.md`](../skills/redteam-ruling/SKILL.md) |
 | 交接 `subagent-contract` | 把活交给子代理并收回来而不洗白主张：先定交付物、要产物路径与确切命令、报告写文件只传指针 | 子代理的结论**不是事实**——父代理必须自己重新导出 | 要开一个探索或实现子代理时、决定要不要接受它返回的东西 | [`skills/subagent-contract/SKILL.md`](../skills/subagent-contract/SKILL.md) |
@@ -40,6 +40,10 @@
 
 **没有一条纪律负责"决定研究什么"**——那是你的。它们约束的是证据如何被分类、主张如何被质疑、活怎么交出去、
 实验怎么被记录、进度怎么沉淀。
+
+**借鉴与质疑是按需的，不是读文献的步骤。** 读一篇论文不触发它们：`adoption-ruling` 只在要从论文写代码或审计
+代码时才加载，`redteam-ruling` 只在已成形的主张要驱动工作、要离开房间或两条路线冲突时才加载。没有触发时它们
+根本不在请求里，成本是零——"没跑过"不说明这篇论文没有价值，只说明这一轮没有那个问题。
 
 ## 三、三条外部通道与它们的工具入口
 
@@ -58,7 +62,6 @@
 | 读（检索 / 记录 / 笔记正文 / 附件文本切片 / 分类树） | [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) |
 | 读附件本身（文件文字层 · 论文自带目录 · 页面渲染成图） | [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) |
 | 往库里加一条条目 | [`tools/zotero-write.mjs`](../tools/zotero-write.mjs) |
-| 在条目上留一条 `/digest` 投影（原地刷新） | [`tools/zotero-note.mjs`](../tools/zotero-note.mjs) |
 | 在条目上留逐节解释笔记（`/section-N`）；claim / 原地改写 / 退休 / 永久删除（仅 `/retired`） | [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) |
 | 改条目的字段与标签 | [`tools/zotero-edit.mjs`](../tools/zotero-edit.mjs) |
 | 建 / 改名 / 归档分类 | [`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs) |
@@ -82,7 +85,7 @@
 （`itemKey · year · found via · grade · depth · verdict · basis · re-open if · date`）。`depth` 说读到哪
 （`—` · `abstract` · `§N` · `full`），`verdict` 说为什么停（`park` · `enough` · `stop`，空 = 还没人判过）。
 **别的课题读到哪，用 `grep -n "<itemKey>" research/literature/*.md` 看**：同一篇被两个课题读过是正常的，
-两个课题各记各的；记录上已有的 `/section-N` 笔记反而是两个课题**共用**的资产。`/digest` 是另一件东西（§6）；
+两个课题各记各的；记录上已有的 `/section-N` 笔记反而是两个课题**共用**的资产；
 条目的 `/done` tag 只是你自己打的一个标记，**任何判断都不读它**。
 
 ### 2. 读到哪为止：逐节推进，每节判一次
@@ -114,18 +117,18 @@ node tools\zotero-section-note.mjs --item <recordKey>
 ```text
 covered     : §2 · §3          # 带 /section-N 的活笔记，按顶层节
 retired     : §4 (KEY -> ...)  # 墓碑
-digest      : KEY              # /digest 投影
+legacy      : KEY              # 旧版本留下的整篇总结，不是节笔记
 unknown     : KEY · KEY        # 没有 /section- tag 的笔记，交给你读
 ambiguous   : KEY              # 带多个 /section- tag，先修
 ```
 
-工具**不解析正文**：带 `/section-N` 才是覆盖，没带的进 `unknown`。读 `unknown` 的第一段；不够就整条打开：
+工具**不解析正文**：带 `/section-N` 才是覆盖；没带 claim 的进 `unknown`，旧版本留下的 `/digest` 整篇总结单列 `legacy`。读 `unknown` 的第一段；不够就整条打开：
 
 ```powershell
 node tools\zotero-read.mjs --item <noteKey> --limit 12000
 ```
 
-然后只有四种动作：`--claim`（内容可用，只打 tag；无 tag 的会同时带 `/imported`）、`--rewrite`（要改格式/正文，原地 + 版本守卫）、`--retire`（垃圾/错误，墓碑），或**不动**（它是 digest / 整篇总结，不是节笔记）。
+然后只有四种动作：`--claim`（内容可用，只打 tag；无 tag 的会同时带 `/imported`）、`--rewrite`（要改格式/正文，原地 + 版本守卫）、`--retire`（垃圾/错误，墓碑），或**不动**（它是整篇总结，不是节笔记）。
 
 ### 4. 正文怎么读（这一节回答"要不要 OCR"）
 
@@ -188,15 +191,7 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 - **没有 `--tidy`**。公式坏了只能由 agent 读文字层/页图后重写正文；工具不自动修。
   已 claim 的记录不能原地改写：退休 + 新写；带 `/imported` 的粘贴笔记可以 `--rewrite` 原地改。
 
-### 7. 写完节笔记之后：digest
-
-- 一条记录一条 `/digest`，从 `/section-N` 笔记合成；每一句都要能追到某条节笔记，**不引入笔记里没有的事实**。
-- 它只覆盖有笔记的节，写明覆盖范围；结果/结论不在其中。没有节笔记的论文**没有 digest**。
-- `node tools\zotero-note.mjs --item <recordKey> --file <digest.html>`：没有就创建，有就原地刷新
-  （干跑、版本守卫）；旧正文先写成一条 `/digest` + `/retired` 快照留在库里；同一文本报 `ALREADY RECORDED`，不写。
-- 读态不在 digest 里：它在这一课题自己的台账行（`depth` + `verdict`）。digest 只覆盖有笔记的节。
-
-### 8. 写入四步（每一次都是这四步）
+### 7. 写入四步（每一次都是这四步）
 
 ```text
 干跑（陈述改了什么）  →  参考管理器的授权对话框  →  --write  →  回读
@@ -205,7 +200,7 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 `Allow` 覆盖**这一次**写入；`Always Allow` 是你给这个库的长效授予，存在你机器上、也只能在参考管理器里撤销。
 **agent 不许开口要 `Always Allow`**，被拒绝或被撤销的授予永远不当作已授予。回读是**写入发生过的唯一证据**。
 
-### 9. 谁动手读、谁动手写
+### 8. 谁动手读、谁动手写
 
 **库写与回读只属于一双手，就是父代理**。子代理只读：把笔记正文写到
 `<workspace>/.section-notes/<recordKey>/` 下的文件并交回一份清单，从不碰库。
@@ -216,7 +211,7 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 已经开始的读完再交——半篇交出去就是读两遍。理由有两层：省上下文，以及库改动是那个被门禁、被审计的
 动作，把它留在一双手里，"不重复、不覆盖别人的笔记"才是可查的。
 
-### 10. 读完之后的下一步：这篇能借什么
+### 9. 读完之后的下一步：这篇能借什么
 
 笔记回答"它说了什么"，台账回答"**我们拿什么**"：`research/adoption/<recordKey>.md`，一条一项，
 `adopt` / `adopt-modified` / `reference-only` / `reject` 四选一，每项带原文定位、成立条件与"在这里怎么验"、
