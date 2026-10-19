@@ -48,8 +48,8 @@ registers, and the row packages it mounts — is checked against the installed k
 **To install: nothing beyond DSH itself.** Three dependencies, all published on npm and all permissive
 (`@deepseek-ai/schemastery` for the row's configuration; `@hyzyla/pdfium` and `pdfjs-dist` for the two
 attachment-side reading rungs — PDFium compiled to WebAssembly, and pdf.js for the bookmarks that build
-does not export). There is no build step and no second toolchain: in particular the two external channels
-are Node programs this package ships, not servers installed and launched through `uvx`, so a Python
+does not export). There is no build step and no second toolchain: in particular every external channel
+is a Node program this package ships, not a server installed and launched through `uvx`, so a Python
 environment is not part of using this preset. The two engines are reached only through
 `tools/zotero-pdf.mjs`, so they cost nothing on a request that does not read an attachment.
 
@@ -85,8 +85,9 @@ subagent from it); the change applies to agents created after the switch, not to
 - **Disciplines on demand.** Ten written disciplines ship **inside the bundle** and the preset
   registers them itself, so they are available to its agents — and to no other session in the
   profile — with no copying step.
-- **Two external channels.** A preprint index and the owner's local reference library (including
-  paywalled full text). Both are **helper programs this preset ships**, not mounted servers, so an
+- **Three external channels.** A preprint index, the owner's local reference library (including
+  paywalled full text), and a bibliographic-metadata channel over the free OpenAlex, Crossref and
+  Unpaywall APIs. All three are **helper programs this preset ships**, not mounted servers, so an
   unused channel costs nothing; see [`protocol.md`](protocol.md) §6.
 - **A study scaffold.** A per-study directory layout with the journals, pitfalls, rulings and
   literature indexes a study accumulates.
@@ -96,9 +97,13 @@ subagent from it); the change applies to agents created after the switch, not to
 Open the preset's settings page. Every row's `Config` is projected into an editable form, so nothing
 requires hand-editing a YAML file:
 
-- **Contact address** (`mailto`) — identifying yourself to the free metadata APIs gets faster service
-  and gentler rate limits. Leave it empty and no contact is sent; the preset behaves exactly as it
-  does with no configuration at all.
+- **Contact address** (`mailto`) — the address this preset hands the bibliographic sources that ask for
+  one. Leave it empty and no contact is sent; the preset behaves exactly as it does with no
+  configuration at all. It is identification rather than a quota lever: measured 2026-10-19, OpenAlex
+  answered a request byte-identical with and without it, and its own response notice states that the
+  parameter does not raise the shared daily budget — the helper prints that notice when the API sends
+  one. Unpaywall is the exception and takes the address in its own `email=` parameter, which is why the
+  helper refuses to ask Unpaywall without one instead of guessing.
 - **Convert new stored PDFs** (`autoLinkAttachments`) — off by default. When on, a literature round
   offers to convert PDFs the reference library *stores* into linked files under the directory below:
   the file is copied out, and the library keeps only a link to it. The agent reports the list first,
@@ -130,7 +135,7 @@ Two channels need setup outside this repository:
   The first write into a library raises that application's own authorization dialog, and answering
   **Always Allow** keeps the grant for that library, so you are asked once rather than on every write —
   the grant is stored under `%LOCALAPPDATA%\dsh-autoresearch` and is revoked from the same Settings pane;
-- the preprint channel needs no credentials.
+- the preprint and bibliographic channels need no credentials.
 
 **What the preprint channel is.** It is not a server this preset mounts. It is `tools/arxiv.mjs`, a
 read-only helper the literature discipline names directly, so it costs nothing on a request that does
@@ -141,6 +146,19 @@ as if it were a record** — the API answers an error inside a normal-looking fe
 rule is written into the helper and its self-test. It returns metadata and abstracts, not full text:
 the replaced server could read a preprint's body, and dropping the row dropped that with it, deliberately
 ([`docs/01_decisions.md`](docs/01_decisions.md) #29).
+
+**What the bibliographic channel is.** `tools/metadata.mjs`, a helper over the free OpenAlex, Crossref
+and Unpaywall REST APIs: one request per invocation, no API key, no mounted row. It resolves a DOI or an
+OpenAlex work id, searches, lists what a work cites or what cites it, and reports whether a free copy is
+listed. Four rules the discipline used to carry as prose are now properties of the program — the contact
+address goes on every request or on none (the parameter is omitted rather than left empty); a second
+page is a second invocation rather than a loop; an unknown DOI, an unparseable body, a rate limit and a
+failed request print four different things; and an abstract is rebuilt from the source's inverted index
+or reported **absent**, never written from the title. It also prints two things only a measurement
+shows: the record that comes back may carry **a different DOI** than the one asked for (measured: an
+arXiv DOI answered with the work's other DOI), and every citation count is printed with the source that
+gave it and the date it was read, because the same work measured 43,412 citations on one source and
+46,513 on the other.
 
 **What the reference-library channel is.** Eight helper programs, not a server. `tools/zotero-read.mjs`
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
@@ -286,6 +304,10 @@ node tools\scaffold-selftest.mjs
 # the preprint channel helper: the query url, Atom parsing and error feeds, without the network
 node tools\arxiv-selftest.mjs
 
+# the bibliographic channel helper: the urls, the inverted-index abstract, the four kinds of nothing,
+# and the refusals — without the network
+node tools\metadata-selftest.mjs
+
 # the reference-library helpers: their pure halves run without a library, and write nothing
 node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
@@ -391,6 +413,10 @@ session still shows the earlier surface. See [`docs/01_decisions.md`](docs/01_de
 - **A full text can be ~80k characters.** The tool-result pruner keeps only a result's head and tail,
   so long texts are pulled to a file and read by offset instead.
 - **A rate-limited metadata source is a constraint, not a bug.** It is not retried in a loop.
+- **A DOI lookup can answer a different DOI, and a citation count belongs to the source that gave it.**
+  Measured 2026-10-19: OpenAlex answered a request for `10.48550/arXiv.1706.03762` with a record whose
+  own DOI is `10.65215/2q58a426`, and the same work carried 43,412 citations there against 46,513 at
+  Crossref. Quote both DOIs, and quote a count with its source and the date it was read.
 - **A `patch: entry "..." not found` warning is usually not junk.** In a profile patch layer, a row
   that only sets `disabled: true` is a *conditional* switch: it does nothing today, and takes effect
   the moment a bundle provides that row again. Deleting such a row silently **re-enables** the

@@ -1471,5 +1471,87 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 - **A 的探针是 `.tmp/` 下的一次性脚本**（gitignored）：重跑配方就是上面两条命令与两个脚本名；
   脚本本身不进发布件，因此这里的数字在重跑之前是**测量**，重跑不了时就退化为**断言**（§53 同一条规矩）。
 
+---
+
+## 55. 第三条通道也有程序了：书目元数据的 helper（契约 Revision 18，2026-10-19）
+
+**起因**：B 之后做 C——给 metadata 通道落一个 helper，把 `mailto` 注入、禁循环、429 退避、字段收敛从散文变成程序属性。
+
+### 55.1 先验（本次实测，全部可复现）
+
+1. **契约与实现本来就差着一半**：`protocol.md` §6 写的是**三类通道**（预印本 / 本地参考库 / 书目 REST），
+   并明文说"通道由**本预设自带、纪律点名的 helper 程序**抵达"。前两类有程序，第三类此前只有散文——
+   纪律教模型**手拼 URL 再交给 `web_fetch`**。所以 C 不是新加通道，是补齐契约早已声明的那一半。
+2. **原始响应装不进去**：一个 OpenAlex 作品记录实测 **24,580 字符**，三行 search **65,619 字符**，
+   而裁剪器只留 8,192（头 4,096 + 尾 1,024）⇒ 必须先把字段收敛。实测收敛后 `--json` 是 **4,867 字符**。
+3. **答回来的 DOI 可能不是问的那个**：OpenAlex 对 `doi:10.48550/arXiv.1706.03762` 答回的作品，
+   它自己的 `doi` 是 `10.65215/2q58a426`（标题与年份都是这篇）。只报标题与数字会把这次替换藏起来。
+4. **两个源不可互换，差别在注册而不在质量**：同一个 arXiv DOI 在 OpenAlex 是 200、在 Crossref 是 404
+   （"Resource not found."）—— arXiv 注册在 DataCite。
+5. **同一个作品的引用数在两个源上不同**：43,412（OpenAlex `cited_by_count`）对 46,513（Crossref
+   `is-referenced-by-count`），分钟级相邻实测。
+6. **四种"没有"必须分开**：Unpaywall 对不认识的 DOI 答 **HTML 的 404**；OpenAlex 对未知 DOI 也答 HTML 404；
+   限流是 429；body 不是 JSON 是另一回事。
+7. **`mailto` 不是 OpenAlex 的配额杠杆**：它自己的 `meta.notice` 写着共享日预算（$0.10/IP）并明说
+   "The mailto parameter doesn't raise this limit"；另一次同请求带/不带 `mailto` 的答复逐字节相同。
+   另外 OpenAlex 的"标题式搜索"其实是**全文搜索**：`attention is all you need` 的 `total` 是 3,230,801，
+   它自己的读法是 `get works where full text has (...)`。
+
+### 55.2 做法：规则搬进程序，**来源与日期搬到数字旁边**
+
+`tools/metadata.mjs`（五模式：`--doi` / `--search` / `--refs` / `--cited-by` / `--oa`；一次调用一个请求）：
+
+- **地址**：`--mailto`（或 `AUTORESEARCH_MAILTO`）有就注入、没有就**整个省略**（不是留空参数）；
+  `--oa` 没有地址直接拒绝——Unpaywall 用 `email=` 收地址，猜不得。
+- **禁循环**：一次调用一个请求、一种模式；`--cited-by` 只收 OpenAlex id（`cites:` 是 id 过滤器，给 DOI 就拒绝并说明先 `--doi`）。
+- **分类**：`classifyResponse` 把 429 / 404 / body 不是 JSON / 其它失败分开，`channelFinding` 各说各话。
+- **收敛**：每个模式先收敛到固定字段集；`--json` 打印的是**收敛后的记录**，不是原始响应。
+- **摘要**：`reconstructAbstract` 只在能从倒排索引**完整重建**时给出文本；位置有洞就报 absent。
+- **引用数**：每行都带**来源与检索日期**（这条同时升格为契约规则，见 55.3）。
+
+**实现里被自己的测试抓到的一个真 bug**：`Array.prototype.filter` **跳过稀疏数组的空洞**，所以第一版
+"位置有洞就拒绝重建"的护栏是空转的——`join(' ')` 会把洞打成空格，输出一份**读起来像完整摘要的部分摘要**。
+这正是"不许报一个你没有重建的摘要"要防的东西，而它差一点就藏在护栏里。改成显式走下标后，那条断言才真的成立。
+
+### 55.3 契约：Revision 18
+
+- 第三通道现在也有程序 ⇒ §6"通道由本预设自带的 helper 抵达"对**三条**都成立（原来只对两条）。
+- §6 新增一条规则：**引用数必须带来源与检索日期**（依据 55.1 第 5 条）。
+- §6 原文自称"Three rules"，而它实际列了七条 ⇒ 改为"These rules"。三条都由 Revision 18 记录，**契约里不写符号名**。
+
+### 55.4 落点
+
+[`tools/metadata.mjs`](../tools/metadata.mjs) ·
+[`tools/metadata-selftest.mjs`](../tools/metadata-selftest.mjs)（fixture 是 2026-10-19 真捕获的响应，
+含 Unpaywall 那段逐字节的 404 HTML）· [`protocol.md`](../protocol.md)（Revision 18 + §6）·
+[`surface.md`](../surface.md)（第三条通道行）· [`README.md`](../README.md)（通道数、联系地址那条声明、
+新 helper 段落、自测清单、一条坑）· [`docs/02_coverage.md`](02_coverage.md) ·
+[`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md)（instrument 从 `web_fetch` 改成 helper）·
+[`contact-bridge.js`](../contact-bridge.js)（常驻行不再教模型手拼 `&mailto=`）·
+[`tools/release-check.mjs`](../tools/release-check.mjs)（`REQUIRED_HELPERS` 补上它）·
+[`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs)（三通道分组 + 三条新事实）· 重生成的
+[`docs/04_toolchain.md`](04_toolchain.md)（20 → **24 条声明**）。
+
+**顺手修掉一个会静默吞东西的地方**：`docs/04` 的通道分组原先写成"`zotero-*` 一类、其余一类"，
+新 helper 会被归进"预印本通道"。现在分组由 `CHANNELS` 显式声明，且**匹配数不等于 1 就抛错**——
+一个没被任何通道认领的 helper 不会从页面上悄悄消失。
+
+### 55.5 验证
+
+`node tools/metadata-selftest.mjs` **PASS**（69 项，含负向控制）；`node tools/metadata.mjs --selftest` 同结果。
+真实网络端到端：`--doi` / `--oa` / `--search` / `--refs` 四种输出如上，退出码 **0（答了）/ 1（请求或响应失败）/ 2（用法）**
+各自实测；`--doi 10.9999/does-not-exist` 走 404 分支并 exit 1；`--cited-by 10.1/x` 走拒绝分支并 exit 2。
+`toolchain-page --write/--check` 报 *current and every citation holds (24 claims)*，`toolchain-selftest` PASS。
+
+### 55.6 未做与边界（登记）
+
+- **Unpaywall 的 422**：纪律里那句"占位域名被 422 拒绝"是**继承来的声明**，本轮**没有复核**。
+  helper 的拒绝条件是"没有地址"（与 422 无关），所以那句改成不带数字的表述，而不是照抄一个我没测的数。
+- **不翻页、不建引用图**：`--refs` / `--cited-by` 各取一页并把总数与"还有多少条held back"报出来；
+  翻页是下一次调用。这与"禁循环"是同一条规矩的两面。
+- **Crossref 侧的引用列表**只按它返回的 `reference` 数组读，不做解析或补全。
+- **`--oa` 的地址来源**仍是系统提示里宣布的那个（`contact-bridge` 注入），helper 不读 profile 配置——
+  预设不得依赖所有者自己的设置（§54.4 同一条边界）。
+
 
 

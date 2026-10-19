@@ -27,6 +27,9 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 单次工具结果超过 **8,192 字符**会被裁剪器掐掉中间（留头 4,096 + 尾 1,024）⇒ 长文本必须切片读。 | `docs/02_coverage.md` · `8,192` |
 | 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/02_coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
+| **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
+| **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
+| `mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。 | `tools/metadata.mjs` · `mailto parameter doesn't raise this limit` |
 
 ## 二、每个 helper
 
@@ -189,7 +192,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 - `--search`（索引查询）· `--id`（按标识读一条）· `--selftest`
 
-**明确拒绝**
+**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
 - 只给题录与摘要，**不是全文**
 - 上游把错误塞在形状正常的 feed 里时，它拒绝把错误当记录打印
@@ -199,6 +202,34 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 - 需要正文 → 走参考库那条路（`zotero-read` / `zotero-pdf`），预印本索引给不了
 
 **出处**：`tools/arxiv.mjs` · `node tools/arxiv.mjs --search` · `--selftest`<br>`README.md` · `not full text`
+
+### 书目元数据通道
+
+#### `metadata.mjs` — 书目元数据（不是全文通道）：解析一条记录 · 检索候选 · 它引了谁 / 谁引了它 · 有没有列免费副本
+
+**能做**
+
+- `--doi <doi|W-id>`（默认 OpenAlex）· `--source crossref`（出版方那一侧）
+- `--search` 候选列表（`--rows` 1–10）· `--refs` · `--cited-by <W-id>` · `--oa <doi> --mailto <地址>`
+- `--json`：打印的是**收敛后的记录**，不是原始响应（实测 24,580 字符 → 4,867）
+
+**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
+
+- 一次调用只发**一个**请求、只用**一种**模式；翻页是下一次调用
+- `--cited-by` 只收 OpenAlex id：`cites:` 是 id 过滤器，给 DOI 就拒绝并说明先 `--doi`
+- `--rows` 只用于结果列表，`--abstract` 只用于作品记录
+- `--oa` 没有联系地址就不发请求（Unpaywall 用 `email=` 收地址）
+- 答回来的 DOI 与问的不同：**两个都打印并标注**
+- 四种"没有"分开报：404（这个源没有它）· body 不是 JSON · 429（限流）· 请求失败
+- 摘要只在能从倒排索引**完整重建**时打印（位置有洞 ⇒ 报 absent），绝不从标题写
+
+**撞上怎么办**
+
+- 要引用一个数字 → 抄输出那一行，它带着来源与检索日期；别把它当作品的稳定属性
+- 搜出候选 → 先 `--doi` 确认那一条；把搜索结果当元数据报告是不允许的
+- 免费副本 → 那是**线索不是取回**：没真取到就写"列在 <url>"，坏链按失败线索报
+
+**出处**：`tools/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation`<br>`docs/02_coverage.md` · `书目元数据`
 
 ## 三、这套校验能证明什么、不能证明什么
 

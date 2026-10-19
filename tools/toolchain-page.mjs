@@ -80,6 +80,21 @@ export const FACTS = [
     says: 'helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。',
     cites: [cite('protocol.md', 'INV-HELPER-1')],
   },
+  {
+    says: '**同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。',
+    cites: [
+      cite('protocol.md', 'quoted with the source that produced it'),
+      cite('tools/metadata.mjs', 'cited_by_count', 'is-referenced-by-count'),
+    ],
+  },
+  {
+    says: '**答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。',
+    cites: [cite('tools/metadata.mjs', 'DIFFERENT from the DOI asked for'), cite('README.md', 'can answer a different DOI')],
+  },
+  {
+    says: '`mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。',
+    cites: [cite('tools/metadata.mjs', "mailto parameter doesn't raise this limit")],
+  },
 ]
 
 /**
@@ -192,6 +207,39 @@ export const HELPERS = [
     when: ['需要正文 → 走参考库那条路（`zotero-read` / `zotero-pdf`），预印本索引给不了'],
     cites: [cite('tools/arxiv.mjs', 'node tools/arxiv.mjs --search', '--selftest'), cite('README.md', 'not full text')],
   },
+  {
+    name: 'metadata.mjs',
+    role: '书目元数据（不是全文通道）：解析一条记录 · 检索候选 · 它引了谁 / 谁引了它 · 有没有列免费副本',
+    can: [
+      '`--doi <doi|W-id>`（默认 OpenAlex）· `--source crossref`（出版方那一侧）',
+      '`--search` 候选列表（`--rows` 1–10）· `--refs` · `--cited-by <W-id>` · `--oa <doi> --mailto <地址>`',
+      '`--json`：打印的是**收敛后的记录**，不是原始响应（实测 24,580 字符 → 4,867）',
+    ],
+    refuses: [
+      '一次调用只发**一个**请求、只用**一种**模式；翻页是下一次调用',
+      '`--cited-by` 只收 OpenAlex id：`cites:` 是 id 过滤器，给 DOI 就拒绝并说明先 `--doi`',
+      '`--rows` 只用于结果列表，`--abstract` 只用于作品记录',
+      '`--oa` 没有联系地址就不发请求（Unpaywall 用 `email=` 收地址）',
+      '答回来的 DOI 与问的不同：**两个都打印并标注**',
+      '四种"没有"分开报：404（这个源没有它）· body 不是 JSON · 429（限流）· 请求失败',
+      '摘要只在能从倒排索引**完整重建**时打印（位置有洞 ⇒ 报 absent），绝不从标题写',
+    ],
+    when: [
+      '要引用一个数字 → 抄输出那一行，它带着来源与检索日期；别把它当作品的稳定属性',
+      '搜出候选 → 先 `--doi` 确认那一条；把搜索结果当元数据报告是不允许的',
+      '免费副本 → 那是**线索不是取回**：没真取到就写"列在 <url>"，坏链按失败线索报',
+    ],
+    cites: [
+      cite(
+        'tools/metadata.mjs',
+        'classifyResponse',
+        'DIFFERENT from the DOI asked for',
+        'rebuilt from abstract_inverted_index',
+        'one request per invocation',
+      ),
+      cite('docs/02_coverage.md', '书目元数据'),
+    ],
+  },
 ]
 
 /** Every claim as `{ label, cites }`, so a checker has one flat list to walk. */
@@ -234,6 +282,33 @@ export function citationGaps(claims, readText) {
 const CELL = (citations) => citations.map((citation) => `\`${citation.file}\` · ${citation.must.map((needle) => `\`${needle}\``).join(' · ')}`).join('<br>')
 const BULLETS = (lines) => lines.map((line) => `- ${line}`).join('\n')
 
+/**
+ * The page's channel sections, in order, and the rule that puts a helper in one of them.
+ *
+ * Every helper must match exactly one. A helper that matched none would silently vanish from a page
+ * whose whole promise is that it lists what exists, so a mismatch is reported instead of dropped.
+ */
+const CHANNELS = [
+  { title: '参考库通道', match: (helper) => helper.name.startsWith('zotero-') },
+  { title: '预印本通道', match: (helper) => helper.name === 'arxiv.mjs' },
+  { title: '书目元数据通道', match: (helper) => helper.name === 'metadata.mjs' },
+]
+
+/**
+ * Which section of the page a helper belongs to.
+ *
+ * @param {{name: string}} helper A helper entry.
+ * @returns {string} The channel title.
+ * @throws {Error} When the helper matches zero or more than one channel.
+ */
+export function channelOf(helper) {
+  const matches = CHANNELS.filter((channel) => channel.match(helper))
+  if (matches.length !== 1) {
+    throw new Error(`helper ${helper.name} matches ${matches.length} channels on the toolchain page`)
+  }
+  return matches[0].title
+}
+
 /** The page, as one string. The only place its shape is decided. */
 export function renderPage() {
   const parts = []
@@ -258,45 +333,27 @@ export function renderPage() {
   for (const fact of FACTS) parts.push(`| ${fact.says} | ${CELL(fact.cites)} |`)
   parts.push('')
   parts.push('## 二、每个 helper')
-  parts.push('')
-  parts.push('### 参考库通道')
-  for (const helper of HELPERS.filter((entry) => entry.name.startsWith('zotero-'))) {
+  for (const channel of CHANNELS) {
     parts.push('')
-    parts.push(`#### \`${helper.name}\` — ${helper.role}`)
-    parts.push('')
-    parts.push('**能做**')
-    parts.push('')
-    parts.push(BULLETS(helper.can))
-    parts.push('')
-    parts.push('**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）')
-    parts.push('')
-    parts.push(BULLETS(helper.refuses))
-    parts.push('')
-    parts.push('**撞上怎么办**')
-    parts.push('')
-    parts.push(BULLETS(helper.when))
-    parts.push('')
-    parts.push(`**出处**：${CELL(helper.cites)}`)
-  }
-  parts.push('')
-  parts.push('### 预印本通道')
-  for (const helper of HELPERS.filter((entry) => !entry.name.startsWith('zotero-'))) {
-    parts.push('')
-    parts.push(`#### \`${helper.name}\` — ${helper.role}`)
-    parts.push('')
-    parts.push('**能做**')
-    parts.push('')
-    parts.push(BULLETS(helper.can))
-    parts.push('')
-    parts.push('**明确拒绝**')
-    parts.push('')
-    parts.push(BULLETS(helper.refuses))
-    parts.push('')
-    parts.push('**撞上怎么办**')
-    parts.push('')
-    parts.push(BULLETS(helper.when))
-    parts.push('')
-    parts.push(`**出处**：${CELL(helper.cites)}`)
+    parts.push(`### ${channel.title}`)
+    for (const helper of HELPERS.filter((entry) => channelOf(entry) === channel.title)) {
+      parts.push('')
+      parts.push(`#### \`${helper.name}\` — ${helper.role}`)
+      parts.push('')
+      parts.push('**能做**')
+      parts.push('')
+      parts.push(BULLETS(helper.can))
+      parts.push('')
+      parts.push('**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）')
+      parts.push('')
+      parts.push(BULLETS(helper.refuses))
+      parts.push('')
+      parts.push('**撞上怎么办**')
+      parts.push('')
+      parts.push(BULLETS(helper.when))
+      parts.push('')
+      parts.push(`**出处**：${CELL(helper.cites)}`)
+    }
   }
   parts.push('')
   parts.push('## 三、这套校验能证明什么、不能证明什么')

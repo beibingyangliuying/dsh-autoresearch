@@ -13,7 +13,7 @@
 | 你的步骤 | 负责的纪律 | 产物（角色，非路径） |
 |---|---|---|
 | 理解课题、收敛问题 | 收敛 | 一份可判定的问题书：问题/边界/非目标/可判定性/记号 |
-| 搜参考文献 | 文献 + 元数据 + 两条外部通道 | 文献重建笔记（非规范）+ 元数据行 |
+| 搜参考文献 | 文献 + 元数据 + 三条外部通道 | 文献重建笔记（非规范）+ 元数据行 |
 | **读透一篇方法论文** | **逐节笔记（新）** | 条目上的逐节解释笔记：每节一条，只写方法/推导/算法节，掐头去尾 |
 | **裁定这篇能借什么** | **借鉴（新）** | 逐项台账：原文定位（节 · 公式号 · 切片）＋ 成立条件与"在这里怎么验" ＋ 原文式／归一化式**分栏** ＋ 目标模块 ＋ **数值锚点**（测试能断言的数），另列拒用及理由 |
 | 思维碰撞、质疑 | 质疑 | 裁定请求：反例/矛盾证据/证伪路径，或诚实地说"无法质疑" |
@@ -68,13 +68,14 @@ flowchart LR
 
 ```powershell
 dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + 两条通道的反向护栏
+node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + 三条通道的反向护栏
 node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
 node tools\doc-selftest.mjs                            # 契约/索引 的分工，以及覆盖地图的名册与路径
 node tools\scaffold-selftest.mjs                       # 脚手架布局：契约 §7 / 本仓 README / 课题继承的权威表必须是同一份名单
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
+node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）

@@ -19,10 +19,11 @@ mounts no MCP server. This file answers one question only — *which name implem
 | Synthesis discipline — several directions become one executable draft (§4) | `synthesis-plan` |
 | Preprint index — search the index, read one record by identifier (§6) | no symbol: a shipped helper program |
 | Local reference library — the owner's library, including paywalled full text (§6) | no symbol: shipped helper programs |
+| Bibliographic metadata — identifiers, venues, years, counts (§6) | no symbol: a shipped helper program |
 
 ## Notes
 
-- **Both external channels are reached through shipped helper programs**, so neither contributes a
+- **All three external channels are reached through shipped helper programs**, so none contributes a
   symbol: this index covers the names that exist in the tool namespace (`mcp__<server>__<tool>`) and the
   discipline names. Which program implements which channel is stated by the disciplines that name them,
   not here. A channel mounted as an MCP row would be indexed by its server name; this preset mounts none.

@@ -1,9 +1,16 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 17.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 18.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 17 states three capabilities this contract previously
+independent of any package version. Revision 18 gives the third channel the program the other two
+already had: the bibliographic REST channel is now reached through a helper this preset ships and its
+discipline names, so §6's statement that the channels are reached through such programs holds for all
+three rather than for two of them. It adds one rule to §6 — a bibliographic count is quoted with the
+source that produced it and the date it was read, because the same work was measured carrying 43,412
+citations on one source and 46,513 on the other — and corrects §6's own count of its rules, which said
+three while carrying seven. §6 states it.
+Revision 17 states three capabilities this contract previously
 left without a channel, and corrects one reason it gave. A section a wrong note covers is freed by
 **retiring** that note: the note's body is never touched, the mark that retires it is reversible, a
 retired note stops counting as coverage, and the note that replaces it names the one it replaced, so
@@ -73,7 +80,8 @@ that the available tool set changed. The pass it replaces listened on `agent/cre
 against a real session — never reached this preset's row at all, so five tools of the configuration
 bundle, one of them destructive, were reachable by every agent of this preset. §5 and its coverage
 block state the mechanism as it now is. Revision 8 records that the preset mounts **no MCP server at all**:
-both external channels are helper programs its own disciplines name, so a channel nobody uses costs
+both external channels are helper programs its own disciplines name — Revision 18 extends that to the
+third — so a channel nobody uses costs
 nothing, and the surface an agent sees is no longer a function of someone else's tool list. It corrects
 §6 on two points — the preprint channel carries search and records rather than full text, and the
 channels are reached through the preset's own helpers rather than through rows — and it narrows §5's
@@ -306,10 +314,14 @@ local reference lib   the study owner's own library, searchable by attachment fu
 bibliographic REST    identifiers, venues, years, counts — metadata only, never evidence
 ```
 
-Three rules bound their use:
+These rules bound their use:
 
 - **Full text and metadata are different evidence classes.** A record obtained from a bibliographic
   REST source can never be the strongest grade; only text actually read can.
+- **A count is quoted with the source that produced it and the date it was read.** The same work was
+  measured at 43,412 citations on one bibliographic source and 46,513 on the other, minutes apart, so a
+  count without its source is a number a reader cannot check, and a count is a snapshot of a retrieval
+  rather than a property of the work.
 - **A channel that answers `HTTP/1.0` or rate-limits without a credential must be handled as a
   known constraint**, not retried in a loop. Rate limiting is a finding about the channel.
 - **The owner's library is searched by full text, not only by metadata.** A library read as a title
