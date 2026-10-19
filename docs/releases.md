@@ -327,7 +327,13 @@ connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https
 2. **发布前回扫**：6 处旧说法（`1c68f00`）＋ 台账归属的契约更正（`e4459dd`，Revision 28）＋ 本文件。
 
 **发布前的门**（都在最终树上跑过）：19 项离线自测全绿；`preset-selftest` 用的 dump 在改动后重新生成；
-`release-check --local` 在干净树上 PASS；`release-check --tag v0.10.0` 从远端复核版本、组合与 helper。
+`release-check --local` 在干净树上 PASS。
+
+**远端复核换了做法，因为这台机器连不上 `raw.githubusercontent.com`**：`release-check --tag v0.10.0`
+报 `fetch failed`（与 §64 记的代理故障同类，属环境，不记为缺陷）。改用等价的两步：先 `git clone --depth 1
+--branch v0.10.0` 取回 tag 树并比对树哈希——`e66716e4…`，与本地 `v0.10.0^{tree}` 完全相同；再在那个克隆里
+跑 `release-check --local`：声明版本 0.10.0、组合不挂 MCP、行名经 `exports` 解析、19 个自测都在 README 有名、
+helper 全在。读到的是"新用户装到的那棵树"，而不是本机工作树。
 
 **这次检查抓到的三类**（都是测试看不见的散文）：
 
