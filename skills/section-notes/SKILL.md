@@ -16,20 +16,25 @@ purpose.** The digest is the one-page projection of what was kept.
 
 ## 1. When to use
 
-- A paper has been chosen for study (a method you may build on, a derivation you must reproduce, a
-  factor you need the exact definition of) and its **method sections** must be understood durably.
+- A reading round has reached the end of a **method section** of a paper this study will build on (a
+  method you may build on, a derivation you must reproduce, a factor you need the exact definition of)
+  and that section must be understood durably. The round may stop part-way through the paper: the note
+  covers the sections the reading actually reached, and the topic's ledger (`depth`) says where that was.
 - A record already carries notes pasted from a browser or another editor, with no claim, and they must
   be read and either claimed, rewritten, or retired.
 - A record carries a section note whose formulas are wrong or unreadable, and the section must be
   explained again.
 
-**Not applicable**: deciding whether a paper is worth reading (`literature-recon` — that is its search
-and grading job), a topic-level literature note (also `literature-recon`), or a one-off "what does this
-section say" question that nothing later will depend on.
+**Not applicable**: deciding whether a paper is worth reading to its end — that is a per-question
+judgement made section by section and recorded in the topic's ledger (`literature-recon` appends the
+candidate and screens it; how far a paper is worth reading is a reading round's call, not this skill's),
+a topic-level literature note (also `literature-recon`), or a one-off "what does this section say"
+question that nothing later will depend on.
 
-**A section note is not the digest, and the digest is not a reading receipt.** The receipt is the
-`research/literature/refs/` line plus the item's `/done` tag. The section note explains one section;
-the digest is their paper-level projection (§4).
+**A section note is not the digest, and the digest is not the reading record.** The reading record is
+the topic's ledger row: `depth` says how far the paper was read, `verdict` says why it stopped, `grade`
+how firmly we may speak about it. The section note explains one section; the digest is their paper-level
+projection (§4).
 
 ## 2. First step: read the current state
 
@@ -98,6 +103,13 @@ Decide from **what the section contains**; position is the check, not the rule.
 If you are about to write a note for the **first** section, or for the **last two**, say in one line
 why that section is method rather than background or results. Being wrong here is the whole failure
 mode this skill exists to prevent.
+
+**The reading may stop inside the paper, and that is not a failure of this skill.** The unit is the
+section the reading reached, not the paper. A section that was never reached gets no note and no
+apology: the ledger's `depth` says where the reading stopped and its `verdict` says why, and those two
+are the whole reason the remaining sections carry no note. In the report, say which sections were not
+reached and that the reading stopped there — never "no note was needed". **An absent note is not
+evidence that a section was read.**
 
 ### 3.2 What one note contains
 
@@ -212,11 +224,13 @@ summary of the whole paper.
   library: before the patch, the old body is written as a `/digest` + `/retired` child note. That
   snapshot takes part in no coverage and can be deleted later like any other retired note. The same
   visible text is `ALREADY RECORDED` and writes nothing.
-- **A record with no section notes has no digest.** A survey or an abstract-only reading has the
-  `refs/` index line and the `/done` tag as its receipt; it does not get a digest.
-- **The receipt is elsewhere.** `research/literature/refs/` holds one line per reference actually read,
-  and the item carries `/done`. Those say "this was read, at what grade". The digest says "this is what
-  the method sections amount to". Do not use the digest as the receipt.
+- **A record with no section notes has no digest.** A survey, an abstract-only reading, or a paper whose
+  reading stopped before the first method section is recorded in the topic's ledger row and gets no
+  digest: a `stop` writes no notes, so there is nothing to project.
+- **The reading record is elsewhere.** The topic's ledger row says how far the paper was read (`depth`)
+  and why the reading stopped (`verdict`); the item's `/done` tag marks the record as read and carries
+  neither. The digest says "this is what the sections that were read amount to". Do not use the digest
+  as the reading record, and never write a `verdict` from a digest.
 
 ## 5. Do vs don't
 
@@ -264,7 +278,9 @@ The artifact is the notes and the digest on the library record. The report is wh
    **the note key that claims it, or `none`** · what it was judged on. Counted per **top-level** section.
 3. `## Unknown notes` — every note read from the plan's `unknown` list, and what was done with it:
    claimed · rewritten · retired · left as a non-section note.
-4. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped** and the reason.
+4. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped / not reached** and
+   the reason. A section the reading never reached is `not reached`, and the line names the ledger's
+   `verdict` that stopped the reading.
 5. `## Notes written` — note key · section · characters, one line each, or "none".
 6. `## Digest` — the `/digest` note key, the sections it covers, and the section notes it projects; or
    "none, because no section note was written".
@@ -342,6 +358,8 @@ The artifact is the notes and the digest on the library record. The report is wh
 - [ ] The coverage table was reported per **top-level** section, with the claiming note or `none`
 - [ ] No note was written for a subsection; no dotted tag was created
 - [ ] No note was written for the abstract, the introduction, the case study, or the conclusions
+- [ ] Sections the reading never reached are reported as `not reached`, with the ledger verdict that
+  stopped it, rather than as "no note needed"
 - [ ] Every note carries `/section-N` and the paper's own ordinal and heading
 - [ ] Every equation is inside `$…$` or `$$…$$`, with display math on lines of its own
 - [ ] Every symbol used is defined at its first appearance

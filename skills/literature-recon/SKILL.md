@@ -14,7 +14,10 @@ This skill does exactly one thing: turn "what have others done on this" into a n
 - Collecting material for a related-work or background section
 - Supplying locatable evidence for a ruling request (`redteam-ruling`)
 
-**Not applicable**: a passing question about what a term means (ordinary search suffices).
+**Not applicable**: a passing question about what a term means (ordinary search suffices), and deciding
+**how far a paper is worth reading for a question**. This skill appends candidates and reads whatever a
+claim needs in order to stand; how far the *paper* is read, and why that reading stopped, is a reading
+round's judgement — `depth` and `verdict` in the topic's ledger — and this skill makes it nowhere.
 
 ## 2. First step: read the existing constraints as a ruler
 
@@ -55,9 +58,14 @@ Three consequences must be stated rather than assumed:
 
 | Grade | Meaning | Usable as |
 |---|---|---|
-| `A` | The **full text**, specific passages, were read | Evidence for a fact |
+| `A` | The **specific passages the claim rests on** were read, and their locator is recorded | Evidence for a fact |
 | `B` | Only the **abstract / introduction** was read | A lead only; not evidence for a fact |
 | `C` | Only a **second-hand paraphrase** (another paper or page mentions it) | A paraphrase; upgrade only after retrieving the original |
+
+A grade is about the sentence it sits on, never about how much of the paper was read. A claim resting
+on §3 read line by line is `A` while the reading stopped at `§3`: the ledger carries both, `grade=A` and
+`depth=§3`, and neither is a lie about the other. **`A` does not mean "the whole paper was read"** — the
+column that says where a reading stopped is `depth`.
 
 ### 3.2 Every citation must be locatable
 
@@ -80,6 +88,9 @@ Literature that contradicts your expectation or the target claim gets its own se
 - State the search question before searching, and record it in the note
 - One note per topic; topics may link to each other
 - Record the query and the search scope (database, time window) so it can be reproduced
+- **Append one row per candidate to that topic's reference ledger**, filling `itemKey`, `year`,
+  `found via`, and the `grade` and `depth` the round actually reached. Read no verdict into a row: no
+  round here decides whether a paper is worth reading to its end.
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
 
@@ -106,11 +117,14 @@ Artifact: `<workspace>/research/literature/<topic>.md` (follow the project's loc
 Fixed sections:
 
 1. `## Search question` — what I am answering, the query and its scope
-2. `## Summary of findings` — ≤10 lines, each carrying a source id
-3. `## Evidence table` — `| Source | Grade | What it actually says | Relation to this study |`
+2. `## Summary of findings` — ≤10 lines, each carrying a source id and its grade
+3. `## Reference ledger` — the nine columns of `research/literature/README.md`. This round appends
+   `itemKey | year | found via | grade | depth` per candidate; `verdict | basis | re-open if | date`
+   stay empty, because they are a reading round's to write.
 4. `## Contradicting evidence` — literature conflicting with the summary; if none, write "none found" and state the search scope
 5. `## Gaps and unknowns` — what was not found, and whether that is "not searched" or "confirmed absent"
-6. `## Non-normative declaration` — one fixed line: **this file is a non-normative reference and must not by itself ground an experiment design or a conclusion**
+6. `## Reading log` — appended when a verdict changes, in `<date> | <itemKey> | <old> → <new> | <basis> | <who>`. A search round adds no line.
+7. `## Non-normative declaration` — one fixed line: **this file is a non-normative reference and must not by itself ground an experiment design or a conclusion**
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -137,7 +151,7 @@ Fixed sections:
   Expect a MIX of rows: an attachment or a note that matched *inside* a record, and records that matched
   by metadata. The tool collapses them onto the record and states what matched, so one paper is one line;
   a hit gives the record key, and the ladder below says where to go from there.
-- **A source may enter the evidence table only if a page or abstract was actually retrieved.** Literature from memory does not count.
+- **A source may enter the ledger only if a page or abstract was actually retrieved.** Literature from memory does not count.
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
 - **Reading a long full text without destroying the context.** The library answers with an attachment's
   whole indexed text in one response — measured **76,908 characters** for a 17-page paper — which is far
@@ -189,23 +203,29 @@ Fixed sections:
   `--grep` locates the term and the tool reports the passages around it.
 
   A full text pulled for one paragraph is context spent for nothing.
-- **Check the reading receipt index before reading anything.** `research/literature/refs/` holds one line per reference already read (key · year · grade · tags · one-line takeaway). A hit means the reading is already done; a `B` line means only the abstract was read and the full text is still owed.
-- **After reading, record the receipt; the digest comes later.** The receipt is one line in
-  `research/literature/refs/` plus the item's `/done` tag. It says "this was read, at what grade". It is
-  **not** the paper-level digest: that is written by `section-notes` after the section notes exist, and
-  a paper with no section notes has no digest (§4 of that discipline).
+- **Check the topic's ledger before reading anything.** `research/literature/<topic>.md` holds one row
+  per paper. A row whose `verdict` is empty is **queued**: the paper is in scope and nobody has judged it
+  for this question yet. A row that carries a `verdict` — `park` · `enough` · `stop` — plus its `depth`
+  says where the last reading stopped and why, which is the state this round starts from. Before opening
+  a paper for this question, look for its row; before opening one for another question, look for it in
+  that question's file (`grep -r "<itemKey>" research/literature/*.md`).
+- **After reading, record what was read in that row; the digest comes later.** Append the row if this is
+  the paper's first appearance, then fill `grade` and `depth` from what was actually retrieved — `B` +
+  `abstract` for a screening read, `A` + `§N` or `full` for the sections actually read. Nothing else
+  records how far a paper was read, and both cells are written from the text in front of you or not at
+  all. The row is **not** the paper-level digest: that is written by `section-notes` after the section
+  notes exist, and a paper with no section notes has no digest (§4 of that discipline).
 
   ```powershell
   node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write
   ```
 
-  Then append one line to the reading receipt index: `<itemKey> | <year> | <grade> | <tags> | <one-line takeaway>`.
-  A `B` line means only the abstract was read and the full text is still owed; a full-text reading
-  upgrades it to `A`. The index is the fast receipt, not a paper-level summary.
+  The item's `/done` tag marks *this library record* as read; it carries neither a grade nor a depth,
+  because a tag cannot hold them.
 - **The digest is one `/digest` note per record, from the section notes.** `section-notes` writes it
   after the notes; `zotero-note.mjs --item <recordKey> --file <digest.html>` creates it or refreshes it
-  in place. Do not write a digest from the raw PDF in the literature round, and do not treat the
-  `refs/` line as the digest. If the record has no section notes, stop after the receipt.
+  in place. Do not write a digest from the raw PDF in the literature round, and do not treat the ledger
+  row as the digest. If the record has no section notes, stop after the row.
 - **Declare the reading budget before searching.** Name how many sources will be opened and at which grade, and stop at it. A round that reads ten full texts to answer one question has spent its budget on the wrong thing.
 - Do not fill in unread passages to make the note look complete.
 
@@ -237,7 +257,7 @@ Two rules bound rung 3:
   of what was tried is an instruction with extra steps.
 - **Receiving a file is not permission to store it.** Adding it to the library stays the owner's
   authorization, given in the reference manager, and a file that arrived but was not read appears in
-  neither the evidence table nor the reading receipt index.
+  neither the topic's ledger nor its summary of findings.
 
 The lookup mechanics for rung 2 belong to `metadata-query`; retrieving and reading a copy belongs to the
 reading channels above. This skill decides which rung is reachable, and records what each answered.
@@ -245,11 +265,12 @@ reading channels above. This skill decides which rung is reachable, and records 
 ## 8. Acceptance checklist
 
 - [ ] Every source has a retrievable identifier
-- [ ] Every source carries an A/B/C grade
+- [ ] Every source carries an A/B/C grade, and a `depth` consistent with what was actually read
 - [ ] Every claim carries a source, or is marked `[exploratory]`
 - [ ] The contradicting-evidence section is filled (including a stated "none found")
 - [ ] The query and search scope are recorded
 - [ ] Preprints are marked
+- [ ] Each candidate has one ledger row, and no row carries a `verdict` this round did not reach
 - [ ] The non-normative declaration is present
 
 ## 9. Don't
@@ -257,4 +278,6 @@ reading channels above. This skill decides which rung is reachable, and records 
 - Do not write review prose or perform a meta-analysis
 - Do not pronounce field consensus
 - Do not modify normative documents (that requires a revision record)
-- Do not make research decisions for the user beyond "is this worth reading"
+- Do not make research decisions for the user, and do not decide how far a paper is worth reading: that
+  judgement belongs to a reading round, and it is recorded as `depth` and `verdict` in the topic's ledger
+- Do not write a `verdict`, a `basis`, or a `re-open if` into a ledger row

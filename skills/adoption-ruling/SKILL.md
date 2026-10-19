@@ -19,26 +19,34 @@ of them become code.
 
 ## 1. When to use
 
-- A paper was **read at full-text grade** and the study will build on its method, assumptions, data, or
+- A paper was **read to the end of the sections the borrowings come from** — `depth: §N` at least, and
+  grade `A` — and the study will build on its method, assumptions, data, or
   evaluation protocol
 - Code is about to be written from a paper's equations and no ruled item covers it
 - Code already cites a paper's formula, and the question is whether the paper actually supports it and
   what it assumed (the reverse audit — the same artifact answers both directions)
 - A paper's method was understood and the next round must know **what not to take** as well as what to take
 
-**Not applicable**: deciding whether a paper is worth reading (`literature-recon` — search and grading);
-explaining a section (`section-notes` — the paper's terms, no evaluation); choosing between directions
-(`synthesis-plan` — direction-level, not equation-level); a paper that contributes only background, which
-a `literature-recon` note already covers.
+**Not applicable**: deciding how far a paper is worth reading (`literature-recon` appends and screens the
+candidate; the reading round records how far it read in the topic's ledger), explaining a section
+(`section-notes` — the paper's terms, no evaluation); choosing between directions (`synthesis-plan` —
+direction-level, not equation-level); a paper that contributes only background, which a
+`literature-recon` note already covers.
+
+A ledger row is **not** a readable verdict about a paper's worth. `verdict: enough` says the reading
+satisfied *that question*; it says nothing about whether the sections carry anything borrowable, and
+`verdict: stop` says nothing about the paper's quality. The evidence grade is a separate cell, and only
+`grade: A` read at `depth: §N` or `full` can carry an adoption.
 
 ## 2. First step: read the ruler
 
 Read-only, before writing anything:
 
-1. **The receipt and the digest** — `research/literature/refs/` is the receipt: one line per reference
-   read, with its grade. The record's `/digest` note is the paper-level projection of its section
-   notes, not the receipt. Only grade `A` can carry an adoption: an item built on an abstract is a
-   guess in a table. A paper with no section notes has no digest.
+1. **The ledger row and the digest** — the topic's reference ledger (`research/literature/<topic>.md`)
+   holds one row per paper: `grade` is the evidence grade, `depth` how far it was read, `verdict` why
+   the reading stopped. The record's `/digest` note is the paper-level projection of its section notes,
+   not the reading record. Only grade `A` read at `depth: §N` or `full` can carry an adoption: an item
+   built on an abstract is a guess in a table. A paper with no section notes has no digest.
 2. **The record's section notes, which are the primary input.**
    `{{presetTools}}/zotero-section-note.mjs --item <recordKey>` reports the readable attachment, and for
    every note its **tags** and **first paragraph**, then `covered`, `retired`, `digest`, `unknown` and
@@ -205,7 +213,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 | Hit | Action |
 |---|---|
-| The digest is grade `B` (abstract only) | **Stop.** An adoption on an abstract is a guess in a table. Read the full text first, then rule. |
+| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — that is `section-notes`' work — then rule. A thin digest is not the test: the digest covers only the sections that have notes, and a paper read to §3 legitimately has a short one. |
 | The needed equation is in no section note | Record it under Gaps and leave the item a candidate. **Never re-derive it here.** |
 | The copy's formula is ambiguous or a symbol is undefined | `ambiguous`, blocked, reported. Never reconstruct, never fill in. |
 | A precondition cannot be checked here | Mark `not checked`; the item stays a candidate. Never adopt with an uncheckable condition stated as if it were checked. |
@@ -234,8 +242,8 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes to
 `research/adoption/INDEX.md`. The report is what a later round needs:
 
-1. `## Record` — key, title, digest grade, the attachment read and how many characters, the section notes
-   read and the sections not covered.
+1. `## Record` — key, title, the ledger's `grade` and `depth`, the attachment read and how many
+   characters, the section notes read and the sections not covered.
 2. `## Ruler` — what was checked: digest, notes, scoping document, domain invariants, existing adoption
    doc, existing rulings.
 3. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
@@ -269,7 +277,8 @@ The artifact is `research/adoption/<recordKey>.md`, plus the line it contributes
 
 ## 8. Acceptance checklist
 
-- [ ] The digest was grade `A`; the round says which attachment and how many characters were read
+- [ ] The ledger row is grade `A` at `depth: §N` or `full`; the round says which attachment and how many
+  characters were read
 - [ ] Every item carries a paper locator: section ordinal, equation number, slice offset
 - [ ] The paper's verbatim form and our normalized form are separate, with a symbol map and units
 - [ ] Every `adopt` / `adopt-modified` item has a numeric anchor and names the test that asserts it
