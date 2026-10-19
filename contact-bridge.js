@@ -94,14 +94,23 @@ export function readAttachmentPolicy(settings) {
   return { auto: false, storePath: '' }
 }
 
-/** The conversion line, or undefined when the switch is off or no directory was configured. */
+/**
+ * The conversion line, or undefined when the switch is off or no directory was configured.
+ *
+ * The command carries the ABSOLUTE helper path and the configured directory, for the reason
+ * {@link helpersLine} states: the agent's working directory is a study workspace, where `tools/...`
+ * resolves to nothing. Both values are already in hand here - the path beside this module's own URL,
+ * the directory from the settings row - so leaving a relative path or a `<directory>` placeholder for
+ * the agent to fill in would be handing it a command that fails where it usually runs.
+ */
 export function attachmentLine(policy) {
   if (policy?.auto !== true || String(policy.storePath ?? '').trim() === '') return undefined
+  const storePath = String(policy.storePath).trim()
   return [
-    `Stored-PDF conversion is on for this preset, with the attachment store directory ${policy.storePath}.`,
+    `Stored-PDF conversion is on for this preset, with the attachment store directory ${storePath}.`,
     'When a literature round finds PDFs the reference library stores rather than links, report the list to the',
-    'owner first; once the owner agrees, run `node tools/zotero-link-attachments.mjs --target <directory>` as a',
-    'dry run and then with `--write`. Those writes are gated by the owner in the reference manager.',
+    `owner first; once the owner agrees, run \`node "${cliToolsDir}/zotero-link-attachments.mjs" --target "${storePath}"\``,
+    'as a dry run and then with `--write`. Those writes are gated by the owner in the reference manager.',
   ].join(' ')
 }
 

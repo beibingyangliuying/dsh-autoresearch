@@ -81,6 +81,24 @@ check(
   'the line names the tool that does the work',
 )
 
+// The command has to be runnable where the agent actually stands. A repo-relative `tools/...` path
+// resolves to nothing in a study workspace, and a `<directory>` placeholder asks the agent to supply a
+// value the prompt already carries - so both are asserted against, not just the tool's name.
+const conversionLine = String(attachmentLine({ auto: true, storePath: 'D:\\Store' }))
+check(
+  conversionLine.includes(`${cliToolsDir}/zotero-link-attachments.mjs`),
+  'the announced command carries the absolute helper path',
+  cliToolsDir,
+)
+check(
+  !/\bnode\s+["']?tools[\\/]/.test(conversionLine),
+  'the announced command never uses a repo-relative tools/ path',
+)
+check(
+  conversionLine.includes('--target "D:\\Store"'),
+  'the announced command carries the configured directory rather than a placeholder',
+)
+
 // The helper directory is announced whether or not anything is configured: an agent working in a
 // study workspace has no other way to find this preset's scripts.
 check(String(helpersLine()).includes(cliToolsDir), 'the helper line names the absolute helper directory', cliToolsDir)
