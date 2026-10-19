@@ -1598,5 +1598,35 @@ const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWi
 **未做**：不改程序、不改纪律、不改生成器。是否把"不做 + 触发条件"登记进 `docs/03_revision_plan.md` §12
 （那是 junhan 自己的台账格式）留给他定。
 
+---
+
+## 57. 发布 0.6.0：第三通道拿到程序，记录改挂仪器（2026-10-19）
+
+**范围**：A–D 四项（§54 / §55 / §56）+ 三个探针转正 + 契约 Revision 18。
+
+**流程**（`preset-release` §7）：
+
+- 版本 `0.5.0 → 0.6.0`，**单独一个提交**（`622f981`，只改 `package.json` 版本一行），使 tag 指向的树恰好是这一版；
+  **契约 Revision 仍是 18**，与包版本互不绑定。
+- 提交前在最终树上重跑 Phase 1：**20 项离线自测 + `preset-selftest` 全绿**；`toolchain-page --check` 报
+  *current and every citation holds (24 claims)*；`release-check --local` **PASS**（含干净树这条 tag 前置条件，
+  当时报出 10 个提交未推）。
+- **注解 tag** `v0.6.0` → `622f981`（tag 对象 `20c656d`）；**先推分支、再推 tag**。
+- **从远端复核** `node tools/release-check.mjs --tag v0.6.0`：**PASS** —— 发布件声明 0.6.0 · 组合不挂 MCP、
+  不启外部命令 · **三条通道需要的 helper（含本轮新增的 `tools/metadata.mjs`）全在发布包里** ·
+  `v0.6.0` 与 `main` 同点 `622f981`。
+
+**§2 的反方向重扫在发布前又命中一次**：`package.json` 的 description（会进发布件元数据）、README 的
+"Two channels need setup" 小标题（其实只有参考库需要设置）、组合里的注释、以及反向护栏的注释，四处都还在写
+"两条通道"。这是同一轮里第二次证明那条规矩：**改行为的人改的是他刚编辑的那个文件，陈旧句子在别处。**
+
+**网络边界（登记）**：本机 git 配置的代理 `http://127.0.0.1:12450` 当时不可达 ⇒ 推送与 `ls-remote` 都报
+connection refused；**在单次调用里覆盖**（`git -c http.proxy= -c https.proxy=`；给 node 生成的 git 用
+`GIT_CONFIG_COUNT/KEY/VALUE` 环境变量）后即为成功。而 `raw.githubusercontent.com` / `api.github.com` /
+`github.com` 三者实测均 **HTTP 200**，所以第一次 `--tag` 复核报的 `fetch failed` 是**瞬时**的，重跑即 PASS。
+照 §53 的读法：**先分辨"远端没有"与"本机连不上"，再读这条失败。**
+
+**未做**：没有新的规范变更，Revision 保持 18；没有动 mnemon 的 profile 配置（§54.4 那条边界仍然成立）。
+
 
 
