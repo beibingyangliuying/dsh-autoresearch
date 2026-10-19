@@ -145,6 +145,42 @@ export function parsePresetFacts(text) {
   return { created, selected, selections, effective: selected ?? created }
 }
 
+/**
+ * One session directory as parsed records, with the preset that actually ran it.
+ *
+ * The session-scanning probes in this directory share this: each asks a different question of the same
+ * transcripts, and letting the multi-frame zstd handling be re-implemented in each would be three
+ * places for the frame-splitting rule to drift. The preset comes from `agent-preset/selected` for the
+ * reason `parsePresetFacts` states, not from the session header.
+ *
+ * @param {string} dir A session directory holding a `.zstd` transcript.
+ * @returns {{preset: string, records: object[]}|undefined} Undefined when the transcript cannot be read.
+ */
+export function readSession(dir) {
+  let text
+  try {
+    text = readTranscript(dir).text
+  } catch {
+    return undefined
+  }
+  const records = text
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => {
+      try {
+        return JSON.parse(line)
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
+  const preset =
+    records.find((record) => record.type === 'agent-preset/selected')?.data?.agentPreset ??
+    records.find((record) => record.type === 'session')?.data?.agentPreset ??
+    ''
+  return { preset, records }
+}
+
 /** List every session under a root, newest first, with the preset each one EFFECTIVELY ran. */
 function scan(root) {
   const rows = []

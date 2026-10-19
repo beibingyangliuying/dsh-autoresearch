@@ -340,6 +340,14 @@ node tools\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 # call one tool and keep the FULL result (mcp-probe truncates a result at 1500 characters)
 $env:ZOTERO_LOCAL='true'; node tools\mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
+# what this preset's OWN sessions actually call, and whether a masked tool is still named in a prompt.
+# The cost decisions rest on these numbers (docs/01_decisions.md #54, #56), so they are re-run rather
+# than recalled: a keep-list entry no session calls is a claim nobody has checked, and the prompt text
+# that names tools is assembled from plugin state rather than from the tool registry.
+node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_
+node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_
+node tools\session-helper-modes.mjs --preset autoresearch
+
 # reference library writes: dry run first; --write makes Zotero ask you to Allow
 node tools\zotero-write.mjs --arxiv 1706.03762
 node tools\zotero-write.mjs --arxiv 1706.03762 --write

@@ -84,6 +84,9 @@ node tools\zotero-section-note-selftest.mjs            # 逐节笔记：哪一�
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
 node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝（不连库）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
+node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）
+node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_  # 常驻提示里点名了哪些工具（隔离挡不住散文）
+node tools\session-helper-modes.mjs --preset autoresearch                  # 读侧 flag 语法有没有真实误用
 ```
 
 ## 一条最容易被误解的设计
