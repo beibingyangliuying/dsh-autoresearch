@@ -35,13 +35,14 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 ### 参考库通道
 
-#### `zotero-read.mjs` — 读：检索 / 一条记录 / 笔记正文 / 附件文本切片 / 分类树 / 标签
+#### `zotero-read.mjs` — 读：检索 / 一条记录 / 笔记正文 / 附件文本切片 / 分类树 / 分类扫描 / 标签
 
 **能做**
 
 - `--search`（默认搜摘要＋笔记＋附件全文）· `--item`（笔记会打印正文**和它的 `tags :`**）
 - `--fulltext --offset/--limit/--grep`：按片读附件文本，上一片会打印 `next --offset`
 - `--collections` / `--collection <key>` / `--tags`
+- `--collection <key> --screen`：把整个分类读满（`start` 分页），每篇印一条摘要；notes/attachments 跳过并计数
 
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 

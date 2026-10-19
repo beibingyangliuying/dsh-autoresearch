@@ -43,6 +43,7 @@
 //   node tools/zotero-read.mjs --fulltext <itemKey> --grep "contingenc"
 //   node tools/zotero-read.mjs --collections
 //   node tools/zotero-read.mjs --collection <collectionKey>
+//   node tools/zotero-read.mjs --collection <collectionKey> --screen [--screen-limit 300]
 //   node tools/zotero-read.mjs --tags
 //
 // Exit codes: 0 answered | 1 the library could not answer, or the record has no such text | 2 usage.
@@ -54,8 +55,10 @@ import {
   localRequest,
   normalizeCollections,
   normalizeTags,
+  readCollection,
   readItem,
   serverInfo,
+  visibleText,
 } from './zotero-local-api.mjs'
 
 const QMODES = ['everything', 'titleCreatorYear']
@@ -69,6 +72,13 @@ const MAX_READ_LIMIT = 100_000
 /** How many keys one multi-get may ask for. */
 const MULTI_GET_CHUNK = 50
 const ATTACHMENT_PREFERENCE = ['application/pdf', 'application/epub+zip', 'text/html']
+/** Rows per request when screening a whole collection. The library's own page size for /items. */
+const SCREEN_PAGE = 100
+/** Characters of one abstract per screened record. 100 records at 300 characters is ~30k, inside a
+ *  single report; the default batch of a sweep is far smaller than that. */
+const DEFAULT_SCREEN_LIMIT = 300
+/** A ceiling on how many rows a screening pass will read, so a runaway collection stops loudly. */
+const SCREEN_CAP = 2_000
 
 /** A malformed command line, as opposed to a read that failed. Exit code 2 rather than 1. */
 class UsageError extends Error {}
@@ -220,9 +230,12 @@ const USAGE =
   '       node tools/zotero-read.mjs --item <key> [--offset N] [--limit N]   # a note prints its body\n' +
   '       node tools/zotero-read.mjs --fulltext <key> [--attachment <key>] [--offset N] [--limit N] [--grep TERM]\n' +
   '       node tools/zotero-read.mjs --collections | --collection <key> | --tags\n' +
+  '       node tools/zotero-read.mjs --collection <key> --screen [--screen-limit N]\n' +
   '       [--json]\n' +
   '       --limit counts ROWS for a search (at most 100, the library\'s page size) and CHARACTERS for a\n' +
-  '       read (default 12000, at most 100000).'
+  '       read (default 12000, at most 100000).\n' +
+  '       --screen enumerates a whole collection and prints one abstract per record; --screen-limit sets\n' +
+  '       the characters printed per abstract (default 300). --limit does not apply to a screening pass.'
 
 /**
  * Read the command line.
@@ -242,6 +255,8 @@ export function parseArgs(argv) {
     tags: [],
     attachment: '',
     grep: '',
+    screen: false,
+    screenLimit: DEFAULT_SCREEN_LIMIT,
     json: false,
   }
   const integer = (name, raw, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) => {
@@ -297,6 +312,13 @@ export function parseArgs(argv) {
         options.grep = next ?? ''
         index += 1
         break
+      case '--screen':
+        options.screen = true
+        break
+      case '--screen-limit':
+        options.screenLimit = integer('screen-limit', next, { min: 60, max: 2_000 })
+        index += 1
+        break
       case '--json':
         options.json = true
         break
@@ -305,6 +327,14 @@ export function parseArgs(argv) {
     }
   }
   if (!options.mode) throw new UsageError('pass --search, --item, --fulltext, --collections, --collection or --tags')
+  if (options.screen && options.mode !== 'collection') {
+    throw new UsageError('--screen applies to --collection <key> only')
+  }
+  // A screening pass pages the collection itself, so a row limit on top of it would be a second,
+  // conflicting notion of "how much of the collection". The character budget is `--screen-limit`.
+  if (options.screen && options.limitRaw !== undefined) {
+    throw new UsageError('--screen reads every row of the collection; set --screen-limit for the characters per abstract, not --limit')
+  }
   // `--item` counts characters too, because a note's body is what an item read of a note returns.
   const reading = options.mode === 'fulltext' || options.mode === 'item'
   options.limit = reading ? DEFAULT_READ_LIMIT : DEFAULT_LIMIT
@@ -609,6 +639,147 @@ async function runCollectionItems(options) {
     const parent = data.parentItem ? `   parent ${data.parentItem}` : ''
     console.log(`${index + 1}. ${row.key}  ${year}  ${label}  ${title}${parent}`)
   })
+  // A listing that silently stops at the page size reads as "this is the collection". Measured: one
+  // collection reported 34 items in the tree and the default page listed 10 of them.
+  if (rows.length < total) {
+    console.log('')
+    console.log(
+      `truncated : showing ${rows.length} of ${total} rows - the remaining ${total - rows.length} are NOT listed. ` +
+        'Raise --limit, or use --screen to enumerate the whole collection.',
+    )
+  }
+}
+
+/**
+ * Every row of one collection, paged.
+ *
+ * Measured 2026-10-19 against this library: `start` IS honoured (`start=5` and `start=12` answered
+ * different rows), so a collection larger than one page can be enumerated rather than truncated. A
+ * parent collection does NOT include its subcollections' items — asked for one whose children held
+ * items, the endpoint answered total 0 — so a pass that wants a subtree has to name each collection.
+ *
+ * @param {string} key A collection key.
+ * @returns {Promise<{rows: object[], total: number, complete: boolean}>} Rows in library order, the
+ *   library's own total, and whether every one of them was read.
+ */
+async function collectionRows(key) {
+  const rows = []
+  let total = 0
+  for (let start = 0; start < SCREEN_CAP; start += SCREEN_PAGE) {
+    const page = await paginatedJson(
+      `/api/users/0/collections/${key}/items?format=json&limit=${SCREEN_PAGE}&start=${start}`,
+    )
+    total = page.total
+    rows.push(...page.rows)
+    if (page.rows.length < SCREEN_PAGE || rows.length >= total) break
+  }
+  return { rows, total, complete: rows.length >= total }
+}
+
+/**
+ * A collection's rows as a screening pass: every record once, with its abstract cut to a fixed length.
+ *
+ * A note filed in a collection is a member in its own right, so the rows arrive mixed and the pass
+ * separates them rather than collapsing a note onto "its" record — a screening pass judges records, and
+ * a note has no abstract to judge by.
+ *
+ * @param {object[]} rows Rows as the collection endpoint returns them.
+ * @param {{limit?: number}} [options] Characters of abstract kept per record.
+ * @returns {{records: Array<{key: string, year: string, itemType: string, title: string, excerpt: string, characters: number}>,
+ *   skipped: {note: number, attachment: number}, budget: number, withAbstract: number}} The records in
+ *   library order, what was skipped, the characters of abstract text the pass will print, and how many
+ *   records carry one.
+ */
+export function screenRows(rows, { limit = DEFAULT_SCREEN_LIMIT } = {}) {
+  const skipped = { note: 0, attachment: 0 }
+  const records = []
+  for (const row of rows) {
+    const data = row.data ?? {}
+    const type = data.itemType
+    if (type === 'note' || type === 'attachment') {
+      skipped[type] += 1
+      continue
+    }
+    const abstract = visibleText(data.abstractNote ?? '')
+    const excerpt = abstract.length > limit ? `${abstract.slice(0, limit)}…` : abstract
+    records.push({
+      key: row.key,
+      year: yearOf(data.date) || '????',
+      itemType: type ?? 'unknown',
+      title: data.title || '(no title)',
+      excerpt,
+      characters: excerpt.length,
+    })
+  }
+  return {
+    records,
+    skipped,
+    budget: records.reduce((sum, record) => sum + record.characters, 0),
+    withAbstract: records.filter((record) => record.excerpt !== '').length,
+  }
+}
+
+/**
+ * One collection as a screening pass: every record once, with its abstract cut to a fixed length.
+ *
+ * The pass says what it read and what it skipped, and claims nothing about an attachment: whether a
+ * record has readable text needs its children, which is the reading round's errand, not this one's.
+ */
+async function runCollectionScreening(options) {
+  const { rows, total, complete } = await collectionRows(options.value)
+  const name = await readCollection(options.value)
+    .then((data) => data?.name ?? '')
+    .catch(() => '')
+  const { records, skipped, budget, withAbstract } = screenRows(rows, { limit: options.screenLimit })
+
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          collection: { key: options.value, name },
+          total,
+          rows: rows.length,
+          complete,
+          skipped,
+          budget,
+          records,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+
+  console.log(
+    `collection : ${options.value}  "${name}"  · total ${total} rows · showing 1-${rows.length}` +
+      (complete ? '' : '   INCOMPLETE'),
+  )
+  console.log(
+    `records    : ${records.length} of ${rows.length} rows are records; ${skipped.note} note(s), ${skipped.attachment} attachment(s) skipped`,
+  )
+  console.log(`abstracts  : ${withAbstract}/${records.length} have one`)
+  console.log(`budget     : ~${budget.toLocaleString('en-US')} characters of abstract text`)
+  if (!complete) {
+    console.log(
+      `incomplete : the pass stopped at ${rows.length} of ${total} rows (cap ${SCREEN_CAP}); this is NOT the whole collection`,
+    )
+  }
+  if (records.length === 0) {
+    console.log('\n0 records in this collection.')
+    return
+  }
+  console.log('')
+  records.forEach((record, index) => {
+    console.log(
+      `${String(index + 1).padStart(2)}. ${record.key}  ${record.year}  ${record.itemType}  ${record.title}`,
+    )
+    console.log(`    abs: ${record.excerpt || '(no abstract)'}`)
+  })
+  console.log('')
+  console.log(
+    'not claimed : whether a record has a readable attachment - that needs its children, which this pass does not read.',
+  )
 }
 
 async function runTags(options) {
@@ -636,7 +807,7 @@ async function main() {
     item: runItem,
     fulltext: runFulltext,
     collections: runCollections,
-    collection: runCollectionItems,
+    collection: options.screen ? runCollectionScreening : runCollectionItems,
     tags: runTags,
   }
   await modes[options.mode](options)

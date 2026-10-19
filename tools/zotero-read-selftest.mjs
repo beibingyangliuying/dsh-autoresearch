@@ -20,6 +20,7 @@ import {
   groupHits,
   parseArgs,
   pickAttachment,
+  screenRows,
   selectRequested,
   sliceText,
   yearOf,
@@ -234,6 +235,39 @@ check(read.mode === 'fulltext' && read.limit === 300, 'a read takes a character 
 check(parseArgs(['--fulltext', 'k']).limit === 12000, 'a read defaults to 12000 characters, inside the shell tool clip')
 check(parseArgs(['--fulltext', 'k', '--grep', 'term']).grep === 'term', 'a read can look for one term')
 check(parseArgs(['--collections']).mode === 'collections' && parseArgs(['--tags']).mode === 'tags', 'the argument-less modes parse')
+
+// --- screening a whole collection ----------------------------------------------------------------
+
+console.log('\n[11] a collection is screened as records with abstracts, not as rows')
+
+/** Four collection rows: two records (one long abstract, one without), a note and an attachment. */
+const COLLECTION_ROWS = [
+  { key: 'ABCD2345', data: { itemType: 'journalArticle', title: 'Example study alpha', date: '2012', abstractNote: 'x'.repeat(120) } },
+  { key: 'BCDE3456', data: { itemType: 'note', title: '' } },
+  { key: 'CDEF4567', data: { itemType: 'journalArticle', title: 'Example study beta', date: '09/2019', abstractNote: '<p>Short &amp; sweet</p>' } },
+  { key: 'DEFG5678', data: { itemType: 'attachment', contentType: 'application/pdf', title: 'Full Text PDF' } },
+]
+const screened = screenRows(COLLECTION_ROWS, { limit: 60 })
+check(screened.records.length === 2, 'two records out of four rows', `${screened.records.length}`)
+check(screened.skipped.note === 1 && screened.skipped.attachment === 1, 'the note and the attachment are counted, not printed')
+check(screened.records[0].excerpt.length === 61, 'a long abstract is cut to the limit plus the ellipsis', `${screened.records[0].excerpt.length}`)
+check(screened.records[0].excerpt.endsWith('…'), 'and the cut is marked rather than silent')
+check(screened.records[1].excerpt === 'Short &amp; sweet', 'the abstract is read as text, not as html', screened.records[1].excerpt)
+check(screened.withAbstract === 2, 'both records carry an abstract', `${screened.withAbstract}`)
+check(screened.records[1].year === '2019', 'the year is found in a free-text date here too')
+check(screened.budget === screened.records.reduce((sum, record) => sum + record.characters, 0), 'the budget is what will actually be printed')
+const bare = screenRows([{ key: 'EFGH6789', data: { itemType: 'journalArticle', title: 'No abstract here' } }])
+check(bare.records[0].excerpt === '' && bare.withAbstract === 0, 'a record with no abstract is kept with an empty excerpt, not dropped')
+check(screenRows([]).records.length === 0 && screenRows([]).budget === 0, 'no rows is no records and no budget')
+
+check(parseArgs(['--collection', 'k', '--screen']).screen === true, '--screen is a flag on --collection')
+check(parseArgs(['--collection', 'k', '--screen']).screenLimit === 300, 'a screening pass defaults to 300 characters per abstract')
+check(parseArgs(['--collection', 'k', '--screen', '--screen-limit', '500']).screenLimit === 500, '--screen-limit sets it')
+check(parseArgs(['--collection', 'k']).screen === false, 'a plain collection listing is not a screening pass')
+throws('--screen without --collection is refused', () => parseArgs(['--search', 'x', '--screen']))
+throws('--screen with --limit is refused, because it would mean two things at once', () =>
+  parseArgs(['--collection', 'k', '--screen', '--limit', '20']),
+)
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
