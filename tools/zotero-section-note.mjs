@@ -41,17 +41,22 @@
 //   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html --write
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"        # dry run
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --undo --write
-//   node tools/zotero-section-note.mjs --delete --note <noteKey>                        # plan only
+//   node tools/zotero-section-note.mjs --delete --note <noteKey>                        # dry run
+//   node tools/zotero-section-note.mjs --delete --note <noteKey> --write
 //
-// This tool performs no deletion; `--delete` states the plan and the irreversibility facts, and the
-// write path is not implemented in this round. Only a `/retired` note is a candidate.
+// DELETION IS PERMANENT, AND ONLY A /retired NOTE IS A CANDIDATE
+//
+// This channel cannot put an item in the trash: a DELETE erases the note, the key answers 404
+// afterwards, and the trash count does not move. The plan states that before the act, and `--write`
+// is the owner's second answer. The request carries the version the plan was read at (the API answers
+// 428 without that precondition), and a version that moved is refused rather than overwritten.
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (already claimed, conflict, library error) |
-// 2 usage, or a write path this round does not implement.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+// 2 usage.
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
+import { APP_NAME, childrenOf, createWriteGate, isWriteAccepted, localRequest, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
 
 /** The tag prefix that records which top-level section a note explains. */
 export const SECTION_TAG_PREFIX = '/section-'
@@ -750,8 +755,9 @@ async function runRetire(options) {
  *
  * Only an import may be rewritten: a note with no `/section-` tag, or a `/section-N` + `/imported`
  * note. A `/section-N` note without `/imported` is a record; changing its prose is a retirement and a
- * new note. The old body is backed up under `.section-notes/` before the write, because this library's
- * API cannot put an item in the trash.
+ * new note. No backup is written: a section note is a transcription of the paper, the paper remains
+ * the source, and the plan prints the old first block before anything is sent. The version guard is
+ * what is kept: a note the application edited while this ran is refused rather than overwritten.
  */
 async function runRewrite(options) {
   const body = options.file ? readFileSync(options.file, 'utf8') : options.text
@@ -790,14 +796,12 @@ async function runRewrite(options) {
     after = after.filter((tag, index, list) => list.findIndex((entry) => lowered(entry) === lowered(tag)) === index)
   }
 
-  const backup = join(process.cwd(), '.section-notes', note.parentItem ?? 'standalone', `rewritten-${options.note}-${new Date().toISOString().replace(/[:.]/g, '-')}.html`)
   console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
   console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}${isImported(tags) ? ' (imported)' : ''}`)
   console.log(`size    : ${String(note.note ?? '').length} -> ${composed.length} characters`)
   console.log(`old     : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
   console.log(`new     : ${firstBlockText(composed).slice(0, 96)}`)
   if (token || !sameTags(after, tags)) console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
-  console.log(`backup  : ${backup}`)
   console.log(`write   : PATCH /api/users/0/items/${options.note}  [{note: ...${token ? ', tags: [...]' : ''}}]`)
 
   if (sameTags(after, tags) && visibleText(note.note ?? '') === visibleText(composed)) {
@@ -809,21 +813,13 @@ async function runRewrite(options) {
     return
   }
 
-  try {
-    mkdirSync(dirname(backup), { recursive: true })
-    writeFileSync(backup, note.note ?? '', 'utf8')
-  } catch (error) {
-    console.error(`\nREFUSED: could not write the backup ${backup}: ${error instanceof Error ? error.message : String(error)}`)
-    process.exitCode = 1
-    return
-  }
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
   const patch = { note: composed }
   if (token) patch.tags = after.map((tag) => ({ tag }))
   const result = await patchItem({ gate, key: options.note, patch, apply: true })
   if (result.conflict) {
-    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written; the backup is at ${backup}.`)
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
     process.exitCode = 1
     return
   }
@@ -835,7 +831,6 @@ async function runRewrite(options) {
   const afterText = visibleText(result.after.note ?? '')
   if (afterText !== visibleText(composed)) {
     console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back with the text that was sent.`)
-    console.error(`The old body is at ${backup}.`)
     process.exitCode = 1
     return
   }
@@ -851,10 +846,17 @@ async function runRewrite(options) {
     return
   }
   console.log(`\nOK - note ${options.note} rewritten (now ${result.after.note.length} characters, version ${result.after.version}).`)
-  console.log(`The old body is at ${backup}.`)
 }
 
-/** Plan a deletion of a retired note. This round does not perform one. */
+/**
+ * Delete a retired note.
+ *
+ * This is the one irreversible write in the preset, and it is allowed only on a note that already
+ * carries `/retired`. The API cannot put an item in the trash: the note is erased, the key answers
+ * 404 afterwards, and the trash count does not move. The plan is printed first, `--write` is the
+ * owner's second answer, and the request carries the version the plan was read at, because this API
+ * answers 428 without that precondition. The delete is proved by a read-back 404, not by the 204.
+ */
 async function runDelete(options) {
   const note = await readItem(options.note)
   if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
@@ -878,15 +880,50 @@ async function runDelete(options) {
   console.log(`successor: ${successor ? `${successor} names itself this note's replacement` : 'nothing names a replacement yet'}`)
   if (digest) console.log('DIGEST  : this note is a /digest; deleting it removes the record of what was read.')
   if (!successor) console.log('WARNING : nothing names a replacement; deleting removes the last record of what this note said.')
-  console.log(`write   : DELETE /api/users/0/items/${options.note}`)
+  console.log(`write   : DELETE /api/users/0/items/${options.note}  If-Unmodified-Since-Version: ${note.version}`)
   console.log('\nThis channel cannot put an item in the trash: DELETE is permanent, the record answers 404')
   console.log('afterwards, and the trash neither grows nor keeps the key. The body cannot be recovered.')
-  if (options.write) {
-    console.error('\nREFUSED: the write path is not implemented; this round only plans a deletion.')
-    process.exitCode = 2
+
+  if (!options.write) {
+    console.log('\nDRY RUN - nothing was written. Re-run with --write to erase the note.')
     return
   }
-  console.log('\nDRY RUN - nothing was written. Deletion is not implemented in this round.')
+
+  const fresh = await readItem(options.note)
+  if (!isRetired((fresh.tags ?? []).map((entry) => entry.tag))) {
+    console.error(`\nREFUSED: ${options.note} is no longer retired; nothing was deleted.`)
+    process.exitCode = 1
+    return
+  }
+  if (fresh.version !== note.version) {
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read (version ${note.version} -> ${fresh.version}). Nothing was deleted.`)
+    process.exitCode = 1
+    return
+  }
+
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  const result = await gate.write('DELETE', `/api/users/0/items/${options.note}`, undefined, {
+    'If-Unmodified-Since-Version': String(fresh.version),
+  })
+  if (result.status === 412) {
+    console.error(`\nCONFLICT: note ${options.note} changed between the read and the delete. Nothing was deleted.`)
+    process.exitCode = 1
+    return
+  }
+  if (!isWriteAccepted(result.status)) {
+    console.error(`\nThe library refused the delete (HTTP ${result.status}): ${result.text.slice(0, 300)}`)
+    process.exitCode = 1
+    return
+  }
+  const gone = await localRequest('GET', `/api/users/0/items/${options.note}`)
+  if (gone.status !== 404) {
+    console.error(`\nREAD-BACK MISMATCH: the library accepted the delete but ${options.note} still answers ${gone.status}.`)
+    process.exitCode = 1
+    return
+  }
+  console.log(`\nOK - note ${options.note} is erased. It answers 404, and the trash does not hold it.`)
+  if (claim.token) console.log(`§${claim.token} is free again; a later note may claim it.`)
 }
 
 const USAGE =
@@ -897,12 +934,13 @@ const USAGE =
   '       node tools/zotero-section-note.mjs --rewrite --note <noteKey> (--text "<html>" | --file <path>) [--section <ordinal>] [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
-  '       node tools/zotero-section-note.mjs --delete --note <noteKey>\n' +
+  '       node tools/zotero-section-note.mjs --delete --note <noteKey> [--write]\n' +
   '       Identity is a tag: /section-N claims a top-level section, /imported marks an import that may\n' +
   '       still be rewritten, /digest marks the paper-level digest, /retired takes a note out of service.\n' +
   '       No invisible marker is written or read, and no prose is parsed: a note with no /section- tag\n' +
   '       is UNKNOWN and is read before anything is written. --tidy does not exist; a damaged body is\n' +
-  '       rewritten by the agent or retired and written again. --delete is a plan only in this round.'
+  '       rewritten by the agent or retired and written again. --delete erases only a /retired note,\n' +
+  '       permanently: this API has no trash, and the plan states that before --write is accepted.'
 
 function parseArgs(argv) {
   const options = {

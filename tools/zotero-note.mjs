@@ -20,13 +20,16 @@
 // line and the item's `/done` tag, and the digest is one synthesis. This tool writes the body the agent
 // gives it; it does not read the paper and does not synthesize.
 //
-// REFRESH IS IN PLACE
+// REFRESH IS IN PLACE, AND THE OLD BODY STAYS IN THE LIBRARY
 //
 // One record has one live `/digest` note. When the synthesis changes, the SAME note is patched, with
-// the old body backed up under `.section-notes/` first and a version guard on the write. The key does
-// not change, no tombstone accumulates, and the old body is recoverable from the workspace. A retired
-// digest is skipped: a new digest is created instead, and the tombstone stays as history. A changed
-// digest is a refresh in place, so the same note and the same key carry the current projection.
+// a version guard on the write; the key does not change, no live digest accumulates, and no workspace
+// file is involved. Before the patch, the old body is written once as a child note carrying `/digest`
+// and `/retired`: the reference library, not a workspace directory, keeps what the digest used to
+// say. That retired snapshot takes part in no coverage, is never appended to, and may be deleted
+// later with the section-note tool. A retired digest is skipped: a new digest is created instead, and
+// the tombstone stays as history. A changed digest is a refresh in place, so the same note and the
+// same key carry the current projection.
 //
 // Usage:
 //   node tools/zotero-note.mjs --item <itemKey> --text "<p>Digest: ...</p>"          # dry run
@@ -34,18 +37,18 @@
 //
 // Exit codes: 0 applied, or nothing to do | 1 refused (conflict, multiple live digests, library error)
 // | 2 usage.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { APP_NAME, childrenOf, createWriteGate, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
-import { DIGEST_TAG, isDigest, isRetired } from './zotero-section-note.mjs'
+import { DIGEST_TAG, RETIRE_TAG, isDigest, isRetired } from './zotero-section-note.mjs'
 
 /** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
 class UsageError extends Error {}
 
-/** A note's tags as bare text. */
+/** A note's tags as bare text, from a wrapped child row or from `readItem`'s unwrapped data. */
 function tagList(item) {
-  return (item?.data?.tags ?? []).map((entry) => entry.tag)
+  return (item?.data?.tags ?? item?.tags ?? []).map((entry) => entry.tag)
 }
 
 /**
@@ -59,6 +62,27 @@ function tagList(item) {
  */
 export function findDigestNote(children) {
   return children.find((child) => child?.data?.itemType === 'note' && isDigest(tagList(child)) && !isRetired(tagList(child)))
+}
+
+/**
+ * The retired snapshot that already holds this body, if one exists.
+ *
+ * A refresh writes the old body as a `/digest` + `/retired` note before patching the live digest. If a
+ * previous attempt died between the two writes, that snapshot is reused rather than copied again, so a
+ * retried refresh does not stack identical tombstones on the record.
+ *
+ * @param {object[]} children Child items as the library returns them.
+ * @param {string} body The old digest body.
+ * @returns {object|undefined} The retired `/digest` note whose visible text is `body`.
+ */
+export function findRetiredSnapshot(children, body) {
+  return children.find(
+    (child) =>
+      child?.data?.itemType === 'note' &&
+      isDigest(tagList(child)) &&
+      isRetired(tagList(child)) &&
+      visibleText(child.data.note ?? '') === visibleText(body),
+  )
 }
 
 /**
@@ -83,7 +107,15 @@ const USAGE =
   'usage: node tools/zotero-note.mjs --item <itemKey> (--text "<html>" | --file <path>) [--write]\n' +
   '       The digest is the record\'s ONE paper-level projection, derived from its /section-N notes.\n' +
   '       It carries /digest; a retired digest is skipped and a new one is created. A changed digest\n' +
-  '       refreshes the same note in place, after backing up the old body under .section-notes/.'
+  '       refreshes the same note in place, after keeping the old body as a /digest + /retired note\n' +
+  '       on the same record.'
+
+/** The key a POST /items reported for its first item, or ''. */
+function postedKey(text) {
+  const body = JSON.parse(text)
+  const saved = body.successful?.['0'] ?? body.success?.['0']
+  return (typeof saved === 'string' ? saved : saved?.key) ?? ''
+}
 
 function parseArgs(argv) {
   const options = { item: '', text: '', file: '', write: false }
@@ -123,7 +155,8 @@ async function main() {
   }
   const existing = live[0]
   const composed = composeNote(existing, addition)
-  const backup = join(process.cwd(), '.section-notes', options.item, `digest-${new Date().toISOString().replace(/[:.]/g, '-')}.html`)
+  const oldBody = existing?.data?.note ?? ''
+  const snapshot = composed.mode === 'refresh' ? findRetiredSnapshot(children, oldBody) : undefined
 
   const action =
     composed.mode === 'refresh'
@@ -135,9 +168,15 @@ async function main() {
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
   console.log(`children: ${children.length}${existing ? ` (live digest note ${existing.key})` : ' (no live digest note)'}`)
   console.log(`action  : ${action}`)
-  if (existing) console.log(`note    : ${(existing.data.note ?? '').length} characters now`)
+  if (existing) console.log(`note    : ${oldBody.length} characters now`)
   console.log(`addition: ${addition.length} characters`)
-  if (composed.mode === 'refresh') console.log(`backup  : ${backup}`)
+  if (composed.mode === 'refresh') {
+    console.log(
+      snapshot
+        ? `keep    : retired note ${snapshot.key} already holds the old body in the library`
+        : 'keep    : the old body as a /digest + /retired note on this record',
+    )
+  }
   if (composed.mode !== 'no-op') console.log(`result  : ${composed.html.length} characters`)
 
   if (composed.mode === 'no-op') {
@@ -149,13 +188,17 @@ async function main() {
 
   console.log(
     composed.mode === 'refresh'
-      ? `write   : PATCH /api/users/0/items/${existing.key}  If-Unmodified-Since-Version: ${existing.data.version}`
+      ? `write   : POST /api/users/0/items  [{itemType: note, parentItem: ${options.item}, note: <old body>, tags: [{tag: ${DIGEST_TAG}}, {tag: ${RETIRE_TAG}}]}]\n` +
+        `          then PATCH /api/users/0/items/${existing.key}  If-Unmodified-Since-Version: ${existing.data.version}`
       : `write   : POST /api/users/0/items  [{itemType: note, parentItem: ${options.item}, note: ..., tags: [{tag: ${DIGEST_TAG}}]}]`,
   )
 
   if (!options.write) {
-    console.log('\nDRY RUN - nothing was written. Re-run with --write; the reference manager will then')
-    console.log('ask you to Allow the write, and is asked once.')
+    console.log('\nDRY RUN - nothing was written. Re-run with --write.')
+    if (composed.mode === 'refresh') {
+      console.log('A refresh makes two writes: the retired snapshot of the old body, then the patch of the')
+      console.log('live digest. One lasting grant covers both; a single-use "Allow" asks once per write.')
+    }
     return
   }
 
@@ -163,34 +206,54 @@ async function main() {
   await gate.open()
 
   if (composed.mode === 'refresh') {
-    try {
-      mkdirSync(dirname(backup), { recursive: true })
-      writeFileSync(backup, existing.data.note ?? '', 'utf8')
-    } catch (error) {
-      console.error(`\nREFUSED: could not write the backup ${backup}: ${error instanceof Error ? error.message : String(error)}`)
-      process.exitCode = 1
-      return
+    let snapshotKey = snapshot?.key ?? ''
+    if (!snapshotKey) {
+      const saved = await gate.write('POST', '/api/users/0/items', [
+        { itemType: 'note', parentItem: options.item, note: oldBody, tags: [{ tag: DIGEST_TAG }, { tag: RETIRE_TAG }] },
+      ])
+      if (saved.status !== 200) {
+        console.error(`\nThe library refused to keep the old body as a retired note (HTTP ${saved.status}): ${saved.text.slice(0, 300)}`)
+        console.error('The live digest was not touched.')
+        process.exitCode = 1
+        return
+      }
+      snapshotKey = postedKey(saved.text)
+      if (!snapshotKey) {
+        console.error(`\nThe library reported no key for the retired snapshot: ${saved.text.slice(0, 300)}`)
+        console.error('The live digest was not touched.')
+        process.exitCode = 1
+        return
+      }
+      const kept = await readItem(snapshotKey)
+      const keptTags = tagList(kept)
+      if (!isDigest(keptTags) || !isRetired(keptTags)) {
+        console.error(`\nREAD-BACK MISMATCH: note ${snapshotKey} does not read back carrying ${DIGEST_TAG} + ${RETIRE_TAG}.`)
+        console.error('The live digest was not touched; that note is an unfiled copy of the old body.')
+        process.exitCode = 1
+        return
+      }
     }
     const result = await patchItem({ gate, key: existing.key, patch: { note: composed.html }, apply: true })
     if (result.conflict) {
-      console.error(`\nCONFLICT: note ${existing.key} changed since this plan was read. Nothing was written.`)
-      console.error(`The old body is at ${backup}.`)
+      console.error(`\nCONFLICT: note ${existing.key} changed since this plan was read. The live digest was not written.`)
+      console.error(`The old body is kept as retired note ${snapshotKey}.`)
       process.exitCode = 1
       return
     }
     if (!result.applied) {
       console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
+      console.error(`The old body is kept as retired note ${snapshotKey}.`)
       process.exitCode = 1
       return
     }
     if (visibleText(result.after.note ?? '') !== visibleText(composed.html)) {
       console.error(`\nREAD-BACK MISMATCH: note ${existing.key} does not read back with the digest that was sent.`)
-      console.error(`The old body is at ${backup}.`)
+      console.error(`The old body is kept as retired note ${snapshotKey}.`)
       process.exitCode = 1
       return
     }
     console.log(`\nOK - note ${existing.key} refreshed in place (now ${result.after.note.length} characters, version ${result.after.version}).`)
-    console.log(`The old body is at ${backup}.`)
+    console.log(`The old body is kept as retired note ${snapshotKey} on the same record.`)
     return
   }
 
@@ -202,9 +265,7 @@ async function main() {
     process.exitCode = 1
     return
   }
-  const body = JSON.parse(res.text)
-  const saved = body.successful?.['0'] ?? body.success?.['0']
-  const noteKey = typeof saved === 'string' ? saved : saved?.key
+  const noteKey = postedKey(res.text)
   if (!noteKey) {
     console.error(`\nThe library reported no success: ${res.text.slice(0, 300)}`)
     process.exitCode = 1

@@ -160,8 +160,10 @@ check(!source.includes('CLAIM_FORMS'), 'no prose claim regex remains')
 check(!source.includes('sectionClaim'), 'no prose claim reader remains')
 check(!source.includes('normalizeMath'), 'no mechanical math repair remains')
 check(!source.includes('options.tidy'), 'no --tidy mode remains')
-check(!/gate\.write\(\s*['"]DELETE['"]/.test(source), 'this tool never sends a DELETE: a retired note is planned, not removed')
-check(source.includes('DELETE /api/users/0/items/'), 'but the plan states the request a future round would send')
+check(source.includes("gate.write('DELETE'"), 'the DELETE goes through the write gate')
+check(source.includes('Only a retired note may be deleted'), 'and the retired check gates it')
+check(!source.includes('performs no deletion'), 'the old "performs no deletion" sentence is gone')
+check(!source.includes('.section-notes'), 'rewriting no longer writes a workspace backup')
 check(source.includes('the body is NOT touched'), 'and the plan says in so many words that the body is left alone')
 
 console.log('\n[8] the command line refuses usage errors before it reads a library')
@@ -169,6 +171,7 @@ const tool = fileURLToPath(new URL('./zotero-section-note.mjs', import.meta.url)
 const run = (...args) => spawnSync(process.execPath, [tool, ...args], { encoding: 'utf8' })
 same(run('--claim').status, 2, '--claim without --note is a usage error')
 same(run('--delete').status, 2, '--delete without --note is a usage error')
+same(run('--delete', '--note', 'X', '--reason', 'why').status, 2, '--delete does not take --reason')
 same(run('--tidy', '--note', 'X').status, 2, '--tidy is gone')
 
 console.log('\n[9] the command line against a stub library, not the owner\'s')
@@ -181,6 +184,9 @@ const stubItems = {
 }
 const stubChildren = ['LIVE2', 'UNK', 'DIG', 'OLD'].map((key) => ({ key, data: stubItems[key] }))
 const requests = []
+const deleted = new Set()
+const scratch = mkdtempSync(join(tmpdir(), 'section-note-'))
+const grantPath = join(scratch, 'grant.json')
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1')
   requests.push(`${req.method} ${url.pathname}`)
@@ -188,13 +194,37 @@ const server = createServer((req, res) => {
     res.writeHead(status, { 'content-type': 'application/json' })
     res.end(JSON.stringify(body))
   }
+  if (url.pathname === '/api/') {
+    res.writeHead(200, { 'content-type': 'application/json', 'zotero-server-id': 'stub-server', 'x-zotero-version': 'stub' })
+    res.end('{}')
+    return
+  }
+  if (url.pathname === '/api/local/authorize' && req.method === 'POST') {
+    send(200, { key: 'stub-key', remember: true })
+    return
+  }
   if (url.pathname === '/api/users/0/items/REC1/children') {
     send(200, stubChildren)
     return
   }
   const match = /^\/api\/users\/0\/items\/([A-Z0-9]+)$/.exec(url.pathname)
   if (match && stubItems[match[1]]) {
-    send(200, { data: stubItems[match[1]] })
+    const key = match[1]
+    if (req.method === 'DELETE') {
+      if (req.headers['if-unmodified-since-version'] !== String(stubItems[key].version)) {
+        send(428, { error: 'precondition required' })
+        return
+      }
+      deleted.add(key)
+      res.writeHead(204)
+      res.end()
+      return
+    }
+    if (deleted.has(key)) {
+      send(404, { error: 'not found' })
+      return
+    }
+    send(200, { data: stubItems[key] })
     return
   }
   send(404, { error: 'not found' })
@@ -203,7 +233,9 @@ await new Promise((done) => server.listen(0, '127.0.0.1', done))
 const origin = `127.0.0.1:${server.address().port}`
 const runAsync = (args) =>
   new Promise((done) => {
-    const child = spawn(process.execPath, [tool, ...args], { env: { ...process.env, ZOTERO_LOCAL_API: origin } })
+    const child = spawn(process.execPath, [tool, ...args], {
+      env: { ...process.env, ZOTERO_LOCAL_API: origin, ZOTERO_LOCAL_KEY_STORE: grantPath },
+    })
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (chunk) => (stdout += chunk))
@@ -225,24 +257,35 @@ same(claimRun.status, 0, 'claiming an untagged note is a dry run')
 check(claimRun.stdout.includes('/section-5'), 'the plan shows the tag it would write')
 check(claimRun.stdout.includes('/imported'), 'and the /imported mark that keeps it rewritable')
 
-const scratch = mkdtempSync(join(tmpdir(), 'section-note-'))
 const bodyFile = join(scratch, 'new.html')
 writeFileSync(bodyFile, '<p>new body</p>', 'utf8')
 const rewriteRun = await runAsync(['--rewrite', '--note', 'UNK', '--file', bodyFile])
 same(rewriteRun.status, 0, 'rewriting an import is a dry run')
-check(rewriteRun.stdout.includes('backup'), 'and it names the backup it would make')
+check(!rewriteRun.stdout.includes('backup'), 'and it no longer promises a workspace backup')
+check(rewriteRun.stdout.includes('old     :'), 'the old first block is what it shows instead')
 const nativeRewrite = await runAsync(['--rewrite', '--note', 'LIVE2', '--file', bodyFile])
 same(nativeRewrite.status, 2, 'a native record is not rewritten in place')
 
 const deleteRun = await runAsync(['--delete', '--note', 'OLD'])
 same(deleteRun.status, 0, 'a retired note has a deletion plan')
 check(deleteRun.stdout.includes('DELETE /api/users/0/items/OLD'), 'the plan states the request')
+check(deleteRun.stdout.includes('If-Unmodified-Since-Version: 5'), 'and the version precondition the API demands')
 check(deleteRun.stdout.includes('permanent'), 'and that the channel cannot undo it')
 const liveDelete = await runAsync(['--delete', '--note', 'LIVE2'])
 same(liveDelete.status, 1, 'a live note is refused')
 
 check(requests.every((line) => line.startsWith('GET ')), 'every dry run sent GET only: nothing was written', requests.join(' | '))
+
+const deleteWrite = await runAsync(['--delete', '--note', 'OLD', '--write'])
+same(deleteWrite.status, 0, 'deleting a retired note with --write erases it')
+check(deleteWrite.stdout.includes('is erased'), 'and says it answers 404')
+check(requests.includes('DELETE /api/users/0/items/OLD'), 'the DELETE was sent')
+check(deleted.has('OLD'), 'the stub library erased the note')
+check(deleteWrite.stdout.includes('It answers 404, and the trash does not hold it'), 'and the read-back proved it')
+const goneRun = await runAsync(['--delete', '--note', 'OLD'])
+same(goneRun.status, 1, 'a deleted note can no longer be planned')
+
 server.close()
 
-console.log(failures === 0 ? '\nPASS - section-note identity is tags, and no prose is parsed' : `\nFAIL (${failures})`)
+console.log(failures === 0 ? '\nPASS - section-note identity is tags, no prose is parsed, and deletion is a gated erasure' : `\nFAIL (${failures})`)
 process.exit(failures === 0 ? 0 : 1)
