@@ -1889,3 +1889,69 @@ Rev 26 的模板给了 `references/ledger.md`，而四条纪律与覆盖地图�
 - 不改文件名、不迁移旧课题：已有 `references/<topic>.md` 的课题不受影响；旧课题若在用别的文件名，
   "已有层级优先"照旧。
 - 没有新增护栏：`ledger.md` 是否被误填，只能靠纪律与阅读，机器校不了这一句。
+
+## 70. 章节笔记的默认路径翻成 claim：外部贴入的笔记只打 tag，生成只在属主点名时跑（2026-10-20）
+
+**起因**：junhan 决定章节笔记全部由他从网页版 DS 生成、贴进 Zotero，本地 agent 只做三件事——读、
+claim、报缺口。按 PDF 生成的能力保留，但不再提示（"软删除"）。
+
+**先验**：`--claim` 早在 Revision 17/19 就是规范条文（"a pasted note is claimed or rewritten in
+place"），所以这次**没有新增语义**，只翻了默认路径。旧形状的两个代价：一是 `section-notes` 的
+360 行正文里绝大部分是**写入标准**，只做一次只读清点也要整份加载，且正文会把 agent 拉去写；二是错
+claim 的代价不对称——已 claim 的节被工具永久拒绝重复创建（`REFUSED: §N is already covered`），而
+`INV-ADOPT-2` 会让后续借鉴引用那条笔记、不再回读原文。所以"缺一条"比"错一条"便宜。
+
+**裁定**：
+
+1. 一个技能、两段：**Part I = claim + 报缺口（默认）**，**Part II = 生成（仅属主点名某一节时）**；
+   §0 的硬闸放在任何写入性内容之前。
+2. 生成从 persona 的路由触发里拿掉，只在技能描述里写明"仅显式要求"；目录里仍看得到它。
+3. `## Owner actions` 与 `owner_actions.md` 一并删除（Revision 26 只把它改成"按需创建"，文件还在）。
+   缺口从 tag 就能重算，落盘只会过时。
+4. ~~`protocol.md` **不动**：claim 是现行条文，翻默认路径不属于规范变更。~~ **发布前的反向重扫推翻了这一条**：契约 §4 的第一句陈述的是**触发**（读轮刚读完就生一条），默认翻过来后它对默认路径已经错了。见 §71。
+
+**实现**：`skills/section-notes/SKILL.md`（描述、§0、§1、§2.1 的 claim 判据、§6.1/§6.2、§8.1/§8.2、
+§9 三条 Part I 禁则）· `cordis.patch.yml` 的路由 bullet · `docs/coverage.md` 该行 · `README.md`
+的参考库段落。
+
+**未做／边界**：
+
+- 不改 `--claim` 的语义：仍是 tag-only、一次一条、干跑先、要属主授权；也不新增技能，所以
+  `skills-selftest` 的 12 份与 `preset-selftest` 的 12 条 routing bullet 都不用动。
+- claim 轮**不写台账 `depth`**：claim 说明"这一节有解释挂着"，不等于"这次会话读过这篇论文"。
+- 子节键（旧工具写的 `/section-N.M`）在 claim 轮只报告，不合并；合并与退休留在 Part II 或属主手里。
+- 不改写历史文档（`docs/plans/*`、`docs/releases.md`、本文件旧条目）。
+- 发布前的反向重扫又命中两处散文（`docs/coverage.md` 的读轮步骤与 §6 的门、`docs/overview.md` 的产物列），
+  随 §71 一并改。
+
+## 71. 发布前的反向重扫推翻了 §70 的"不动协议"：Revision 29 改的是触发句（2026-10-20）
+
+**怎么发现的**：§70 裁定"`protocol.md` 不动"，理由写的是"claim 早在 Revision 17 就是条文，翻默认路径不属于
+规范变更"。这一轮发布前按 `preset-release` §2 做反向重扫——先把改动写成一句话（*启动一条节笔记的不再是读轮读完
+一个方法节，而是属主点名那一节*），再逐份读者可见的文件搜这句话的旧形状——`protocol.md` 命中两处：修订史里
+"Revision 23 … what starts a section note is the end of a method section in a reading round"，以及 §4
+`sections` 条目的第一句"a method section a reading round has just finished becomes one `/section-N` note"。
+
+**为什么 §70 的理由站不住**：§70 说的"claim 早就是条文"没错，错在把"默认路径"只当成路由与技能文本的排布。
+契约 §4 那一句陈述的是**触发**——读轮刚读完就生一条笔记。默认翻过来之后，这句话对默认路径已经错了；而契约与
+实现冲突时契约赢，所以只能改契约，不能用"claim 已经在里面"绕开。`preset-release` §2 的原话是"退役的说法不许
+作为降级版本活下来"。
+
+**裁定（Revision 29）**：
+
+1. §4 `sections` 改成：一条 `/section-N` 笔记**只在属主点名那一节时写**；外部贴入的笔记 claim 到它自己标题
+   写明的节（只打 tag、不动正文）；只做 claim 的轮次**报出仍缺笔记的节，不代写**。
+2. 头部立 Revision 29，把两条理由写进契约本身：claim 只说明"这一节有解释挂着"，不等于这次会话读过（故 claim
+   轮不写 `depth`）；错 claim 是永久的（已 claim 的节被拒重复创建，`INV-ADOPT-2` 让后续引用那条笔记、不回读
+   原文），缺一条可以下轮补。
+3. 修订史里 Revision 23 那一句改成"…and Revision 29 moves it once more, to the owner naming that
+   section"——历史句留在原处，但不再单独成立。
+
+**同一轮修掉的散文命中**（不改契约）：`docs/coverage.md` 的读轮步骤仍写"每读完一个方法节…写一条"，且 §6
+"写哪些节"没有门；`docs/overview.md` 的产物列写"每个顶层方法节一条"，读起来像本轮会逐节生成。
+
+**未做／边界**：`--claim` 的语义没动（tag-only、一次一条、干跑先、要授权）；技能结构没动（§70 的 Part I /
+Part II 仍是实现）；`docs/plans/*` 与本文件旧条目不改。
+
+**落在何处**：[`protocol.md`](../protocol.md)（头部、修订史、§4 `sections`）· [`docs/coverage.md`](coverage.md)
+（读轮步骤、§6 的门）· [`docs/overview.md`](overview.md) · 本文件。
