@@ -293,7 +293,7 @@ docs/                  Chinese review aids: the coverage map, the review, the de
 ## Develop it
 
 ```powershell
-# preset structure: composition, persona, routing, leak guards
+# preset structure: composition, persona, routing, leak guards, and the counts the prose declares
 dsh --profile web --dump-config > .tmp\composed-web.txt
 node tools\preset-selftest.mjs .tmp\composed-web.txt
 

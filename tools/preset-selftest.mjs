@@ -8,16 +8,19 @@
 // Checks:
 //   [1] the profile's bundle entry is still a LINK to this workspace, not a copy
 //       (a copy silently breaks "edit the source and it takes effect")
-//   [2] the composed dump is NEWER than the preset source, and the composed tree it holds contains
+//   [2] the count the prose declares matches the disciplines on disk
+//       (this is the number that went stale in #36, #64 and #70; it reads no dump, so it runs before
+//        the dump is required, and it deliberately does NOT cover level counts or behavioural prose)
+//   [3] the composed dump is NEWER than the preset source, and the composed tree it holds contains
 //       the preset with the expected plugin rows
 //       (a stale dump is worse than none: it reports both false passes and false failures about a
 //        reality that no longer exists. This check exists because that actually happened.)
-//   [3] every paragraph of the source persona survives into the composed tree
+//   [4] every paragraph of the source persona survives into the composed tree
 //       (the tree re-serialises the scalar with `>-`, so compare ignoring whitespace)
-//   [4] all discipline rules and skill-routing bullets are present
-//   [5] always-on cost of the persona
+//   [5] all discipline rules and skill-routing bullets are present
+//   [6] always-on cost of the persona
 // Exit code is 1 when any check fails.
-import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync, statSync } from 'node:fs'
+import { readFileSync, lstatSync, readlinkSync, realpathSync, existsSync, statSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, resolve, dirname } from 'node:path'
 
@@ -36,6 +39,35 @@ const profileEntry = join(
 
 /** The profile's own base URL: the base the registry's trial mount resolves row names from. */
 const profileDir = resolve(profileEntry, '..', '..', '..')
+
+/**
+ * The disciplines this preset routes to, named once.
+ *
+ * Both the disk/prose count in [2] and the bullet check in [5] need this list, and a second copy of it
+ * is how a count drifts: one copy gains a name, the other keeps the old total, and each looks right on
+ * its own.
+ */
+const ROUTED_NAMES = [
+  'research-scoping',
+  'literature-recon',
+  'collection-sweep',
+  'reading-triage',
+  'section-notes',
+  'adoption-ruling',
+  'redteam-ruling',
+  'progress-sync',
+  'metadata-query',
+  'subagent-contract',
+  'experiment-protocol',
+  'synthesis-plan',
+]
+
+/** English number words, so a prose count can be compared with an actual one. */
+const NUMBER_WORDS = Object.fromEntries(
+  'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'
+    .split(' ')
+    .map((word, index) => [word, index + 1]),
+)
 
 let failures = 0
 const ok = (cond, label, detail = '') => {
@@ -117,7 +149,57 @@ if (!existsSync(profileEntry)) {
   ok(sameDir, 'link points at this workspace', sameDir ? workspaceDir : `expected ${workspaceDir}`)
 }
 
-console.log('\n[2] composed tree carries the preset')
+console.log('\n[2] the count the prose declares matches the disciplines on disk')
+// Prose counts have gone stale four times - #36, #64, #70, and the composition header before 0.12.0 -
+// and nothing caught any of them: this file asserted the routing bullets it knew by name, never the
+// number the surrounding prose claims. The anchor is the skills directory, because that is what ships;
+// the composed persona is a serialisation of the same fact and needs a dump before it can be read.
+//
+// What this deliberately does NOT cover: LEVEL counts (how many rungs the reading ladder has - the
+// 0.12.0 drift was exactly one of those) and behavioural sentences ("creates the scoping document and
+// nothing else"). No word count can police those, so the release checklist still owes a read-through;
+// a green line here is not permission to skip it.
+const skillsDir = join(workspaceDir, 'skills')
+const onDisk = readdirSync(skillsDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && existsSync(join(skillsDir, entry.name, 'SKILL.md')))
+  .map((entry) => entry.name)
+  .sort()
+ok(
+  onDisk.length === ROUTED_NAMES.length,
+  'shipped disciplines = routed disciplines',
+  `${onDisk.length} on disk, ${ROUTED_NAMES.length} routed`,
+)
+const shippedNotRouted = onDisk.filter((name) => !ROUTED_NAMES.includes(name))
+const routedNotShipped = ROUTED_NAMES.filter((name) => !onDisk.includes(name))
+ok(
+  shippedNotRouted.length === 0 && routedNotShipped.length === 0,
+  'every shipped discipline is routed, and every routed name ships',
+  [
+    ...shippedNotRouted.map((name) => `on disk, not routed: ${name}`),
+    ...routedNotShipped.map((name) => `routed, no directory: ${name}`),
+  ].join('; '),
+)
+
+// Three places of prose declare that same number, each in its own voice. A site that stops matching
+// FAILS rather than passing quietly: a guard that has stopped looking is the defect it was built for.
+const declares = [
+  ['cordis.patch.yml header', patchFile, /routing to ([\w-]+) research-discipline skills/i],
+  ['package.json description', 'package.json', /([\w-]+) on-demand research disciplines/i],
+  ['README.md', 'README.md', /([\w-]+)\s+written disciplines ship/i],
+]
+for (const [label, file, pattern] of declares) {
+  const word = readFileSync(file, 'utf8').replace(/\*/g, '').match(pattern)?.[1]?.toLowerCase()
+  const declared = word === undefined ? undefined : (NUMBER_WORDS[word] ?? Number(word))
+  ok(
+    Number.isInteger(declared) && declared === onDisk.length,
+    `${label} declares ${onDisk.length} discipline(s)`,
+    word === undefined
+      ? 'the sentence that declares the count is gone - teach this check the new wording, do not delete it'
+      : `says "${word}"`,
+  )
+}
+
+console.log('\n[3] composed tree carries the preset')
 if (!existsSync(composedFile)) {
   ok(false, 'composed dump exists', `${composedFile} — run: dsh --profile web --dump-config > ${composedFile}`)
 } else {
@@ -227,7 +309,7 @@ if (!existsSync(composedFile)) {
     ok(!blockText.includes(spec), `no ${spec} spec is named in the composition`)
   }
 
-  console.log('\n[3] source persona survives into the composed tree')
+  console.log('\n[4] source persona survives into the composed tree')
   const sourcePersona = extractBlockScalar(readFileSync(patchFile, 'utf8').split('\n'), /^\s+prefix: [|>]-/)
   const composedPersona = extractBlockScalar(composed, /^\s+prefix: [|>]-/)
   ok(Boolean(sourcePersona), 'source persona extracted')
@@ -243,14 +325,12 @@ if (!existsSync(composedFile)) {
     ok(missing.length === 0, `all ${paras.length} paragraphs intact`, missing.length ? `missing ${missing.length}` : '')
     missing.forEach((p) => console.log(`         lost: ${p.slice(0, 100)}`))
 
-    console.log('\n[4] discipline rules and routing bullets')
+    console.log('\n[5] discipline rules and routing bullets')
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
     ok(rules.length === 11, 'eleven numbered discipline rules', `found ${rules.length}`)
     const flatPersona = composedPersona.replace(/\s+/g, '')
-    const bullets = ['research-scoping', 'literature-recon', 'collection-sweep', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan'].filter(
-      (n) => flatPersona.includes(`→\`${n}\``),
-    )
-    ok(bullets.length === 12, 'twelve skill-routing bullets', `found ${bullets.length}`)
+    const bullets = ROUTED_NAMES.filter((n) => flatPersona.includes(`→\`${n}\``))
+    ok(bullets.length === ROUTED_NAMES.length, `all ${ROUTED_NAMES.length} skill-routing bullets present`, `found ${bullets.length}`)
     ok(composedPersona.includes('{{model}}'), '{{model}} placeholder intact')
     // Retired on purpose, and named so it cannot come back: 0.2.0 registered `cwd` as a prompt
     // variable and 0.2.1 replaced it with the REQUIRED runtime context "Current working directory:
@@ -266,11 +346,11 @@ if (!existsSync(composedFile)) {
         ? 'could not read the kernel registry (@deepseek-ai/dsh-agent-loop, from the profile)'
         : `${referenced.map((n) => `{{${n}}}`).join(', ') || '(none)'} / kernel registers: ${registered.join(', ') || '(none)'}`,
     )
-    for (const name of ['research-scoping', 'literature-recon', 'collection-sweep', 'reading-triage', 'section-notes', 'adoption-ruling', 'redteam-ruling', 'progress-sync', 'metadata-query', 'subagent-contract', 'experiment-protocol', 'synthesis-plan']) {
+    for (const name of ROUTED_NAMES) {
       ok(composedPersona.includes(name), `routing names: ${name}`)
     }
 
-    console.log('\n[5] always-on cost')
+    console.log('\n[6] always-on cost')
     console.log(`    persona: ${composedPersona.length} chars, ~${Math.round(composedPersona.length / 3.6)} tokens per request`)
   }
 }
