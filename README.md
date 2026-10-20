@@ -170,13 +170,16 @@ helper can do, what it refuses, and what to do when the refusal lands is one pag
 [`docs/toolchain.md`](docs/toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
 write has its own tool: `zotero-write.mjs` adds a record, and
-`zotero-section-note.mjs` leaves one explanation note per top-level method section. Its identity is a
+`zotero-section-note.mjs` keeps one explanation note per top-level method section. Its identity is a
 `/section-N` tag rather than an invisible marker (the application eats comments in the body); its first
 step is a read-only report of what the record already claims and which notes are **unknown**, and those
-are read before anything is written. A pasted note can be claimed (`--claim`) or rewritten in place
-(`--rewrite`, no workspace backup: the paper is the source); a claimed record is retired rather than
-rewritten; `--tidy` is gone; and `--delete` erases a `/retired` note permanently, one note at a time,
-after printing the plan. `zotero-edit.mjs` changes its fields and tags,
+are read before anything is written. **Claiming is the default and writing is the exception**: a note
+pasted in from outside is claimed to the top-level section its own heading names, which writes a tag and
+nothing else, and a claim round reports the sections still carrying no note instead of writing them; a
+note body is generated from the paper only when the owner names a section and asks, and a claim round
+never opens the paper at all. `--rewrite` upgrades an **import** in place (no workspace backup: the
+paper remains the source); a claimed record is retired rather than rewritten; `--tidy` is gone; and
+`--delete` erases a `/retired` note permanently, one note at a time, after printing the plan. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
 not one of them: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference

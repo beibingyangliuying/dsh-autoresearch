@@ -1,29 +1,48 @@
 ---
 name: section-notes
-description: Turn the method sections of a paper the study will build on into one explanation note per TOP-LEVEL method section, attached to the library record. Identity is a tag (`/section-N`), never an invisible marker; a note with no tag is read before anything is written; a pasted note is claimed or rewritten in place; a wrong record is retired first and may be deleted only after that. Use after a reading round finishes a method section, when a record carries pasted notes that must enter the convention, and when a section is blocked by a note that explains it badly.
+description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it. This skill never rewrites, merges or reformats an imported note.
 ---
 
-# section-notes — one explanation note per method section
+# section-notes — keep a paper's record section-addressable
 
-This skill does one thing on one record: it turns **reading a paper's method** into one durable
-explanation note per top-level section. It is not a summary of the paper, not a reading record, and
-not a review prose exercise.
+This skill does one thing on one record: it keeps a paper's **method sections** addressable, one
+durable explanation per top-level section. Most rounds only claim explanations that already exist and
+name the sections still missing one; a note body is written from the paper only when the owner asks for
+that section. It is not a summary of the paper, not a reading record, and not a review prose exercise.
 
 It exists because a paper's value to a study is concentrated in two or three of its sections. A note
 that explains Introduction and Numerical results costs the same to write as the one that explains the
 derivation, and a later round pays the same cost to read it. **The head and the tail are cut off on
 purpose.**
 
+## 0. Which half of this skill runs
+
+This skill has two halves, and **the request decides which one runs**:
+
+| The situation | Which half | What it may write |
+|---|---|---|
+| A record carries notes pasted in from outside — a browser, a chat model, another editor | **Part I — claim and report** | a `/section-N` tag on a note that already exists, and nothing else |
+| The owner names a section and asks for a note to be written from the paper | **Part II — generate** | one new note body for that section, or a rewrite of an **import** |
+| It is not clear which | neither: report and ask | nothing |
+
+**Part I is the default, and it is where most rounds stop.** It writes no note body, never rewrites,
+merges, retires or reformats an imported note, and never opens the paper's PDF. Its rules are §2 and
+§2.1, its report is §6.1, its checklist is §8.1. Part II's criteria (§3), wording (§5) and generation
+checks (§8.2) apply **only** while Part II is running.
+
+A claim is a write to the reference library: one note per invocation, dry run first, under the owner's
+authorization (`INV-EVID-3`). The report states how many tags the round wrote.
+
 ## 1. When to use
 
-- A reading round has reached the end of a **method section** of a paper this study will build on (a
-  method you may build on, a derivation you must reproduce, a factor you need the exact definition of)
-  and that section must be understood durably. The round may stop part-way through the paper: the note
-  covers the sections the reading actually reached, and the topic's ledger (`depth`) says where that was.
-- A record already carries notes pasted from a browser or another editor, with no claim, and they must
-  be read and either claimed, rewritten, or retired.
-- A record carries a section note whose formulas are wrong or unreadable, and the section must be
-  explained again.
+- **Default — the record carries notes pasted in from outside** (a browser, a chat model, another
+  editor), with no claim, and the study needs to know which top-level sections they cover and which
+  still carry none. This is **Part I**: claim what names its section, report the gaps, write nothing.
+- **The owner names a section and asks for a note** to be written from the paper, because that
+  section must be understood durably (a method you may build on, a derivation you must reproduce, a
+  factor you need the exact definition of). This is **Part II**.
+- **The owner asks for a section to be explained again**, because the note that claims it explains it
+  badly or its formulas are unreadable. This is **Part II** as well.
 
 **Not applicable**: deciding whether a paper is worth reading to its end — that is a per-question
 judgement made section by section and recorded in the topic's ledger (`literature-recon` appends the
@@ -35,9 +54,14 @@ question that nothing later will depend on.
 says how far the paper was read, `verdict` says why it stopped, `grade` how firmly we may speak about
 it. The section note explains one section.
 
+**A claim is not a reading either.** Claiming an imported note records that a section has an
+explanation attached; it does not mean this session read the paper. A claim round never writes a
+`depth` for that paper — the note's provenance is the `/imported` tag, and the ledger's reading row
+stays exactly as it was.
+
 ## 2. First step: read the current state
 
-Read-only, before writing anything:
+Read-only, before claiming or writing anything:
 
 1. **The record's own state**: `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`. It prints
    every child note with its **tags** and **first paragraph**, then five lines:
@@ -54,7 +78,7 @@ Read-only, before writing anything:
    without one is `unknown`, and the judgement is yours. The tool's `covered` line is a claim about a
    tag, not about the note's content.
 
-2. **Read every `unknown` note before writing.** Take its first paragraph from the plan; open the whole
+2. **Read every `unknown` note before claiming or writing.** Take its first paragraph from the plan; open the whole
    note with `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000` when the paragraph is not
    enough. Then make one of four moves:
 
@@ -65,17 +89,21 @@ Read-only, before writing anything:
    | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone; it may be erased later with `--delete --write` |
    | a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one. A note an earlier version tagged `/digest` is this case: the plan lists it as `legacy`, and it is never claimed for a section |
 
-3. **State the coverage table before writing.** One line per section you are considering: the paper's
+   **In Part I only two of those four moves exist**: `--claim`, and *leave it*. `--rewrite` and
+   `--retire` are Part II moves, taken only when the owner asks for a section.
+
+3. **State the coverage table before any claim or write.** One line per section you are considering: the paper's
    own ordinal and heading · the note key that already covers it, or `none` · what it was judged on.
    Where your reading disagrees with a tag, report both and **stop** — a wrong tag is the owner's to
    settle, not something to write around.
 
-4. **One existing section note as the ruler**, when the library has any:
+4. **(Part II only) One existing section note as the ruler**, when the library has any:
    `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000`. The note's shape — where the
    heading line sits, how equations are delimited, how the closing summary reads — is the convention
    this skill follows. **An existing convention outranks the template below.**
 
-5. **The paper's own section boundaries**, before reading for content. Ask
+5. **The paper's own section boundaries** — both halves need this list: Part I checks a claim's
+   ordinal against it, Part II reads within it. Ask
    `{{presetTools}}/zotero-pdf.mjs --item <recordKey> --outline` first: where the file carries the
    paper's own table of contents, the section list and its ordinals come from there. Where it carries
    none, pull the text in slices and find the headings, or locate one with `--grep`. Either way, **write
@@ -85,7 +113,37 @@ Read-only, before writing anything:
 Nothing about a paper may be written from memory. A section note whose content was not read in this
 session is a fabrication with a citation attached.
 
-## 3. Criteria
+### 2.1 Part I — the claim decision, and how narrow it is
+
+A claim says "this section is explained by this note". It is cheap to make and expensive to get wrong:
+a claimed section is refused to every later create (`REFUSED: §N is already covered - note <key>`),
+and a study that adopts from that note cites the wrong section without ever re-reading the paper
+(`INV-ADOPT-2`). Where the note's own section cannot be established, the claim waits for the owner.
+
+| What the note's own text says | Move |
+|---|---|
+| names a top-level section, and the ordinal agrees with the paper's own section list — or, where the file carries no outline, with the notes' own consistent ordinal sequence | `--claim --note <key> --section N` |
+| names a section, but the ordinal disagrees with the paper's own list, or two notes claim the same ordinal | **do not claim.** Report both and stop |
+| carries no section number, or carries more than one | **do not claim.** Report it |
+| is a whole-paper summary rather than one section | **do not claim.** Report it; a `/digest` note is this case, and the plan calls it `legacy` |
+| the notes' ordinals are not a consistent sequence (duplicates, a title naming a different section, or no ordinals at all) | **claim nothing.** Report the headings found and ask |
+
+Two conditions ride on the same decision:
+
+- **The note's own first block is what is judged, and only what section it explains.** Part I asks
+  whether the note *is* an explanation of §N, never whether it is a good one. Open the whole note with
+  `{{presetTools}}/zotero-read.mjs --item <noteKey>` only when the first block cannot settle which
+  section it explains.
+- **`--section N` takes the paper's TOP-LEVEL ordinal**, the one the paper itself uses. A note keyed
+  to `§3.1` is not a claim on §3; Part I reports a subsection note rather than folding it in.
+
+**Where the paper carries no outline, the list is the notes' own titles, and that is a weaker check.**
+Measured on one library, 11 of 20 papers carried an outline and 9 did not (`zotero-pdf.mjs --outline`),
+so this case is common rather than exceptional: claim against the notes' consistent ordinal sequence,
+and say so in `## Coverage` — "ordinals from the notes; the file carries no outline" — so a later round
+knows what the claim rested on.
+
+## 3. Criteria (Part II — generating a note)
 
 ### 3.1 Which sections get a note
 
@@ -212,19 +270,23 @@ is in the report — and **never split a section to stay inside that range**.
 
 - Report the section list **before** writing: ordinal, the paper's own heading, and note / no-note with
   the reason for each.
-- Read every `unknown` note before writing; say which ones you claimed, rewrote, or retired.
+- Read every `unknown` note before claiming or writing; say which ones you claimed, rewrote, or retired.
 - Keep one note per top-level section, and name the section by the ordinal the paper itself uses.
 - Say which attachment the text came from, and how many characters of it were read.
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
+
+**These are Part II conditions unless a row says otherwise.** A claim round does not care whether the
+record carries an attachment: it reads the notes, not the paper. Two rows belong to both halves — an
+`ambiguous` tag, and a note that already claims the section.
 
 | Hit | Action |
 |---|---|
 | The record has no PDF/EPUB/HTML attachment, or the library has not indexed it | Report "no readable text"; write nothing. The note is not owed from the abstract. |
 | The section is already claimed — the plan says so, **or your reading of the notes says so** | Report "already covered by note `<key>`" and skip it. Never create a second note for one section. |
 | A note carries two `/section-` tags (`ambiguous`) | Fix the tags first; do not write while coverage is ambiguous. |
-| An `unknown` note explains §N | Claim it (`--claim`), or rewrite it if it needs our format; do not write a second note beside it. |
-| A note is a subsection-keyed note from an earlier round | Report it; merge its content into the top-level note, then retire it. Never create a note for the parent while it is there. |
+| An `unknown` note explains §N | Claim it (`--claim`) — both halves act here. Part II may rewrite it if it needs our format; do not write a second note beside it. |
+| A note is a subsection-keyed note from an earlier round | Report it. Part II merges its content into the top-level note and retires it; Part I only reports it and claims nothing on the parent. Never create a note for the parent while it is there. |
 | The paper is a survey/review with no derivation anywhere | Report "no method section". Do not force a note onto a background section. |
 | The section boundaries cannot be established from the text | Report the headings you did find and **stop**; ask. A note keyed on a guessed ordinal collides with the real one later. |
 | The section is a case study, a results table, or a conclusion | Do not write it. Say it was skipped and why. |
@@ -232,7 +294,7 @@ is in the report — and **never split a section to stay inside that range**.
 | The section is claimed by a note that is **wrong** | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never edit its prose; deleting it is a separate act, allowed only once it is retired. |
 | The text layer is unreadable, or a formula only exists in the image | Read the rendered page as an image (`--render` + `read_image`); say which rung answered. Do not trust the text layer for mathematics. |
 
-## 5. Wording discipline
+## 5. Wording discipline (Part II)
 
 - The note explains the paper's method; it does not evaluate it. "This section derives X" is the
   note's register; "this is a good approach" is not in it.
@@ -243,6 +305,25 @@ is in the report — and **never split a section to stay inside that range**.
   section; a constant that follows from the note's own arithmetic is marked as the reader's.
 
 ## 6. Report shape
+
+### 6.1 Part I — claim and gap report
+
+The artifact is the tags on the record plus this table. **No file is written for it**: a gap is
+recomputable from the tags, so a saved copy would only age. Where the owner wants it kept, they say so.
+
+1. `## Record` — key, title, and where the notes came from if the owner said.
+2. `## Coverage` — one line per top-level section of the paper: ordinal · the paper's own heading ·
+   **the note key that claims it, or `none`** · what the claim was judged on.
+3. `## Claimed` — note key · section, one line each, or "none", with the tag read back after the write.
+4. `## Left alone` — every note read this round and not claimed, with the reason: no section number ·
+   the ordinal disagrees · more than one section · whole-paper summary · subsection key · nothing to
+   check the ordinal against.
+5. `## Missing` — the sections with no note, in the paper's own order. **This is the hand-off**: the
+   owner brings an explanation for each from wherever they write them, and nothing is generated here.
+6. `## Not established` — the section boundaries this round could not settle, and what would settle
+   them.
+
+### 6.2 Part II — generation report
 
 The artifact is the notes on the library record. The report is what a later round needs:
 
@@ -263,14 +344,12 @@ The artifact is the notes on the library record. The report is what a later roun
    reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
    was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
    stored nowhere else: this section is where it is written down.
-9. `## Owner actions` — one row per thing the round cannot do itself: the record · the note · the
-   section · the action (retire · write the replacement · delete in Zotero · decide) · **why** · the
-   draft's path. A deletion the preset may not perform lands here: a note that was never retired, or
-   anything the owner would have to do in the application instead. A retired note the round deleted
-   itself is reported under `## Retired`, not here.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
+- **A claim round reads no paper.** Its whole instrument is the record's plan: `--item <recordKey>
+  --json` prints every note's tags and first block, and that is enough to decide a claim in most
+  cases. Opening the paper's PDF in Part I is a sign the round has slipped into Part II.
 - **Writing is one section per invocation, dry run first.** `{{presetTools}}/zotero-section-note.mjs`
   states the change, refuses a claimed section, and writes only with `--write`; it reads back what it
   wrote before reporting success. Never batch several sections into one command.
@@ -291,7 +370,7 @@ The artifact is the notes on the library record. The report is what a later roun
 - **When the round spans records, ask for the plan as JSON.**
   `{{presetTools}}/zotero-section-note.mjs --item <recordKey> --json` prints the same facts the prose
   plan does: every note's tags, section, retired/imported/legacy state, and the `unknown` and
-  `ambiguous` lists. Assemble the owner-action table from that, never by parsing the prose.
+  `ambiguous` lists. Assemble the coverage and gap table from that, never by parsing the prose.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
   88k characters for the papers this discipline is used on — while the shell tool clips one command's
   output at 16,000 characters and the result pruner reduces any tool result over 8,192 to its head and
@@ -324,6 +403,22 @@ The artifact is the notes on the library record. The report is what a later roun
 
 ## 8. Acceptance checklist
 
+### 8.1 Part I — claim and report
+
+- [ ] No note body was written, and no note was rewritten, merged, retired or reformatted
+- [ ] Every note carrying no `/section-` tag was read — its first block, the whole note only where the
+  first block could not settle which section it explains — before anything was claimed
+- [ ] Every claim names a section the note itself names, and that section exists in the paper's list —
+  the file's outline, or the notes' consistent ordinals where the file carries none, said which
+- [ ] No claim was made against a claim the plan already reports; no section is claimed twice
+- [ ] Every claim was a dry run first, and its tag read-back is quoted
+- [ ] Every note left unclaimed appears in `## Left alone` with its reason
+- [ ] The `## Missing` list is in the paper's own order, and nothing in it was generated
+- [ ] The number of tags the round wrote is stated
+- [ ] The round was not recorded as a reading in the topic's ledger
+
+### 8.2 Part II — generation (only when the owner asked for a section)
+
 - [ ] The section list was reported before any write, each with note / skipped and a reason
 - [ ] Every `unknown` note was read, and the report says what was done with it
 - [ ] The coverage table was reported per **top-level** section, with the claiming note or `none`
@@ -337,16 +432,20 @@ The artifact is the notes on the library record. The report is what a later roun
 - [ ] Each note ends with a summary naming its contribution and its hand-off to the next section
 - [ ] Any note outside the 1,500–5,000 signal range is explained
 - [ ] Each write was a dry run first, and its read-back is quoted
-- [ ] No section is claimed twice; every skip is reported
 - [ ] Every retirement is reported with its reason and its successor
 - [ ] A note an earlier version tagged `/digest` was reported as legacy and left alone, never claimed
 - [ ] Every deletion was a `/retired` note, planned first, and the report quotes its read-back 404
-- [ ] `## Owner actions` is reported, and written to the study's `<layer root>/owner_actions.md` (`research/` where the study has one, else its root) when anything is left for the owner
 
 ## 9. Don't
 
+- Do not claim a note whose own text does not name its section. A claim is a durable statement a later
+  round checks, and a wrong one blocks the section until the owner retires it.
+- Do not rewrite, merge, retire or reformat an imported note in a claim round. What the owner pasted
+  is the owner's text; Part II touches an import only when the owner asks for that section.
+- Do not turn a claim round into a reading: no paper is opened, and no `depth` is written for it.
 - Do not summarize the paper. The unit is the method section, not the paper.
-- Do not write a note keyed to a subsection, and do not fold a dotted note silently: merge it or retire it.
+- Do not write a note keyed to a subsection, and do not fold a dotted note silently: Part II merges it
+  or retires it; Part I reports it and claims nothing on the parent.
 - Do not write a note for a section that was not read in this session.
 - Do not duplicate coverage to "complete" a record, and do not delete someone else's note.
 - Do not delete a note that is not retired, and do not delete one to free its section: retiring frees

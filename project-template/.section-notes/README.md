@@ -14,6 +14,9 @@ reads it and drafts the note bodies here, and **only the parent writes to the re
 
 ## Rules
 
+- **A claim round writes nothing here.** Part I of the discipline (claim a pasted note, report the
+  sections still missing one) touches only the library's tags; this directory exists for a round the
+  owner asked to generate note bodies.
 - **Nothing here carries authority.** A draft is `[unverified]` until the parent reads it back from the
   library. A file here is never evidence, never a record, and never quoted as one; deleting one needs no
   permission and no ceremony.

@@ -62,7 +62,7 @@
                 - A claim is about to drive work or leave the room, or two routes conflict and need a real challenge → `redteam-ruling` (the red team must run as an independent subagent)
                 - Wrapping up a work round, ending a session, handing off, or resuming → `progress-sync`
                 - Needs bibliographic metadata (DOI, venue, citation counts, reference lists) rather than full text → `metadata-query`
-                - A method-heavy paper is being read for study and its derivations must be understood durably, the reading round has just finished a method section, or an existing section note's formulas are unreadable → `section-notes`
+                - A paper's method-section notes were pasted in from outside and have to be claimed to the sections they name, or a record has to say which sections still carry no note → `section-notes` (it claims them and reports the gaps; it writes a note body only when you name a section and ask)
                 - A paper has been read and the study will build on it, code is about to be written from its equations, or existing code cites one → `adoption-ruling`
                 - Work is about to be handed to a subagent (an explorer, or an implementer who writes or runs code) → `subagent-contract`
                 - Code is about to run to test a hypothesis, or a run's outcome is being reported → `experiment-protocol`
