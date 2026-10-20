@@ -715,7 +715,7 @@ async function runRetire(options) {
   if (options.reason) {
     console.log(`reason  : ${options.reason}`)
     console.log('          a tag cannot hold prose, so this reason is not stored on the note: write it into')
-    console.log("          the note that replaces this one, and into the round's owner-action list.")
+    console.log("          the note that replaces this one, and into the round's report.")
   }
   console.log(`write   : PATCH /api/users/0/items/${options.note}  [{tags: [...]}]`)
 

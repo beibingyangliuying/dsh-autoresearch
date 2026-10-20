@@ -1,9 +1,13 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 29.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 30.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 29 moves the **trigger** of the section-note discipline:
+independent of any package version. Revision 30 removes the owner-action layer from §7's list, which
+no discipline has written since Revision 26, and aligns four discipline texts and the coverage map
+with Revision 29's trigger: a note body is generated only when the owner names that section. No
+behaviour changes — the contract already said what they now say.
+Revision 29 moves the **trigger** of the section-note discipline:
 what starts a section note is the owner naming that section and asking for it, not the end of a method
 section in a reading round. A note pasted in from outside is claimed to the section its own heading
 names — a tag and no body — and a round that only claims reports the sections still carrying no note
@@ -513,7 +517,7 @@ is the study's. The rule is decidable from the filesystem, so no document has to
 a study scaffolded either way needs no migration.
 
 **Only the literature layer and the scoping document are created up front.** Every other layer a
-discipline writes into — adoption ledgers, rulings, the journal, the owner-action list, the experiments,
+discipline writes into — adoption ledgers, rulings, the journal, the experiments,
 the pitfalls, the archive — is created by the discipline that first writes there, and that round names the
 path it used in its report. A scaffold that pre-built all of them stated a shape none of the studies it
 was measured against had adopted, and a directory made for later says nothing by being empty.
@@ -527,11 +531,10 @@ outranks non-normative notes; a journal is a record and never grounds a claim; a
 carries the environment and date it applies to, so it can be deleted when it stops applying. An
 adoption ledger sits on both sides of that line and the contract says which is which: it grounds no
 claim, like a note, and it **binds the code**, so a module that disagrees with a ruled item is a defect
-rather than a difference of opinion. An owner-action list is a third kind of thing: a request, which
-states what the round could not do itself, carries the reason and the replacement with it, and grounds
-nothing. Where a study has no constraint file yet, nothing stands at the top of that order: a round that
-needs an invariant says the study has none and stops rather than inventing one, because the order it would
-be inventing is the one thing the study's owner has not yet stated.
+rather than a difference of opinion. Where a study has no constraint file yet, nothing stands at the
+top of that order: a round that needs an invariant says the study has none and stops rather than
+inventing one, because the order it would be inventing is the one thing the study's owner has not yet
+stated.
 
 A retired document is moved into the study's archive with a note saying what it was and what replaced
 it, and is not rewritten there; a live pointer into it is updated, a dated record inside it is not. The

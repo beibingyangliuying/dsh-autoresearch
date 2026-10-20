@@ -17,7 +17,7 @@ nothing here decides whether a paper is used.
   code belongs to the adoption chain and its own ledger. A row here saying a paper was read is not a claim
   that anything was taken from it.
 - **This layer does not pre-create the study's other layers.** A directory a study needs — rulings, a
-  journal, owner actions, experiments, pitfalls, an archive — is created by the discipline that first
+  journal, experiments, pitfalls, an archive — is created by the discipline that first
   writes there, and that round reports the path it used. Do not create one now to have somewhere to put
   something later.
 

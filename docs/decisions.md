@@ -1955,3 +1955,47 @@ Part II 仍是实现）；`docs/plans/*` 与本文件旧条目不改。
 
 **落在何处**：[`protocol.md`](../protocol.md)（头部、修订史、§4 `sections`）· [`docs/coverage.md`](coverage.md)
 （读轮步骤、§6 的门）· [`docs/overview.md`](overview.md) · 本文件。
+
+## 72. Revision 30：补回 0.11.0 漏扫的四份纪律，删掉 owner-action 层的最后影子（2026-10-20）
+
+**起因**：junhan 盘问两件他记得的事是否打架——(1) 章节笔记由他从网页版 DS 生成、agent 不自生成；
+(2) 各课题自己维护台账，读文献时发现想深读但笔记不够就自己补。排查结论：台账那条（§62／§69）没变，
+两条原则本身不冲突；但"读轮自己补笔记"的旧默认确实还活着，而且其中一条会把 §70 反着执行。
+
+**先验**：§70／§71 已把契约（§4 `sections`、头部、路由 bullet）与 `section-notes`、`README.md`、
+`docs/coverage.md` 的读轮步骤、`docs/overview.md` 的产物列同步到"属主点名才生成"。未同步的是四份纪律的
+技能正文：[`reading-triage`](../skills/reading-triage/SKILL.md) §3.5(4) 仍写"方法节读完且继续 → write its
+`/section-N` note"，§7 重述同一触发；[`collection-sweep`](../skills/collection-sweep/SKILL.md) §3.5 仍把
+"读完节末写一条"当事实，§4.2 的停止条件甚至规定"属主现在要写笔记 → **Refuse**"——正好把 §70 反着执行；
+[`adoption-ruling`](../skills/adoption-ruling/SKILL.md) §4.2 让借鉴轮直接"Read the sections … that is
+`section-notes`' work"。[`docs/coverage.md`](coverage.md) 的读轮步骤被 §71 改了一半，第一句仍写"这一节要有
+一条"。另有 owner-action 层的四处影子：契约 §7 两处、模板 `references/README.md` 一处、工具提示一处——该层
+自 Revision 26 起已无纪律写入，§70 第 3 条也删掉了 `## Owner actions` 与 `owner_actions.md`。
+
+**为什么自测没抓**：`doc-selftest` 校名册、路径与分工，不校触发语义；0.11.0 发布前的反向重扫只扫了
+`protocol.md`、`coverage.md`、`overview.md`（[`releases.md`](releases.md) §72），四份纪律正文不在扫描范围。
+
+**裁定**（junhan 选"硬矛盾 + 半矛盾 + owner-action 残留"，语义保留 Part II）：
+
+1. 触发口径不动：笔记正文**只在属主点名某一节时**由 `section-notes` 生成；读轮、初筛轮、借鉴轮只报缺口，
+   不代写，也不拒绝属主的正当点名。
+2. 改 `reading-triage` §3.5(4)（读轮不产笔记、只报复用与缺口）、§3.7（笔记只存在于属主点名的节）、
+   §7（同一句）。
+3. 改 `collection-sweep` §3.5（笔记由属主点名 + `section-notes` 才存在，读完一节不产生）与 §4.2
+   （"现在写笔记"不再是拒绝，而是"本轮不写、指向 `section-notes`"）；§1 的一句同步。
+4. 改 `adoption-ruling` §4.2（有笔记读笔记、没笔记报缺口）与 `literature-recon` 的同一句中缀。
+5. `docs/coverage.md` 读轮步骤改成"只报这一节有没有笔记，不代写"。
+6. 契约升 **Revision 30**：§7 删掉 owner-action layer；模板 `references/README.md` 与
+   `tools/zotero-section-note.mjs` 的 retire 提示同步。没有语义变更，是让契约与实现追上 §70／§71 的裁定。
+7. `docs/overview.md` 与 `cordis.patch.yml` 的路由 bullet 已正确，不动。
+
+**未做／边界**：`docs/plans/*`、`docs/releases.md`、本文件旧条目不改；协议头部的 Revision 27 段仍写"a note
+is written at a method section's end"——那是修订史里的历史句，不单独成立；触发语义仍是散文，能机械校的只有
+名册、路径与分工，这条边界不变。
+
+**落在何处**：[`protocol.md`](../protocol.md)（头部、§7）· [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md)
+· [`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) ·
+[`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) ·
+[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
+[`docs/coverage.md`](coverage.md) · [`project-template/references/README.md`](../project-template/references/README.md)
+· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)。
