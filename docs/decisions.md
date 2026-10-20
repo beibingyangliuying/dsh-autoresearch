@@ -2038,7 +2038,8 @@ README 的技能目录实测"20 条 / 8 条本预设"未标日期，现在船上
 2. §7 改成"预先创建的是文献层、scoping 文档与草稿目录（`.section-notes/`）"，并把"one pre-created layer"改成
    "two pre-created directories"。
 3. archive 归**属主**：§7 明说移动退役文档是 owner 的动作，轮次发现活指针只报不动（与"移除属主工作区的文件不是
-   轮次的动作"同一条理由）。
+   轮次的动作"同一条理由）；`progress-sync` 里那句"use the archive flow"改成 mnemon 自己的归档，并说明课题
+   `archive/` 是另一个地方。
 4. §8 表下补一行：`INV-NOTE-2` 随 digest 在 Rev 25 退役，编号不复用——缺口是记录，不是漏行。
 5. `metadata-query`：**已在库**的作品才追加台账行（`itemKey` · `year` · `found via`=来源+检索日期，`grade` 与
    `depth` 留空）；**不在库**的作品没有 `itemKey`，只进本轮报告并交 `literature-recon` 决定要不要成行。删掉四列
@@ -2067,5 +2068,6 @@ README 的技能目录实测"20 条 / 8 条本预设"未标日期，现在船上
 [`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) ·
 [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) ·
 [`skills/experiment-protocol/SKILL.md`](../skills/experiment-protocol/SKILL.md) ·
+[`skills/progress-sync/SKILL.md`](../skills/progress-sync/SKILL.md) ·
 [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) · [`cordis.patch.yml`](../cordis.patch.yml) ·
 [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md)。

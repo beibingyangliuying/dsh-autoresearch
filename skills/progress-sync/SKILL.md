@@ -110,7 +110,8 @@ Only the few facts needed across sessions; each self-contained and not duplicati
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - mnemon Documents are **managed storage**: write only through the managed tools, **never** through file-editing tools.
-- Do not delete existing Documents; if something must be retired, use the archive flow.
+- Do not delete existing Documents; if something must be retired, use mnemon's own archive flow — the
+  study's `archive/` is a different place, and moving a document there is the owner's act, not a round's.
 - Runtime memory is hard-capped; check current usage before writing.
 - If the workspace already has a document hierarchy, **follow it** (location, naming, authority order).
 
