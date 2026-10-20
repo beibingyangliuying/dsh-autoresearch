@@ -473,3 +473,61 @@ develop 注释）· `f1cf249`（六处真名 + `decisions.md` §75）· `48690e0
 **落在何处**：[`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) · [`docs/backlog.md`](backlog.md) ·
 [`decisions.md`](decisions.md) §75 · [`plans/revision-17.md`](plans/revision-17.md) ·
 [`plans/revision-26.md`](plans/revision-26.md) · [`package.json`](../package.json)。
+
+---
+
+## §77 · 0.13.0 发布：建条目时就能归档，一次写入（2026-10-20）
+
+**版本**：`0.13.0`，提交 `07e3f4e`，注解 tag `v0.13.0`（tag 对象 `84d77ef` 剥到的正是该提交）。**本次未能推送**：
+`git push origin main` 与 `git push origin v0.13.0` 都返回 128（`Could not connect to server` via `127.0.0.1`），
+与 0.12.1 那次同一处故障，`main` 与 tag 由属主推。
+
+**为什么是 minor 而不是补丁**：`--collection` 是**使用者可见的新写入方式**（一次授权覆盖"建"与"归档"两件事），
+按 0.10／0.11／0.12 的口径算新能力；**契约 Revision 不动**——§6 那句"Adding, editing, filing or removing a record
+is a write, so it needs `INV-EVID-3`'s authorization and its read-back"本来就覆盖它，没有规范句移动。
+
+**相对 0.12.1 的三条提交**：`2431f1d`（工具＋离线自测＋重生成的 toolchain 页）· `c3c696c`（读者页与纪律、
+`decisions.md` §76、preset-release 的套件清单、机器痕迹下线）· `07e3f4e`（版本）。
+
+**起因是一次误读**：junhan 贴来的本地 agent 收尾写着"写入工具没有 `--collection` ⇒ 两条落在库根，锚定表不用改"。
+前半句真（`fillTemplate` 只填 schema 字段），后半句推断过头——`zotero-collection.mjs --assign` 一直能把已存在的
+条目归档，只是第二次写入。他问的是工具该怎么长，答案是：归档进 create body。
+
+**这一版做什么**：`--collection <key>` 把 `collections` 放进同一个 create；key 在写入前按库里的分类树校验（分页读），
+**形状在第一次请求之前**就拒绝；**不收分类名**（同名分类可挂不同父级，猜名字就是放错文件夹）。回读新增 `filing`
+一栏；没成则报 `UNFILED`——条目**已存在**，只给一条 `--assign` 命令，**不补写第二次**，自测里以"源码不得出现
+`patchItem`"正面断言这一点。
+
+**仍未实测的一条**：create 携带 `collections` 库是否收下，本仓库没有人观测过；**第一次真写就是那次测量**，回读是
+唯一证据。工具头注与 `decisions.md` §76 都这么写，不写成"支持"。
+
+**§2 重扫抓到的两处**（都不是我自己复盘看出来的第二处）：`docs/overview.md` 的自测清单、`.agents/skills/
+preset-release/SKILL.md` 的 Phase-1 套件清单各少一条——后一条是 `release-check-selftest` 报的
+（`FAIL the release procedure names every self-test → zotero-write-selftest`），护栏在工作。另外初稿把**真库分类键
+与分类名**写进了 `decisions.md` §76、把一个真分类名当测试夹具，全部换成占位（§6：`docs/` 随 npm 包与 GitHub 公开）。
+
+**顺带修的既有缺陷**：错误路径的 `process.exit(1)` 在 Windows 上会把退出码换成 `0xC0000409` 并多打一行 libuv 断言
+（Crossref 404 路径改前必现，`--collection` 的新拒绝路径也会落进去）⇒ 改 `process.exitCode` 后自然退出；实测 exit 1、
+约 0.9 s、无断言行。
+
+**验证**（都在最终树上跑过）：dump 重生成 73,149 字节，persona 5,420 字符 ≈1,506 token（与 0.12.1 相同）；
+`preset-selftest` 六段全过；**19 项离线自测**（含新增 `zotero-write-selftest` 31 条断言）、`toolchain-page --check`
+（23 条）与 `release-check --local`（声明 0.13.0、**20 项自测有名**、干净树）全绿。对真库（Zotero 10.0.6，kept 授权
+在档）：`zotero-write.mjs --selftest` PASS；干跑 `--collection <key>` 打印 `filing` 行且 payload 出现 `collections`；
+坏键与不存在的键都在任何写入之前 exit 1。**没有做过一次真实写入**——所以本版不含"归档成功"的实测，只有它的前置。
+
+**推送与远端复核：未完成**。属主推完后按 §7 复核三处：`ls-remote` 的 `refs/tags/v0.13.0^{}` 应等于 `07e3f4e`；
+`git clone --depth 1 --branch v0.13.0` 的树哈希应与本地 `v0.13.0^{tree}` 相同；在该克隆里 `release-check --local`
+应 PASS。
+
+**记录本身比 tag 晚一条**：本节写入后 `main` 比 `v0.13.0` 多这一个提交，tag 不动（§72／§74／§76 同一做法）。
+
+**改完要重启宿主**：纪律文本（`skills/literature-recon/SKILL.md`）只在宿主启动时注册，开新会话或刷新页面都不够
+（`decisions.md` §25）；**工具本体不受影响**，它按绝对路径直接跑文件。
+
+**落在何处**：[`tools/zotero-write.mjs`](../tools/zotero-write.mjs) ·
+[`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs) · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) →
+[`docs/toolchain.md`](toolchain.md) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
+[`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) ·
+[`decisions.md`](decisions.md) §76 · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) ·
+[`package.json`](../package.json)。
