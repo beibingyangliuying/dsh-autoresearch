@@ -1999,3 +1999,73 @@ is written at a method section's end"——那是修订史里的历史句，不�
 [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
 [`docs/coverage.md`](coverage.md) · [`project-template/references/README.md`](../project-template/references/README.md)
 · [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)。
+
+## 73. Revision 31：把第 17 版自己写下却漏掉的那一级补回契约，并让 §7 的两句话追上脚手架（2026-10-20）
+
+**起因**：junhan 在 §72 之后问"能不能系统排查一遍还有哪里不一致、或与先前拍定的原则不符"。排查按判定表做：
+先立一张"契约拍定的语义 × 12 份纪律 × 6 份读者文档 × 组合与模板 × 工具自述"的对照，再逐条对撞，最后用
+反向重扫（把结论写成一句话，去搜它的旧形状）。共命中 14 处：硬矛盾 6、半矛盾 4、措辞 4。机器侧先跑过
+`doc-selftest` 11/11、`toolchain-page --check` 23 条、`scaffold-selftest` 6/6，全绿——所以这 14 处**全在仪器
+射程之外**，这正是它们能活下来的原因。
+
+**先验**（每条都落到行）：①读的阶梯——契约只列三级（§6 的 bullet、`INV-CTX-1`、Rev 17 段落），而
+[`zotero-pdf.mjs`](../tools/zotero-pdf.mjs) 按四级编号并打印 `rung (2)(3)(4)`、覆盖图照四级写还标"Rev 17 ·
+`INV-CTX-1`"、[`backlog.md`](backlog.md) 把 `--outline` 叫"梯级 ③"，而
+[`literature-recon`](../skills/literature-recon/SKILL.md) 明写"结构/大纲这一级 **deliberately absent: nothing in
+the toolchain offers one**"——三方打架，且那句是假事实。②[`metadata-query`](../skills/metadata-query/SKILL.md) §6
+让往台账文件追加四列"证据表"，与九列台账、模板"no new judgement"、覆盖图"不给证据等级"、它自己 §9"不给等级"
+四处冲突（Revision 22 把文献纪律的证据表改成台账时漏了这一份）。③[`cordis.patch.yml`](../cordis.patch.yml) 头注
+`ten research-discipline skills`，路由块 12 条、`preset-selftest` 断言 12。④契约 §7"Only the literature layer and
+the scoping document are created up front"与 README"and nothing else"，而同一节的树、模板与 `scaffold-selftest`
+都把 `.section-notes/` 算进布局——散文说两样，机器名单三样。⑤[`collection-sweep`](../skills/collection-sweep/SKILL.md)
+§3.5 已改成"点名才生成"，§6.5 仍写"which sections `section-notes` is expected to write"。⑥
+[`adoption-ruling`](../skills/adoption-ruling/SKILL.md) 入口要求 `grade A`，§4.2 又让"从原文读"、§2 还写"先跑
+`section-notes`"——后者在 Rev 29 之后已不成立；而这次阅读没有任何人写回台账（`INV-EVID-6` 要那一行）。⑦
+README 的技能目录实测"20 条 / 8 条本预设"未标日期，现在船上是 12 条。⑧四份纪律引用的 `AGENTS.md §2/§3/§4/§6`
+来自 Rev 26 整份删掉的模板，编号悬空，且 §4 在两处指的不是同一件事。⑨§7"退役文档进 archive"没有任何纪律执行，
+而 `progress-sync` 的 "archive flow" 指的是 mnemon 的归档。⑩-⑭措辞类：README 的 `--tag v0.2.0` 示例、
+`D:\Zotero` 盘符示例、覆盖图两个同名的"阶梯"、§8 表里跳号的 `INV-NOTE-2`、`section-notes` §3.1 仍是"读轮读到哪"
+的旧框架。
+
+**为什么自测没抓**：仪器校的是名册、路径、分工与"名字是否还存在"；条数、级数、散文里的行为句都不在其中。三次
+陈旧计数（§36／§64／§70）都是发版前通读抓住的，这一轮第四次仍是这样——组合注释从来没进过通读范围。
+
+**裁定**（junhan 选"硬矛盾 + 半矛盾 + 措辞全修"；阶梯选"四级，契约补'论文自带目录'"）：
+
+1. 契约升 **Revision 31**：§6 的 bullet 与 `INV-CTX-1` 补第 3 级"论文自己的目录"，并写明它答结构、不答内容、
+   很多论文没有；Rev 31 段落明说 **Rev 17 的段落只列了三级、漏掉同一次修订交付的那一级**——旧句因此不被单独
+   读成本条。
+2. §7 改成"预先创建的是文献层、scoping 文档与草稿目录（`.section-notes/`）"，并把"one pre-created layer"改成
+   "two pre-created directories"。
+3. archive 归**属主**：§7 明说移动退役文档是 owner 的动作，轮次发现活指针只报不动（与"移除属主工作区的文件不是
+   轮次的动作"同一条理由）。
+4. §8 表下补一行：`INV-NOTE-2` 随 digest 在 Rev 25 退役，编号不复用——缺口是记录，不是漏行。
+5. `metadata-query`：**已在库**的作品才追加台账行（`itemKey` · `year` · `found via`=来源+检索日期，`grade` 与
+   `depth` 留空）；**不在库**的作品没有 `itemKey`，只进本轮报告并交 `literature-recon` 决定要不要成行。删掉四列
+   证据表与"at most B"那句——等级说的是"读了什么"，元数据什么都没读。
+6. `adoption-ruling`：**不读原文、也不触发生成**。grade 不到 A 时报告"这一项依赖哪几节、其中哪几节没有笔记"，
+   交回读轮或请属主点名；§2 的"先跑 `section-notes`"改为"请属主点名或开一次读轮"。
+7. `literature-recon`：删"nothing in the toolchain offers one"，改成"结构级是 `INV-CTX-1` 的第 3 级，由
+   `--outline` 提供，答结构不答内容"，并把"加载多少的花费梯度"与"文本从哪一级来的读取阶梯"分成两个名字。
+8. `collection-sweep` §6.5 改成"从论文自己的目录列出它有哪些顶层节——关于论文的结构事实，不是'会有笔记'的承诺"。
+9. 四份纪律里 `AGENTS.md` 的 §2/§3/§4/§6 编号去掉，改成"无论那个文件把这几项放在哪"——脚手架不规定章节顺序，
+   引用编号就是引用一份没人写过的文件。
+10. `section-notes` §3.1 改成本轮只解释被点名的那一节；没被点名的节没有笔记，报告里写"未到达"而不是"不需要"。
+11. `cordis.patch.yml` 头注 `ten → twelve`；`zotero-pdf.mjs` 头注 `the two rungs → the three rungs`。
+12. 读者页：覆盖图的阶梯归因改 Rev 31、两个"阶梯"分开命名；README 的"and nothing else"改三样、目录实测加口径
+    （"when it shipped eight disciplines"）、`--tag v0.2.0 → vX.Y.Z`、盘符示例换成占位符。
+
+**未做／边界**：`docs/plans/*`、`docs/releases.md` 与本文件旧条目不改；**目录实测没有重测**——重测要开两个新会话，
+且那条结论是"目录会混"，比例本身不是结论，所以只补口径不造新数字；非库作品的元数据"要不要另存一份"按裁定只进
+报告，不引入第三份名单；`docs/` 里 0.9.0 起就随包发出的属主课题真名仍未处理（[`releases.md`](releases.md) §70
+已登记）；触发语义、级数这类"散文对散文"的东西依旧没有机械护栏，这条边界不变。
+
+**落在何处**：[`protocol.md`](../protocol.md)（头部、§6、§7、§8 `INV-CTX-1` 与表下注释）· 本文件 ·
+[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
+[`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) ·
+[`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) ·
+[`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) ·
+[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) ·
+[`skills/experiment-protocol/SKILL.md`](../skills/experiment-protocol/SKILL.md) ·
+[`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) · [`cordis.patch.yml`](../cordis.patch.yml) ·
+[`docs/coverage.md`](coverage.md) · [`README.md`](../README.md)。

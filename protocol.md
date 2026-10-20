@@ -1,12 +1,23 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 30.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 31.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 30 removes the owner-action layer from §7's list, which
-no discipline has written since Revision 26, and aligns four discipline texts and the coverage map
-with Revision 29's trigger: a note body is generated only when the owner names that section. No
-behaviour changes — the contract already said what they now say.
+independent of any package version. Revision 31 names a rung Revision 17 shipped and its own paragraph
+left out: the paper's own table of contents is rung 3 of the reading ladder, between the attachment's
+text layer and the rendered page. The helper had already numbered it so, and two disciplines already
+climb it, but §6 and `INV-CTX-1` listed three rungs — so a reader of the contract could not learn that
+a structural read exists, and a discipline that named one looked unsupported. The same revision states
+what §7's own layout block already contained: the draft directory is created up front with the
+literature layer and the scoping document. It also makes moving a retired document into the archive
+the owner's act rather than a round's, because the sentence assigned that move to no discipline, and it
+records in §8 why one invariant id is missing from the sequence: a retired id is never reused. No
+behaviour changes; every sentence here is what the helper programs and the shipped scaffold already
+did.
+Revision 30 removes the owner-action layer from §7's list, which no discipline has written since
+Revision 26, and aligns four discipline texts and the coverage map with Revision 29's trigger: a note
+body is generated only when the owner names that section. No behaviour changes — the contract already
+said what they now say.
 Revision 29 moves the **trigger** of the section-note discipline:
 what starts a section note is the owner naming that section and asking for it, not the end of a method
 section in a reading round. A note pasted in from outside is claimed to the section its own heading
@@ -480,12 +491,13 @@ These rules bound their use:
   and `--write` performs one erasure — the version it was read at is the precondition, and a read-back
   404 is what proves it.
 - **A reading states which rung of the ladder answered it.** The rungs, cheapest first, are the
-  library's indexed text, the attachment's own text layer, and the page rendered as an image. A channel
-  that returns an empty text for an attachment it never indexed is reporting about itself; a text layer
-  whose font encoding is broken reports confidently and wrongly about mathematics; a rendered page
-  answers questions neither can. Spending a rung that costs more than the one below it is a decision to
-  state, not a default, and what a rendered page yields is read as an image rather than quoted as
-  though it were text.
+  library's indexed text, the attachment's own text layer, the paper's own table of contents, and the
+  page rendered as an image. A channel that returns an empty text for an attachment it never indexed is
+  reporting about itself; a text layer whose font encoding is broken reports confidently and wrongly
+  about mathematics; a table of contents states what the paper says its sections are and nothing about
+  what they contain, and many papers carry none; a rendered page answers questions neither can.
+  Spending a rung that costs more than the one below it is a decision to state, not a default, and what
+  a rendered page yields is read as an image rather than quoted as though it were text.
 
 The channels are reached through **helper programs this preset itself ships and its disciplines name**,
 never through a profile-level mount, so that enabling a research channel cannot change what an unrelated
@@ -494,8 +506,8 @@ it is a program the agent runs, which is why an unused channel costs nothing on 
 
 ## 7. The study scaffold
 
-The scaffold offers a study the minimum it needs to be auditable — one pre-created layer, not the seven it
-used to. Roles, not just paths:
+The scaffold offers a study the minimum it needs to be auditable — two pre-created directories, not the
+seven it used to, and one of the two holds working files rather than records. Roles, not just paths:
 
 ```text
 <study>/
@@ -516,11 +528,14 @@ keeps them at its own root. A study carrying both is not guessed at: the round s
 is the study's. The rule is decidable from the filesystem, so no document has to be read to learn it, and
 a study scaffolded either way needs no migration.
 
-**Only the literature layer and the scoping document are created up front.** Every other layer a
-discipline writes into — adoption ledgers, rulings, the journal, the experiments,
-the pitfalls, the archive — is created by the discipline that first writes there, and that round names the
+**What is created up front is the literature layer, the scoping document and the draft directory
+(`.section-notes/`).**
+Every other layer a discipline writes into — adoption ledgers, rulings, the journal, the experiments,
+the pitfalls — is created by the discipline that first writes there, and that round names the
 path it used in its report. A scaffold that pre-built all of them stated a shape none of the studies it
-was measured against had adopted, and a directory made for later says nothing by being empty.
+was measured against had adopted, and a directory made for later says nothing by being empty. The
+archive is not one of these: it holds retired documents, and moving one there is the owner's act,
+stated below.
 
 A study scaffolded before Revision 22 may still carry `research/literature/refs/`. No discipline reads
 it — a ledger now sits in each question's own literature file — and a round that finds it reports it and
@@ -536,10 +551,12 @@ top of that order: a round that needs an invariant says the study has none and s
 inventing one, because the order it would be inventing is the one thing the study's owner has not yet
 stated.
 
-A retired document is moved into the study's archive with a note saying what it was and what replaced
-it, and is not rewritten there; a live pointer into it is updated, a dated record inside it is not. The
-reason a direction was retired is the reusable part of it, and that reason survives only if the file
-carrying it survives unchanged.
+A retired document is moved into the study's archive by the study's owner, with a note saying what it
+was and what replaced it, and is not rewritten there; a live pointer into it is updated, a dated record
+inside it is not. No discipline performs that move: a round that finds a live pointer into a retired
+document reports it and leaves the file where it is, because removing a file from the owner's workspace
+is not a round's act. The reason a direction was retired is the reusable part of it, and that reason
+survives only if the file carrying it survives unchanged.
 
 ## 8. Domain invariants
 
@@ -568,10 +585,13 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
-| `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
+| `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
 | `INV-DOC-1` | The contract names no public symbol, and the index is a bijection with the authoritative list. | It keeps the contract stable under renames and stops the index drifting from reality. |
+
+A retired invariant keeps its id. `INV-NOTE-2` bounded the paper-level digest, was retired with it in
+Revision 25, and is never reused — so the gap in the sequence is a record rather than a missing row.
 
 ## 9. Outside this domain (non-goals)
 
