@@ -2,7 +2,7 @@
 # DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
 #   - `persona` carries a resident research discipline (three-way typing, no
 #     unfalsifiable wording, no memory-based citations, read-before-write) plus
-#     routing to ten research-discipline skills.
+#     routing to twelve research-discipline skills.
 #   - `persona` deliberately has NO `suffix`. The kernel registered `cwd` as a prompt variable only
 #     through 0.2.0; from 0.2.1 its registry holds `provider` and `model` alone, and prompt
 #     assembly interpolates strictly - any other name THROWS, which fails every turn before the

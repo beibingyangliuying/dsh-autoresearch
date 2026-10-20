@@ -89,7 +89,7 @@ subagent from it); the change applies to agents created after the switch, not to
   paywalled full text), and a bibliographic-metadata channel over the free OpenAlex, Crossref and
   Unpaywall APIs. All three are **helper programs this preset ships**, not mounted servers, so an
   unused channel costs nothing; see [`protocol.md`](protocol.md) §6.
-- **A study scaffold.** The one layer two real studies defined the same way — a scoping document, a
+- **A study scaffold.** The layout two real studies defined the same way — a scoping document, a
   non-normative literature layer, and a draft directory for section notes — with every other directory
   created by the discipline that first writes there.
 
@@ -121,8 +121,8 @@ authorizes it, and the bulk migration runs inside the application, at your keybo
 
 ```powershell
 # increment: a few new stored PDFs per round. Dry run unless --write is given.
-node tools\zotero-link-attachments.mjs --target D:\Zotero
-node tools\zotero-link-attachments.mjs --target D:\Zotero --write
+node tools\zotero-link-attachments.mjs --target <linked-attachment-base>
+node tools\zotero-link-attachments.mjs --target <linked-attachment-base> --write
 
 # bulk migration: set CONFIG.targetDir in the file first, then paste the whole file into the
 # reference manager's Run JavaScript window.
@@ -232,11 +232,12 @@ between "searched and absent" and "not searched at all".
 The scaffolder is PowerShell today, so this step is Windows-only. Copy `project-template/` by hand
 elsewhere; the layout is the same.
 
-It creates the scoping document and one literature layer, and nothing else — **the first thing you write
-is the study's `AGENTS.md`**: what this domain forbids, the order its documents take, the notation, the
-environment. The scaffold deliberately leaves that file absent rather than prefilled, because a
-placeholder in its place is read as an authority table while saying nothing. Every other directory the
-study turns out to need is created by whichever discipline first writes there.
+It creates the scoping document, one literature layer and the draft directory section notes are written
+into, and nothing else — **the first thing you write is the study's `AGENTS.md`**: what this domain
+forbids, the order its documents take, the notation, the environment. The scaffold deliberately leaves
+that file absent rather than prefilled, because a placeholder in its place is read as an authority table
+while saying nothing. Every other directory the study turns out to need is created by whichever
+discipline first writes there.
 
 ### What a study looks like
 
@@ -253,7 +254,7 @@ study turns out to need is created by whichever discipline first writes there.
   .section-notes/      what a round drafts before writing to the library; working files, no authority
 ```
 
-Two things about this block are the point of it. It is **one layer**, because one layer is what two real
+Two things about this block are the point of it. It is **small**, and what it states is what two real
 studies had independently defined the same way — everything else is created by the discipline that first
 writes there, and that round reports the path it used, so the scaffold stops guessing what a study will
 look like. And it does not prescribe where a study keeps them: a study that already has a `research/`
@@ -334,7 +335,7 @@ node tools\dump-session-selftest.mjs
 # the PUBLISHED package at a tag - the local suite cannot see unpublished commits, which is how a
 # version that still mounted two MCP servers was publishable with everything green.
 node tools\release-check.mjs --local
-node tools\release-check.mjs --tag v0.2.0
+node tools\release-check.mjs --tag vX.Y.Z
 node tools\release-check-selftest.mjs      # its pure halves, offline, with negative controls
 
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
@@ -476,9 +477,10 @@ session still shows the earlier surface. See [`docs/decisions.md`](docs/decision
   the skill registry exposes no equivalent restriction: a catalog read merges the global layer with
   the viewing scope's chain, and the preset's own registrations win only on a duplicate name. A
   preset session therefore sees every skill the profile carries. This was measured rather than
-  assumed, on two sessions created with this preset: each received a **20-entry** catalog, of which
-  **8** were the preset's shipped disciplines and **12** came from the profile, the foreign entries
-  taking **3,367 of the catalog's 6,971 characters**. Both available levers are unusable —
+  assumed, on two sessions created with this preset while it shipped **eight** disciplines: each
+  received a **20-entry** catalog, **8** of them the preset's own and **12** from the profile, the
+  foreign entries taking **3,367 of the catalog's 6,971 characters**. Both counts move as this preset
+  and the profile change; what does not move is the mixing. Both available levers are unusable —
   `includeDefaultRoots: false` would also drop each study's project-level skill directory, and
   shadowing a foreign name replaces its description without removing the entry. Treat the catalog as
   untrusted breadth: the resident discipline says a listed skill outside the routing list is not this
