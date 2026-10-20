@@ -184,11 +184,22 @@ export const HELPERS = [
   },
   {
     name: 'zotero-write.mjs',
-    role: '新建一条记录（按 arXiv id / DOI）',
-    can: ['`--arxiv <id>` / `--doi <doi>`（干跑默认）', '`--selftest`：不写库，只查接缝'],
-    refuses: ['库里已有的重复（DOI / archiveID / 标题）→ `REFUSING to create a duplicate`，除非显式 `--force`'],
-    when: ['"加一篇"之前先搜一遍：重复条目在库里比缺条目更难收拾'],
-    cites: [cite('tools/zotero-write.mjs', 'REFUSING to create a duplicate', '--selftest')],
+    role: '新建一条记录（按 arXiv id / DOI），并可**同时**归入分类',
+    can: [
+      '`--arxiv <id>` / `--doi <doi>`（干跑默认）',
+      '`--collection <key>`：建条目时把 `collections` 放进**同一个 create body**——一次写入、一次授权；key 在写入前按库里的分类树校验，**不接受分类名**',
+      '`--selftest`：不写库，只查接缝；纯函数那半边在 `zotero-write-selftest.mjs`',
+    ],
+    refuses: [
+      '库里已有的重复（DOI / archiveID / 标题）→ `REFUSING to create a duplicate`，除非显式 `--force`',
+      '`--collection` 的 key 形状不对或库里没有 → **在第一次请求之前**拒绝，不猜分类名',
+      '回读里没有这个归档 → 报 `UNFILED` 并 exit 1：条目**已建**，它只给 `zotero-collection.mjs --assign` 一条命令，**不会补写第二次**',
+    ],
+    when: [
+      '"加一篇"之前先搜一遍：重复条目在库里比缺条目更难收拾',
+      '要归档又不想多写一次 → 建的时候带 `--collection`；事后补档才是 `zotero-collection.mjs --assign`',
+    ],
+    cites: [cite('tools/zotero-write.mjs', 'REFUSING to create a duplicate', 'UNFILED', '--selftest')],
   },
   {
     name: 'zotero-link-attachments.mjs',

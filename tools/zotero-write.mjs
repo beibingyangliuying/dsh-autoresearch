@@ -10,12 +10,43 @@
 // Transport and the write gate live in ./zotero-local-api.mjs, together with the reason these calls
 // go through node:http with no timeout instead of fetch.
 //
+// ONE WRITE, AND WHAT IT DOES NOT COVER
+//
+//   * `--collection <key>` puts the new record into that collection as part of the SAME create: the
+//     create body carries `collections`, so it is one write and one authorization, and the read-back
+//     below is what decides whether the library kept the filing. **The filing through a create is not
+//     measured in this repository** - the local API mirrors the web API's item shape, but nobody here
+//     has watched a record created with `collections` come back carrying them. So the tool does not
+//     claim the filing: it reports it, and when the read-back has none it prints `UNFILED`, names the
+//     record that now exists, and gives the one command that files it. It never writes a second time
+//     to cover for a create, because then "one invocation, one change" would be a lie the next reader
+//     has to disprove.
+//   * an unknown or malformed collection key is refused BEFORE anything is written, and a collection
+//     NAME is not accepted: two collections may share a name under different parents, and guessing
+//     which one was meant is how a paper lands in the wrong folder.
+//   * no attachment is written. `docs/decisions.md` §329 refused `--attach`; a record with no PDF is
+//     what this path produces, and the reading tools say so rather than pretending otherwise.
+//
 // Usage:
 //   node tools/zotero-write.mjs --arxiv 1706.03762            # dry run
 //   node tools/zotero-write.mjs --arxiv 1706.03762 --write
 //   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --write
+//   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --collection ABCDEFGH --write
 //   node tools/zotero-write.mjs --selftest                    # no writes, checks the seams
-import { APP_NAME, createWriteGate, localRequest, readItem, serverInfo } from './zotero-local-api.mjs'
+//
+// Exit codes: 0 created, or a clean dry run | 1 refused or failed - including `UNFILED`, where the
+// record exists and only the filing did not stick. Nothing else is ever written on 1.
+import { resolve as resolvePath } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  APP_NAME,
+  createWriteGate,
+  getJson,
+  localRequest,
+  normalizeCollections,
+  readItem,
+  serverInfo,
+} from './zotero-local-api.mjs'
 
 // Optional polite-pool contact address for the metadata APIs. Set AUTORESEARCH_MAILTO in the
 // environment, or pass --mailto <address>; without one the requests are still valid, just
@@ -30,6 +61,90 @@ const value = (name) => {
   return i === -1 ? null : (argv[i + 1] ?? null)
 }
 const log = (...parts) => console.log(...parts)
+
+/** The shape of a Zotero object key: eight characters, uppercase letters and digits. */
+const KEY_SHAPE = /^[A-Z0-9]{8}$/
+
+/**
+ * The filing tool, as an ABSOLUTE path.
+ *
+ * Every command this program prints is meant to be run by an agent working in a study workspace, where
+ * a relative `tools/...` resolves to nothing (`INV-HELPER-1`). So the path is taken from where this file
+ * actually lives rather than written down.
+ */
+const COLLECTION_TOOL = fileURLToPath(new URL('./zotero-collection.mjs', import.meta.url))
+
+/**
+ * Collections named with `--collection`, uppercased, deduplicated, in first-seen order.
+ *
+ * @param {string[]} args Command-line arguments.
+ * @returns {string[]} One entry per distinct collection; `''` marks a flag with no value, which
+ *   {@link collectionKeyProblems} then refuses rather than dropping silently.
+ */
+export function parseCollectionKeys(args) {
+  const keys = []
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--collection') continue
+    const next = args[index + 1]
+    keys.push(next === undefined || next.startsWith('--') ? '' : next.trim().toUpperCase())
+  }
+  return [...new Set(keys)]
+}
+
+/**
+ * Why a set of collection keys cannot be used, if it cannot.
+ *
+ * @param {string[]} keys As {@link parseCollectionKeys} returns them.
+ * @returns {string[]} One message per bad key; empty when every key is usable.
+ */
+export function collectionKeyProblems(keys) {
+  const problems = []
+  for (const key of keys) {
+    if (key === '') problems.push('--collection needs a value')
+    else if (!KEY_SHAPE.test(key)) {
+      problems.push(`--collection "${key}" is not an eight-character key (node "${COLLECTION_TOOL}" --list prints them)`)
+    }
+  }
+  return problems
+}
+
+/**
+ * The create body, with the filing added.
+ *
+ * `collections` is not a schema field of any item type - `/itemTypeFields` does not list it and
+ * {@link fillTemplate} therefore drops it - so it is attached here, after the template is filled.
+ *
+ * @param {object} item The filled template.
+ * @param {string[]} keys Collections to file the new record into; none leaves the field off the body.
+ * @returns {object} The body to POST.
+ */
+export function withCollections(item, keys) {
+  return keys.length === 0 ? item : { ...item, collections: [...keys] }
+}
+
+/**
+ * Collections asked for that the record does not read back as filed in.
+ *
+ * @param {string[]} expected The keys the create body carried.
+ * @param {string|string[]|false|null|undefined} filed The record's `collections` as read back.
+ * @returns {string[]} The missing keys; empty when the filing stuck.
+ */
+export function unfiledCollections(expected, filed) {
+  const have = normalizeCollections(filed)
+  return expected.filter((key) => !have.includes(key))
+}
+
+/**
+ * Collection keys the library does not have.
+ *
+ * @param {string[]} keys Keys to look for.
+ * @param {object[]} rows Collection rows as `/collections` returns them.
+ * @returns {string[]} The unknown keys; empty when every key exists.
+ */
+export function unknownCollections(keys, rows) {
+  const known = new Set(rows.map((row) => row.key))
+  return keys.filter((key) => !known.has(key))
+}
 
 /** The local API has no /items/new template endpoint; ask it which fields the type accepts. */
 async function emptyItem(itemType) {
@@ -153,6 +268,37 @@ async function findExisting(meta) {
   return hit ? { key: hit.key, title: hit.data.title } : null
 }
 
+/** Rows per request when the collection keys are checked. The library's own page size for `/items`. */
+const COLLECTION_PAGE = 200
+
+/** A ceiling on that list, so an endpoint that ignores `start` stops loudly instead of looping. */
+const COLLECTION_CAP = 20 * COLLECTION_PAGE
+
+/**
+ * Every collection in the library, paged.
+ *
+ * A key is checked against this list before anything is written, because a create that carries an
+ * unknown key would be refused by the library AFTER the authorization dialog, which reads to the owner
+ * as a broken tool rather than as a bad argument.
+ *
+ * @returns {Promise<object[]>} Collection rows.
+ */
+async function allCollections() {
+  const rows = []
+  for (let start = 0; ; start += COLLECTION_PAGE) {
+    const page = await getJson(`/api/users/0/collections?format=json&limit=${COLLECTION_PAGE}&start=${start}`)
+    if (!Array.isArray(page)) throw new Error('the collections endpoint did not answer a list')
+    rows.push(...page)
+    if (page.length < COLLECTION_PAGE) return rows
+    if (rows.length >= COLLECTION_CAP) {
+      throw new Error(
+        `the collection list stopped at ${rows.length} rows (cap ${COLLECTION_CAP}) — this endpoint may be ignoring start, ` +
+          'so no key has been checked and nothing was written',
+      )
+    }
+  }
+}
+
 async function resolve() {
   const arxiv = value('arxiv')
   const doi = value('doi')
@@ -170,6 +316,11 @@ async function buildPayload(meta) {
 }
 
 async function run() {
+  // Refused before the first request, so a bad argument costs no authorization dialog and no network.
+  const wanted = parseCollectionKeys(argv)
+  const keyProblems = collectionKeyProblems(wanted)
+  if (keyProblems.length) throw new Error(keyProblems.join('; '))
+
   const gate = createWriteGate({
     appName: APP_NAME,
     onAuthorized: ({ remember }) =>
@@ -186,7 +337,20 @@ async function run() {
   const { source, meta } = await resolve()
   log(`[2] ${source} -> "${meta.title}" (${meta.creators.length} creators, ${meta.date || 'no date'})`)
 
-  const { item, used, dropped } = await buildPayload(meta)
+  if (wanted.length) {
+    const rows = await allCollections()
+    const unknown = unknownCollections(wanted, rows)
+    if (unknown.length) {
+      throw new Error(
+        `no collection ${unknown.join(' · ')} in this library — node "${COLLECTION_TOOL}" --list prints the keys`,
+      )
+    }
+    const names = wanted.map((key) => `${key} "${rows.find((row) => row.key === key)?.data?.name ?? '(unnamed)'}"`)
+    log(`    filing    : ${names.join(' · ')} — carried by this create, not a second write`)
+  }
+
+  const { item: bare, used, dropped } = await buildPayload(meta)
+  const item = withCollections(bare, wanted)
   log(`[3] item type ${meta.itemType}: filled ${used.length} field(s): ${used.join(', ')}`)
   if (dropped.length) log(`    dropped (not valid for this type): ${dropped.join(', ')}`)
 
@@ -224,12 +388,36 @@ async function run() {
   const titleOk = back.title === item.title
   const doiOk = !item.DOI || back.DOI === item.DOI
   const creatorsOk = (back.creators ?? []).length === item.creators.length
+  const unfiled = unfiledCollections(wanted, back.collections)
+  const filingNote =
+    wanted.length === 0
+      ? 'not asked'
+      : unfiled.length === 0
+        ? `matches (${wanted.join(' · ')})`
+        : `MISSING (${unfiled.join(' · ')})`
   log(
     `[7] read-back: title ${titleOk ? 'matches' : `MISMATCH ("${back.title}")`}, ` +
-      `DOI ${doiOk ? 'matches' : 'MISMATCH'}, creators ${creatorsOk ? `matches (${item.creators.length})` : 'MISMATCH'}`,
+      `DOI ${doiOk ? 'matches' : 'MISMATCH'}, creators ${creatorsOk ? `matches (${item.creators.length})` : 'MISMATCH'}, ` +
+      `filing ${filingNote}`,
   )
   if (!titleOk || !doiOk || !creatorsOk) throw new Error('read-back does not match what was sent')
-  log(`\nOK — "${back.title}" is now in the library (key ${itemKey}).`)
+  if (unfiled.length) {
+    // The record exists; only the filing is in doubt. Saying "added" here would be the exact lie this
+    // tool exists to avoid, and writing again to hide it would break one change per invocation.
+    console.error(`\nUNFILED — "${back.title}" IS in the library as ${itemKey}, but the filing did not stick.`)
+    console.error(
+      `The record reads back as collections ${JSON.stringify(normalizeCollections(back.collections))}; ` +
+        `the create body carried ${JSON.stringify(wanted)}.`,
+    )
+    console.error('Nothing was written a second time, and the create was not retried. File it in one more command:')
+    for (const key of unfiled) {
+      console.error(`  node "${COLLECTION_TOOL}" --assign ${itemKey} --collection ${key} --write`)
+    }
+    process.exitCode = 1
+    return
+  }
+  const where = wanted.length === 0 ? '' : `, filed under ${wanted.join(' · ')}`
+  log(`\nOK — "${back.title}" is now in the library (key ${itemKey}${where}).`)
 }
 
 async function selftest() {
@@ -288,14 +476,25 @@ async function selftest() {
   }
 
   log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
-  process.exit(failures === 0 ? 0 : 1)
+  // Same reason as the CLI catch below: the resolvers above end in `fetch`, and a forced exit while a
+  // socket is closing replaces this code with 0xC0000409 on Windows.
+  process.exitCode = failures === 0 ? 0 : 1
 }
 
-try {
-  if (flag('selftest')) await selftest()
-  else await run()
-} catch (error) {
-  const cause = error.cause ? ` (cause: ${error.cause.code ?? error.cause.message ?? error.cause})` : ''
-  console.error(`\nERROR: ${error.message}${cause}`)
-  process.exit(1)
+const isEntryPoint = process.argv[1] !== undefined && resolvePath(process.argv[1]) === fileURLToPath(import.meta.url)
+
+// Only act when this file IS the command: the unit self-test imports the pure parts above, and an
+// import must not create a record.
+if (isEntryPoint) {
+  try {
+    if (flag('selftest')) await selftest()
+    else await run()
+  } catch (error) {
+    const cause = error.cause ? ` (cause: ${error.cause.code ?? error.cause.message ?? error.cause})` : ''
+    console.error(`\nERROR: ${error.message}${cause}`)
+    // NOT `process.exit(1)`: on Windows a forced exit while the transport is still closing a socket
+    // trips a libuv assertion (`uv_async`), which replaces exit code 1 with 0xC0000409 and prints an
+    // assertion line after the real error. Setting the code and letting the loop drain exits with 1.
+    process.exitCode = 1
+  }
 }
