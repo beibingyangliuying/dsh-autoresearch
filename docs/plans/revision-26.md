@@ -4,7 +4,7 @@
 · 落地后的理由与边界见 [`../decisions.md`](../decisions.md) §67；本文件保留当时的依据与逐项改动，不再维护。
 
 **依据**：2026-10-19 对两个真实课题工作区的只读核对
-（`doc/地震后区域电网功能恢复与安全再投运机制`、`doc/局部电气设备减隔震对区域电网地震级联风险的跨尺度影响机制`）；
+（`doc/<课题A>/`、`doc/<课题B>/`）；
 对 `research/literature` 的全仓清点（产品面 29 处 / 13 个文件，不含 `.tmp`、`.mnemon`、`node_modules`）；
 本次会话的逐项裁定（§11）。
 
@@ -30,8 +30,8 @@
 
 | 课题 | 层 |
 |---|---|
-| A《地震后区域电网功能恢复与安全再投运机制》 | `audit/` · `design/` · `notes/` · `prospects/` · `references/` · `specs/` |
-| B《局部电气设备减隔震…跨尺度影响机制》 | `audit/` · `design/` · `prospects/` · `records/` · `references/` · `specs/` |
+| A | `audit/` · `design/` · `notes/` · `prospects/` · `references/` · `specs/` |
+| B | `audit/` · `design/` · `prospects/` · `records/` · `references/` · `specs/` |
 
 - **只有 `references/` 在两边各有一份可比的层定义，且两份 `README.md` 的规则一致**——
   非规范、只做指向、照抄既有的 A/B/C、**不新增判定**、不改写被指向的笔记；采纳结论留在 `prospects/`／`design/`。
