@@ -140,8 +140,9 @@ and which sections those papers have (from their own outlines), as an expectatio
 2. `## Enumeration` — total rows · rows read · records vs notes/attachments · whether it was complete
 3. `## Screening` — ruled out N (one line each: `itemKey` · the abstract sentence), in scope M, unreadable K
 4. `## Budget` — estimated characters · the 8-slice budget · slices actually spent · papers still queued
-5. `## Handover` — the `itemKey`s going to `reading-triage` and their order, and which sections
-   `section-notes` is expected to write (an expectation, not a claim)
+5. `## Handover` — the `itemKey`s going to `reading-triage` and their order, and which top-level
+   sections each paper has (from its own outline) — a structural fact about the paper, not a promise
+   that a note will exist
 6. `## Not swept` — truncation, duplicate keys, already-judged rows, records with no abstract
 7. `## Not judged` — one line: no adoption, no borrowing, and no note was written this round, and why
 

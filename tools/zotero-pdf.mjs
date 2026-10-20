@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read the attachment ITSELF, for the two rungs the library's index cannot serve.
+// Read the attachment ITSELF, for the three rungs the library's index cannot serve.
 //
 // WHY THIS FILE EXISTS
 //

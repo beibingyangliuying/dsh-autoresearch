@@ -26,9 +26,10 @@ library). Neither is this skill's instrument: this one asks bibliographic source
 
 ## 2. First step: read the declared conventions as a ruler
 
-1. Read the study's citation convention — `AGENTS.md` §4 if the study has one, and
+1. Read the study's citation convention — its `AGENTS.md` if it has one, and
    `<layer root>/references/README.md`. The **layer root** is `research/` where that directory exists and
-   the study root otherwise (protocol §7).
+   the study root otherwise (protocol §7). The scaffold prescribes no section order for `AGENTS.md`, so
+   read the file rather than looking for a section number.
 2. Decide which of the three questions you are answering: **find a work**, **resolve an
    identifier**, or **expand references/citations**. They use different endpoints.
 3. Note the retrieval date — citation counts are a snapshot, not a stable property.
@@ -125,20 +126,24 @@ Whether a copy is fetched and read is the reading channels' business, not this s
 - `cited_by_count` / `is-referenced-by-count` is a **snapshot on the retrieval date**; never present
   it as a stable or authoritative number.
 - **Never infer a paper's content from its title.**
-- A metadata-only source can be at most evidence grade **`B`** in a `literature-recon` note — never
-  `A`, which requires the full text.
+- **A metadata lookup supports no grade at all.** A grade says what was read, and this skill reads no
+  text — `B` already requires that the abstract was read. A row whose only source is metadata keeps its
+  `grade` empty and says which REST source answered it, and when, in `found via`.
 
 ## 6. Report shape
 
-Append to `<layer root>/references/<topic>.md` as evidence-table rows, e.g.:
+**Two destinations, and neither is a table of its own.**
 
-```
-| Source | Grade | What it actually says | Relation to this study |
-|---|---|---|---|
-| Author, *Title*, Venue, 2024, DOI:10.xxxx/yyyy (OpenAlex, retrieved 2026-10-11) | B | metadata only: venue, year, cited_by_count=12 | candidate for the contradicting-evidence section |
-```
+1. **A work already in the library** — append one row to that question's ledger
+   (`<layer root>/references/<topic>.md`), filling `itemKey`, `year` and `found via` (the source, and
+   the date it answered: `OpenAlex, retrieved 2026-10-11`). `grade` and `depth` stay empty: nothing was
+   read, and those cells belong to a reading round.
+2. **A work that is not in the library** — it has no `itemKey`, and a row without one is a row no later
+   round's `grep` can find. Report it under `## Candidates` in this round's answer and hand it to
+   `literature-recon`, which decides whether the work earns a row and what it is worth.
 
-If the study has its own convention, follow it.
+Do not invent a second table in that file. Its nine columns are the ledger, and a fourth shape beside
+them is a thing the next round cannot read. If the study has its own convention, follow it.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -149,7 +154,7 @@ If the study has its own convention, follow it.
   helper, and a hand-built request carries none of them.
 - Do not paste credentials into conversation text; these sources need none beyond the contact address.
 - Never present a metadata lookup as if it were reading the paper.
-- Do not modify anything under the layer root other than appending evidence rows.
+- Do not modify anything under the layer root other than appending the ledger row a lookup earns.
 
 ## 8. Acceptance checklist
 
@@ -157,7 +162,8 @@ If the study has its own convention, follow it.
 - [ ] Every count is quoted with the source that gave it and the retrieval date
 - [ ] When the DOI that came back differs from the one asked for, **both** are reported
 - [ ] No abstract was invented; absent abstracts are stated as absent
-- [ ] Metadata-only rows are graded `B` or lower
+- [ ] A row written from a lookup carries no `grade`; `found via` names the source and the date
+- [ ] A work that is not in the library went to the report, not into the ledger
 - [ ] 429s are reported, not retried in a loop
 
 ## 9. Don't

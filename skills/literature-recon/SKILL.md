@@ -208,10 +208,13 @@ Fixed sections:
   full text (last)      pull the whole text to a file, read by offset    only when reading through
   ```
 
-  Every rung here is backed by an instrument this preset ships. A **structure / outline** rung is
-  deliberately absent: nothing in the toolchain offers one, and naming a rung nothing can climb is how a
-  written discipline ends up with no instrument. The passage rung is reached by content instead —
-  `--grep` locates the term and the tool reports the passages around it.
+  Every rung here is backed by an instrument this preset ships, and the passage rung is reached by
+  content rather than by structure: `--grep` locates the term and the tool reports the passages around
+  it. This is the ladder of **what to load**. The reading ladder the contract counts in `INV-CTX-1` is a
+  different one — the four ways a text can be obtained, whose third rung is the paper's own table of
+  contents (`zotero-pdf.mjs --outline`). That rung answers *where* a section is and never *what it
+  says*, so it is climbed before a passage read and is never quoted as text. A rung nothing can climb
+  is still not named.
 
   A full text pulled for one paragraph is context spent for nothing.
 - **Check the topic's ledger before reading anything.** `<layer root>/references/<topic>.md` holds one row

@@ -69,10 +69,11 @@ where that directory exists, the study root otherwise (protocol §7):
 
 Write the result up as a **ruler list**; it is what the round is judged on.
 
-**If a needed equation appears in no section note, there are exactly two moves:** run `section-notes`
-for that section first, or record it under `## Gaps` and leave the item a candidate. **Never re-derive it
-here.** Two authors of one transcription produce two versions of one formula, and nothing later can say
-which one the code was written from.
+**If a needed equation appears in no section note, there are exactly two moves:** report that the section
+carries no note and ask the owner — to name that section for `section-notes`, or to open a reading round —
+or record the item under `## Gaps` and leave it a candidate. **Never re-derive it here, and never read the
+paper here.** Two authors of one transcription produce two versions of one formula, and nothing later can
+say which one the code was written from.
 
 ## 3. Criteria
 
@@ -220,7 +221,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 | Hit | Action |
 |---|---|
-| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — from the section note where the owner had one written, from the paper where not — and report the sections with no note instead of writing one; then rule. |
+| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table, and getting the paper read is not this round's work: report which sections the item would rest on and which of them carry no note, then hand it back — `section-notes` for the section the owner names, `reading-triage` for a depth. Rule only from what the ledger says was read. |
 | The needed equation is in no section note | Record it under Gaps and leave the item a candidate. **Never re-derive it here.** |
 | The copy's formula is ambiguous or a symbol is undefined | `ambiguous`, blocked, reported. Never reconstruct, never fill in. |
 | A precondition cannot be checked here | Mark `not checked`; the item stays a candidate. Never adopt with an uncheckable condition stated as if it were checked. |

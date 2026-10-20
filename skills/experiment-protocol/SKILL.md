@@ -21,9 +21,11 @@ own question.
 
 ## 2. First step: read the declared boundary as a ruler
 
-1. Read the study's `AGENTS.md`, if it has one: its invariants (§2), its document authority (§3), its
-   environment (§6). **Never run against a read-only input or baseline.** With no such file there is no
-   declared boundary to read, and the round says so rather than writing a card against an assumed one.
+1. Read the study's `AGENTS.md`, if it has one: its invariants, its document authority and its
+   environment, wherever that file puts them — the scaffold prescribes no section order, so a section
+   number would point at a file nobody wrote. **Never run against a read-only input or baseline.** With
+   no such file there is no declared boundary to read, and the round says so rather than writing a card
+   against an assumed one.
 2. Read any existing execution protocol (for example a `specs/` directory) and follow it; do not
    invent a parallel one.
 3. Fix the **reference population** before looking at outcomes. A denominator chosen after seeing

@@ -161,12 +161,11 @@ If you are about to write a note for the **first** section, or for the **last tw
 why that section is method rather than background or results. Being wrong here is the whole failure
 mode this skill exists to prevent.
 
-**The reading may stop inside the paper, and that is not a failure of this skill.** The unit is the
-section the reading reached, not the paper. A section that was never reached gets no note and no
-apology: the ledger's `depth` says where the reading stopped and its `verdict` says why, and those two
-are the whole reason the remaining sections carry no note. In the report, say which sections were not
-reached and that the reading stopped there — never "no note was needed". **An absent note is not
-evidence that a section was read.**
+**This round explains the section it was asked for, not the paper.** A section the owner did not name
+gets no note, and a round asked for one section may stop inside it: the coverage table says which
+sections carry a note, and the report says which ones were not reached rather than "no note was
+needed". Where a reading round stopped short of a section, that question's ledger says so — `depth`
+where the reading stopped, `verdict` why. **An absent note is not evidence that a section was read.**
 
 ### 3.2 What one note contains
 
