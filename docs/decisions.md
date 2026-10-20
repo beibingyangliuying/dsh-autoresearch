@@ -2130,6 +2130,9 @@ README 写 `eleven`，套件照样全绿。
 **未做／边界**：新口径下重测 `zotero-pdf.mjs` 的使用率不在本轮（要新会话数据）；护栏不加第三处锚点，也不比
 README 里那条**过去时**的实测（"when it shipped eight disciplines"）——那是历史记录，不该被当下数判错；
 **已发出的 0.12.0 里仍带着旧标题**，清理要到下一次发布才真正生效；[`releases.md`](releases.md) 只在新版发布时记。
+**补记（同日收口）**：0.12.1 已带上这些改写（属主推送，`releases.md` §76）；**0.9.0–0.12.0 的 tag 里仍有原标题，
+属主裁定不改写历史**——改写要重算全部 tag 与所有引用过其哈希的记录，收益只是清掉**已经公开过**的标题，代价是
+整条历史失去可核对的锚点。所以"不再随包发出"这个保证只覆盖**当前版本及以后**。
 
 **落在何处**：[`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（`ROUTED_NAMES`、`NUMBER_WORDS`、
 `[2]` 块、`[3]`–`[6]` 重编号）· [`docs/backlog.md`](backlog.md)（第 1 行、#6、#8）· 本文件（三处标题）·
