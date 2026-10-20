@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 28.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 29.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 28 states which file a reading fills, because the scaffold
+independent of any package version. Revision 29 moves the **trigger** of the section-note discipline:
+what starts a section note is the owner naming that section and asking for it, not the end of a method
+section in a reading round. A note pasted in from outside is claimed to the section its own heading
+names — a tag and no body — and a round that only claims reports the sections still carrying no note
+instead of writing them. Two facts force it. A claim says that a section has an explanation attached,
+never that this session read the paper, so a claim round writes no `depth` into a question's ledger. And
+a wrong claim is permanent while a missing note is cheap: a claimed section is refused a second note,
+and adoption cites a note rather than re-reading the source, so a claim made from a guess is not
+correctable later. The claim path itself is not new — a pasted note has been claimed or rewritten in
+place since Revision 17 — so what this revision changes is which round is the ordinary one. §4 states it.
+Revision 28 states which file a reading fills, because the scaffold
 and four disciplines had come to name different ones: the scaffold's `references/ledger.md` is the
 table's **shape** and nothing else, and a question's ledger is `references/<topic>.md` — the file every
 discipline names — which the first round creates by copying that shape. §7's layout note had read as if
@@ -149,8 +159,9 @@ artifact from the digest `INV-EVID-4` speaks of, and neither replaces the other;
 already covers is never written twice, including coverage recorded only in a note's own opening line;
 and repairing an older note's damaged formula delimiters is **mechanical only** — a repair that guesses
 at what a broken formula meant is a rewrite, and a rewrite is not a repair. §4 and §6 are restated
-accordingly. Revision 23 later moves that discipline's trigger: what starts a section note is the end of
-a method section in a reading round, not the paper's selection for study. Revision 10 records what
+accordingly. Revision 23 later moves that discipline's trigger from the paper's selection for study to the
+end of a method section in a reading round, and Revision 29 moves it once more, to the owner naming that
+section; §4 states the current one. Revision 10 records what
 authorizes a write into the reference
 library. The reference manager raises its dialog on every request for a key — the local API has no
 "this application is already trusted" path, so the answer "Always Allow" chooses the kind of key issued
@@ -308,12 +319,14 @@ triage       one paper is advanced section by section for one named question, an
              required for `park`, `stop` and every `enough` short of the full text, a verdict that
              would move the research direction is the owner's, and the reading reuses the section
              notes another question already wrote
-sections     a method section a reading round has just finished becomes one `/section-N` note per
-             TOP-LEVEL section, attached to its library record; background, case study and conclusion
-             sections are not written, a claimed section is never written twice, a dotted key is
-             neither written nor read, a pasted note is claimed or rewritten in place, a wrong
-             record is retired rather than deleted, and one record carries one explanation per section
-             and no paper-level summary
+sections     one `/section-N` note per TOP-LEVEL section, attached to its library record: it is
+             written only when the owner names that section and asks for it, a note pasted in from
+             outside is claimed to the section its own heading names — a tag, never a body — and a
+             round that only claims reports the sections still carrying no note instead of writing
+             them; background, case study and conclusion sections are not written, a claimed section
+             is never written twice, a dotted key is neither written nor read, a pasted note is
+             claimed or rewritten in place, a wrong record is retired rather than deleted, and one
+             record carries one explanation per section and no paper-level summary
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code
