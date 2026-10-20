@@ -450,17 +450,18 @@ develop 注释）· `f1cf249`（六处真名 + `decisions.md` §75）· `48690e0
 `release-check --local`（声明 0.12.1、19 项自测有名、干净树）全绿。护栏做了反例：README 的 `Twelve` 改成 `Ten`
 立刻 FAIL 并同时报出"盘上 12／散文 ten"，改回即绿——§36／§64／§70 那三次若有它，会在提交前就红。
 
-**推送与远端复核**：本机直到这一版写完仍无外网（`127.0.0.1:12450` 无人监听、直连 443 超时、SSH 22 通但无密钥），
-所以 `main` 与 `v0.12.1` 由属主在 2026-10-20 自己推送。**远端复核（clone tag 比树哈希）本轮仍未做，也不算已做**
-——"本地全绿"是关于工作树的断言，不是关于发布件的断言。复核要跑的两条命令与预期值留在这里，谁有网谁补：
+**推送与远端复核**：本机当时无外网（`127.0.0.1:12450` 无人监听、直连 443 超时），所以 `main` 与 `v0.12.1` 由属主
+在 2026-10-20 推送。代理起来后复核在三处对上：
 
-```powershell
-git ls-remote origin refs/heads/main refs/tags/v0.12.1 'refs/tags/v0.12.1^{}'
-# 预期 refs/tags/v0.12.1^{} = 48690e052de6beef86230cd76b30540bddd10258（tag 所指的版本提交）
-git clone --depth 1 --branch v0.12.1 https://github.com/beibingyangliuying/dsh-autoresearch.git .tmp\verify-0.12.1
-cd .tmp\verify-0.12.1; node tools\release-check.mjs --local
-# 预期 HEAD^{tree} = 99aac9b10255737ec9d2b8cb5ab2e686280bc592，且声明版本 0.12.1
-```
+- `ls-remote`：`refs/heads/main` = `4ac47a7`，tag 对象 `5487311`，`refs/tags/v0.12.1^{}` = `48690e0`——正是 tag 所指的
+  版本提交。
+- `git clone --depth 1 --branch v0.12.1` 取回的树哈希 `99aac9b10255737ec9d2b8cb5ab2e686280bc592`，与本地
+  `v0.12.1^{tree}` **完全相同**。
+- 在该克隆里跑 `release-check --local`：**PASS**（声明 0.12.1、19 项自测有名、helper 全在、干净树）。再 grep 三种
+  旧标题的片段：**零命中**——所以这一版的整改确实落在安装者拿到的树上，而不只是在工作树里。
+
+**记录本身比 tag 晚一条**：本节写入后 `main` 会比 `v0.12.1` 多一个提交（发布记录），tag 不动——与 §72／§74 同一
+做法，所以 `release-check --tag` 那一类检查看到的仍是版本提交，不会把记录算进去。
 
 **0.9.0–0.12.0 的 tag 里仍有原标题——属主裁定不改写历史（2026-10-20）**。改写要重写全部 tag 以及所有引用过其
 哈希的记录，收益只是清掉**已经公开过**的旧标题，代价是整条历史失去可核对的锚点；判为不值。所以「不再随包发出」
