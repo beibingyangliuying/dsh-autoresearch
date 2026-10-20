@@ -10,7 +10,7 @@ question**, and it records the queue where the next round can find it. It is an 
 it decides which papers are worth reading and in what order, never how far one is read.
 
 It exists because the three steps around it already had disciplines and the first step had none. Reading a
-paper section by section is `reading-triage`; writing a note at the end of a method section is
+paper section by section is `reading-triage`; writing a note on a method section the owner names is
 `section-notes`; deciding what may be borrowed is `adoption-ruling`. Nothing turned "this collection" into
 "these candidates, in this order, with the ones that cannot serve us already ruled out" — so a collection
 was either read in whatever order the library listed it, or screened by hand with nothing recorded.
@@ -92,10 +92,10 @@ several reading rounds, and a sweep that does not say so has promised a queue it
 
 ### 3.5 The section-note seam
 
-A note is written when a **method section has been read to its end**, by `section-notes`, one note per
-top-level section. A sweep never writes one, never claims one, and never predicts one as done — it reports
-which papers it is handing over, and which sections those papers have (from their own outlines), as an
-expectation only.
+A note body exists only where the owner has named that section and `section-notes` wrote one, one note
+per top-level section; reading to a method section's end does not produce one. A sweep never writes
+one, never claims one, and never predicts one as done — it reports which papers it is handing over,
+and which sections those papers have (from their own outlines), as an expectation only.
 
 ## 4. Do vs don't
 
@@ -119,7 +119,7 @@ expectation only.
 | A row already carries a current verdict and its `re-open if` does not hold | Skip it. Report it as already judged. |
 | The ledger's location is unknown, or both layer roots exist | Stop. Ask where the ledger is. |
 | The collection is a reading pile spanning unrelated questions | Stop. Ask whether this is this question's literature. |
-| The owner's next request is to write a note now | Refuse: notes are written at a method section's end, by `section-notes`. |
+| The owner's next request is to write a note now | Not this round: a sweep reads no paper and writes no note. Point at `section-notes`, which writes a body only for the section the owner names. |
 
 ## 5. Wording discipline
 

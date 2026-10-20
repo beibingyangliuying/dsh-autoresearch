@@ -220,7 +220,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 | Hit | Action |
 |---|---|
-| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — that is `section-notes`' work — then rule. |
+| The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table. Read the sections the item would rest on — from the section note where the owner had one written, from the paper where not — and report the sections with no note instead of writing one; then rule. |
 | The needed equation is in no section note | Record it under Gaps and leave the item a candidate. **Never re-derive it here.** |
 | The copy's formula is ambiguous or a symbol is undefined | `ambiguous`, blocked, reported. Never reconstruct, never fill in. |
 | A precondition cannot be checked here | Mark `not checked`; the item stays a candidate. Never adopt with an uncheckable condition stated as if it were checked. |

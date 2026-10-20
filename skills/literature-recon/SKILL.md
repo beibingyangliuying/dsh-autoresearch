@@ -224,8 +224,8 @@ Fixed sections:
   the paper's first appearance, then fill `grade` and `depth` from what was actually retrieved — `B` +
   `abstract` for a screening read, `A` + `§N` or `full` for the sections actually read. Nothing else
   records how far a paper was read, and both cells are written from the text in front of you or not at
-  all. Turning a method section into a note is `section-notes`' act, and a paper nobody wrote notes for
-  is still recorded here: the row is the record, not a summary.
+  all. Turning a method section into a note is `section-notes`' act, and only when the owner names that
+  section; a paper nobody wrote notes for is still recorded here: the row is the record, not a summary.
 
   ```powershell
   node "{{presetTools}}/zotero-edit.mjs" --item "<itemKey>" --add-tag /done --remove-tag /unread --write

@@ -129,9 +129,11 @@ an outline mapped to a position.
 3. **No reusable note**: `{{presetTools}}/zotero-read.mjs --fulltext "<recordKey>" --offset 0 --limit 12000`,
    then the offset it names, and so on. When the library has not indexed the attachment, the same
    arguments work with `{{presetTools}}/zotero-pdf.mjs --extract`.
-4. **When a method section is finished and the reading continues, write its `/section-N` note** —
-   `section-notes` does that, one section per invocation. That note is the asset the *next* question
-   reuses; a reading that stops does not produce one.
+4. **A section note is not produced by this round.** Where the record already carries one for the
+   section just read, it is the asset the *next* question reuses (report it as reused); where it does
+   not, the gap is reported and nothing is written. `section-notes` generates a note body only when
+   the owner names that section and asks for it — continuing past a method section does not trigger
+   it.
 5. **At each section boundary, judge.** Met the need → `enough`. Still possible → continue. Settled that
    it cannot serve this question → `stop`.
 
@@ -175,8 +177,9 @@ slice costs five to eight calls and the context that goes with them. **The reusa
 not the previous question's ledger row** — the row is a hint about where to look, and it is written
 about a different question.
 
-Reuse only pays where a note exists. `section-notes` writes notes for method sections only, so a paper
-that an earlier question stopped inside its introduction or its review has no note to reuse; that
+Reuse only pays where a note exists. Section notes exist only for top-level method sections, and only
+where the owner has had one written; a paper that an earlier question stopped inside its introduction
+or its review has no note to reuse, and one the owner named no section for has none either. That
 question's row says `stop` and this one starts from the paper. Say which happened in the report.
 
 ### 3.8 One round's reading budget, and whose hands read it
@@ -280,9 +283,10 @@ answer to the owner.
   rather than computing it; a hand-computed offset walks into the middle of a heading.
 - **`--item <noteKey>` reads a note; `--item <recordKey>` on `zotero-section-note.mjs` lists a record's
   notes.** They are different calls with different output; confusing them wastes a slice.
-- **This skill writes no library note.** The verdict is a workspace row. When the reading continues past
-  a method section, the note that gets written is `section-notes`' work, under its own write
-  authorization (`INV-EVID-3`) and read-back rules.
+- **This skill writes no library note.** The verdict is a workspace row. A section note is
+  `section-notes`' work, under its own write authorization (`INV-EVID-3`) and read-back rules, and it
+  exists only where the owner named that section; a reading that continues past a method section
+  reports the gap instead of producing one.
 - **Never write the ledger before the reading.** A row written first is a plan, and a plan in the
   ledger's columns reads as a judgement that was made.
 - **A row is never deleted.** A judgement that changes gets a dated `## Reading log` line beside it, so
