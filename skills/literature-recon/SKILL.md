@@ -192,14 +192,15 @@ Fixed sections:
 
   The index's terms of use forbid serving its e-prints from our own servers; retrieving a copy in order
   to read it is allowed, and that copy stays a local working file this preset never republishes.
-- **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, and it refuses to create a duplicate of something already in the library. Propose the addition and let the owner answer the reference manager's dialog: "Allow" covers that one write, and "Always Allow" is their standing grant for that library, which this preset keeps on their machine and they can revoke in the reference manager. Never ask for "Always Allow", and never treat a refused or revoked authorization as granted.
+- **Adding a reference to the owner's library.** Use `{{presetTools}}/zotero-write.mjs` — an absolute path, because this preset ships its helpers outside your workspace and a relative `tools/...` resolves to nothing there. It is a **dry run unless `--write` is given**, and it refuses to create a duplicate of something already in the library. Propose the addition and let the owner answer the reference manager's dialog: "Allow" covers that one write, and "Always Allow" is their standing grant for that library, which this preset keeps on their machine and they can revoke in the reference manager. Never ask for "Always Allow", and never treat a refused or revoked authorization as granted. Adding to a collection is **the same write**, not a follow-up: `--collection <key>` puts the filing in the create body. It takes a collection **key** (`{{presetTools}}/zotero-collection.mjs --list` prints them), never a name — two collections may share a name under different parents, so a name is refused instead of guessed. A record created without one is not stuck at the library's root: `{{presetTools}}/zotero-collection.mjs --assign <itemKey> --collection <key> --write` files it afterwards, at the cost of a second write.
 
   ```powershell
   node "{{presetTools}}/zotero-write.mjs" --arxiv 1706.03762          # dry run: resolve, build, print
   node "{{presetTools}}/zotero-write.mjs" --doi 10.xxxx/yyyy --write  # owner answers Zotero's dialog
+  node "{{presetTools}}/zotero-write.mjs" --doi 10.xxxx/yyyy --collection ABCDEFGH --write  # filed in the same create
   ```
 
-  The write is only accepted once a **read-back** of the created item matches the title, DOI and creator count. Never report "added" from the POST response alone.
+  The write is only accepted once a **read-back** of the created item matches the title, DOI and creator count — and, when a collection was named, its `collections`. Never report "added" from the POST response alone. `UNFILED` is its own verdict: the record **is** in the library while the filing did not stick, so report it that way, run the `--assign` command the tool prints, and never re-create the record to cover for it.
 - **Read at the cheapest level that can answer the question.** Never load a full text to find one fact. The channels offer a ladder, and the discipline is to climb it in order:
 
   ```text

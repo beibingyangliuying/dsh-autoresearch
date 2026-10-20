@@ -169,7 +169,8 @@ and the page rendered to an image — the rung that answers mathematics no text 
 helper can do, what it refuses, and what to do when the refusal lands is one page**:
 [`docs/toolchain.md`](docs/toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of
-write has its own tool: `zotero-write.mjs` adds a record, and
+write has its own tool: `zotero-write.mjs` adds a record — and, given `--collection <key>`, files it into
+that collection **in the same create** rather than by a second write — and
 `zotero-section-note.mjs` keeps one explanation note per top-level method section. Its identity is a
 `/section-N` tag rather than an invisible marker (the application eats comments in the body); its first
 step is a read-only report of what the record already claims and which notes are **unknown**, and those
@@ -189,7 +190,11 @@ tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
 
 Every write states the change first and is a **dry run until `--write` is given**; it carries the version
 the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
-wrote before reporting success. One invocation states one change. The reference manager's own dialog is
+wrote before reporting success. One invocation states one change. A create that also names a collection
+states the filing as part of that same change — the body carries it — and believes it only when the record
+reads back filed: a record whose filing did not stick is reported as **`UNFILED`**, with the one command
+that files it, rather than covered by a second write the invocation never announced. The reference
+manager's own dialog is
 the gate the contract names: **"Allow"** authorizes that single write, and **"Always Allow"** is a
 standing grant this preset keeps for that library, so the asking follows the library rather than the
 write. The owner revokes a grant at any time in the reference manager's settings; a refused or revoked
@@ -321,6 +326,7 @@ node tools\metadata-selftest.mjs
 # the reference-library helpers: their pure halves run without a library, and write nothing
 node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
+node tools\zotero-write-selftest.mjs      # the collection key, the create body, and the UNFILED path that owns no second write
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
 node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
@@ -360,6 +366,9 @@ node tools\session-helper-modes.mjs --preset autoresearch
 # reference library writes: dry run first; --write makes Zotero ask you to Allow
 node tools\zotero-write.mjs --arxiv 1706.03762
 node tools\zotero-write.mjs --arxiv 1706.03762 --write
+# and the same create can file the record, in one write rather than two. A collection NAME is refused:
+# two collections may share a name under different parents, so a key is what it takes.
+node tools\zotero-write.mjs --doi 10.xxxx/yyyy --collection <collectionKey> --write
 ```
 
 **The preset's helper programs are addressed absolutely, on purpose.** An agent of this preset works in

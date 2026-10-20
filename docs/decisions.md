@@ -2137,3 +2137,37 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 **落在何处**：[`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（`ROUTED_NAMES`、`NUMBER_WORDS`、
 `[2]` 块、`[3]`–`[6]` 重编号）· [`docs/backlog.md`](backlog.md)（第 1 行、#6、#8）· 本文件（三处标题）·
 [`plans/revision-17.md`](plans/revision-17.md) · [`plans/revision-26.md`](plans/revision-26.md)。
+
+## 76. 建条目时可以同时指定分类：一次写入，`UNFILED` 自成一个结论（2026-10-20）
+
+**起因**：junhan 贴来本地 agent 的一段收尾，里面写"**未归入任何集合**（写入工具没有 `--collection` 参数）⇒ 两条落在库根，`02-3` 仍是 6 部作品，锚定表 §3 不用改"。他问的不是那两条怎么办，而是**"添加条目的时候同时能指定分类是不是比较方便"**——工具该怎么长。
+
+**先验**（三条都落到行）：
+
+① 那段话**半真，且结论是推断过头**。真的一半：`fillTemplate()` 只填 `/itemTypeFields` 给的 schema 字段，`collections` 不在其中，body 里确实没有它。过头的另一半：**归档早就存在**，只是另一次写入——`zotero-collection.mjs --assign <itemKey> --collection <key> --write`，读 `version`、`PATCH` + `If-Unmodified-Since-Version`、回读比对。agent 把"一个工具只做一件事"读成了"做不到"，于是把"两条在库根"报成了既定事实。这个误读的成本是用户以为锚定表已经定了。
+
+② **一次 create 直接带 `collections` 在 Zotero 上是条目形状的一部分**（web API v3），本地 API 镜像它；但**本仓库没有实测过**"建的时候带上、读回来还在"。按本仓库的规矩，这类未测行为只能写成"尝试 + 回读 + 没成就说没成"，不能写成"支持"。
+
+③ `zotero-edit.mjs` 的 `REFUSED_FIELDS` 早就把 `collections` 排除在"改字段"之外，所以归档的唯一入口是 `zotero-collection.mjs`。加 `--collection` 不是新开一条写路径，而是让**建**这条路用上同一个字段。
+
+**裁定**（四项由 junhan 逐项确认，全部取给定选项）：
+
+1. **只给 `zotero-write.mjs` 加 `--collection <key>`，放进同一个 create body** ⇒ 一次写入、一次授权。不改成"建完自动再 assign"的串联：那是同一次调用里的第二个变更，而"一次调用一件事"是这一侧的共同规矩。
+2. **只收 8 位 key**（`^[A-Z0-9]{8}$`，小写自动转大写），**不收分类名**。同名分类挂在不同父级下是合法约定（重复检查本身就按 sibling 比），猜名字就是把论文放进错文件夹的那条路。
+3. key 的**形状**在第一次请求之前拒绝；key **存不存在**在写入前按库里 75 个分类（分页读）核对——否则打字错误要等属主点完 Allow 才被库拒绝，读起来像工具坏了。
+4. 回读里没有这次归档 ⇒ **`UNFILED` + exit 1**：条目**已在库**，工具只打印 `--assign` 那一条命令，**不补写第二次、不重试 create**。
+
+**验证**：
+
+- 新增离线自测 [`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs)（31 条断言，写库为零）。含反例：分类名被拒；根分类读回 `false` 不等于一个名叫 `false` 的分类；源码里**不许出现 `patchItem`/`patchCollection`**——这条正面断言了"工具没有第二条写路径"。
+- 真库干跑（Zotero 10.0.6，kept 授权在档）：给一个真实分类键，工具打印 `filing : <key> "<分类名>" — carried by this create, not a second write`，payload 里出现 `"collections"`；`--collection AB` 与 `--collection GONE0000` 都在任何写入之前 exit 1。**键与分类名不誊写**——它们说明不了这次测量，只透露属主库的内容（同 §75 那条红线：`docs/` 随 npm 包一起公开）。
+- `node --check` · `toolchain-page --write/--check`（23 条出处）· `toolchain-selftest` · `zotero-write-selftest` 全绿。
+
+**未做／边界**：
+
+- **"create 带 collections 到底收不收"仍未实测**。第一次真写就是那次测量，回读是唯一证据；库若忽略它，用户看到的是 `UNFILED` + 一条 `--assign`，而不是一句"失败"。
+- 重复命中（条目已在库）时**不**顺手归档那一条：那是一调用里的第二种变更。要归档已有条目就明说 `--assign`，要第二份就 `--force`。
+- `--attach <pdf>` 仍是 §329 的拒绝项，没重开。
+- **顺带修了一条既有缺陷**：任何在 `fetch` / 本地请求之后立刻 `throw` 的路径，收尾的 `process.exit(1)` 在 Windows 上会撞 libuv 的 `uv_async` 断言，退出码变成 `0xC0000409` 并多打一行 `Assertion failed`（改前实测：`--doi 10.9999/not-a-real-doi` 必然复现；`--collection GONE0000` 也复现）。这是**既有**问题、不是 `--collection` 引入的，但新的拒绝路径正好落在这一类里，所以一并改掉：错误路径改成 `process.exitCode = 1` 后自然退出，实测 exit 1、约 0.9 s、无断言行；`--selftest` 的收尾同理。**未做的事**：没有动共享传输（`localRequest` 仍用默认 agent 的 keep-alive），慢的原因是等待套接字收尾而不是挂住。
+
+**落在何处**：[`tools/zotero-write.mjs`](../tools/zotero-write.mjs)（`parseCollectionKeys` · `collectionKeyProblems` · `withCollections` · `unfiledCollections` · `unknownCollections` · `allCollections` · 回读的 `filing` 一栏与 `UNFILED` 段 · 入口守卫）· [`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs)（新）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md)（自测清单、用法示例、"tools say rather than hide" 那段）· [`docs/coverage.md`](coverage.md) · 本文件。版本号不动，随下一次发布带出。

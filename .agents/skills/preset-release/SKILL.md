@@ -84,6 +84,7 @@ node tools\arxiv-selftest.mjs
 node tools\metadata-selftest.mjs
 node tools\zotero-read-selftest.mjs
 node tools\zotero-pdf-selftest.mjs
+node tools\zotero-write-selftest.mjs
 node tools\zotero-edit-selftest.mjs
 node tools\zotero-collection-selftest.mjs
 node tools\zotero-section-note-selftest.mjs

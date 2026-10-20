@@ -62,7 +62,7 @@
 |---|---|
 | 读（检索 / 记录 / 笔记正文 / 附件文本切片 / 分类树） | [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) |
 | 读附件本身（文件文字层 · 论文自带目录 · 页面渲染成图） | [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) |
-| 往库里加一条条目 | [`tools/zotero-write.mjs`](../tools/zotero-write.mjs) |
+| 往库里加一条条目，并可**同时**归入分类（`--collection <key>`，一次写入而不是两次） | [`tools/zotero-write.mjs`](../tools/zotero-write.mjs) |
 | 在条目上留逐节解释笔记（`/section-N`）；claim / 原地改写 / 退休 / 永久删除（仅 `/retired`） | [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) |
 | 改条目的字段与标签 | [`tools/zotero-edit.mjs`](../tools/zotero-edit.mjs) |
 | 建 / 改名 / 归档分类 | [`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs) |
