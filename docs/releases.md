@@ -561,15 +561,20 @@ origin main` 成功**（`4ebefd9..255a474`），随后同一条命令把 `v0.13.
 **21/21 PASS**，`toolchain-page --check` 23 条引文成立。**仍然没有做过一次真实写入**——本版不含任何写成功路径的真库实测，
 只有它的前置（桩库与只读比对）。
 
-**远端复核（已跑，PASS）**：`node tools/release-check.mjs --tag v0.14.0` 读出三件事——发布件声明 **0.14.0** ✓、
-组合**不挂任何 MCP 也不启动任何进程** ✓、三个通道要用的 helper **都在发布包里** ✓——最后一步比对了 `v0.14.0 -> 2e8b4ea`
-与 `main -> 255a474`（本节写入后 main 前进一个提交，正常）。`--tag` 之前还有一次独立的本地克隆核对：
-`checkout v0.14.0` 的树哈希 `b143a00` 与本地 `v0.14.0^{tree}` 一致，且在该克隆里 `release-check --local` PASS。
+**远端复核（两条路，都走到 PASS）**：`node tools/release-check.mjs --tag v0.14.0` 读出三件事——发布件声明
+**0.14.0** ✓、组合**不挂任何 MCP 也不启动任何进程** ✓、三个通道要用的 helper **都在发布包里** ✓——最后一步比对
+`v0.14.0 -> 2e8b4ea` 与当时的 `main`。之后几分钟内 node 的 `fetch` 到 `raw.githubusercontent.com` 开始失败
+（`the tag is readable: fetch failed`），**同一条检查复跑不再通过**——这是网络，不是发布件；`git ls-remote`
+仍能读到 `refs/tags/v0.14.0^{}` = `2e8b4ea`。于是换一条更硬的运输补证：**直接从 GitHub 克隆那个 tag**
+（`git clone --depth 1 --branch v0.14.0 https://github.com/…`，走 libcurl），得到树哈希 `b143a00`——与本地
+`v0.14.0^{tree}` 相同，`package.json` 声明 0.14.0，在该克隆里 `release-check --local` **PASS**。这条克隆路径正是
+"一个新用户装到的是什么"，比读单个文件更接近安装本身。
 
 **抓到的工具缺陷（未修，留给下一版）**：`release-check --tag` 的最后一步 shell 出 `git ls-remote`，因而继承 git
 的代理配置；代理不可用时它在三项真检查**全部 PASS 之后**抛 `ERROR: Command failed: git ls-remote …` 并 exit 1
 ——把"分支头无法核对"报成"这一版有问题"。本轮用一次性的 `GIT_CONFIG_COUNT/KEY_0/VALUE_0` 环境覆盖绕过（只对那条
-命令生效，没有动属主的 git 配置）。该修的方向：这一步失败时打印"分支头无法核对，原因 …"，而不是抛错。
+命令生效，没有动属主的 git 配置）。该修的方向：这一步失败时打印"分支头无法核对，原因 …"，而不是抛错；
+网络级的 `fetch failed` 同理，不该显示成 `FAIL the tag is readable` 而不说"没连上"。
 
 **一处要重启宿主**：`skills/literature-recon/SKILL.md` 改了一句（重复命中不再用 "refuses" 描述），
 纪律只在宿主启动时注册，开新会话或刷新页面都不够（§25）；工具本体不受影响，它按绝对路径跑文件。
