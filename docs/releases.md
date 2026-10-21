@@ -524,6 +524,10 @@ preset-release/SKILL.md` 的 Phase-1 套件清单各少一条——后一条是 
 
 **记录本身比 tag 晚一条**：本节写入后 `main` 比 `v0.13.0` 多这一个提交，tag 不动（§72／§74／§76 同一做法）。
 
+**补记（2026-10-21）**：上面那句"本次未能推送"**已经过期**。`v0.13.0` 随 0.14.0 一起推上去了，
+远端 `refs/tags/v0.13.0^{}` = `07e3f4e`，与本地一致（见 §80）。留着原文是因为它是当时的事实，
+但读者要按这一句来判当前状态。
+
 **改完要重启宿主**：纪律文本（`skills/literature-recon/SKILL.md`）只在宿主启动时注册，开新会话或刷新页面都不够
 （`decisions.md` §25）；**工具本体不受影响**，它按绝对路径直接跑文件。
 
@@ -537,10 +541,11 @@ preset-release/SKILL.md` 的 Phase-1 套件清单各少一条——后一条是 
 ## §80 · 0.14.0 发布：写操作的三种答案统一到每一条路径，以及第一次把"命令行的回答"当被测对象（2026-10-21）
 
 **版本**：`0.14.0`，提交 `2e8b4ea`，注解 tag `v0.14.0`（tag 对象 `e1529a3`，剥到的正是该提交；树 `b143a00`）。
-**本次推送仍未完成**：`git push origin main` 与 `git push origin v0.13.0 v0.14.0` 都返回 128
-（`Failed to connect to github.com port 443 via 127.0.0.1`）——git 配的代理 `127.0.0.1:12450` 没在运行，
-绕过代理直连也被 `Connection was reset`。与 §77 同一处故障；**`v0.13.0` 也仍未推送**，所以一次推送要把两个 tag
-一起带上，否则 README 里 `#v0.13.0` 那个 pin 仍然解析不到。
+**推送成功（第二次尝试）**：第一次 `git push origin main` 与 `git ls-remote` 都返回 128——git 配的代理
+`127.0.0.1:12450` 没在运行，绕过代理直连又被 `Connection was reset`。几分钟后重试，**`git -c http.proxy= push
+origin main` 成功**（`4ebefd9..255a474`），随后同一条命令把 `v0.13.0` 与 `v0.14.0` 一起推上（两个 `[new tag]`）。
+远端剥皮与本地一致：`v0.13.0^{}` = `07e3f4e`、`v0.14.0^{}` = `2e8b4ea`。**`v0.13.0` 此前一直没推上去**
+（§77 那次失败没有补做），所以这一次推两个——顺带让 README 里 `#v0.13.0` 那个 pin 变成真能解析的引用。
 
 **为什么是 minor**：`journal-rank.mjs` 是使用者可见的新能力；而三条写路径的三种答案与 `/agent-note`／`/reviewed`
 是**实现追上契约**，不是新增规范 —— `protocol.md` §6 与 Revision 32 早就写了"一次写入报三种答案之一"。
@@ -556,9 +561,15 @@ preset-release/SKILL.md` 的 Phase-1 套件清单各少一条——后一条是 
 **21/21 PASS**，`toolchain-page --check` 23 条引文成立。**仍然没有做过一次真实写入**——本版不含任何写成功路径的真库实测，
 只有它的前置（桩库与只读比对）。
 
-**推送后属主应复核三处**（与 §77 同一清单，两个 tag 都要）：`ls-remote` 的 `refs/tags/v0.13.0^{}` 应等于 `07e3f4e`、
-`refs/tags/v0.14.0^{}` 应等于 `2e8b4ea`；`git clone --depth 1 --branch v0.14.0` 的树哈希应为 `b143a00`；
-在该克隆里 `release-check --local` 应 PASS。在这三条之前，"这一版可被安装"只是关于本地一棵树的断言（§34）。
+**远端复核（已跑，PASS）**：`node tools/release-check.mjs --tag v0.14.0` 读出三件事——发布件声明 **0.14.0** ✓、
+组合**不挂任何 MCP 也不启动任何进程** ✓、三个通道要用的 helper **都在发布包里** ✓——最后一步比对了 `v0.14.0 -> 2e8b4ea`
+与 `main -> 255a474`（本节写入后 main 前进一个提交，正常）。`--tag` 之前还有一次独立的本地克隆核对：
+`checkout v0.14.0` 的树哈希 `b143a00` 与本地 `v0.14.0^{tree}` 一致，且在该克隆里 `release-check --local` PASS。
+
+**抓到的工具缺陷（未修，留给下一版）**：`release-check --tag` 的最后一步 shell 出 `git ls-remote`，因而继承 git
+的代理配置；代理不可用时它在三项真检查**全部 PASS 之后**抛 `ERROR: Command failed: git ls-remote …` 并 exit 1
+——把"分支头无法核对"报成"这一版有问题"。本轮用一次性的 `GIT_CONFIG_COUNT/KEY_0/VALUE_0` 环境覆盖绕过（只对那条
+命令生效，没有动属主的 git 配置）。该修的方向：这一步失败时打印"分支头无法核对，原因 …"，而不是抛错。
 
 **一处要重启宿主**：`skills/literature-recon/SKILL.md` 改了一句（重复命中不再用 "refuses" 描述），
 纪律只在宿主启动时注册，开新会话或刷新页面都不够（§25）；工具本体不受影响，它按绝对路径跑文件。
