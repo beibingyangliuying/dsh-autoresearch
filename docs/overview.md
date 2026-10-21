@@ -82,9 +82,9 @@ node tools\metadata-selftest.mjs                       # 书目元数据 helper�
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
 node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED（不连库）
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
-node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表（不连库）
+node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表 / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-section-note-selftest.mjs            # 逐节笔记：tag 身份 / claim/rewrite/retire / 删除（不连库）
-node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类（不连库）
+node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类 / 走桩库的 convert·unconfirmed·partial（不连真库）
 node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝（不连库）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
 node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）

@@ -338,9 +338,9 @@ node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment ch
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\zotero-write-selftest.mjs      # the collection key, the create body, and the UNFILED path that owns no second write
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule
-node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list
+node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
 node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
-node tools\zotero-link-selftest.mjs       # the attachment-link planner
+node tools\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session

@@ -1,4 +1,4 @@
-// Unit self-test for the attachment-link tool's planning logic, runnable without the library.
+// Self-test for the attachment-link tool, runnable without the library.
 //
 // Usage: node tools/zotero-link-selftest.mjs
 //
@@ -6,6 +6,17 @@
 // filesystem accepts, so a title carrying a colon or a question mark cannot produce an unusable
 // path. And an existing destination is NEVER overwritten: the tool converts, recovers an identical
 // file, or reports a conflict and leaves both copies alone.
+//
+// Section [3] spawns the command line against a STUB library and real temporary files, because the
+// failure that costs the most here is a link that was created and reported as a failure - the next
+// run would answer it with a second link. Each conversion is asserted by what the stub library holds
+// afterwards, not only by what the tool printed.
+import { spawn } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   WAKE_NOTE_MARKER,
   classifyConflict,
@@ -139,5 +150,277 @@ check(
   WAKE_NOTE_MARKER,
 )
 
-console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
+console.log("\n[3] the command line against a stub library, not the owner's")
+
+const scratch = mkdtempSync(join(tmpdir(), 'link-cli-'))
+const storeDir = join(scratch, 'store')
+mkdirSync(storeDir)
+const sourceFile = join(scratch, 'stored.pdf')
+writeFileSync(sourceFile, '%PDF-1.4 stub bytes\n', 'utf8')
+const destinationFile = join(storeDir, 'A paper.pdf')
+const grantPath = join(scratch, 'grant.json')
+const tool = fileURLToPath(new URL('./zotero-link-attachments.mjs', import.meta.url))
+
+const baseAttachments = () => [
+  {
+    key: 'STORED01',
+    library: { type: 'user', id: 1 },
+    data: {
+      linkMode: 'imported_file',
+      contentType: 'application/pdf',
+      parentItem: 'PARENT01',
+      filename: 'stored.pdf',
+      version: 5,
+    },
+  },
+]
+const baseTop = () => [{ key: 'PARENT01', data: { title: 'A paper' } }]
+const baseStored = () => ({
+  key: 'STORED01',
+  itemType: 'attachment',
+  linkMode: 'imported_file',
+  contentType: 'application/pdf',
+  parentItem: 'PARENT01',
+  version: 5,
+})
+
+// The library the tool talks to, plus the hooks a scenario replaces. A null hook means "behave like
+// the thing the conversion was measured against".
+const stub = {
+  attachments: baseAttachments(),
+  top: baseTop(),
+  items: { STORED01: baseStored() },
+  children: { PARENT01: [] },
+  requests: [],
+  created: 0,
+  authorize: () => ({ status: 200, body: { key: 'stub-key', remember: false } }),
+  createLink: null,
+  deleteAttachment: null,
+}
+
+const resetLibrary = () => {
+  stub.attachments = baseAttachments()
+  stub.top = baseTop()
+  stub.items = { STORED01: baseStored() }
+  stub.children = { PARENT01: [] }
+  stub.requests.length = 0
+  stub.created = 0
+  stub.authorize = () => ({ status: 200, body: { key: 'stub-key', remember: false } })
+  stub.createLink = null
+  stub.deleteAttachment = null
+  rmSync(destinationFile, { force: true })
+}
+
+/** A created linked attachment, in the shape the tool reads back. */
+const addLink = (payload) => {
+  const key = `NEWLINK${String(++stub.created).padStart(2, '0')}`
+  const data = {
+    key,
+    itemType: 'attachment',
+    linkMode: 'linked_file',
+    parentItem: payload.parentItem,
+    contentType: payload.contentType,
+    path: payload.path,
+    title: payload.title,
+    version: 1,
+  }
+  stub.items[key] = data
+  stub.children[payload.parentItem] = [...(stub.children[payload.parentItem] ?? []), key]
+  return key
+}
+
+const server = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+  const path = url.pathname
+  stub.requests.push(`${req.method} ${path}`)
+  const send = (status, body) => {
+    res.writeHead(status, { 'content-type': 'application/json' })
+    res.end(body === undefined ? '' : JSON.stringify(body))
+  }
+  const noContent = () => {
+    res.writeHead(204)
+    res.end()
+  }
+  const readBody = (done) => {
+    let raw = ''
+    req.on('data', (chunk) => (raw += chunk))
+    req.on('end', () => done(raw))
+  }
+
+  if (path === '/api/') {
+    res.writeHead(200, {
+      'content-type': 'application/json',
+      'zotero-server-id': 'stub-server',
+      'x-zotero-version': 'stub',
+    })
+    res.end('{}')
+    return
+  }
+  if (path === '/api/local/authorize' && req.method === 'POST') {
+    const answer = stub.authorize()
+    if (answer.status !== 200) send(answer.status, { error: 'the stub declined the dialog' })
+    else send(200, answer.body)
+    return
+  }
+  if (path === '/api/users/0/items/top') {
+    send(200, stub.top)
+    return
+  }
+  if (path === '/api/users/0/items' && req.method === 'GET') {
+    send(200, stub.attachments)
+    return
+  }
+  if (path === '/api/users/0/items' && req.method === 'POST') {
+    readBody((raw) => {
+      const [payload] = JSON.parse(raw)
+      if (stub.createLink) {
+        const answer = stub.createLink(payload)
+        send(answer.status, answer.body)
+        return
+      }
+      send(200, { successful: { 0: addLink(payload) } })
+    })
+    return
+  }
+  const fileUrl = /^\/api\/users\/0\/items\/([A-Z0-9]+)\/file\/view\/url$/.exec(path)
+  if (fileUrl) {
+    if (fileUrl[1] !== 'STORED01') {
+      send(404, { error: 'no file on this item' })
+      return
+    }
+    res.writeHead(200, { 'content-type': 'text/plain' })
+    res.end(`file:///${sourceFile.replace(/\\/g, '/')}`)
+    return
+  }
+  const childrenPath = /^\/api\/users\/0\/items\/([A-Z0-9]+)\/children$/.exec(path)
+  if (childrenPath) {
+    send(
+      200,
+      (stub.children[childrenPath[1]] ?? []).map((key) => ({ key, data: stub.items[key] })),
+    )
+    return
+  }
+  const itemPath = /^\/api\/users\/0\/items\/([A-Z0-9]+)$/.exec(path)
+  if (itemPath) {
+    const row = stub.items[itemPath[1]]
+    if (!row) {
+      send(404, { error: 'not found' })
+      return
+    }
+    if (req.method === 'DELETE') {
+      if (stub.deleteAttachment) {
+        send(stub.deleteAttachment(row).status, { error: 'the stub refused the delete' })
+        return
+      }
+      delete stub.items[itemPath[1]]
+      noContent()
+      return
+    }
+    send(200, { data: row })
+    return
+  }
+  send(404, { error: 'not found' })
+})
+
+await new Promise((done) => server.listen(0, '127.0.0.1', done))
+const origin = `127.0.0.1:${server.address().port}`
+const runAsync = (args) =>
+  new Promise((done) => {
+    const child = spawn(process.execPath, [tool, ...args], {
+      env: { ...process.env, ZOTERO_LOCAL_API: origin, ZOTERO_LOCAL_KEY_STORE: grantPath },
+    })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (chunk) => (stdout += chunk))
+    child.stderr.on('data', (chunk) => (stderr += chunk))
+    child.on('close', (status) => done({ status, stdout, stderr }))
+  })
+const createsSent = () => stub.requests.filter((line) => line === 'POST /api/users/0/items').length
+const deletesSent = () => stub.requests.filter((line) => line === 'DELETE /api/users/0/items/STORED01').length
+
+// The plan touches nothing: not the library, not the disk.
+resetLibrary()
+const planRun = await runAsync(['--target', storeDir])
+check(planRun.status === 0, 'a dry run exits 0', `status ${planRun.status}`)
+check(planRun.stdout.includes('DRY RUN'), 'and says nothing was written')
+check(
+  stub.requests.every((line) => line.startsWith('GET ')),
+  'every request it sent was a GET',
+  stub.requests.join(' | '),
+)
+check(!existsSync(destinationFile), 'and no destination file appeared')
+
+resetLibrary()
+const converted = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(converted.status === 0, 'a conversion exits 0', `status ${converted.status}`)
+check(converted.stdout.includes('CONVERTED STORED01 -> NEWLINK01'), 'and names the stored copy and its link')
+check(existsSync(destinationFile), 'the bytes were copied under the parent title')
+check(stub.items.STORED01 === undefined, 'the stored attachment left the library')
+check(stub.items.NEWLINK01?.linkMode === 'linked_file', 'and the attachment that replaced it is a linked file')
+check(deletesSent() === 1, 'the stored copy was deleted exactly once', String(deletesSent()))
+
+// The create answers 500 and the link is there anyway. Second-guessing this with another create is the
+// one failure that costs the owner a duplicate attachment, so the tool searches for the link first.
+resetLibrary()
+stub.createLink = (payload) => {
+  addLink(payload)
+  return { status: 500, body: { error: 'boom' } }
+}
+const landed = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(landed.status === 3, 'a create that failed after landing is exit 3', `status ${landed.status}`)
+check(landed.stdout.includes('UNCONFIRMED STORED01'), 'and the line is called unconfirmed, not failed')
+check(
+  landed.stdout.includes('the parent now carries NEWLINK01'),
+  'and it found the link the failed create had made',
+  landed.stdout.trim().split(/\r?\n/).find((line) => line.includes('UNCONFIRMED')) ?? '',
+)
+check(createsSent() === 1, 'the create was not sent twice', String(createsSent()))
+check(deletesSent() === 0, 'and the stored copy was kept, because nothing was proven')
+
+// The link is created, reads back as something else, so the stored copy must not be deleted.
+resetLibrary()
+stub.createLink = (payload) => {
+  const key = addLink(payload)
+  stub.items[key] = { ...stub.items[key], contentType: 'text/html' }
+  return { status: 200, body: { successful: { 0: key } } }
+}
+const mismatched = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(mismatched.status === 3, 'a link that does not read back as sent is exit 3', `status ${mismatched.status}`)
+check(
+  mismatched.stdout.includes('was created but does not read back as sent'),
+  'and it says the attachment exists',
+  mismatched.stdout.trim().split(/\r?\n/).find((line) => line.includes('UNCONFIRMED')) ?? '',
+)
+check(deletesSent() === 0, 'and the stored copy is kept', String(deletesSent()))
+
+// The link is good and the deletion is refused: half a conversion, which is not success.
+resetLibrary()
+stub.deleteAttachment = () => ({ status: 500 })
+const partial = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(partial.status === 3, 'a link that landed with the delete refused is exit 3', `status ${partial.status}`)
+check(partial.stdout.includes('PARTIAL   STORED01'), 'and it is called partial, naming both halves')
+check(stub.items.NEWLINK01?.linkMode === 'linked_file', 'the link exists')
+check(stub.items.STORED01 !== undefined, 'and so does the stored copy it could not delete')
+
+// Declined by the owner: nothing was written. What the RUN's exit code should say is open
+// (docs/decisions.md #78), so only the property that is not in doubt is asserted here.
+resetLibrary()
+stub.authorize = () => ({ status: 403 })
+const declined = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(createsSent() === 0, 'a declined dialog sends no write at all', String(createsSent()))
+check(
+  declined.stdout.includes('declined'),
+  'and the item line names the dialog as the reason',
+  declined.stdout.trim().split(/\r?\n/).find((line) => line.includes('ERROR')) ?? '',
+)
+check(stub.items.STORED01 !== undefined, 'the stored attachment is still there')
+console.log(`    (recorded, not asserted: this run exits ${declined.status} - see docs/decisions.md #78)`)
+
+server.close()
+
+console.log(
+  failures === 0
+    ? '\nPASS - the planner holds, and a conversion that landed is never reported as one that did not'
+    : `\nFAIL (${failures})`,
+)
 process.exit(failures === 0 ? 0 : 1)

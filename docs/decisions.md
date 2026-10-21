@@ -2217,3 +2217,25 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 6. **文档**：`protocol.md` §6 与 Revision 32 段明说这条规则覆盖每一条写路径（不只笔记）；`README.md`、`docs/coverage.md` 与重生成的 `docs/toolchain.md` 同步。
 
 **验证**：`zotero-local-api-selftest` 新增第 [1b] 组（0/5xx 可落盘、4xx 是拒绝、两种措辞、返回 3）与 [9] 的 `refused` 断言；`toolchain-page --check` 引文仍全部成立；四个文件 `node --check` 通过。**未做**：这四个工具的 CLI 失败分支没有端到端桩库测试（只测了共用助手）；真库仍只做只读比对（`--plan` 在一份带裸 `agent-note` 的记录上正确输出 `AGENT`/草稿与 provenance 汇总）。
+
+## 78. 命令行的退出码有了端到端测试：两支工具走桩库，一处 `exit 0` 记而未决（2026-10-21）
+
+§77 的"未做"里有一条：四个工具的 CLI 失败分支没有端到端测试，只测了共用助手。junhan 这一轮从四个待办里选了"只补最容易出错的两支"——`zotero-collection` 与 `zotero-link-attachments`，因为这两处的失败代价是**重复创建**：同名分类在两列里不可分辨，重复链接在库里长得一模一样。
+
+**怎么测的**：`ZOTERO_LOCAL_API`（读的地址缝）和 `ZOTERO_LOCAL_KEY_STORE`（授予文件的位置）此前就有了，节笔记的自测已经在用这套组合。于是两支自测各自起一个桩库在临时端口上、授予文件放进临时目录、`spawn` 真进程，断言的是**退出码与库里的最终状态**，不是工具打印的文字——打印可以好看，码不能错。
+
+**`zotero-collection-selftest` 第 [3] 组（13 项）**：
+
+- 建成 → `0`；同名已在同一父下 → `1`，且**一个请求都没发**（闸门都没开）。
+- `200` 却没回 key、而树里已出现 → **3**，打印 `WRITTEN BUT UNCONFIRMED` + key + "nothing else was created"，且**只发了一次 create**。
+- `500` 而树里什么都没有 → **3**（`SENT BUT UNCONFIRMED`），并明说"树里没有，但请求已发出，不要建第二次"。
+- `4xx` → `1`；对话框被拒 → **`1` 而不是 3**，且 create 一个都没发出（`refused` 标记被端到端验证了一次）。
+- 改名：接受 → `0`；`412` 且版本真的动了 → `1` `CONFLICT`；`500` 但回读已是新名 → `3` "the rename landed"；**`2xx` 但名字没变** → `3` "不要建替代分类"（这是最坏的一种：通道全程报告成功）。
+- 归档：接受 → `0`；`500` 但回读正是要求的清单 → `3` "the write landed"；`412` → `1`。
+- 用法错 → `2`。
+
+**`zotero-link-selftest` 第 [3] 组（6 项）**，真的临时文件 + 桩库：dry run 只发 `GET`、不动盘；一次成功转换 → `0`，字节复制、旧附件从库里消失、新附件是 `linked_file`、删除只发一次；create 回 `500` 但链接已出现在 children 里 → **3**，`UNCONFIRMED`、找到 `NEWLINK01`、只发了一次 create、旧附件保留；链接建了但读回不是发出去的东西 → `3` 且不删旧附件；链接好了而删除被拒 → `3` `PARTIAL`；对话框被拒 → 一个写请求都没发。
+
+**一处记而未决（未改代码）**：对话框被拒之后，`link-attachments` 的整轮退出码是 **`0`**——每份失败的候选只留一行 `ERROR`、`[4] result: error=1`，然后正常结束。这与 §77 刚统一的"三种答案"方向相反：什么都没写，却说成功。同一处还有第二个洞：`verifyLink` 在读回时抛错（连接断了）会被记成 `error`，而那时**链接已经建好**。两条都只写进自测的输出（`(recorded, not asserted: this run exits 0 - see docs/decisions.md #78)`），**没有**写成断言——改退出码不属于这一轮被授权的范围。建议的改法是两行加一个小 catch：`error > 0 → exit 1`（`3` 仍优先），`verifyLink` 抛错改走 `unconfirmed` 并 `findLink` 对账。**留给 junhan 裁定**。
+
+**验证**：两支自测各自全绿（`PASS`）。**未做**：`zotero-edit` 与 `zotero-write` 的 CLI 没有同样补（本轮只选了两支；它们失败后的对账是"重读单条"，是四处里最简单的）；真库仍未写入。
