@@ -178,9 +178,15 @@ are read before anything is written. **Claiming is the default and writing is th
 pasted in from outside is claimed to the top-level section its own heading names, which writes a tag and
 nothing else, and a claim round reports the sections still carrying no note instead of writing them; a
 note body is generated from the paper only when the owner names a section and asks, and a claim round
-never opens the paper at all. `--rewrite` upgrades an **import** in place (no workspace backup: the
-paper remains the source); a claimed record is retired rather than rewritten; `--tidy` is gone; and
-`--delete` erases a `/retired` note permanently, one note at a time, after printing the plan. `zotero-edit.mjs` changes its fields and tags,
+never opens the paper at all. **A body an agent writes is tagged `/agent-note`**, and stays a
+candidate-grade draft until the owner accepts it with `--review`, which adds `/reviewed` and never
+touches a word; `--rewrite` upgrades an **import** or an unreviewed draft in place (no workspace
+backup: the paper remains the source); a claimed record and a reviewed note are retired rather than
+rewritten; `--tidy` is gone; and `--delete` erases a `/retired` note permanently, one note at a time,
+after printing the plan. A write reports one of three answers — written and read back, refused with
+nothing written, or sent but unconfirmed with the key it may have left — so a failed read-back is
+never read as "nothing was written" — and every write path above answers that way, not only a note: a
+record, a field or a tag, a collection, an attachment. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
 not one of them: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
@@ -192,8 +198,8 @@ Every write states the change first and is a **dry run until `--write` is given*
 the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
 wrote before reporting success. One invocation states one change. A create that also names a collection
 states the filing as part of that same change — the body carries it — and believes it only when the record
-reads back filed: a record whose filing did not stick is reported as **`UNFILED`**, with the one command
-that files it, rather than covered by a second write the invocation never announced. The reference
+reads back filed: a record whose filing did not stick is reported as **`UNFILED`** and exits **3**, with
+the one command that files it, rather than covered by a second write the invocation never announced. The reference
 manager's own dialog is
 the gate the contract names: **"Allow"** authorizes that single write, and **"Always Allow"** is a
 standing grant this preset keeps for that library, so the asking follows the library rather than the

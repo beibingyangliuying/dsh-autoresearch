@@ -22,10 +22,15 @@
 //   node tools/zotero-edit.mjs --item <itemKey> --set DOI=                        # clear a field
 //   node tools/zotero-edit.mjs --item <itemKey> --add-tag /done --remove-tag /unread --write
 //
-// Exit codes: 0 applied, or nothing to do | 1 refused (conflict or a library error) | 2 usage.
-import { APP_NAME, createWriteGate, normalizeTags, patchItem, readItem } from './zotero-local-api.mjs'
+// Exit codes: 0 applied and read back, or nothing to do | 1 refused, nothing written | 2 usage |
+// 3 sent or written but unconfirmed - the record may already carry the change, so read it, do not
+// resend it.
+import { APP_NAME, createWriteGate, mayHaveLanded, normalizeTags, patchItem, readItem, reportUnconfirmed } from './zotero-local-api.mjs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+/** Set immediately before the PATCH is sent, so a failure after that point is never called a refusal. */
+let writeAttempted = false
 
 /** What one line of `--set field=value` may change. */
 export const EDITABLE_FIELDS = [
@@ -222,30 +227,77 @@ async function main() {
     return
   }
 
-  const result = await patchItem({ gate, key: options.key, patch, apply: true })
+  const result = await patchItem({
+    gate,
+    key: options.key,
+    patch,
+    apply: true,
+    beforeWrite: () => {
+      writeAttempted = true
+    },
+  })
   if (result.conflict) {
     printConflict(options.key, { patch }, result.before)
     process.exitCode = 1
     return
   }
   if (!result.applied) {
+    if (mayHaveLanded(result.status)) {
+      // The item exists either way, so the honest report names it and says what a re-read shows:
+      // a 5xx after a sent PATCH is not a refusal, and "nothing was written" would invite a resend.
+      const after = await readItem(options.key).catch(() => null)
+      const left = after
+        ? fieldsNotReadBack(after, changes, tagChange)
+        : ['the re-read failed too, so even this is unproven']
+      process.exitCode = reportUnconfirmed({
+        key: options.key,
+        what: `the ${fieldsOf(changes)} change on ${options.key} answered HTTP ${result.status}${
+          result.detail ? ` (${result.detail.slice(0, 200)})` : ''
+        }`,
+        found: after
+          ? left.length === 0
+            ? 'A re-read shows every requested value already present: the write landed.'
+            : `A re-read does not show ${left.join(', ')}; the library may still have applied it.`
+          : 'The re-read that would settle it failed as well.',
+      })
+      return
+    }
     console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
     process.exitCode = 1
     return
   }
 
   const after = result.after
-  const mismatched = changes.filter((change) => {
-    if (change.field !== 'tags') return String(after[change.field] ?? '') !== change.to
-    return JSON.stringify(normalizeTags(after.tags)) !== JSON.stringify(tagChange.next)
-  })
+  const mismatched = fieldsNotReadBack(after, changes, tagChange)
   if (mismatched.length > 0) {
-    console.error(`\nREAD-BACK MISMATCH on ${mismatched.map((c) => c.field).join(', ')}: the write was accepted`)
-    console.error('but the record does not read back as sent. Nothing further was changed.')
-    process.exitCode = 1
+    process.exitCode = reportUnconfirmed({
+      key: options.key,
+      what: `the library accepted the change to ${mismatched.join(', ')} and the record does not read back as sent (version ${after.version})`,
+      found: 'Nothing further was changed. The record holds some other value now - read it before deciding.',
+    })
     return
   }
   console.log(`\nOK - ${options.key} now reads back with every requested value (version ${after.version}).`)
+}
+
+/** The fields a change list names, in one phrase. */
+function fieldsOf(changes) {
+  return changes.map((change) => change.field).join(', ')
+}
+
+/**
+ * The fields that do not read back as they were sent. Pure.
+ *
+ * A tag list is compared after normalisation, because the library reorders and dedups it; every other
+ * field is compared as the string it would have been sent as.
+ */
+function fieldsNotReadBack(after, changes, tagChange) {
+  return changes
+    .filter((change) => {
+      if (change.field !== 'tags') return String(after[change.field] ?? '') !== change.to
+      return JSON.stringify(normalizeTags(after.tags)) !== JSON.stringify(tagChange.next)
+    })
+    .map((change) => change.field)
 }
 
 // NOT `await main()`: this module exports pure functions its self-test imports, and a pending
@@ -260,6 +312,14 @@ if (isEntryPoint) {
       process.exit(2)
     }
     console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    if (writeAttempted && !error.refused) {
+      process.exitCode = reportUnconfirmed({
+        key: '',
+        what: 'the change was sent and then the connection failed: OUTCOME UNKNOWN',
+        found: 'The PATCH may have been applied. Read the record before trying again.',
+      })
+      return
+    }
+    process.exitCode = 1
   })
 }

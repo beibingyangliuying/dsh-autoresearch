@@ -1,9 +1,22 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 31.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 32.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 31 names a rung Revision 17 shipped and its own paragraph
+independent of any package version. Revision 32 names the provenance this contract did not have: who
+wrote a note's body. A section note the preset's own discipline writes carries `/agent-note`; the
+owner's acceptance of that body is `/reviewed`; an unreviewed agent body is a draft that may be
+rewritten in place and that supports a candidate and nothing stronger, while a reviewed one is a
+record. An agent body never carries `/imported`, because that tag says the text came from outside and
+an agent's draft did not. The same revision gives a write a third answer: exit 1 says nothing was
+written, exit 0 says it was written and read back, and a write that may exist — the request failed,
+or landed but did not read back — is reported as sent-but-unconfirmed and never as refused, because a
+false "nothing was written" is how one note becomes two. That answer is the same for every write path
+this preset has, not only for a note: a new record, a field or tag change, a collection, an attachment. It also removes the note-title attempt,
+which this channel refuses (a note has no title field; a title patch answers 500), and states that a
+create on a record carrying unclaimed notes is refused until those notes are read, since `covered:
+none` says what claims a section and not what explains it. §6, §8 and the two disciplines state it.
+Revision 31 names a rung Revision 17 shipped and its own paragraph
 left out: the paper's own table of contents is rung 3 of the reading ladder, between the attachment's
 text layer and the rendered page. The helper had already numbered it so, and two disciplines already
 climb it, but §6 and `INV-CTX-1` listed three rungs — so a reader of the contract could not learn that
@@ -340,12 +353,14 @@ sections     one `/section-N` note per TOP-LEVEL section, attached to its librar
              round that only claims reports the sections still carrying no note instead of writing
              them; background, case study and conclusion sections are not written, a claimed section
              is never written twice, a dotted key is neither written nor read, a pasted note is
-             claimed or rewritten in place, a wrong record is retired rather than deleted, and one
-             record carries one explanation per section and no paper-level summary
+             claimed or rewritten in place, a wrong record is retired rather than deleted, an
+             agent-written body is tagged `/agent-note` until the owner accepts it with `/reviewed`,
+             and one record carries one explanation per section and no paper-level summary
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code
-             without an anchor, and the ledger grounds no conclusion
+             without an anchor, an unreviewed agent note supports no adoption, and the ledger
+             grounds no conclusion
 challenge    a claim is opposed with a counterexample, contradicting evidence, or a
              falsification path — or the challenge reports that it cannot challenge
 settlement   conclusions, rejected directions and rulings are settled into three layers
@@ -468,21 +483,38 @@ These rules bound their use:
   is reporting about itself rather than about the work.
 - **A note written onto a record stays the owner's.** The channel's note writes are additive, a claim,
   or a replacement of an import the owner pasted. Identity is a tag, not a comment in the body: a
-  section note carries `/section-N`, a note out of service carries `/retired`, and a note that came
-  from outside carries `/imported`. A note carrying `/digest` was written by an earlier version as a
-  whole-paper summary: it is **legacy**, it is never coverage, and nothing writes one now. The
-  application may rewrite a note's body and eat an invisible comment; it does not touch a tag. A note
-  with no `/section-` tag is **unknown**: it is read before anything is written, because the channel
-  does not parse prose and a note carrying no claim is not coverage. A reading that disagrees with a
+  section note carries `/section-N`, a note out of service carries `/retired`, a note that came
+  from outside carries `/imported`, a body an agent wrote from the paper carries `/agent-note`, and
+  the owner's acceptance of that body is `/reviewed`. A note carrying `/digest` was written by an
+  earlier version as a whole-paper summary: it is **legacy**, it is never coverage, and nothing writes
+  one now. The application may rewrite a note's body and eat an invisible comment; it does not touch a
+  tag. A note with no `/section-` tag is **unknown**: it is read before anything is written, because the
+  channel does not parse prose and a note carrying no claim is not coverage — and `covered: none` is a
+  statement about claims, never about whether an explanation exists, so no round reports a section
+  uncovered while an unclaimed note on that record is unread. A reading that disagrees with a
   tag stops the round for the owner to settle; it is never written around. A section a record already claims is
   refused rather than written twice, and **what is counted is the top-level section**: a dotted key is
   neither written nor read, and a note keyed to a subsection is unknown until it is merged into its
-  top-level section or retired. A note with no `/section-` tag, or `/section-N` + `/imported`, is an
-  import and may be rewritten in place, after a dry run and a version guard. A `/section-N`
-  note without `/imported` is a record: its prose is not rewritten in place, and a change to it is a
-  retirement and a replacement. There is no automatic prose repair, and a rewrite writes no workspace
+  top-level section or retired. A note with no `/section-` tag, `/section-N` + `/imported`, or an
+  unreviewed `/agent-note` is an import or a draft and may be rewritten in place, after a dry run and a
+  version guard. A `/section-N` note without `/imported` and without an unreviewed `/agent-note` is a
+  record: its prose is not rewritten in place, and a change to it is a retirement and a replacement.
+  A note created as an agent draft never receives `/imported`, and a claim never adds it to one: the
+  tag says where the text first came from, and an agent's own body did not come from outside. A
+  rewritten import keeps the mark it had, because that mark records the text it replaced. There is no
+  automatic prose repair, and a rewrite writes no workspace
   backup: the plan prints the old first block, the paper remains the source, and a note the
   application edited while the write ran is refused rather than overwritten.
+- **A write reports one of three outcomes, and "refused" is only one of them.** Exit 0 means written
+  and read back; exit 1 means refused and nothing was written; a write that may exist — the request
+  failed, or the library accepted it and the read-back disagrees — is reported as sent or written but
+  **unconfirmed**, with the key if one was found, and it is never reported as a refusal. A caller that
+  reads "nothing was written" on an unconfirmed write resends it, and one note becomes two. A server-side
+  failure and a dropped connection are in that third class: HTTP names a response, not an effect, so a
+  tool that cannot tell searches the library for what it asked for and says what the search found —
+  naming the key when it is there, and warning that the request was sent when it is not. A create is
+  refused while unclaimed notes remain on the record; reading them, or stating what was read and why
+  none covers the section, is the only way past that refusal.
 - **A note that is wrong is retired, not rewritten in place.** Its body is left exactly
   as it stands and `/retired` is added. A retired note is a tombstone rather than coverage, so the
   section it claimed becomes writable again, and removing the mark restores the claim it made. The note
@@ -575,7 +607,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-DISC-3` | A delegated conclusion is not the parent's fact until the parent has read the artifact itself. | Verification and attribution must not collapse into one act. |
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
-| `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on. |
+| `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent; a write whose outcome is not confirmed is reported as sent-but-unconfirmed, never as refused. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on, and a false "nothing was written" is how one note becomes two. |
 | `INV-EVID-4` | A source already read is not read again to recover what it or its section notes say: how far a paper was read, and why that reading stopped, are a row in the question's own ledger, the section notes are the transcription of the reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round: the ledger row says where the last reading stopped, and the section notes are what makes that reading reusable for a question that was not the one it was made for. |
 | `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
 | `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
@@ -583,8 +615,10 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
+| `INV-ADOPT-5` | An adoption item names the section note it rests on and that note's provenance; an unreviewed `/agent-note` supports no `adopt`, `adopt-modified` or `verified`. | An agent's transcription of a paper is a candidate's ground, not the owner's accepted record; without the tag the two read identically and the ledger cannot be re-examined. |
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
+| `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |

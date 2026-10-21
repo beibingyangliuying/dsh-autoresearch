@@ -217,6 +217,39 @@ export function isWriteAccepted(status) {
 }
 
 /**
+ * Whether the library's answer to a failed write leaves the outcome open.
+ *
+ * A request that never got an answer (status 0) and a server-side failure (5xx) may both have been
+ * carried out: HTTP names a response, not an effect. Telling a caller "nothing was written" in either
+ * case is how one write becomes two, so the tools say "unconfirmed" instead and name what they found.
+ *
+ * @param {number} status The status the channel answered, or 0 when it answered nothing.
+ * @returns {boolean} True when the write may exist.
+ */
+export function mayHaveLanded(status) {
+  return status === 0 || status >= 500
+}
+
+/**
+ * Report a write whose outcome is not proven, and return the exit code that states it.
+ *
+ * Prints rather than throws, because the caller has already decided what to say about the write: this
+ * only gives every tool the same words and the same exit code. The key is printed when one was found,
+ * because the next step is to read that key, never to repeat the request.
+ *
+ * @param {{key?: string, what?: string, found?: string}} options `what` names the write, in the
+ *   caller's own terms; `found` says what a read-back after the failure showed, when one was made.
+ * @returns {number} Always 3: written or sent, and unconfirmed.
+ */
+export function reportUnconfirmed({ key = '', what = 'the write', found = '' }) {
+  console.error(`\n${key ? 'WRITTEN BUT UNCONFIRMED' : 'SENT BUT UNCONFIRMED'}: ${what}.`)
+  if (key) console.error(`It is ${key} - read that item before anything else.`)
+  if (found) console.error(found)
+  console.error('Do NOT resend it: a write that may exist is read before it is repeated.')
+  return 3
+}
+
+/**
  * Read, refuse a stale change, patch, read back.
  *
  * The staleness check is OURS rather than the library's: the change is refused when the record's
@@ -228,18 +261,21 @@ export function isWriteAccepted(status) {
  *
  * One call makes at most one write.
  *
- * @param {{gate: object, path: string, readCurrent: () => Promise<object>, patch: object, apply: boolean}} options
+ * @param {{gate: object, path: string, readCurrent: () => Promise<object>, patch: object, apply: boolean,
+ *   beforeWrite?: () => void}} options `beforeWrite` runs immediately before the request is sent, so a
+ *   caller can record that a write was attempted before anything can throw.
  * @returns {Promise<{applied: boolean, conflict: boolean, status: number, detail: string, before: object, after: object|null}>}
  *   `before` is what the plan was built from; on a conflict it is re-read and holds the library's
  *   current state. `detail` carries the library's own words when it refused the write.
  */
-async function applyPatch({ gate, path, readCurrent, patch, apply }) {
+async function applyPatch({ gate, path, readCurrent, patch, apply, beforeWrite = undefined }) {
   const before = await readCurrent()
   if (!apply) return { applied: false, conflict: false, status: 0, detail: '', before, after: null }
   const fresh = await readCurrent()
   if (fresh.version !== before.version) {
     return { applied: false, conflict: true, status: 0, detail: '', before: fresh, after: null }
   }
+  beforeWrite?.()
   const res = await gate.write('PATCH', path, patch, { 'If-Unmodified-Since-Version': String(fresh.version) })
   if (res.status === 412) {
     const current = await readCurrent()
@@ -258,14 +294,28 @@ async function applyPatch({ gate, path, readCurrent, patch, apply }) {
   return { applied: true, conflict: false, status: res.status, detail: '', before, after: await readCurrent() }
 }
 
-/** One version-guarded change to one item. */
-export async function patchItem({ gate, key, patch, apply }) {
-  return applyPatch({ gate, path: `/api/users/0/items/${key}`, readCurrent: () => readItem(key), patch, apply })
+/** One version-guarded change to one item. `beforeWrite` runs immediately before the request is sent. */
+export async function patchItem({ gate, key, patch, apply, beforeWrite }) {
+  return applyPatch({
+    gate,
+    path: `/api/users/0/items/${key}`,
+    readCurrent: () => readItem(key),
+    patch,
+    apply,
+    beforeWrite,
+  })
 }
 
 /** One version-guarded change to one collection. */
-export async function patchCollection({ gate, key, patch, apply }) {
-  return applyPatch({ gate, path: `/api/users/0/collections/${key}`, readCurrent: () => readCollection(key), patch, apply })
+export async function patchCollection({ gate, key, patch, apply, beforeWrite }) {
+  return applyPatch({
+    gate,
+    path: `/api/users/0/collections/${key}`,
+    readCurrent: () => readCollection(key),
+    patch,
+    apply,
+    beforeWrite,
+  })
 }
 
 /**
@@ -424,13 +474,20 @@ export function createWriteGate({
       body: JSON.stringify({ appName }),
       headers: { 'Content-Type': 'application/json', 'Zotero-Server-ID': serverId },
     })
-    if (res.status === 403) throw new Error('the authorization dialog was declined in the reference manager')
-    if (res.status === 429) throw new Error('too many authorization dialogs (limit 5/min) - wait a minute')
-    if (res.status === 428) throw new Error('the reference manager wants a Zotero-Server-ID header on this write')
-    if (res.status === 401) throw new Error('unauthorized: the key was rejected')
-    if (res.status !== 200) throw new Error(`authorize answered ${res.status}: ${res.text.slice(0, 200)}`)
+    // Every answer here arrives BEFORE the write is sent, so each one is a refusal in the sense the
+    // exit codes use: nothing was written, and asking again is the right next step.
+    const refusedError = (message) => {
+      const error = new Error(message)
+      error.refused = true
+      return error
+    }
+    if (res.status === 403) throw refusedError('the authorization dialog was declined in the reference manager')
+    if (res.status === 429) throw refusedError('too many authorization dialogs (limit 5/min) - wait a minute')
+    if (res.status === 428) throw refusedError('the reference manager wants a Zotero-Server-ID header on this write')
+    if (res.status === 401) throw refusedError('unauthorized: the key was rejected')
+    if (res.status !== 200) throw refusedError(`authorize answered ${res.status}: ${res.text.slice(0, 200)}`)
     const body = JSON.parse(res.text)
-    if (!body.key) throw new Error('authorize returned no key')
+    if (!body.key) throw refusedError('authorize returned no key')
     lasting = Boolean(body.remember)
     if (lasting) {
       grants = withGrant(grants, serverId, { key: body.key, appName, createdAt: new Date().toISOString() })
@@ -491,7 +548,11 @@ export function createWriteGate({
         if (res.status !== 401) return res
         dropKey()
       }
-      throw new Error('the write was still refused with 401 after re-authorizing twice')
+      const refused = new Error('the write was still refused with 401 after re-authorizing twice')
+      // A refusal is the one failure that proves nothing was written, so the tools can say so with
+      // exit 1 even though a write was attempted. Anything else thrown after this point stays open.
+      refused.refused = true
+      throw refused
     },
   }
 }

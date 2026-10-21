@@ -38,19 +38,26 @@
 //   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --write
 //   node tools/zotero-collection.mjs --assign <itemKey> --collection <collectionKey> --remove --write
 //
-// Exit codes: 0 applied, or nothing to do | 1 refused (conflict, duplicate, or a library error) | 2 usage.
+// Exit codes: 0 applied and read back, or nothing to do | 1 refused, nothing written | 2 usage |
+// 3 sent or written but unconfirmed - the tree or the record may already carry the change, so read it
+// rather than resending it.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   APP_NAME,
   createWriteGate,
   getJson,
+  mayHaveLanded,
   normalizeCollections,
   patchCollection,
   patchItem,
   readCollection,
   readItem,
+  reportUnconfirmed,
 } from './zotero-local-api.mjs'
+
+/** Set immediately before a write is sent, so a failure after that point is never called a refusal. */
+let writeAttempted = false
 
 /** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
 class UsageError extends Error {}
@@ -190,24 +197,35 @@ async function runCreate(options) {
   }
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
+  writeAttempted = true
   const res = await gate.write('POST', '/api/users/0/collections', [
     { name: options.value, parentCollection: parentKey ?? false },
   ])
-  if (res.status !== 200) {
+  if (res.status !== 200 && !mayHaveLanded(res.status)) {
     console.error(`\nThe library refused the creation (HTTP ${res.status}): ${res.text.slice(0, 300)}`)
     process.exitCode = 1
     return
   }
-  const body = JSON.parse(res.text)
-  const saved = body.successful?.['0'] ?? body.success?.['0']
+  const body = res.status === 200 ? JSON.parse(res.text) : null
+  const saved = body?.successful?.['0'] ?? body?.success?.['0']
   const created = typeof saved === 'string' ? saved : saved?.key
-  if (!created) {
-    console.error(`\nThe library reported no success: ${res.text.slice(0, 300)}`)
-    process.exitCode = 1
+  if (created) {
+    const back = await readCollection(created)
+    console.log(`\nOK - ${created} "${back.name}" now exists under ${parentName} (version ${back.version}).`)
     return
   }
-  const back = await readCollection(created)
-  console.log(`\nOK - ${created} "${back.name}" now exists under ${parentName} (version ${back.version}).`)
+  // No key came back, and the request was sent: the tree itself can say whether the collection exists,
+  // so ask it rather than reporting a refusal that a caller would answer with a second create.
+  const again = siblingWithName(await allCollections(), { name: options.value, parentKey })
+  process.exitCode = reportUnconfirmed({
+    key: again?.key ?? '',
+    what: `the creation of "${options.value}" answered ${
+      res.status === 200 ? 'success without a key' : `HTTP ${res.status}`
+    }`,
+    found: again
+      ? `The tree now lists "${options.value}" as ${again.key}: the collection exists, and nothing else was created.`
+      : 'The tree lists no collection of that name, but the request was sent - do not create it twice.',
+  })
 }
 
 async function runRename(options) {
@@ -235,7 +253,15 @@ async function runRename(options) {
   }
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
-  const result = await patchCollection({ gate, key: options.value, patch: { name: options.name }, apply: true })
+  const result = await patchCollection({
+    gate,
+    key: options.value,
+    patch: { name: options.name },
+    apply: true,
+    beforeWrite: () => {
+      writeAttempted = true
+    },
+  })
   if (result.conflict) {
     console.error(`\nCONFLICT: collection ${options.value} changed since this plan was read. Nothing was written.`)
     console.error(`Its current name is "${result.before.name}" at version ${result.before.version}.`)
@@ -243,10 +269,31 @@ async function runRename(options) {
     return
   }
   if (!result.applied) {
+    if (mayHaveLanded(result.status)) {
+      const after = await readCollection(options.value).catch(() => null)
+      process.exitCode = reportUnconfirmed({
+        key: options.value,
+        what: `the rename answered HTTP ${result.status} (${result.detail.slice(0, 200)})`,
+        found: after
+          ? after.name === options.name
+            ? `A re-read shows "${options.name}": the rename landed.`
+            : `A re-read still shows "${after.name}".`
+          : 'The re-read that would settle it failed as well.',
+      })
+      return
+    }
     console.error(`\nThe library refused the rename (HTTP ${result.status}): ${result.detail}`)
     console.error('This is the unmeasured case: the local API may not support renaming a collection.')
     console.error('Rename it in the application instead - this tool will not create a replacement.')
     process.exitCode = 1
+    return
+  }
+  if (result.after.name !== options.name) {
+    process.exitCode = reportUnconfirmed({
+      key: options.value,
+      what: `the library accepted the rename and the collection still reads "${result.after.name}"`,
+      found: 'The collection was not renamed as asked; do not create a replacement, which would carry a new key.',
+    })
     return
   }
   console.log(`\nOK - ${options.value} is now "${result.after.name}" (version ${result.after.version}).`)
@@ -275,7 +322,15 @@ async function runAssign(options) {
   }
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
-  const result = await patchItem({ gate, key: options.item, patch: { collections: next }, apply: true })
+  const result = await patchItem({
+    gate,
+    key: options.item,
+    patch: { collections: next },
+    apply: true,
+    beforeWrite: () => {
+      writeAttempted = true
+    },
+  })
   if (result.conflict) {
     console.error(`\nCONFLICT: item ${options.item} changed since this plan was read. Nothing was written.`)
     console.error(`Its current filing is ${normalizeCollections(result.before.collections).join(' · ') || 'none'} at version ${result.before.version}.`)
@@ -283,14 +338,31 @@ async function runAssign(options) {
     return
   }
   if (!result.applied) {
+    if (mayHaveLanded(result.status)) {
+      const after = await readItem(options.item).catch(() => null)
+      const filing = after ? normalizeCollections(after.collections) : null
+      process.exitCode = reportUnconfirmed({
+        key: options.item,
+        what: `the filing change answered HTTP ${result.status} (${result.detail.slice(0, 200)})`,
+        found: filing
+          ? JSON.stringify(filing) === JSON.stringify(next)
+            ? `A re-read shows exactly the requested filing (${filing.join(' · ') || 'none'}): the write landed.`
+            : `A re-read shows ${filing.join(' · ') || 'none'}.`
+          : 'The re-read that would settle it failed as well.',
+      })
+      return
+    }
     console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
     process.exitCode = 1
     return
   }
   const after = normalizeCollections(result.after.collections)
   if (JSON.stringify(after) !== JSON.stringify(next)) {
-    console.error(`\nREAD-BACK MISMATCH: asked for ${next.join(' · ') || 'none'}, the record reads back as ${after.join(' · ') || 'none'}.`)
-    process.exitCode = 1
+    process.exitCode = reportUnconfirmed({
+      key: options.item,
+      what: `the library accepted the filing and the record reads back as ${after.join(' · ') || 'none'}`,
+      found: 'The filing is not what was asked; read the record before filing it again.',
+    })
     return
   }
   console.log(`\nOK - ${options.item} now files under ${after.join(' · ') || 'none'} (version ${result.after.version}).`)
@@ -312,6 +384,13 @@ if (isEntryPoint) {
       process.exit(2)
     }
     console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    if (writeAttempted && !error.refused) {
+      process.exitCode = reportUnconfirmed({
+        what: 'the change was sent and then the connection failed: OUTCOME UNKNOWN',
+        found: 'Read the collection tree or the record before trying again.',
+      })
+      return
+    }
+    process.exitCode = 1
   })
 }

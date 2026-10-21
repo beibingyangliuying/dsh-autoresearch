@@ -11,9 +11,17 @@
 //
 //   /section-3       this note claims TOP-LEVEL section 3
 //   /imported        this claim came from an imported/pasted note, so it may still be rewritten
+//   /agent-note      an agent wrote this body from the paper; until /reviewed it is candidate-grade
+//   /reviewed        the owner read and accepted an /agent-note body: it is a record again
 //   /digest          LEGACY: an earlier version's whole-paper summary; never a section note, never written now
 //   /retired         out of service: not coverage, and the only note a delete may target
 //   /replaces-<key>  this note replaced a retired note
+//
+// AUTHORSHIP IS NOT THE OWNER'S. A body an agent drafted from the paper is still the owner's note, but a
+// later round must be able to tell it from one the owner wrote: `/agent-note` says who wrote the prose,
+// and `/reviewed` says the owner accepted it. An unreviewed agent body is a DRAFT: it may be rewritten
+// in place and it supports nothing stronger than a candidate. Reviewing it does not rewrite a byte - it
+// is a tag, like every other identity in this tool.
 //
 // No dotted tag is written or read. A subsection-keyed note from an earlier round is `unknown` here
 // and is merged into its top-level section or retired by a later round; nothing is folded silently.
@@ -51,8 +59,8 @@
 // is the owner's second answer. The request carries the version the plan was read at (the API answers
 // 428 without that precondition), and a version that moved is refused rather than overwritten.
 //
-// Exit codes: 0 applied, or nothing to do | 1 refused (already claimed, conflict, library error) |
-// 2 usage.
+// Exit codes: 0 applied and read back, or nothing to do | 1 refused, and nothing was written |
+// 2 usage | 3 sent or written but NOT confirmed - the note may exist, so never resend it.
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,8 +81,26 @@ export const RETIRE_TAG = '/retired'
 /** The tag that names the retired note a successor replaced. */
 export const REPLACES_TAG_PREFIX = '/replaces-'
 
+/** The tag that records a note body an agent wrote from the paper. */
+export const AGENT_TAG = '/agent-note'
+
+/** The bare form an earlier round wrote; read as the same mark, never written. */
+export const LEGACY_AGENT_TAG = 'agent-note'
+
+/** The tag the owner adds when they accept an agent-written body. */
+export const REVIEWED_TAG = '/reviewed'
+
 /** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
 class UsageError extends Error {}
+
+/**
+ * Whether this invocation has sent a write.
+ *
+ * Exit 1 means "nothing was written"; once a request may have left, that sentence is not available
+ * any more. The catch at the bottom of this file reads this flag and answers exit 3 instead, which is
+ * the third answer a write CLI needs: the library may hold it.
+ */
+let writeAttempted = false
 
 const CHINESE_DIGITS = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
 
@@ -212,6 +238,73 @@ export function isImported(tags) {
  */
 export function isDigest(tags) {
   return (tags ?? []).some((tag) => lowered(tag) === DIGEST_TAG)
+}
+
+/**
+ * Whether an agent wrote this note's body from the paper.
+ *
+ * The bare `agent-note` form is accepted because one round wrote it before this vocabulary existed;
+ * accepting it costs nothing and re-tagging the owner's library to satisfy a spelling would not.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {boolean} True when the note carries `/agent-note` (or its legacy bare form).
+ */
+export function isAgentNote(tags) {
+  return (tags ?? []).some((tag) => {
+    const text = lowered(tag)
+    return text === AGENT_TAG || text === LEGACY_AGENT_TAG
+  })
+}
+
+/**
+ * Whether the owner has accepted this note's agent-written body.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {boolean} True when the note carries `/reviewed`.
+ */
+export function isReviewed(tags) {
+  return (tags ?? []).some((tag) => lowered(tag) === REVIEWED_TAG)
+}
+
+/**
+ * Who wrote the prose, as one word a plan can print.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {'agent+reviewed'|'agent'|'import'|'owner'} The provenance.
+ */
+export function provenanceOf(tags) {
+  if (isAgentNote(tags)) return isReviewed(tags) ? 'agent+reviewed' : 'agent'
+  return isImported(tags) ? 'import' : 'owner'
+}
+
+/**
+ * What a ruling may treat this note as: a record, or only a candidate.
+ *
+ * A retired note, a legacy summary, and a note claiming no section carry no authority. An agent body
+ * the owner has not reviewed is a draft: it explains the section, and it is not evidence a ledger may
+ * rest an adoption on (`adoption-ruling`).
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @param {string} token The top-level section it claims, or ''.
+ * @returns {'record'|'candidate'|'none'} The authority.
+ */
+export function authorityOf(tags, token) {
+  if (!token || isRetired(tags) || isDigest(tags)) return 'none'
+  return isAgentNote(tags) && !isReviewed(tags) ? 'candidate' : 'record'
+}
+
+/**
+ * The tag list a review leaves behind: every existing tag, plus or minus `/reviewed`.
+ *
+ * Idempotent in both directions, and it never drops a tag it did not put there.
+ *
+ * @param {string[]} tags The note's current tags.
+ * @param {{undo?: boolean}} [options] `undo` removes the mark instead of adding it.
+ * @returns {string[]} The tags to send.
+ */
+export function reviewTags(tags, { undo = false } = {}) {
+  const kept = (tags ?? []).filter((tag) => !isReviewed([tag]))
+  return undo ? kept : [...kept, REVIEWED_TAG]
 }
 
 /**
@@ -365,6 +458,8 @@ async function noteChildren(itemKey) {
         retired: isRetired(tags),
         imported: isImported(tags),
         digest: isDigest(tags),
+        agent: isAgentNote(tags),
+        reviewed: isReviewed(tags),
         claim: readSectionTag(tags),
       }
     })
@@ -414,6 +509,10 @@ export function planJson({ record, attachment, notes }) {
       retired: note.retired,
       imported: note.imported,
       legacy: note.digest,
+      agent: isAgentNote(note.tags),
+      reviewed: isReviewed(note.tags),
+      provenance: provenanceOf(note.tags),
+      authority: authorityOf(note.tags, note.claim.token),
       section: note.claim.token,
       sectionTags: note.claim.tags,
       invalidSectionTags: note.claim.invalid,
@@ -426,6 +525,9 @@ export function planJson({ record, attachment, notes }) {
       legacy: legacy.map((note) => ({ note: note.key })),
       unknown: unknown.map((note) => note.key),
       ambiguous: ambiguous.map((note) => note.key),
+      drafts: notes
+        .filter((note) => isAgentNote(note.tags) && !isReviewed(note.tags) && !note.retired)
+        .map((note) => ({ section: note.claim.token, note: note.key })),
     },
     counts: {
       notes: notes.length,
@@ -434,6 +536,9 @@ export function planJson({ record, attachment, notes }) {
       legacy: legacy.length,
       unknown: unknown.length,
       ambiguous: ambiguous.length,
+      agent: notes.filter((note) => isAgentNote(note.tags)).length,
+      reviewed: notes.filter((note) => isAgentNote(note.tags) && isReviewed(note.tags)).length,
+      drafts: notes.filter((note) => isAgentNote(note.tags) && !isReviewed(note.tags) && !note.retired).length,
     },
   }
 }
@@ -467,7 +572,13 @@ async function runPlan(itemKey, { json = false } = {}) {
         : note.claim.ambiguous
           ? 'ambiguous'
           : 'unknown'
-    const marks = [note.imported ? 'IMPORTED' : '', note.retired ? 'RETIRED' : ''].filter(Boolean).join(' ')
+    const marks = [
+      note.agent ? (note.reviewed ? 'AGENT+REVIEWED' : 'AGENT') : '',
+      note.imported ? 'IMPORTED' : '',
+      note.retired ? 'RETIRED' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
     console.log(
       `\n  ${note.key}  ${String(note.html.length).padStart(6)}c  ${isApplicationWrapped(note.html) ? 'app' : 'API'}  ${label}${marks ? `  ${marks}` : ''}`,
     )
@@ -498,12 +609,70 @@ async function runPlan(itemKey, { json = false } = {}) {
   console.log(`legacy      : ${legacy.length ? legacy.map((note) => note.key).join(' · ') : 'none'}`)
   console.log(`unknown     : ${unknown.length ? unknown.map((note) => note.key).join(' · ') : 'none'}`)
   console.log(`ambiguous   : ${ambiguous.length ? ambiguous.map((note) => note.key).join(' · ') : 'none'}`)
+  const drafts = notes.filter((note) => isAgentNote(note.tags) && !isReviewed(note.tags) && !note.retired)
+  console.log(
+    `provenance  : ${AGENT_TAG} ${notes.filter((note) => isAgentNote(note.tags)).length} (` +
+      `reviewed ${notes.filter((note) => isAgentNote(note.tags) && isReviewed(note.tags)).length}) · ` +
+      `${IMPORTED_TAG} ${notes.filter((note) => note.imported).length} · ` +
+      `neither ${notes.filter((note) => !isAgentNote(note.tags) && !note.imported).length}` +
+      '   (marks, not a partition: a rewritten import carries both)',
+  )
+  console.log(
+    `drafts      : ${
+      drafts.length
+        ? `${drafts.map((note) => `${note.claim.token ? `§${note.claim.token} ` : ''}(${note.key})`).join(' · ')} - agent-written and not reviewed: candidate-grade`
+        : 'none'
+    }`,
+  )
   console.log('\nNOTE: `covered` is what explicit /section-N tags claim, counted per TOP-LEVEL section.')
   console.log('`unknown` notes have no claim: read the first paragraph above (the whole note with')
   console.log('zotero-read.mjs --item <noteKey> when it is not enough), then --claim it, --rewrite it, or')
   console.log('--retire it. A note marked RETIRED is a tombstone: it is NOT coverage, and only a retired')
   console.log('note is deletable. A legacy /digest note is an earlier version\'s whole-paper summary: not a')
-  console.log('section note, and never claimed for one.')
+  console.log('section note, and never claimed for one. An AGENT note was written by an agent from the paper:')
+  console.log('until it also carries /reviewed it is a DRAFT - rewritable in place, and candidate-grade only.')
+  console.log('--review --note <key> records the owner\'s acceptance as a tag; the body is never touched.')
+}
+
+/**
+ * The note a create may have left behind even though the CLI reports a failure.
+ *
+ * A create is the one write whose failure can duplicate: the POST lands, the response is lost or the
+ * read-back disagrees, and a caller that reads "failure" as "nothing was written" sends it again. The
+ * only evidence that separates the two is the record itself, so this re-reads it and matches on the
+ * body plus every tag the write intended.
+ *
+ * @param {string} itemKey The record the note was written on.
+ * @param {string} composed The body that was sent.
+ * @param {string[]} tags The tags the write intended.
+ * @param {Set<string>} before The note keys that existed before the write.
+ * @returns {Promise<object|undefined>} The note that landed, if one matches.
+ */
+async function createdDespiteFailure(itemKey, composed, tags, before) {
+  const after = await noteChildren(itemKey)
+  return after.find(
+    (note) =>
+      !before.has(note.key) &&
+      visibleText(note.html) === visibleText(composed) &&
+      tags.every((tag) => note.tags.some((entry) => lowered(entry) === lowered(tag))),
+  )
+}
+
+/**
+ * Report a write whose outcome is not confirmed, and never as a refusal.
+ *
+ * Exit 3 is the third answer this CLI needs: exit 1 says nothing was written, exit 0 says it was and
+ * reads back, and 3 says the library may hold it. Retrying on 3 is how the same note becomes two.
+ *
+ * @param {string} noteKey The note that was found, or '' when none was.
+ * @param {string} message What happened, in the tool's own words.
+ */
+function reportUnconfirmed(noteKey, detail) {
+  console.error(`\n${noteKey ? 'WRITTEN BUT UNCONFIRMED' : 'SENT BUT UNCONFIRMED'} - ${detail}`)
+  if (noteKey) console.error(`The note EXISTS: ${noteKey}.`)
+  console.error('Do NOT retry this write. Re-run the plan (--item <recordKey>) and read the record first:')
+  console.error('a note that exists and is written again becomes a duplicate, and tags cannot merge them.')
+  process.exitCode = 3
 }
 
 /** Create one section note, refusing when the section is already claimed. */
@@ -527,6 +696,21 @@ async function runCreate(options) {
     return
   }
 
+  // A create on a record whose notes were never read is how a duplicate happens: the round reads
+  // `covered: none`, writes, and a note that was there all along turns out to explain the same
+  // section. The refusal is narrow - it fires only while an unclaimed note exists - and the owner's
+  // sentence is what carries the judgement.
+  const unknown = notes.filter((note) => !note.retired && !note.digest && !note.claim.token && !note.claim.ambiguous)
+  const acknowledged = String(options.acknowledgeUnknown ?? '').trim()
+  if (unknown.length && !acknowledged) {
+    console.error(`\nREFUSED: ${unknown.length} note(s) on this record carry no /section- tag: ${unknown.map((note) => note.key).join(' · ')}.`)
+    console.error('Read them first (zotero-read.mjs --item <noteKey>): a section is not uncovered until they')
+    console.error('have been read. If none of them explains this section, say what you read and why:')
+    console.error(`  --acknowledge-unknown "<what you read, and why none covers §${token}>"`)
+    process.exitCode = 1
+    return
+  }
+
   const replacedKey = String(options.replaces ?? '').trim()
   if (replacedKey) {
     const old = await readItem(replacedKey)
@@ -544,13 +728,14 @@ async function runCreate(options) {
   }
 
   const covering = coveringNote(notes, token)
-  const tags = [sectionTag(token), ...(replacedKey ? [replacesTag(replacedKey)] : [])]
+  const tags = [sectionTag(token), AGENT_TAG, ...(replacedKey ? [replacesTag(replacedKey)] : [])]
 
   console.log(`record  : ${options.item}  [${record.itemType}]  "${record.title ?? ''}"`)
   console.log(`section : §${token}`)
   console.log(`notes   : ${notes.length} child note(s); claimed: ${[...new Set(notes.filter((note) => note.claim.token).map((note) => `§${note.claim.token}`))].join(' · ') || 'none'}`)
   console.log(`body    : ${composed.length} characters; tags: ${tags.join(' · ')}`)
-  if (options.title) console.log(`title   : "${options.title}" (attempted; the note is written without it if refused)`)
+  console.log(`author  : agent (${AGENT_TAG}); it stays a candidate-grade draft until the owner adds ${REVIEWED_TAG}`)
+  if (unknown.length) console.log(`unknown : ${unknown.length} note(s) acknowledged: ${acknowledged}`)
   if (replacedKey) console.log(`replaces: ${replacedKey} (tag ${replacesTag(replacedKey)}) - it is retired, so §${token} is free`)
   console.log(`write   : ${createWriteLine(options.item)}`)
 
@@ -566,54 +751,91 @@ async function runCreate(options) {
     return
   }
 
+  const before = new Set(notes.map((note) => note.key))
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
   const payload = { itemType: 'note', parentItem: options.item, note: composed, tags: tags.map((tag) => ({ tag })) }
-  const withTitle = options.title ? { ...payload, title: options.title } : payload
-  let res = await gate.write('POST', '/api/users/0/items', [withTitle])
-  if (res.status !== 200 && options.title) {
-    console.log(`\nThe library refused the title (HTTP ${res.status}); writing the same note without it.`)
+  writeAttempted = true
+  let res
+  let sendError
+  try {
     res = await gate.write('POST', '/api/users/0/items', [payload])
+  } catch (error) {
+    sendError = error
   }
-  if (res.status !== 200) {
+  if (sendError) {
+    let landed
+    try {
+      landed = await createdDespiteFailure(options.item, composed, tags, before)
+    } catch {
+      landed = undefined
+    }
+    reportUnconfirmed(
+      landed?.key ?? '',
+      landed
+        ? `the request failed (${sendError.message}), yet a note matching this body is on the record.`
+        : `the request failed (${sendError.message}) and no matching note was found on a re-read.`,
+    )
+    return
+  }
+  if (!isWriteAccepted(res.status)) {
+    let landed
+    try {
+      landed = await createdDespiteFailure(options.item, composed, tags, before)
+    } catch {
+      landed = undefined
+    }
+    if (landed) {
+      reportUnconfirmed(landed.key, `the library answered HTTP ${res.status}, yet a note matching this body is on the record.`)
+      return
+    }
     console.error(`\nThe library refused the write (HTTP ${res.status}): ${res.text.slice(0, 300)}`)
+    console.error('No note matching this body was found on a re-read, so nothing was written.')
     process.exitCode = 1
     return
   }
   const saved = JSON.parse(res.text)
   const noteKey = saved.successful?.['0'] ?? saved.success?.['0']
   if (!noteKey) {
-    console.error(`\nThe library reported no success: ${res.text.slice(0, 300)}`)
-    process.exitCode = 1
+    let landed
+    try {
+      landed = await createdDespiteFailure(options.item, composed, tags, before)
+    } catch {
+      landed = undefined
+    }
+    reportUnconfirmed(landed?.key ?? '', `the library accepted the write (HTTP ${res.status}) but named no note key.`)
     return
   }
   const back = await readItem(noteKey)
   const backTags = (back.tags ?? []).map((entry) => entry.tag)
   if (!visibleText(back.note ?? '').includes(visibleText(composed))) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back with the text that was sent.`)
-    process.exitCode = 1
+    reportUnconfirmed(noteKey, `READ-BACK MISMATCH: note ${noteKey} exists but does not read back with the text that was sent.`)
     return
   }
   if (readSectionTag(backTags).token !== token) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${sectionTag(token)}.`)
-    console.error(`Tags read back: ${backTags.length ? backTags.join(' · ') : '(none)'}`)
-    process.exitCode = 1
+    reportUnconfirmed(noteKey, `READ-BACK MISMATCH: note ${noteKey} does not read back carrying ${sectionTag(token)}.`)
+    return
+  }
+  if (!isAgentNote(backTags)) {
+    reportUnconfirmed(noteKey, `READ-BACK MISMATCH: note ${noteKey} does not read back carrying ${AGENT_TAG}.`)
     return
   }
   if (replacedKey && replacesKey(backTags) !== replacedKey) {
-    console.error(`\nREAD-BACK MISMATCH: note ${noteKey} does not read back carrying ${replacesTag(replacedKey)}.`)
-    process.exitCode = 1
+    reportUnconfirmed(noteKey, `READ-BACK MISMATCH: note ${noteKey} does not read back carrying ${replacesTag(replacedKey)}.`)
     return
   }
-  console.log(`\nOK - note ${noteKey} carries §${token} on ${options.item} (now ${back.note.length} characters, version ${back.version}).` + (replacedKey ? ` It replaces ${replacedKey}.` : ''))
+  console.log(`\nOK - note ${noteKey} carries §${token} and ${AGENT_TAG} on ${options.item} (now ${back.note.length} characters, version ${back.version}).` + (replacedKey ? ` It replaces ${replacedKey}.` : ''))
+  console.log(`It is a DRAFT: ${REVIEWED_TAG} is the owner's act (--review --note ${noteKey}), and until then an`)
+  console.log('adoption may treat it as a candidate only.')
 }
 
 /**
  * Claim an existing note for a top-level section.
  *
  * The body is never touched. A note with no `/section-` tag receives `/imported` as well, because it
- * came from outside this tool and remains an import that may be rewritten; an agent-created note
- * never carries that tag and is a record.
+ * came from outside this tool and remains an import that may be rewritten. An `/agent-note` does not
+ * receive it: its author is already recorded, and calling an agent's own body an import would say the
+ * wrong thing about where it came from.
  */
 async function runClaim(options) {
   const note = await readItem(options.note)
@@ -648,7 +870,7 @@ async function runClaim(options) {
     return
   }
 
-  const addImported = claim.token === '' && !isImported(tags)
+  const addImported = claim.token === '' && !isImported(tags) && !isAgentNote(tags)
   const kept = tags.filter((tag) => !lowered(tag).startsWith(SECTION_TAG_PREFIX))
   const after = [...kept, sectionTag(token), ...(addImported || isImported(tags) ? [IMPORTED_TAG] : [])]
     .filter((tag, index, list) => list.findIndex((entry) => lowered(entry) === lowered(tag)) === index)
@@ -656,6 +878,7 @@ async function runClaim(options) {
 
   console.log(`note    : ${options.note}  parent ${note.parentItem}  version ${note.version}`)
   console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}${claim.tags.length ? ` (tags ${claim.tags.join(' · ')})` : ''}  ->  §${token}`)
+  console.log(`author  : ${provenanceOf(tags)}${authorityOf(after, token) === 'candidate' ? ' (a draft: candidate-grade until /reviewed)' : ''}`)
   console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
   console.log(`change  : ${unchanged ? 'nothing (already claimed)' : addImported ? 'claim + /imported' : 'claim'}   (the body is NOT touched)`)
   console.log(`write   : PATCH /api/users/0/items/${options.note}  [{tags: [...]}]`)
@@ -671,6 +894,7 @@ async function runClaim(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
+  writeAttempted = true
   const result = await patchItem({ gate, key: options.note, patch: { tags: after.map((tag) => ({ tag })) }, apply: true })
   if (result.conflict) {
     console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
@@ -684,17 +908,17 @@ async function runClaim(options) {
   }
   const backTags = (result.after.tags ?? []).map((entry) => entry.tag)
   if (readSectionTag(backTags).token !== token) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
-    console.error(`Tags read back: ${backTags.length ? backTags.join(' · ') : '(none)'}`)
-    process.exitCode = 1
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
     return
   }
   if (addImported && !isImported(backTags)) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
-    process.exitCode = 1
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
     return
   }
   console.log(`\nOK - note ${options.note} claims §${token}${addImported ? ' and is marked /imported' : ''} (version ${result.after.version}).`)
+  if (authorityOf(backTags, token) === 'candidate') {
+    console.log(`It is an agent draft: ${REVIEWED_TAG} is the owner's act (--review --note ${options.note}).`)
+  }
 }
 
 /** Retire one note, or put its claim back. One note, one write, and the body is never touched. */
@@ -730,6 +954,7 @@ async function runRetire(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
+  writeAttempted = true
   const result = await patchItem({ gate, key: options.note, patch: { tags: after.map((tag) => ({ tag })) }, apply: true })
   if (result.conflict) {
     console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
@@ -743,9 +968,7 @@ async function runRetire(options) {
   }
   const back = (result.after.tags ?? []).map((entry) => entry.tag)
   if (isRetired(back) !== want) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back ${want ? 'retired' : 'live'}.`)
-    console.error(`Tags read back: ${back.length ? back.join(' · ') : '(none)'} - the mark did not survive the write.`)
-    process.exitCode = 1
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back ${want ? 'retired' : 'live'} - the mark did not survive the write.`)
     return
   }
   console.log(`\nOK - note ${options.note} is ${want ? 'retired' : 'live again'} (version ${result.after.version}).`)
@@ -758,11 +981,13 @@ async function runRetire(options) {
 /**
  * Rewrite a note's body in place.
  *
- * Only an import may be rewritten: a note with no `/section-` tag, or a `/section-N` + `/imported`
- * note. A `/section-N` note without `/imported` is a record; changing its prose is a retirement and a
- * new note. No backup is written: a section note is a transcription of the paper, the paper remains
- * the source, and the plan prints the old first block before anything is sent. The version guard is
- * what is kept: a note the application edited while this ran is refused rather than overwritten.
+ * Three classes may be rewritten: an import (no `/section-` tag, or `/section-N` + `/imported`), and
+ * an agent DRAFT (`/agent-note` without `/reviewed`). A `/section-N` note without `/imported` or
+ * `/agent-note` is the owner's record, and a reviewed agent note is a record too: their prose is not
+ * rewritten in place, and changing one is a retirement and a new note. No backup is written: a section
+ * note is a transcription of the paper, the paper remains the source, and the plan prints the old
+ * first block before anything is sent. The version guard is what is kept: a note the application
+ * edited while this ran is refused rather than overwritten.
  */
 async function runRewrite(options) {
   const body = options.file ? readFileSync(options.file, 'utf8') : options.text
@@ -777,7 +1002,12 @@ async function runRewrite(options) {
   const claim = readSectionTag(tags)
   if (isRetired(tags)) throw new UsageError(`${options.note} is retired; a tombstone is not rewritten`)
   if (claim.ambiguous) throw new UsageError(`${options.note} carries more than one /section- tag; fix it before rewriting`)
-  if (claim.token && !isImported(tags)) {
+  if (isReviewed(tags)) {
+    throw new UsageError(
+      `${options.note} carries ${REVIEWED_TAG}: the owner accepted that body, so it is a record. Retire it and write the replacement, or --review --note ${options.note} --undo --write first.`,
+    )
+  }
+  if (claim.token && !isImported(tags) && !isAgentNote(tags)) {
     throw new UsageError(
       `${options.note} is a §${claim.token} record without ${IMPORTED_TAG}: a record's prose is not rewritten in place. Retire it and write the replacement, or claim an import.`,
     )
@@ -800,14 +1030,16 @@ async function runRewrite(options) {
     if (addImported || isImported(tags)) after.push(IMPORTED_TAG)
     after = after.filter((tag, index, list) => list.findIndex((entry) => lowered(entry) === lowered(tag)) === index)
   }
+  if (!isAgentNote(after)) after = [...after, AGENT_TAG]
 
   console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
-  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}${isImported(tags) ? ' (imported)' : ''}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none'}  author: ${provenanceOf(tags)}`)
   console.log(`size    : ${String(note.note ?? '').length} -> ${composed.length} characters`)
   console.log(`old     : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
   console.log(`new     : ${firstBlockText(composed).slice(0, 96)}`)
-  if (token || !sameTags(after, tags)) console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
-  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{note: ...${token ? ', tags: [...]' : ''}}]`)
+  console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
+  console.log(`effect  : the body is replaced by an agent draft - ${AGENT_TAG} is added, ${REVIEWED_TAG} is not`)
+  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{note: ..., tags: [...]}]`)
 
   if (sameTags(after, tags) && visibleText(note.note ?? '') === visibleText(composed)) {
     console.log('\nnothing to do - the body already reads the same and the tags would not change.')
@@ -820,8 +1052,8 @@ async function runRewrite(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
-  const patch = { note: composed }
-  if (token) patch.tags = after.map((tag) => ({ tag }))
+  const patch = { note: composed, tags: after.map((tag) => ({ tag })) }
+  writeAttempted = true
   const result = await patchItem({ gate, key: options.note, patch, apply: true })
   if (result.conflict) {
     console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
@@ -835,22 +1067,86 @@ async function runRewrite(options) {
   }
   const afterText = visibleText(result.after.note ?? '')
   if (afterText !== visibleText(composed)) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back with the text that was sent.`)
-    process.exitCode = 1
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back with the text that was sent.`)
     return
   }
   const backTags = (result.after.tags ?? []).map((entry) => entry.tag)
   if (token && readSectionTag(backTags).token !== token) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
-    process.exitCode = 1
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${sectionTag(token)}.`)
     return
   }
-  if (token && addImported && !isImported(backTags)) {
-    console.error(`\nREAD-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
-    process.exitCode = 1
+  if (addImported && !isImported(backTags)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${IMPORTED_TAG}.`)
+    return
+  }
+  if (!isAgentNote(backTags)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${AGENT_TAG}.`)
     return
   }
   console.log(`\nOK - note ${options.note} rewritten (now ${result.after.note.length} characters, version ${result.after.version}).`)
+  console.log(`It is an agent draft: ${REVIEWED_TAG} is the owner's act (--review --note ${options.note}).`)
+}
+
+/**
+ * Record the owner's acceptance of an agent-written body, or take it back.
+ *
+ * This is a tag and never a body edit: the owner's judgement is that the prose is right, and the prose
+ * is what they judged. The note stays the owner's either way; `/reviewed` says a later round may treat
+ * it as a record rather than as a draft. `--undo` puts it back into the draft state, which is the one
+ * reversal that does not touch a word.
+ */
+async function runReview(options) {
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  const claim = readSectionTag(tags)
+  const undo = options.undo === true
+  const want = !undo
+  const already = isReviewed(tags)
+  if (isRetired(tags)) throw new UsageError(`${options.note} is retired; a tombstone is not reviewed`)
+  if (!isAgentNote(tags)) {
+    throw new UsageError(`${options.note} carries no ${AGENT_TAG}: only a body an agent wrote has a review state. An owner's note is a record already.`)
+  }
+  const after = reviewTags(tags, { undo })
+
+  console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
+  console.log(`claim   : ${claim.token ? `§${claim.token}` : 'none (not a section note)'}`)
+  console.log(`body    : ${String(note.note ?? '').length} characters`)
+  console.log(`first   : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
+  console.log(`tags    : ${tags.length ? tags.join(' · ') : '(none)'}  ->  ${after.join(' · ')}`)
+  console.log(`change  : ${already === want ? 'nothing' : want ? 'draft -> record' : 'record -> draft'}   (the body is NOT touched)`)
+  if (want) console.log(`effect  : an adoption may rest on it as a record; it is no longer rewritten in place`)
+  else console.log('effect  : it is an agent draft again and may be rewritten in place')
+
+  if (already === want) {
+    console.log(`\nnothing to do - the note is already ${want ? 'reviewed' : 'an unreviewed draft'}, and this tool writes no no-op.`)
+    return
+  }
+  if (!options.write) {
+    console.log('\nDRY RUN - nothing was written. Re-run with --write.')
+    return
+  }
+
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  writeAttempted = true
+  const result = await patchItem({ gate, key: options.note, patch: { tags: after.map((tag) => ({ tag })) }, apply: true })
+  if (result.conflict) {
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
+    process.exitCode = 1
+    return
+  }
+  if (!result.applied) {
+    console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
+    process.exitCode = 1
+    return
+  }
+  const back = (result.after.tags ?? []).map((entry) => entry.tag)
+  if (isReviewed(back) !== want) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back ${want ? 'reviewed' : 'as a draft'}.`)
+    return
+  }
+  console.log(`\nOK - note ${options.note} is ${want ? `reviewed by the owner (${REVIEWED_TAG})` : 'an unreviewed draft again'} (version ${result.after.version}).`)
 }
 
 /**
@@ -906,6 +1202,7 @@ async function runDelete(options) {
 
   const gate = createWriteGate({ appName: APP_NAME })
   await gate.open()
+  writeAttempted = true
   const result = await gate.write('DELETE', `/api/users/0/items/${options.note}`, undefined, {
     'If-Unmodified-Since-Version': String(fresh.version),
   })
@@ -932,54 +1229,60 @@ async function runDelete(options) {
 const USAGE =
   'usage: node tools/zotero-section-note.mjs --item <recordKey> [--plan] [--json]\n' +
   '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
-  '                                       [--title "<title>"] [--replaces <retiredNoteKey>] [--write]\n' +
+  '                                       [--replaces <retiredNoteKey>] [--acknowledge-unknown "<what you read>"] [--write]\n' +
   '       node tools/zotero-section-note.mjs --claim --note <noteKey> --section <ordinal> [--write]\n' +
   '       node tools/zotero-section-note.mjs --rewrite --note <noteKey> (--text "<html>" | --file <path>) [--section <ordinal>] [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
+  '       node tools/zotero-section-note.mjs --review --note <noteKey> [--undo] [--write]\n' +
   '       node tools/zotero-section-note.mjs --delete --note <noteKey> [--write]\n' +
   '       Identity is a tag: /section-N claims a top-level section, /imported marks an import that may\n' +
-  '       still be rewritten, /digest is a LEGACY whole-paper summary from an earlier version, /retired takes a note out of service.\n' +
-  '       No invisible marker is written or read, and no prose is parsed: a note with no /section- tag\n' +
-  '       is UNKNOWN and is read before anything is written. --tidy does not exist; a damaged body is\n' +
-  '       rewritten by the agent or retired and written again. --delete erases only a /retired note,\n' +
-  '       permanently: this API has no trash, and the plan states that before --write is accepted.'
+  '       still be rewritten, /agent-note marks a body an agent wrote from the paper, /reviewed marks the\n' +
+  '       owner accepting that body, /digest is a LEGACY whole-paper summary from an earlier version,\n' +
+  '       /retired takes a note out of service. No invisible marker is written or read, and no prose is\n' +
+  '       parsed: a note with no /section- tag is UNKNOWN and is read before anything is written.\n' +
+  '       --tidy does not exist; a damaged body is rewritten by the agent or retired and written again.\n' +
+  '       --delete erases only a /retired note, permanently: this API has no trash, and the plan states\n' +
+  '       that before --write is accepted.\n' +
+  '       Exit 0 = written and read back | 1 = refused, nothing written | 2 = usage |\n' +
+  '       3 = sent or written but NOT confirmed - read the record before retrying, never resend.'
 
 function parseArgs(argv) {
   const options = {
-    item: '', note: '', section: '', text: '', file: '', title: '', reason: '', replaces: '',
-    claim: false, rewrite: false, delete: false, retire: false, undo: false,
+    item: '', note: '', section: '', text: '', file: '', reason: '', replaces: '', acknowledgeUnknown: '',
+    claim: false, rewrite: false, delete: false, retire: false, review: false, undo: false,
     plan: false, json: false, write: false,
   }
-  const valued = new Set(['--item', '--note', '--section', '--text', '--file', '--title', '--reason', '--replaces'])
-  const switches = new Set(['--claim', '--rewrite', '--delete', '--retire', '--undo', '--plan', '--json', '--write'])
+  const valued = new Set(['--item', '--note', '--section', '--text', '--file', '--reason', '--replaces', '--acknowledge-unknown'])
+  const switches = new Set(['--claim', '--rewrite', '--delete', '--retire', '--review', '--undo', '--plan', '--json', '--write'])
+  const keyOf = (flag) => flag.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     if (switches.has(flag)) {
-      options[flag.slice(2)] = true
+      options[keyOf(flag)] = true
       continue
     }
     if (!valued.has(flag)) throw new UsageError(`unrecognised argument '${flag}'`)
     const next = argv[index + 1]
     if (next === undefined) throw new UsageError(`${flag} needs a value`)
-    options[flag.slice(2)] = next
+    options[keyOf(flag)] = next
     index += 1
   }
 
-  const modes = ['claim', 'rewrite', 'delete', 'retire'].filter((mode) => options[mode])
-  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --rewrite, --delete, --retire')
-  if (options.undo && !options.retire) throw new UsageError('--undo belongs to --retire')
+  const modes = ['claim', 'rewrite', 'delete', 'retire', 'review'].filter((mode) => options[mode])
+  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --rewrite, --delete, --retire, --review')
+  if (options.undo && !options.retire && !options.review) throw new UsageError('--undo belongs to --retire or --review')
   if (options.reason && !options.retire) throw new UsageError('--reason belongs to --retire')
-  if (options.title && !options.section) throw new UsageError('--title belongs to a --section create')
   if (options.replaces && !options.section) throw new UsageError('--replaces goes with the --section it replaces')
-  if (options.json && (modes.length || options.section || options.text || options.file || options.title || options.replaces || options.note)) {
+  if (options.acknowledgeUnknown && !options.section) throw new UsageError('--acknowledge-unknown belongs to a --section create')
+  if (options.json && (modes.length || options.section || options.text || options.file || options.replaces || options.note)) {
     throw new UsageError('--json prints the coverage plan; it goes with --item and nothing else')
   }
 
   if (options.claim) {
     if (!options.note) throw new UsageError('--claim takes --note <noteKey>')
     if (!options.section) throw new UsageError('--claim takes --section <ordinal>')
-    if (options.item || options.text || options.file || options.title || options.reason || options.replaces || options.plan) {
+    if (options.item || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--claim changes one note and nothing else; drop the other arguments')
     }
     return options
@@ -987,14 +1290,21 @@ function parseArgs(argv) {
   if (options.rewrite) {
     if (!options.note) throw new UsageError('--rewrite takes --note <noteKey>')
     if (Boolean(options.text) === Boolean(options.file)) throw new UsageError('pass --text or --file, not both')
-    if (options.item || options.title || options.reason || options.replaces || options.plan) {
+    if (options.item || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--rewrite changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.review) {
+    if (!options.note) throw new UsageError('--review takes --note <noteKey>')
+    if (options.item || options.section || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
+      throw new UsageError('--review changes one note and nothing else; drop the other arguments')
     }
     return options
   }
   if (options.delete) {
     if (!options.note) throw new UsageError('--delete takes --note <noteKey>')
-    if (options.item || options.section || options.text || options.file || options.title || options.reason || options.replaces || options.plan) {
+    if (options.item || options.section || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--delete takes one note and nothing else; drop the other arguments')
     }
     return options
@@ -1004,14 +1314,14 @@ function parseArgs(argv) {
     if (!options.undo && String(options.reason).trim() === '') {
       throw new UsageError('--retire needs --reason "<why>": the reason is the record of the change, and this tool stores no prose on the note')
     }
-    if (options.item || options.section || options.text || options.file || options.title || options.replaces || options.plan) {
+    if (options.item || options.section || options.text || options.file || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--retire changes one note and nothing else; drop the other arguments')
     }
     return options
   }
   if (options.plan) {
     if (!options.item) throw new UsageError('--plan takes --item <recordKey>')
-    if (options.section || options.text || options.file || options.title || options.replaces || options.note || options.write) {
+    if (options.section || options.text || options.file || options.replaces || options.note || options.write || options.acknowledgeUnknown) {
       throw new UsageError('--plan prints a record; it does not take a body or a write')
     }
     return options
@@ -1021,8 +1331,9 @@ function parseArgs(argv) {
     if (Boolean(options.text) === Boolean(options.file)) throw new UsageError('pass --text or --file, not both')
     return options
   }
-  if (options.note) throw new UsageError('--note belongs to --claim, --rewrite, --delete or --retire')
-  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--rewrite/--delete/--retire')
+  if (options.acknowledgeUnknown) throw new UsageError('--acknowledge-unknown belongs to a --section create')
+  if (options.note) throw new UsageError('--note belongs to --claim, --rewrite, --review, --delete or --retire')
+  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--rewrite/--review/--delete/--retire')
   if (options.write) throw new UsageError('--write belongs to --section or one of the note modes')
   return options
 }
@@ -1035,6 +1346,10 @@ async function main() {
   }
   if (options.rewrite) {
     await runRewrite(options)
+    return
+  }
+  if (options.review) {
+    await runReview(options)
     return
   }
   if (options.delete) {
@@ -1058,9 +1373,17 @@ if (isEntryPoint) {
   main().catch((error) => {
     if (error instanceof UsageError) {
       console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
+      process.exitCode = 2
+      return
     }
     console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    if (writeAttempted && !error.refused) {
+      console.error('OUTCOME UNKNOWN: a write had been sent before this error, so exit 1 would claim')
+      console.error('nothing was written. Do not resend it: re-run the plan (--item <recordKey>) and read')
+      console.error('the record. This is exit 3, the answer for a write that may exist.')
+      process.exitCode = 3
+      return
+    }
+    process.exitCode = 1
   })
 }

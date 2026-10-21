@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it. This skill never rewrites, merges or reformats an imported note.
+description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). This skill never rewrites, merges or reformats an imported note.
 ---
 
 # section-notes — keep a paper's record section-addressable
@@ -22,7 +22,7 @@ This skill has two halves, and **the request decides which one runs**:
 | The situation | Which half | What it may write |
 |---|---|---|
 | A record carries notes pasted in from outside — a browser, a chat model, another editor | **Part I — claim and report** | a `/section-N` tag on a note that already exists, and nothing else |
-| The owner names a section and asks for a note to be written from the paper | **Part II — generate** | one new note body for that section, or a rewrite of an **import** |
+| The owner names a section and asks for a note to be written from the paper | **Part II — generate** | one new note body for that section, or a rewrite of an **import** or an **agent draft**; every body it writes carries `/agent-note` |
 | It is not clear which | neither: report and ask | nothing |
 
 **Part I is the default, and it is where most rounds stop.** It writes no note body, never rewrites,
@@ -84,7 +84,7 @@ Read-only, before claiming or writing anything:
 
    | What the note is | Move |
    |---|---|
-   | a usable explanation of §N, in any format | `--claim --note <key> --section N` — only tags are written; the body is untouched; a note with no section tag also gets `/imported` |
+   | a usable explanation of §N, in any format | `--claim --note <key> --section N` — only tags are written; the body is untouched; a note with no section tag also gets `/imported`, unless it already carries `/agent-note` |
    | about §N but needs our format or prose | `--rewrite --note <key> --section N --file <draft>` — dry run first; no backup is written |
    | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone; it may be erased later with `--delete --write` |
    | a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one. A note an earlier version tagged `/digest` is this case: the plan lists it as `legacy`, and it is never claimed for a section |
@@ -170,10 +170,10 @@ where the reading stopped, `verdict` why. **An absent note is not evidence that 
 ### 3.2 What one note contains
 
 1. **A heading line** naming the section by ordinal **and** by the paper's own title, translated if the
-   note is not in the paper's language. Where the library can carry a note title, the title carries the
-   same name — **attempted, never required**: measured here, a `title` patch on a note answers HTTP 500
-   while a `tags` patch on the same note answers 204, so the section is named by the first line and by
-   the `/section-N` tag, and the child-note list shows an untitled note.
+   note is not in the paper's language. A note has no title field in this library — measured here, a
+   `title` patch on a note answers HTTP 500 while a `tags` patch on the same note answers 204 — so the
+   section is named by that first line and by the `/section-N` tag, the tool does not attempt a title,
+   and the child-note list shows an untitled note.
 2. **The section's core, in two to four sentences**: what problem it solves, by what means, and what it
    establishes.
 3. **Subsections mirroring the paper's own numbering** — do not re-invent a structure the paper
@@ -228,11 +228,28 @@ is in the report — and **never split a section to stay inside that range**.
 - **Create refuses a claimed section.** The tool prints `REFUSED: §N is already covered - note <key>
   claims §N`. Do not work around a refusal.
 - **`--claim` is how an existing note enters coverage.** It writes `/section-N` and leaves the body
-  alone; a note that had no section tag also gets `/imported`. A claim is a durable statement that a
-  later round can check; a note left unclaimed is read again every round.
-- **A claimed import may be rewritten in place; a record may not.** `/section-N` + `/imported` is an
-  import: `--rewrite` may replace its body (dry run, version guard). `/section-N` without
-  `/imported` is a record: its prose is never rewritten in place. Retire it and write the replacement.
+  alone; a note that had no section tag also gets `/imported`, unless it is an `/agent-note`. A claim
+  is a durable statement that a later round can check; a note left unclaimed is read again every round.
+- **Four classes, and the tags say which.** The class is what decides whether a body may be replaced
+  in place:
+
+  | Tags on the note | Class | Rewritten in place? |
+  |---|---|---|
+  | `/section-N` + `/imported` | an import the owner pasted | yes |
+  | `/section-N` + `/agent-note` (no `/reviewed`) | an agent draft | yes |
+  | `/section-N` + `/agent-note` + `/reviewed` | a record the owner accepted | **no** — retire and replace |
+  | `/section-N` alone | the owner's record | **no** — retire and replace |
+
+  A note carrying both `/imported` and `/agent-note` is an import an agent rewrote: it stays
+  rewritable, and its provenance is `agent`, because the prose is the agent's now.
+
+  **A body this discipline writes carries `/agent-note` from the moment it is created.** The tool adds
+  it and the read-back asserts it; a rewrite stamps it too, because the body is now an agent's prose.
+  `/reviewed` is written only by `--review --note <key>`, after the owner says the body is right; it is
+  a tag and never a body edit. A note created as an agent draft never receives `/imported`, and a
+  claim never adds it to one: calling an agent's own body an import would say the wrong thing about
+  where it came from. A rewritten import keeps the mark it had, because that mark records the text it
+  replaced.
 - **A wrong note is retired, never rewritten.** When a note explains its section
   badly enough that the section has to be explained again:
   `{{presetTools}}/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"`. Its body is left
@@ -246,18 +263,20 @@ is in the report — and **never split a section to stay inside that range**.
   the plan lists it as `legacy`, it is not counted as coverage, and it is never claimed for a section.
 - Notes are created in section order, so the record reads in the order the paper reads.
 
-### 3.4 Rewriting an import is the agent's work; there is no tidy
+### 3.4 Writing a body is the agent's work; there is no tidy
 
 - **There is no `--tidy` and no automatic math repair.** Writing a note is the agent's job. A tool that
   rewrote a formula because it looked like LaTeX was making a content decision while claiming to format
   one. The old mechanical rules are gone.
-- **`--rewrite` is for an import**: a note with no `/section-` tag, or `/section-N` + `/imported`. It
-  replaces the body with the draft the agent wrote, after a dry run and under a version guard. The
-  note's key does not change, and no workspace backup is written: a section note transcribes the
-  paper, the paper remains the source, and the plan prints the old first block before the write. If the
-  note changed in the application while the draft was being written, the tool refuses rather than
-  overwrite it.
-- **A record is not rewritten in place.** Retire it and write the replacement (§3.3).
+- **`--rewrite` is for an import or an agent draft**: a note with no `/section-` tag, `/section-N` +
+  `/imported`, or `/section-N` + `/agent-note` without `/reviewed`. It replaces the body with the draft
+  the agent wrote, after a dry run and under a version guard, and stamps `/agent-note`. The note's key
+  does not change, and no workspace backup is written: a section note transcribes the paper, the paper
+  remains the source, and the plan prints the old first block before the write. If the note changed in
+  the application while the draft was being written, the tool refuses rather than overwrite it.
+- **A record is not rewritten in place.** An owner's note and a reviewed agent note are records: retire
+  one and write the replacement (§3.3). `--review --note <key> --undo` is the way back to a draft when
+  the owner withdraws their acceptance; it changes a tag, never a word.
 - **The formula shape is the agent's responsibility**: `$…$` inline, `$$` alone on its own lines for
   display, every symbol defined at first use, the paper's own equation number in prose. If the text
   layer is unreadable, climb the reading ladder and read the rendered page as an image (§7) before
@@ -272,6 +291,9 @@ is in the report — and **never split a section to stay inside that range**.
 - Read every `unknown` note before claiming or writing; say which ones you claimed, rewrote, or retired.
 - Keep one note per top-level section, and name the section by the ordinal the paper itself uses.
 - Say which attachment the text came from, and how many characters of it were read.
+- Say which notes are agent drafts and whether the owner has reviewed them. An unreviewed
+  `/agent-note` is a candidate-grade draft, and `adoption-ruling` may rest no more than a candidate
+  on it; do not let a report call one "the note on §N" without that word.
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
 
@@ -292,6 +314,8 @@ record carries an attachment: it reads the notes, not the paper. Two rows belong
 | The note runs long — well past the 5,000-character signal | Cut the case-study material and the restatement of the abstract, not the derivation, and say in the report that the section's method content is long. **Never split the section.** |
 | The section is claimed by a note that is **wrong** | **Retire it** (`--retire --note <noteKey> --reason "<why>"`), then write the replacement with `--replaces <noteKey>`. Never edit its prose; deleting it is a separate act, allowed only once it is retired. |
 | The text layer is unreadable, or a formula only exists in the image | Read the rendered page as an image (`--render` + `read_image`); say which rung answered. Do not trust the text layer for mathematics. |
+| A create is refused because the record carries `unknown` notes | Read them first. If none explains the section, `--acknowledge-unknown "<what you read, and why none covers §N>"` is the only way past the refusal — never claim "no note exists" from `covered: none`. |
+| The section is claimed by an **unreviewed agent draft** | Report it as a draft, not as the owner's note. Do not treat its prose as settled, and do not rest a record on it. |
 
 ## 5. Wording discipline (Part II)
 
@@ -343,6 +367,10 @@ The artifact is the notes on the library record. The report is what a later roun
    reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
    was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
    stored nowhere else: this section is where it is written down.
+9. `## Provenance` — one line per note this round wrote or rewrote: note key · section · `agent` or
+   `agent+reviewed`, quoted from the read-back, plus the tags it reads back with. This is the line a
+   later ruling quotes; a body with no `/agent-note` in the read-back is a write to report as failed,
+   not as done.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -352,6 +380,15 @@ The artifact is the notes on the library record. The report is what a later roun
 - **Writing is one section per invocation, dry run first.** `{{presetTools}}/zotero-section-note.mjs`
   states the change, refuses a claimed section, and writes only with `--write`; it reads back what it
   wrote before reporting success. Never batch several sections into one command.
+- **Read the exit code as three answers, not two.** `0` = written and read back · `1` = refused and
+  **nothing was written** · `3` = sent or written but **not confirmed**. Exit 3 is not a failure to
+  retry: the tool prints the key it found and says so. Re-run the plan, read the record, and only then
+  decide. A caller that treats 3 as 1 writes the same note twice.
+- **`unknown` is a to-read list, never an absence.** `covered: none` says no note *claims* a section; it
+  does not say no note *explains* it. A create on a record with `unknown` notes is refused until they
+  are read, and `--acknowledge-unknown "<what you read, and why none covers §N>"` is the only way past
+  that refusal. A report that calls a section uncovered without saying how many `unknown` notes were
+  read is a guess.
 - **The judgement about coverage is yours; the tag is the backstop.** The plan prints every note's tags
   and first paragraph and names the `unknown` ones. A tag is a claim; a note with no tag is read. Where
   your reading and the tag disagree, report both and stop.
@@ -366,6 +403,14 @@ The artifact is the notes on the library record. The report is what a later roun
   Only a `/retired` note is eligible: this channel has no trash, so the note and its key are gone. The
   request carries the version the plan was read at; a note that moved is refused. Bulk cleanup stays
   the owner's act in the application.
+- **Reviewing is a tag, not an edit.** `--review --note <key>` records that the owner accepted an agent
+  body; `--review --note <key> --undo --write` puts it back. Only an `/agent-note` has that state, the
+  body is never touched, and a reviewed note is a record. The owner's sentence is the ground; the tag
+  is where a later round reads it.
+- **A failed write is reported, never worked around.** If the tool fails, quote the command, the exit
+  code and the output, and stop. Do not hand-roll a write script: a write outside this tool's gate has
+  no read-back, and the library keeps no trace of which hand wrote it. A workaround the owner
+  authorizes still runs through the same gate and the same read-back, and the report names it.
 - **When the round spans records, ask for the plan as JSON.**
   `{{presetTools}}/zotero-section-note.mjs --item <recordKey> --json` prints the same facts the prose
   plan does: every note's tags, section, retired/imported/legacy state, and the `unknown` and
@@ -426,11 +471,17 @@ The artifact is the notes on the library record. The report is what a later roun
 - [ ] Sections the reading never reached are reported as `not reached`, with the ledger verdict that
   stopped it, rather than as "no note needed"
 - [ ] Every note carries `/section-N` and the paper's own ordinal and heading
+- [ ] Every note this round wrote or rewrote carries `/agent-note`, quoted from the read-back
+- [ ] No `/reviewed` was written by this round: that tag is the owner's, and only `--review` after
+  their answer may add it
+- [ ] A create on a record with `unknown` notes was preceded by reading them, or
+  `--acknowledge-unknown` names what was read and why none covers the section
 - [ ] Every equation is inside `$…$` or `$$…$$`, with display math on lines of its own
 - [ ] Every symbol used is defined at its first appearance
 - [ ] Each note ends with a summary naming its contribution and its hand-off to the next section
 - [ ] Any note outside the 1,500–5,000 signal range is explained
 - [ ] Each write was a dry run first, and its read-back is quoted
+- [ ] Any exit 3 is reported as "sent but unconfirmed", with the key the tool found — never as refusal
 - [ ] Every retirement is reported with its reason and its successor
 - [ ] A note an earlier version tagged `/digest` was reported as legacy and left alone, never claimed
 - [ ] Every deletion was a `/retired` note, planned first, and the report quotes its read-back 404
@@ -451,7 +502,12 @@ The artifact is the notes on the library record. The report is what a later roun
   it, and deletion is permanent. Do not retire a note you have not read: retiring asserts that the note
   is wrong, and that is a claim you have to be able to state the grounds for.
 - Do not rewrite a `/section-N` record in place; retire it and write the replacement. Only an
-  `/imported` note is rewritten in place.
+  `/imported` note and an unreviewed `/agent-note` draft are rewritten in place.
+- Do not present an unreviewed `/agent-note` as the owner's note, and do not add `/reviewed` yourself:
+  that tag records the owner's judgement, and an agent that writes it has ruled for them.
+- Do not call an agent draft an import, and do not let `--claim` add `/imported` to one.
+- Do not write through a hand-rolled script when this tool fails. Report the command, the exit code and
+  the output, and stop: a write outside the gate has no read-back.
 - Do not use `--tidy`: there is no automatic repair. Read the text or the page image and write the body.
 - Do not let a child write into the reference library.
 - Do not turn the note into review prose, a grade, or a judgement of the paper's quality.

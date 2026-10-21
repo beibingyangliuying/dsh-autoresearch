@@ -2155,7 +2155,7 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 1. **只给 `zotero-write.mjs` 加 `--collection <key>`，放进同一个 create body** ⇒ 一次写入、一次授权。不改成"建完自动再 assign"的串联：那是同一次调用里的第二个变更，而"一次调用一件事"是这一侧的共同规矩。
 2. **只收 8 位 key**（`^[A-Z0-9]{8}$`，小写自动转大写），**不收分类名**。同名分类挂在不同父级下是合法约定（重复检查本身就按 sibling 比），猜名字就是把论文放进错文件夹的那条路。
 3. key 的**形状**在第一次请求之前拒绝；key **存不存在**在写入前按库里 75 个分类（分页读）核对——否则打字错误要等属主点完 Allow 才被库拒绝，读起来像工具坏了。
-4. 回读里没有这次归档 ⇒ **`UNFILED` + exit 1**：条目**已在库**，工具只打印 `--assign` 那一条命令，**不补写第二次、不重试 create**。
+4. 回读里没有这次归档 ⇒ **`UNFILED` + exit 1**（§77 的同一类缺口修完后改为 **exit 3**：条目已在库，退出码必须说它可能已写）：条目**已在库**，工具只打印 `--assign` 那一条命令，**不补写第二次、不重试 create**。
 
 **验证**：
 
@@ -2171,3 +2171,49 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 - **顺带修了一条既有缺陷**：任何在 `fetch` / 本地请求之后立刻 `throw` 的路径，收尾的 `process.exit(1)` 在 Windows 上会撞 libuv 的 `uv_async` 断言，退出码变成 `0xC0000409` 并多打一行 `Assertion failed`（改前实测：`--doi 10.9999/not-a-real-doi` 必然复现；`--collection GONE0000` 也复现）。这是**既有**问题、不是 `--collection` 引入的，但新的拒绝路径正好落在这一类里，所以一并改掉：错误路径改成 `process.exitCode = 1` 后自然退出，实测 exit 1、约 0.9 s、无断言行；`--selftest` 的收尾同理。**未做的事**：没有动共享传输（`localRequest` 仍用默认 agent 的 keep-alive），慢的原因是等待套接字收尾而不是挂住。
 
 **落在何处**：[`tools/zotero-write.mjs`](../tools/zotero-write.mjs)（`parseCollectionKeys` · `collectionKeyProblems` · `withCollections` · `unfiledCollections` · `unknownCollections` · `allCollections` · 回读的 `filing` 一栏与 `UNFILED` 段 · 入口守卫）· [`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs)（新）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md)（自测清单、用法示例、"tools say rather than hide" 那段）· [`docs/coverage.md`](coverage.md) · 本文件。版本号不动，随下一次发布带出。
+
+## 77. 笔记的作者成为一个 tag：`/agent-note` 与 `/reviewed`（2026-10-21）
+
+**起因**：两个文献裁定会话（03 类 17 部、04 类逐篇）收尾时都做了同一件事——代理补写的节笔记先在**课题自己的索引**里定了一条约定："代理写的笔记一律加 `agent-note`；不得单独支撑 `adopt`；台账里凡以它为依据的判决必须写明。" 属主问的是：这条约定为什么不在预设里？
+
+**先验（三条都落到行）**：
+
+① **`grep agent-note` 在整个预设里 0 命中**：`section-notes` 只说"写笔记是代理的活"，工具只写 `/section-N`，`adoption-ruling` 的六字段里没有"这份笔记谁写的、业主复核过没有"。⇒ 同一条裁定换一个课题、换一轮上下文就不存在；而一份未复核的代理正文可以**静默**支撑 `adopt`。
+
+② 那次"预设工具在这套库上两条路都写不进去"的诊断，**在 HEAD 上不可复现**：不带 `--title` 时 path 是常量 `/api/users/0/items`，产生不了 `Request path contains unescaped characters`；带 `--title` 时工具本来就有回退（改发无 title 的载荷，2026-10-16 起）。⇒ "仪器坏了"本身是一个要证据的主张；而那次绕行留下了一个孤儿笔记和一份没标签的笔记。
+
+③ 那次"工具少报了笔记数（7 vs 10）"**不成立**：7 份是业主的（§2–§8），另外 3 份是代理刚写的重复，10 = 7 + 3。真正的问题是它把 `covered: none` 读成了"没有笔记"，而 plan 逐份打印了那 7 条的首段。
+
+**裁定**（四项 + 标签一项，由 junhan 逐项确认）：
+
+1. **写入失败分三种答案**：`0` 写入并回读 · `1` 拒绝且确定没写 · `3` 已发送或已写但未确认（打印 key，**不许重发**）；失败后自动对账（重列 children，比对正文与 tag）。
+2. **代理写的正文自动带 `/agent-note`**；业主确认后 `--review` 加 `/reviewed`。未复核的草稿可原地改、只够撑 `candidate`；复核过的按记录处理。`--claim` 不给 agent 笔记加 `/imported`。
+3. **`adoption-ruling` 的每一项若以节笔记为依据，必须写明 note key 与出处**；未复核的 `/agent-note` 不支撑 `adopt`/`adopt-modified`/`verified`。`verified` 要两样：复核过的笔记＋跑过的测试。
+4. **"某节没有笔记"必须先读该记录上所有 `unknown` 笔记**；create 在还有无 tag 笔记时拒绝，除非 `--acknowledge-unknown "<读了什么>"`。
+5. **去掉 `--title`**：写路径要求 Zotero 10，而 note 没有 title 字段（title patch 回 500）；回退的第二次 POST 本身就是重复风险。
+
+**实现**：`tools/zotero-section-note.mjs`（`AGENT_TAG` · `REVIEWED_TAG` · `isAgentNote` · `isReviewed` · `provenanceOf` · `authorityOf` · `reviewTags` · `runReview` · `createdDespiteFailure` · `reportUnconfirmed` · `writeAttempted` · exit 3 · `--acknowledge-unknown`）· [`tools/zotero-section-note-selftest.mjs`](../tools/zotero-section-note-selftest.mjs)（第 [3] 组作者/复核/草稿、第 [6] 组 plan 的作者与 authority、第 [9] 组桩库的 POST/PATCH、unknown 闸、退出码 3）· [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) · [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) · [`protocol.md`](../protocol.md)（**Revision 32**：§4 两行、§6、`INV-NOTE-4`、`INV-ADOPT-5`、`INV-EVID-3` 补一句）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md)。
+
+**验证**：`zotero-section-note-selftest` 全绿（新增断言覆盖：作者与复核互不冒充、claim 不给 agent 笔记加 `/imported`、复核后不可原地改、unknown 闸、`--acknowledge-unknown` 放行、退出码 3 与"不要重发"）· 全套离线自测 · `release-check --local` 除"工作树干净"一项外全绿（该项是打 tag 的前置，开发期本就为脏）。**未做**：不对真库做写入实测（`--review` 只改 tag，走的是既有 `patchItem` 版本守卫与回读）；版本号与 tag 不动，随下一次发布带出。
+
+**同一类缺口的其余四处（2026-10-21，属主当场选"现在就改"）**
+
+上面第 1 项裁定当时只落到了节笔记这一个工具。junhan 追问"这套预设还有没有类似的问题"之后，按同一条规则扫了其余写路径，四处都还在用两种答案回答：
+
+| 工具 | 改前的回答 | 与契约冲突在哪 |
+|---|---|---|
+| `zotero-edit.mjs` | 读回不一致 → `exit 1`，而正文先打印了 "the write was accepted" | 提案被接受却报"拒绝"，调用方重发的正是这次改动 |
+| `zotero-collection.mjs` | 建分类没拿回 key、改名/归档读回不一致 → `exit 1` | 分类可能已建/已改名；再建一次就是同名分类 |
+| `zotero-write.mjs` | 读回 title/DOI/creators 不一致 → `throw` → `exit 1`；`UNFILED` → `exit 1` | 条目**已经在库里**，却被报成失败 |
+| `zotero-link-attachments.mjs` | 链接建了但读不回 → 记 `FAILED`；整轮即便有失败也退 **0** | 两个方向都错：可能写着却说失败，失败又说成功 |
+
+改法（同一套词、同一个码，共用实现在 `zotero-local-api.mjs`）：
+
+1. **`mayHaveLanded(status)`**：`0`（没有回答）与 `5xx` 都可能已经写了，`4xx` 是拒绝。`applyPatch` 新增 `beforeWrite` 钩子，让调用方在请求发出前打标记——顶层 `catch` 才有资格说"已发送"。
+2. **`reportUnconfirmed({key, what, found})`**：打印 `WRITTEN BUT UNCONFIRMED`（找到 key）或 `SENT BUT UNCONFIRMED`（没找到），并返回 **3**。四个工具的失败分支都改用它，措辞因此与技能里教的词一致。
+3. **失败后对账**：`edit` 重读条目逐字段比；`collection` 的 create 重列分类树按 name+parent 找、`assign` 重读 filings；`write` 用既有的 `findExisting` 按 DOI/archiveID/标题搜；`link-attachments` 重列 parent 的 children 按 path 找。
+4. **`refused` 标记**：`gate.write()` 与 `authorize()` 里**任何请求发出之前**的失败（403 对话框被拒、429、401 重试到底）都带 `error.refused = true`，顶层 `catch` 据此仍判 `exit 1`——否则"属主关掉了对话框"会被说成"可能已经写了"，同样不诚实。
+5. **批量工具的退出码**：`link-attachments` 一轮里只要有 `unconfirmed`/`partial` 就以 3 结束；`UNFILED` 从 1 改为 **3**。
+6. **文档**：`protocol.md` §6 与 Revision 32 段明说这条规则覆盖每一条写路径（不只笔记）；`README.md`、`docs/coverage.md` 与重生成的 `docs/toolchain.md` 同步。
+
+**验证**：`zotero-local-api-selftest` 新增第 [1b] 组（0/5xx 可落盘、4xx 是拒绝、两种措辞、返回 3）与 [9] 的 `refused` 断言；`toolchain-page --check` 引文仍全部成立；四个文件 `node --check` 通过。**未做**：这四个工具的 CLI 失败分支没有端到端桩库测试（只测了共用助手）；真库仍只做只读比对（`--plan` 在一份带裸 `agent-note` 的记录上正确输出 `AGENT`/草稿与 provenance 汇总）。

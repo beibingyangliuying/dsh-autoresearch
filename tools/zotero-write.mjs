@@ -34,8 +34,9 @@
 //   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --collection ABCDEFGH --write
 //   node tools/zotero-write.mjs --selftest                    # no writes, checks the seams
 //
-// Exit codes: 0 created, or a clean dry run | 1 refused or failed - including `UNFILED`, where the
-// record exists and only the filing did not stick. Nothing else is ever written on 1.
+// Exit codes: 0 created and read back, or a clean dry run | 1 refused, nothing written | 2 usage |
+// 3 sent or written but unconfirmed - a record may exist, so search for it rather than creating it
+// again. `UNFILED` is 3: the record exists and only the filing did not stick.
 import { resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -43,10 +44,15 @@ import {
   createWriteGate,
   getJson,
   localRequest,
+  mayHaveLanded,
   normalizeCollections,
   readItem,
+  reportUnconfirmed,
   serverInfo,
 } from './zotero-local-api.mjs'
+
+/** Set immediately before the create is sent, so a failure after that point is never called a refusal. */
+let writeAttempted = false
 
 // Optional polite-pool contact address for the metadata APIs. Set AUTORESEARCH_MAILTO in the
 // environment, or pass --mailto <address>; without one the requests are still valid, just
@@ -247,8 +253,9 @@ function fillTemplate(template, source) {
 async function createItem(item, gate) {
   const res = await gate.write('POST', '/api/users/0/items', [item])
   if (res.status === 401) throw new Error('401 Unauthorized — the key was rejected; run again')
-  if (res.status !== 200) throw new Error(`create answered ${res.status}: ${res.text.slice(0, 300)}`)
-  return JSON.parse(res.text)
+  // Not thrown for a server-side failure: the POST may still have created the record, and the caller
+  // is the only place that can search for it before saying "nothing was written".
+  return { status: res.status, text: res.text }
 }
 
 /** Refuse to create a second copy of something already in the library. */
@@ -377,11 +384,30 @@ async function run() {
   )
   if (!kept) log('    (this request waits for you; it has no timeout)')
 
+  writeAttempted = true
   const created = await createItem(item, gate)
+  const body = created.status === 200 ? JSON.parse(created.text) : null
   // An array POST answers with the saved object; a single-object POST answers with the key.
-  const saved = created.successful?.['0'] ?? created.success?.['0']
+  const saved = body?.successful?.['0'] ?? body?.success?.['0']
   const itemKey = typeof saved === 'string' ? saved : saved?.key
-  if (!itemKey) throw new Error(`create reported no success: ${JSON.stringify(created).slice(0, 300)}`)
+  if (!itemKey) {
+    if (!mayHaveLanded(created.status) && created.status !== 200) {
+      console.error(`\nThe library refused the create (HTTP ${created.status}): ${created.text.slice(0, 300)}`)
+      process.exitCode = 1
+      return
+    }
+    // No key came back and the request was sent: search before concluding anything, because a second
+    // create is exactly the duplicate this tool exists to refuse.
+    const again = await findExisting(item).catch(() => null)
+    process.exitCode = reportUnconfirmed({
+      key: again?.key ?? '',
+      what: `the create answered ${created.status === 200 ? 'success without a key' : `HTTP ${created.status}`}`,
+      found: again
+        ? `The search finds "${again.title}" as ${again.key}: the record exists, and nothing else was created.`
+        : 'The search finds no such record, but the request was sent - search again before creating it twice.',
+    })
+    return
+  }
   log(`[6] created item ${itemKey}`)
 
   const back = await readItem(itemKey)
@@ -400,7 +426,16 @@ async function run() {
       `DOI ${doiOk ? 'matches' : 'MISMATCH'}, creators ${creatorsOk ? `matches (${item.creators.length})` : 'MISMATCH'}, ` +
       `filing ${filingNote}`,
   )
-  if (!titleOk || !doiOk || !creatorsOk) throw new Error('read-back does not match what was sent')
+  if (!titleOk || !doiOk || !creatorsOk) {
+    process.exitCode = reportUnconfirmed({
+      key: itemKey,
+      what: `the record was created and does not read back as sent (title ${titleOk ? 'ok' : 'differs'}, DOI ${
+        doiOk ? 'ok' : 'differs'
+      }, creators ${creatorsOk ? 'ok' : 'differ'})`,
+      found: 'Read it before editing it: a second create would leave two records for one paper.',
+    })
+    return
+  }
   if (unfiled.length) {
     // The record exists; only the filing is in doubt. Saying "added" here would be the exact lie this
     // tool exists to avoid, and writing again to hide it would break one change per invocation.
@@ -413,7 +448,7 @@ async function run() {
     for (const key of unfiled) {
       console.error(`  node "${COLLECTION_TOOL}" --assign ${itemKey} --collection ${key} --write`)
     }
-    process.exitCode = 1
+    process.exitCode = 3
     return
   }
   const where = wanted.length === 0 ? '' : `, filed under ${wanted.join(' · ')}`
@@ -495,6 +530,12 @@ if (isEntryPoint) {
     // NOT `process.exit(1)`: on Windows a forced exit while the transport is still closing a socket
     // trips a libuv assertion (`uv_async`), which replaces exit code 1 with 0xC0000409 and prints an
     // assertion line after the real error. Setting the code and letting the loop drain exits with 1.
-    process.exitCode = 1
+    process.exitCode =
+      writeAttempted && !error.refused
+        ? reportUnconfirmed({
+            what: 'the create was sent and then the connection failed: OUTCOME UNKNOWN',
+            found: 'The record may exist. Search the library for it before creating it a second time.',
+          })
+        : 1
   }
 }

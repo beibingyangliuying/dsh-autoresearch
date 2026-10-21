@@ -58,14 +58,21 @@ where that directory exists, the study root otherwise (protocol §7):
    every note its **tags** and **first paragraph**, then `covered`, `retired`, `legacy`, `unknown` and
    `ambiguous`. Read the `unknown` notes yourself: the tool does not parse prose, and a note with no
    `/section-` tag is not coverage until it is read and claimed. A tag is a claim about a note, not a
-   guarantee that the note explains that section.
-3. **The study's own constraints** — the scoping document (what the study is for), and the study's
+   guarantee that the note explains that section. **`unknown` is a to-read list, not an absence**: a
+   section is not "carrying no note" until every unclaimed note on that record has been read, and the
+   report says how many were.
+3. **Provenance of every note the ruling leans on.** The plan prints it: an `/agent-note` body was
+   written by an agent from the paper, and `/reviewed` means the owner read and accepted that body. An
+   `/agent-note` with no `/reviewed` is a **draft**: it may support a `candidate`, and it may not be the
+   sole ground for an `adopt`, an `adopt-modified`, or a `verified`. A note with neither tag is the
+   owner's record, and an `/imported` note is text the owner pasted.
+4. **The study's own constraints** — the scoping document (what the study is for), and the study's
    `AGENTS.md` for domain invariants, notation and units, read when the study has one. **An adoption that
    violates a domain invariant is not admissible**, however good the paper is; without that file there is
    no invariant to check, and the round reports that instead of assuming one.
-4. **An existing adoption doc for this record** (`<layer root>/adoption/<recordKey>.md`) and the module index
+5. **An existing adoption doc for this record** (`<layer root>/adoption/<recordKey>.md`) and the module index
    (`<layer root>/adoption/INDEX.md`). One record has one doc; a second round appends.
-5. **Any ruling that already covers one of these items** — a re-rule without a reason is a regression.
+6. **Any ruling that already covers one of these items** — a re-rule without a reason is a regression.
 
 Write the result up as a **ruler list**; it is what the round is judged on.
 
@@ -118,7 +125,7 @@ Per item: the pre-ruling state `candidate`, and the verdicts `adopt` · `adopt-m
 
 | Field | Why it is load-bearing |
 |---|---|
-| **Paper locator**: section ordinal · the paper's own equation number · the slice offset actually read (or "no equation number in the copy") | A formula with no locator is a memory, not a transcription, and a later challenge cannot reach it |
+| **Paper locator**: section ordinal · the paper's own equation number · the slice offset actually read (or "no equation number in the copy") · **the section note it was transcribed from, with that note's provenance** (`owner` / `import` / `agent` / `agent+reviewed`) | A formula with no locator is a memory, not a transcription, and a later challenge cannot reach it; a note with no provenance cannot tell the owner's transcription from an agent's draft |
 | **The paper's own form, verbatim** (LaTeX) | The only form that can be checked against the source |
 | **Our normalized form** + symbol map + units, **in its own field** | What code is written from — but never merged into the line above |
 | **Holds when**, plus **how we check it here** (`checked: how` / `not checked`) | The standard reason a correct formula is wrong for us |
@@ -138,6 +145,11 @@ Every item also states **what would refute it** (the observation after which we 
 - **A constructed number is not an anchor.** A value that follows from the units, an identity that holds
   by definition, a bound that cannot be otherwise — resident rule 10: those are properties of the
   definition, and a test asserting one proves nothing about the implementation.
+- **The anchor's source note has to be a record, not a draft.** An anchor or a verbatim form that rests
+  only on an `/agent-note` without `/reviewed` is an agent's transcription of the paper, not the owner's
+  accepted one: the item stays `candidate`, and the doc names the note and says it is unreviewed. The
+  owner reviews the note (`--review --note <key>`) or the item waits. `verified` needs both: a reviewed
+  note and a test that ran.
 
 ### 3.5 Two columns, and stop on ambiguity
 
@@ -223,6 +235,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 |---|---|
 | The ledger row says `depth: abstract`, or its grade is below `A` | **Stop.** An adoption on an abstract is a guess in a table, and getting the paper read is not this round's work: report which sections the item would rest on and which of them carry no note, then hand it back — `section-notes` for the section the owner names, `reading-triage` for a depth. Rule only from what the ledger says was read. |
 | The needed equation is in no section note | Record it under Gaps and leave the item a candidate. **Never re-derive it here.** |
+| The only note the item rests on is an `/agent-note` without `/reviewed` | The item stays `candidate`, and the doc names the note and says it is an unreviewed agent draft. Ask the owner to review it; never add `/reviewed` here. |
 | The copy's formula is ambiguous or a symbol is undefined | `ambiguous`, blocked, reported. Never reconstruct, never fill in. |
 | A precondition cannot be checked here | Mark `not checked`; the item stays a candidate. Never adopt with an uncheckable condition stated as if it were checked. |
 | No numeric anchor and none computable from the source | The item stays a candidate. It is not "adoptable in principle". |
@@ -251,7 +264,8 @@ The artifact is `<layer root>/adoption/<recordKey>.md`, plus the line it contrib
 `<layer root>/adoption/INDEX.md`. The report is what a later round needs:
 
 1. `## Record` — key, title, the ledger's `grade` and `depth`, the attachment read and how many
-   characters, the section notes read and the sections not covered.
+   characters, the section notes read (**each with its provenance**), and the sections not covered with
+   how many `unknown` notes were read before saying so.
 2. `## Ruler` — what was checked: the ledger row, the section notes, scoping document, domain invariants,
    existing adoption doc, existing rulings.
 3. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
@@ -294,6 +308,9 @@ The artifact is `<layer root>/adoption/<recordKey>.md`, plus the line it contrib
 - [ ] The paper's verbatim form and our normalized form are separate, with a symbol map and units
 - [ ] Every `adopt` / `adopt-modified` item has a numeric anchor and names the test that asserts it
 - [ ] Every anchor states its provenance: the paper's own locator, or `reader-computed`
+- [ ] Every item that leans on a section note names the note and its provenance; an unreviewed
+  `/agent-note` supports no `adopt`, `adopt-modified`, or `verified`
+- [ ] Every "the section carries no note" claim says how many `unknown` notes were read first
 - [ ] Every item states "holds when" and how it is checked here (`checked` / `not checked`)
 - [ ] Every `adopt` / `adopt-modified` item names a target, or is a candidate and says so
 - [ ] Refused items are listed with grounds
@@ -313,6 +330,10 @@ The artifact is `<layer root>/adoption/<recordKey>.md`, plus the line it contrib
 - Do not re-read the paper to recover what a section note says
 - Do not write code from a candidate item
 - Do not let a child rule, or write into `<layer root>/adoption/`
+- Do not let an unreviewed `/agent-note` carry an adoption: an agent's transcription is a candidate's
+  ground until the owner has accepted the note
+- Do not call a section uncovered while an `unknown` note on that record is still unread, and do not
+  read the plan's `covered: none` as "no note exists"
 - Do not let the ledger claim an implementation, a test, or a verification the code does not have
 - Do not turn the doc into a literature note or a review: it is a ledger of what we take, under what
   condition, into what module

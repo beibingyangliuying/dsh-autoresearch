@@ -32,7 +32,10 @@ import { createReadStream, existsSync, statSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { APP_NAME, createWriteGate, getJson, localRequest } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, getJson, localRequest, reportUnconfirmed } from './zotero-local-api.mjs'
+
+/** Set immediately before a write is sent, so a failure after that point is never called a refusal. */
+let writeAttempted = false
 
 /** The marker that identifies the note this tool touches to wake the index drain. */
 export const WAKE_NOTE_MARKER = 'Autoresearch index refresh'
@@ -180,14 +183,34 @@ function readChunk(path, offset, length) {
 }
 
 async function createLinked(parentKey, absolutePath, contentType, title) {
+  writeAttempted = true
   const res = await gate.write('POST', '/api/users/0/items', [
     { itemType: 'attachment', parentItem: parentKey, linkMode: 'linked_file', contentType, path: absolutePath, title },
   ])
-  if (res.status !== 200) throw new Error(`create answered ${res.status}: ${res.text.slice(0, 300)}`)
-  const body = JSON.parse(res.text)
-  const saved = body.successful?.['0'] ?? body.success?.['0']
-  if (!saved) throw new Error(`create reported no success: ${res.text.slice(0, 300)}`)
-  return typeof saved === 'string' ? saved : saved.key
+  const body = res.status === 200 ? JSON.parse(res.text) : null
+  const saved = body?.successful?.['0'] ?? body?.success?.['0']
+  const key = typeof saved === 'string' ? saved : saved?.key
+  if (key) return key
+  // No key: a server-side failure may still have created the link, so the caller looks for it rather
+  // than reporting a failure the next run would answer with a second link.
+  const error = new Error(
+    res.status === 200 ? 'create reported no success' : `create answered ${res.status}: ${res.text.slice(0, 300)}`,
+  )
+  error.sent = true
+  error.status = res.status
+  throw error
+}
+
+/** The linked attachment a parent record now carries for one path, if any. */
+async function findLink(parentKey, absolutePath) {
+  const children = await getJson(`/api/users/0/items/${parentKey}/children?format=json`).catch(() => null)
+  if (!Array.isArray(children)) return null
+  const hit = children.find(
+    (child) =>
+      child.data?.linkMode === 'linked_file' &&
+      String(child.data?.path ?? '').toLowerCase() === absolutePath.toLowerCase(),
+  )
+  return hit ? hit.key : null
 }
 
 /** Read the new attachment back and check it says what was sent. Returns the item or undefined. */
@@ -352,8 +375,11 @@ async function main() {
       )
       const verified = await verifyLink(linkedKey, { parentKey: plan.parentKey, contentType: 'application/pdf' })
       if (!verified) {
-        console.log(`    FAILED    ${plan.key}: the new link did not read back as sent; the stored copy is kept`)
-        results.push({ status: 'failed', key: plan.key, linkedKey })
+        console.log(
+          `    UNCONFIRMED ${plan.key}: the attachment ${linkedKey} was created but does not read back as sent; ` +
+            'the stored copy is kept',
+        )
+        results.push({ status: 'unconfirmed', key: plan.key, linkedKey })
         continue
       }
       const deletion = await deleteItem(plan.key)
@@ -365,6 +391,17 @@ async function main() {
       console.log(`    ${plan.action === 'recover' ? 'RECOVERED' : 'CONVERTED'} ${plan.key} -> ${linkedKey}`)
       results.push({ status: plan.action === 'recover' ? 'recovered' : 'converted', key: plan.key, linkedKey })
     } catch (error) {
+      if (error.sent) {
+        // The link may exist. Look before saying anything: a second convert would make a second link.
+        const found = await findLink(plan.parentKey, plan.destination)
+        console.log(
+          `    UNCONFIRMED ${plan.key}: ${error.message}; ${
+            found ? `the parent now carries ${found}` : 'no matching link in the parent yet'
+          }`,
+        )
+        results.push({ status: 'unconfirmed', key: plan.key, linkedKey: found })
+        continue
+      }
       console.log(`    ERROR     ${plan.key}: ${error.message}`)
       results.push({ status: 'error', key: plan.key })
     }
@@ -373,6 +410,11 @@ async function main() {
   const counts = summarize(results)
   const changed = (counts.converted ?? 0) + (counts.recovered ?? 0)
   console.log('\n[4] result: ' + (Object.entries(counts).map(([k, v]) => `${k}=${v}`).join(', ') || 'nothing'))
+
+  // Exit 3 rather than 1 or 0: a link that may exist is not a failure to be retried, and not a success.
+  // The per-item lines above name the key, which is what the next run reads before converting again.
+  const unsettled = ['unconfirmed', 'partial'].reduce((total, status) => total + (counts[status] ?? 0), 0)
+  if (unsettled > 0) process.exitCode = 3
 
   if (changed > 0 && !flag('no-wake')) {
     const wake = await wakeIndexDrain()
@@ -436,7 +478,13 @@ if (isEntryPoint) {
     } catch (error) {
       const cause = error.cause ? ` (cause: ${error.cause.code ?? error.cause.message ?? error.cause})` : ''
       console.error(`\nERROR: ${error.message}${cause}`)
-      process.exit(1)
+      process.exitCode =
+        writeAttempted && !error.refused
+          ? reportUnconfirmed({
+              what: 'a write was sent and then the connection failed: OUTCOME UNKNOWN',
+              found: 'A link may exist. Read the record before running the conversion again.',
+            })
+          : 1
     }
   }
 }

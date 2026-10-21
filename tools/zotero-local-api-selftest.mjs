@@ -28,7 +28,9 @@ import {
   isWriteAccepted,
   keptGrant,
   localOrigin,
+  mayHaveLanded,
   parseGrantStore,
+  reportUnconfirmed,
   withGrant,
   withoutGrant,
 } from './zotero-local-api.mjs'
@@ -37,6 +39,18 @@ let failures = 0
 const check = (condition, label, detail = '') => {
   console.log(`  ${condition ? 'OK  ' : 'FAIL'} ${label}${detail ? `  ${detail}` : ''}`)
   if (!condition) failures += 1
+}
+
+/** Run one reporter and collect what it wrote to stderr, without letting it reach the terminal. */
+function captureStderr(run) {
+  const original = console.error
+  const lines = []
+  console.error = (...args) => lines.push(args.map((part) => String(part)).join(' '))
+  try {
+    return { code: run(), text: lines.join('\n') }
+  } finally {
+    console.error = original
+  }
 }
 
 console.log('local API module self-test')
@@ -52,6 +66,23 @@ check(!isWriteAccepted(401), '401 is not: the key was rejected')
 check(!isWriteAccepted(412), '412 is not: the version precondition failed')
 check(!isWriteAccepted(429), '429 is not: too many dialogs')
 check(!isWriteAccepted(500), '500 is not')
+
+console.log('\n[1b] a failed write is either refused or open - never silently "nothing happened"')
+
+check(mayHaveLanded(0), 'a request that got no answer may have landed')
+check(mayHaveLanded(500), '500 may have landed: HTTP names a response, not an effect')
+check(mayHaveLanded(503), '503 as well')
+check(!mayHaveLanded(400), '400 is a refusal')
+check(!mayHaveLanded(401), '401 is a refusal')
+check(!mayHaveLanded(404), '404 is a refusal')
+check(!mayHaveLanded(412), '412 is a refusal')
+
+const withKey = captureStderr(() => reportUnconfirmed({ key: 'ABCDEFGH', what: 'the title change' }))
+check(withKey.code === 3, 'a write that may exist exits 3, never 1', String(withKey.code))
+check(withKey.text.includes('WRITTEN BUT UNCONFIRMED'), 'and says so in the words the skills tell an agent to look for')
+check(withKey.text.includes('ABCDEFGH'), 'naming the key to read instead of resending')
+const noKey = captureStderr(() => reportUnconfirmed({ what: 'the create' }))
+check(noKey.code === 3 && noKey.text.includes('SENT BUT UNCONFIRMED'), 'a write with no key found says "sent", not "written"')
 
 console.log('\n[2] a write cannot happen without an opened gate')
 
@@ -226,12 +257,15 @@ const ceilingRun = fakeManager({ keys: [{ key: 'a', remember: true }, { key: 'b'
 const gate5 = createWriteGate({ appName: APP_NAME, store: ceilingStore, transport: ceilingRun.transport })
 await gate5.open()
 let ceilingError = ''
+let ceilingRefused = false
 try {
   await gate5.write('PATCH', '/api/users/0/items/AAAAAAAA', { title: 'x' })
 } catch (error) {
   ceilingError = error.message
+  ceilingRefused = error.refused === true
 }
 check(/401/.test(ceilingError), 'a library that rejects every key ends as an error rather than a loop', ceilingError)
+check(ceilingRefused, 'and the error is marked refused, so a tool can answer exit 1 rather than "may exist"')
 check(ceilingRun.dialogs.length === 2, 'after at most two dialogs', `${ceilingRun.dialogs.length} dialog(s)`)
 check(keptGrant(ceilingStore.load(), 'srv1') === null, 'and the grant it could not use is not left on file')
 

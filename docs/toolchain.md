@@ -78,26 +78,29 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 **出处**：`tools/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give`
 
-#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划 · 写 · claim · 原地改写 · 归退 · 删除（仅 `/retired`，永久）
+#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划（含作者） · 写 · claim · 复核 · 原地改写 · 归退 · 删除（仅 `/retired`，永久）
 
 **能做**
 
-- `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、legacy
-- 写一条节的解释笔记（干跑默认，写后回读 `/section-N`）
-- `--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`
-- `--rewrite --note <key> --file ...`：只改无 tag 或 `/imported` 的导入笔记（版本守卫，不写备份）
+- `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、legacy，以及每条的**作者**（`owner` / `import` / `agent` / `agent+reviewed`）
+- 写一条节的解释笔记（干跑默认，写后回读 `/section-N`＋`/agent-note`）
+- `--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`，**agent 笔记除外**
+- `--rewrite --note <key> --file ...`：改导入笔记或**未复核的 agent 草稿**（版本守卫，不写备份），改写后带 `/agent-note`
+- `--review --note <key>`：业主确认一份 agent 正文，加 `/reviewed`（只改 tag、正文不动）；`--undo` 退回草稿
 - `--retire --note <key> --reason "<why>"`：任何笔记都可变成**墓碑**，`--undo` 可逆
 - `--replaces <旧key>`：新笔记带走"我取代了谁"的指针
 - `--delete --note <key> [--write]`：只对 `/retired`；`--write` 永久擦除，404 回读
+- `--acknowledge-unknown "<读了什么>"`：记录上还有无 tag 笔记时，create 的放行条件
 
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
 - 已被 claim 的顶层节（`REFUSED: §…`）——**不要绕过它**
 - 点号序号 `--section 3.1`：**不写也不读**（计数单位是顶层节）
-- 带 `/section-N` 但没有 `/imported` 的记录：**不原地改写**，走退休 + 新写
+- 记录（`/section-N` 无 `/imported`、无未复核 `/agent-note`）与**已复核**的 agent 笔记：**不原地改写**，走退休 + 新写
 - 多条 `/section-` tag 的笔记：`ambiguous`，不计覆盖
 - `--replaces` 的对象没退休，或它讲的是另一节
 - `--delete` 一个不是 `/retired` 的笔记：`REFUSED`
+- 记录上还有无 tag 笔记时的 create（`--acknowledge-unknown` 是唯一的放行口）
 
 **撞上怎么办**
 
@@ -105,8 +108,10 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 - 网页版粘贴的笔记：读 → `--claim` 或 `--rewrite`；垃圾 → `--retire`
 - 确认一条 retired 笔记没有保留价值 → `--delete --write`；不可恢复，且回收站里不会有它
 - 没有 `--tidy`；公式坏了由 agent 读文字层/页图后重写
+- **退出码是三种答案**：0 写入并回读 · 1 拒绝且确定没写 · 3 已发送/已写但未确认（打印 key，**不要重发**）
+- agent 草稿要升成记录：**业主**说可以之后 `--review`，工具不替业主加 `/reviewed`
 
-**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched`
+**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `AGENT_TAG` · `REVIEWED_TAG` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched` · `WRITTEN BUT UNCONFIRMED` · `SENT BUT UNCONFIRMED` · `--acknowledge-unknown`
 
 #### `zotero-edit.mjs` — 改一条记录的字段与标签
 
@@ -117,12 +122,13 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
 - 结构化字段（`REFUSED_FIELDS`）：creators · itemType · key · version · collections · relations · 两个日期
+- 失败分三种答案：0 写入并回读 · 1 拒绝（冲突、4xx）· **3 已发送或已写但未确认**——5xx 或断线不等于没写，报告点名条目并说清重读看到什么
 
 **撞上怎么办**
 
 - 要改上面那些：**在应用里改**，工具会说明每条为什么不是一行能表达
 
-**出处**：`tools/zotero-edit.mjs` · `EDITABLE_FIELDS` · `REFUSED_FIELDS` · `a creator list is structured`
+**出处**：`tools/zotero-edit.mjs` · `EDITABLE_FIELDS` · `REFUSED_FIELDS` · `a creator list is structured` · `OUTCOME UNKNOWN`
 
 #### `zotero-collection.mjs` — 分类：列出 / 建 / 改名 / 归档 / 移出
 
@@ -133,12 +139,13 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
 - 改名是**实测可用**的（2026-10-16），但分类的 `version` 常为 0 ⇒ 那条守卫在多数分类上是空转
+- 没拿回 key 时**先重读分类树再判断**（exit 3），而不是报"没写成"让调用方再建一个同名分类
 
 **撞上怎么办**
 
 - 改名被库拒绝时，工具**停下**，不会用"新建一个再搬"来假装成功（那会换 key）
 
-**出处**：`tools/zotero-collection.mjs` · `--rename <collectionKey> --name`<br>`README.md` · `unreliable rather than absent`
+**出处**：`tools/zotero-collection.mjs` · `--rename <collectionKey> --name` · `The tree lists no collection`<br>`README.md` · `unreliable rather than absent`
 
 #### `zotero-write.mjs` — 新建一条记录（按 arXiv id / DOI），并可**同时**归入分类
 
@@ -152,14 +159,15 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 - 库里已有的重复（DOI / archiveID / 标题）→ `REFUSING to create a duplicate`，除非显式 `--force`
 - `--collection` 的 key 形状不对或库里没有 → **在第一次请求之前**拒绝，不猜分类名
-- 回读里没有这个归档 → 报 `UNFILED` 并 exit 1：条目**已建**，它只给 `zotero-collection.mjs --assign` 一条命令，**不会补写第二次**
+- 回读里没有这个归档 → 报 `UNFILED` 并 **exit 3**：条目**已建**，它只给 `zotero-collection.mjs --assign` 一条命令，**不会补写第二次**
+- 断线或 5xx 且没拿回 key → **先搜一遍**（DOI / archiveID / 标题）再说：搜到就点名 key，搜不到也说明请求已发出、别再建第二份
 
 **撞上怎么办**
 
 - "加一篇"之前先搜一遍：重复条目在库里比缺条目更难收拾
 - 要归档又不想多写一次 → 建的时候带 `--collection`；事后补档才是 `zotero-collection.mjs --assign`
 
-**出处**：`tools/zotero-write.mjs` · `REFUSING to create a duplicate` · `UNFILED` · `--selftest`
+**出处**：`tools/zotero-write.mjs` · `REFUSING to create a duplicate` · `UNFILED` · `--selftest` · `search again before creating it twice`
 
 #### `zotero-link-attachments.mjs` — 存储型附件 → 链接附件（增量）
 
@@ -171,12 +179,13 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 **明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
 
 - **整库迁移不是它**：那是 `zotero-link-snippet.js`，由**属主自己在应用里跑**，不经 API 授权
+- 每条转换写两次；链接建好却读不回时**保留存储副本**、报 `UNCONFIRMED` 并以 exit 3 结束，不重试
 
 **撞上怎么办**
 
 - 要动全库 → 停下来问属主，别用增量工具假装做迁移
 
-**出处**：`tools/zotero-link-attachments.mjs` · `WAKE_NOTE_MARKER`<br>`README.md` · `A whole-library migration is`
+**出处**：`tools/zotero-link-attachments.mjs` · `WAKE_NOTE_MARKER` · `no matching link in the parent yet`<br>`README.md` · `A whole-library migration is`
 
 ### 预印本通道
 
