@@ -144,6 +144,12 @@ measurement into an assertion.
    `package.json`, the published composition and the published helper programs over the network. This is
    the only check that can see the defect that mattered most here — 47 commits of green local work that
    nobody could install.
+   **Read its exit code as three answers, not two**: `0` everything was checked and holds; `1` something
+   was checked and is wrong; `3` a check could not RUN (no network, or a git proxy that is not up), with
+   the reason printed and nothing proven about that question. `3` is not a softer `1` — during 0.14.0's
+   own verification a dead proxy and a failing `fetch` each produced a false accusation, which is why the
+   tool now says `UNVERIFIED` instead. On `3`, fix the transport and run it again rather than reading it
+   as a defect in the release.
 6. Record the release in `docs/decisions.md` when it carries a contract-relevant change.
 
 ## 8. Before saying "published"

@@ -18,7 +18,9 @@
 //   node tools/release-check.mjs --local
 //   node tools/release-check.mjs --tag v0.2.0 [--repo owner/name]
 //
-// Exit codes: 0 every check passed | 1 at least one check failed | 2 usage.
+// Exit codes: 0 every check passed | 1 at least one check failed - the artifact is wrong | 2 usage |
+// 3 at least one check could not run (no network, no git) and nothing that did run failed. 3 is not a
+// weaker 1: nothing was examined there, so neither PASS nor FAIL would be true of it.
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -207,48 +209,99 @@ export function namedHelperProblems(texts, roster) {
   return [...problems]
 }
 
-const g = (args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim()
+// stderr is piped rather than inherited: `gitReason` turns it into one printed line, so a check that
+// could not run does not also spray git's own "fatal:" text above the explanation.
+const g = (args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 
-/** One `PASS`/`FAIL` line per check, and the failures that decide the exit code. */
-function report(label, problems) {
-  const failed = problems.length > 0
-  console.log(`  ${failed ? 'FAIL' : 'OK  '} ${label}`)
-  for (const problem of problems) console.log(`         ${problem}`)
-  return failed ? 1 : 0
+/** Why a git call failed, without git's "Command failed: ..." wrapper in front of the real reason. */
+function gitReason(error) {
+  const stderr = String(error.stderr ?? '').trim()
+  return (stderr || String(error.message)).split(/\r?\n/)[0]
 }
 
-async function checkLocal() {
+/**
+ * The three outcomes, and the exit code each one means.
+ *
+ * A check that could not RUN is not a failed check. When the network or git is unavailable the artifact
+ * was never examined, so `FAIL` accuses a release nobody looked at and `PASS` certifies one nobody read.
+ * Both halves of that happened while verifying 0.14.0: a dead git proxy ended a run in which every
+ * substantive check had passed, and a network error printed as `FAIL the tag is readable`, which reads
+ * like a defect in the package.
+ *
+ * A failure outranks an unverifiable check: something IS known to be wrong.
+ *
+ * @param {{failed?: number, unverified?: number}} tally What the checks reported.
+ * @returns {{text: string, code: number}} The closing line and the exit code.
+ */
+export function summary({ failed = 0, unverified = 0 } = {}) {
+  if (failed > 0) return { text: `FAIL (${failed} check(s))`, code: 1 }
+  if (unverified > 0) {
+    return {
+      text: `UNVERIFIED (${unverified} check(s) could not run - nothing was proven about the artifact there)`,
+      code: 3,
+    }
+  }
+  return { text: 'PASS', code: 0 }
+}
+
+/** One check line. `problems` name what is wrong with the artifact, so any of them fails the run. */
+function report(tally, label, problems = []) {
+  if (problems.length === 0) {
+    console.log(`  OK   ${label}`)
+    return
+  }
+  tally.failed += 1
+  console.log(`  FAIL ${label}`)
+  for (const problem of problems) console.log(`         ${problem}`)
+}
+
+/** A check that never ran, counted apart because it says nothing about the artifact. */
+function unverified(tally, label, reason) {
+  tally.unverified += 1
+  console.log(`  UNVERIFIED ${label}`)
+  console.log(`         ${reason}`)
+}
+
+function checkLocal() {
+  const tally = { failed: 0, unverified: 0 }
   const pkgText = readFileSync(join(ROOT, 'package.json'), 'utf8')
   const patchText = readFileSync(join(ROOT, 'cordis.patch.yml'), 'utf8')
   const readmeText = readFileSync(join(ROOT, 'README.md'), 'utf8')
   const bundleName = JSON.parse(pkgText).name
-  let failures = 0
 
   console.log(`[local] ${bundleName} at ${ROOT}`)
   // The version alone is not a failure: a working tree is allowed to be mid-release. It is printed so
   // the number someone is about to tag is on screen while they read the rest.
   console.log(`  OK   declared version ${JSON.parse(pkgText).version}`)
-  failures += report('composition mounts no MCP server and launches nothing', compositionProblems(patchText))
-  failures += report(
+  report(tally, 'composition mounts no MCP server and launches nothing', compositionProblems(patchText))
+  report(
+    tally,
     'every row name resolves through exports',
     exportProblems(pkgText, bundleName, bundleRowSpecs(patchText, bundleName)),
   )
   const tests = documentedSelftests(readmeText, readdirSync(join(ROOT, 'tools')))
-  failures += report('every self-test in tools/ is documented in the README', tests.undocumented.map((n) => `${n} exists but the README does not name it`))
-  failures += report('the README names no self-test that is gone', tests.stale.map((n) => `${n} is documented but does not exist`))
+  report(tally, 'every self-test in tools/ is documented in the README', tests.undocumented.map((n) => `${n} exists but the README does not name it`))
+  report(tally, 'the README names no self-test that is gone', tests.stale.map((n) => `${n} is documented but does not exist`))
   console.log(`         ${tests.documented.length} self-tests documented`)
 
   // The demand side of the roster: what the skills actually tell an agent to run. Reading it here is
   // what makes the roster fail when a discipline starts naming a helper nobody added.
   const skillDir = join(ROOT, 'skills')
   const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
-  failures += report('every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
+  report(tally, 'every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
 
-  const dirty = g(['status', '--porcelain'])
-  failures += report(
-    'the working tree is clean (a precondition for tagging, not for developing)',
-    dirty === '' ? [] : dirty.split('\n').map((path) => `uncommitted: ${path.trim()}`),
-  )
+  // The clean-tree line is a precondition for tagging, so it has to be able to say "I could not look"
+  // rather than "the tree is dirty" when git itself is what failed.
+  try {
+    const dirty = g(['status', '--porcelain'])
+    report(
+      tally,
+      'the working tree is clean (a precondition for tagging, not for developing)',
+      dirty === '' ? [] : dirty.split('\n').map((path) => `uncommitted: ${path.trim()}`),
+    )
+  } catch (error) {
+    unverified(tally, 'the working tree is clean (a precondition for tagging, not for developing)', gitReason(error))
+  }
   try {
     const unpublished = Number(g(['rev-list', '--count', 'origin/main..HEAD']))
     console.log(`         ${unpublished} commit(s) not on origin/main`)
@@ -259,7 +312,7 @@ async function checkLocal() {
   } catch {
     console.log('         NOTE: no origin/main is known here, so unpublished work cannot be counted')
   }
-  return failures
+  return tally
 }
 
 /**
@@ -318,45 +371,81 @@ export function branchHead(refs) {
 
 async function checkTag(tag, repo) {
   console.log(`[${tag}] published package in ${repo}`)
-  let failures = 0
+  const tally = { failed: 0, unverified: 0 }
   const raw = (path) => `https://raw.githubusercontent.com/${repo}/${tag}/${path}`
+
+  /**
+   * One file from the published tag. A 404 is the answer "it is not there" - which is a statement about
+   * the release - while a thrown fetch is the answer "nobody asked", which is not.
+   */
+  const fetchText = async (path) => {
+    const response = await fetch(raw(path))
+    if (response.status === 404) return { missing: true }
+    if (!response.ok) throw new Error(`${raw(path)} answered HTTP ${response.status}`)
+    return { text: await response.text() }
+  }
 
   let pkgText
   let patchText
   try {
-    pkgText = await (await fetch(raw('package.json'))).text()
-    patchText = await (await fetch(raw('cordis.patch.yml'))).text()
+    const manifest = await fetchText('package.json')
+    if (manifest.missing) {
+      report(tally, `${tag} exists on the remote and carries a package.json at its root`, [
+        `${raw('package.json')} answers HTTP 404 - an install from this tag cannot work`,
+      ])
+      return tally
+    }
+    pkgText = manifest.text
+    const patch = await fetchText('cordis.patch.yml')
+    if (patch.missing) {
+      report(tally, `the tag carries a composition`, [`${raw('cordis.patch.yml')} answers HTTP 404`])
+      return tally
+    }
+    patchText = patch.text
   } catch (error) {
-    console.log(`  FAIL the tag is readable: ${error.message}`)
-    return 1
+    unverified(tally, 'the published package could be read', error.message)
+    return tally
   }
-  if (!pkgText.trim().startsWith('{')) {
-    console.log(`  FAIL ${tag} has no package.json at its root - an install from this tag cannot work`)
-    return 1
-  }
-  failures += report(
+  report(
+    tally,
     `the published package declares the version the tag implies (${versionOfTag(tag)})`,
     versionProblems(pkgText, { expected: versionOfTag(tag) }),
   )
-  failures += report('the published composition mounts no MCP server and launches nothing', compositionProblems(patchText))
+  report(tally, 'the published composition mounts no MCP server and launches nothing', compositionProblems(patchText))
 
   const missing = []
+  let unreadable = ''
   for (const path of REQUIRED_HELPERS) {
-    const response = await fetch(raw(path))
-    if (!response.ok) missing.push(`${path} answers HTTP ${response.status}`)
+    try {
+      const response = await fetch(raw(path))
+      if (response.status === 404) missing.push(`${path} is not in the published package`)
+      else if (!response.ok) missing.push(`${path} answers HTTP ${response.status}`)
+    } catch (error) {
+      unreadable = error.message
+      break
+    }
   }
-  failures += report('every helper program the channels need is inside the published package', missing)
+  const helperLabel = 'every helper program the channels need is inside the published package'
+  if (unreadable) unverified(tally, helperLabel, unreadable)
+  else report(tally, helperLabel, missing)
 
-  const refs = g(['ls-remote', 'origin', ...tagRefQuery(tag)])
-  const head = branchHead(refs)
-  const tagged = taggedCommit(refs, tag)
-  console.log(`  OK   ${tag} -> ${tagged ?? '(not fetched)'}, main -> ${head ?? '(not fetched)'}`)
-  if (tagged !== undefined && head !== undefined && tagged !== head) {
-    // Not a failure: main is allowed to move on after a release. It matters because "the fix is
-    // published" and "the release contains the fix" are different statements.
-    console.log('         NOTE: the branch head has moved past this tag, so main carries changes this release does not.')
+  // The comparison with the branch head needs git, and git needs a working network of its own. When it
+  // cannot answer, that is one unexamined question - not a broken release, which is what 0.14.0's own
+  // verification was told while every other check had passed.
+  try {
+    const refs = g(['ls-remote', 'origin', ...tagRefQuery(tag)])
+    const head = branchHead(refs)
+    const tagged = taggedCommit(refs, tag)
+    console.log(`  OK   ${tag} -> ${tagged ?? '(not fetched)'}, main -> ${head ?? '(not fetched)'}`)
+    if (tagged !== undefined && head !== undefined && tagged !== head) {
+      // Not a failure: main is allowed to move on after a release. It matters because "the fix is
+      // published" and "the release contains the fix" are different statements.
+      console.log('         NOTE: the branch head has moved past this tag, so main carries changes this release does not.')
+    }
+  } catch (error) {
+    unverified(tally, `${tag} names the commit the branch head does`, `git could not ask the remote: ${gitReason(error)}`)
   }
-  return failures
+  return tally
 }
 
 async function main() {
@@ -370,9 +459,10 @@ async function main() {
   if (tag === undefined && !argv.includes('--local')) {
     throw new UsageError('pass --local, or --tag <tag> to check a published package')
   }
-  const failures = tag === undefined ? await checkLocal() : await checkTag(tag, repo)
-  console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures} check(s))`}`)
-  process.exit(failures === 0 ? 0 : 1)
+  const tally = tag === undefined ? checkLocal() : await checkTag(tag, repo)
+  const { text, code } = summary(tally)
+  console.log(`\n${text}`)
+  process.exit(code)
 }
 
 // Only act when this file IS the command: the self-test imports the pure functions above, and an

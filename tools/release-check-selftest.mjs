@@ -19,6 +19,7 @@ import {
   documentedSelftests,
   exportProblems,
   namedHelperProblems,
+  summary,
   taggedCommit,
   tagRefQuery,
   versionOfTag,
@@ -181,6 +182,24 @@ check(
   tagRefQuery('v0.2.1').includes('refs/tags/v0.2.1^{}'),
   'the ref query asks for the peeled commit - dropping it silently restores the false note',
   tagRefQuery('v0.2.1').join(' '),
+)
+
+console.log('\n[7] three outcomes, and the code each one means')
+
+// A check that could not RUN is not a check that failed. Verifying 0.14.0 produced both mistakes: a
+// dead git proxy ended a run whose substantive checks had all passed (it threw instead of saying so),
+// and a network error printed as "FAIL the tag is readable" (it accused the package). These four drive
+// the separation, including the ordering between the two.
+check(summary({}).code === 0 && summary({}).text === 'PASS', 'nothing wrong is PASS and exit 0')
+check(summary({ failed: 2 }).code === 1 && summary({ failed: 2 }).text.startsWith('FAIL'), 'a failed check is exit 1 and says FAIL', summary({ failed: 2 }).text)
+check(
+  summary({ unverified: 1 }).code === 3 && summary({ unverified: 1 }).text.startsWith('UNVERIFIED'),
+  'a check that could not run is exit 3, and says so - nothing was examined',
+  summary({ unverified: 1 }).text,
+)
+check(
+  summary({ failed: 1, unverified: 2 }).code === 1,
+  'a real failure outranks an unverifiable check, because something IS known to be wrong',
 )
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)

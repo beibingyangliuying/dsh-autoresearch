@@ -352,6 +352,8 @@ node tools\dump-session-selftest.mjs
 # version that still mounted two MCP servers was publishable with everything green.
 node tools\release-check.mjs --local
 node tools\release-check.mjs --tag vX.Y.Z
+                              # exit 0 verified | 1 the artifact is wrong | 3 a check could not RUN (no
+                              # network, no git) - 3 is not a softer 1: nothing was examined there
 node tools\release-check-selftest.mjs      # its pure halves, offline, with negative controls
 
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a

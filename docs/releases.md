@@ -570,11 +570,11 @@ origin main` 成功**（`4ebefd9..255a474`），随后同一条命令把 `v0.13.
 `v0.14.0^{tree}` 相同，`package.json` 声明 0.14.0，在该克隆里 `release-check --local` **PASS**。这条克隆路径正是
 "一个新用户装到的是什么"，比读单个文件更接近安装本身。
 
-**抓到的工具缺陷（未修，留给下一版）**：`release-check --tag` 的最后一步 shell 出 `git ls-remote`，因而继承 git
-的代理配置；代理不可用时它在三项真检查**全部 PASS 之后**抛 `ERROR: Command failed: git ls-remote …` 并 exit 1
-——把"分支头无法核对"报成"这一版有问题"。本轮用一次性的 `GIT_CONFIG_COUNT/KEY_0/VALUE_0` 环境覆盖绕过（只对那条
-命令生效，没有动属主的 git 配置）。该修的方向：这一步失败时打印"分支头无法核对，原因 …"，而不是抛错；
-网络级的 `fetch failed` 同理，不该显示成 `FAIL the tag is readable` 而不说"没连上"。
+**抓到的工具缺陷（当日已修，见 `decisions.md` §81）**：`release-check --tag` 的最后一步 shell 出 `git ls-remote`，
+因而继承 git 的代理配置；代理不可用时它在三项真检查**全部 PASS 之后**抛 `ERROR: Command failed: git ls-remote …`
+并 exit 1——把"分支头无法核对"报成"这一版有问题"。本轮先用一次性的 `GIT_CONFIG_COUNT/KEY_0/VALUE_0` 环境覆盖
+绕过（只对那条命令生效，没有动属主的 git 配置），随后按属主裁定改成三种答案：`0` 全查且成立 · `1` 查了且不成立 ·
+**`3` 某项没能查**（打印原因，那一项什么也没证明）。这一版发布件里仍是旧行为，修复随下一次发布带出。
 
 **一处要重启宿主**：`skills/literature-recon/SKILL.md` 改了一句（重复命中不再用 "refuses" 描述），
 纪律只在宿主启动时注册，开新会话或刷新页面都不够（§25）；工具本体不受影响，它按绝对路径跑文件。

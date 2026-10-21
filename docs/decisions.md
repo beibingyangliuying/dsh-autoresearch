@@ -2263,3 +2263,32 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 **落点**：[`tools/zotero-write.mjs`](../tools/zotero-write.mjs)（措辞与头部 0 行）· [`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs)（第 [7] 组）· [`tools/zotero-edit-selftest.mjs`](../tools/zotero-edit-selftest.mjs)（第 [3] 组）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md)。
 
 **验证**：两支自测全绿；`toolchain-page --check` 23 条引文成立；全套离线自测（21 项）与 `release-check --local` 全绿。**未做**：真库仍未写入；`--selftest` 那两条走活网的分支不在自测范围内（它们要真 arXiv 与真 Crossref）。
+
+## 81. 发布复核的第三种答案：`1` 是"发布件错了"，`3` 是"这一项根本没读到"（2026-10-21）
+
+起因：0.14.0 的远端复核里，同一段代码给出了两个假结论。①`release-check --tag` 的最后一步 shell 出
+`git ls-remote`，因而继承 git 的代理配置；代理没起来时，三项实质检查**已经全部 PASS**，它却抛
+`ERROR: Command failed` 并退 1——把"分支头没法核对"报成"这一版有问题"。②网络层的 `fetch` 失败被打印成
+`FAIL the tag is readable`，读起来像发布件缺文件，而实际上是没连上。
+
+**裁定**（属主当场选"现在就修，随下一次发布带出"）：**发布复核有三个答案，不是两个**。
+
+- `0` 全都查了，都成立；
+- `1` 查了，某一条不成立——发布件错了；
+- `3` 某一条**没能查**（网络不通、git 代理没起来），打印原因，那一项什么也没证明。
+
+`3` 不是"轻一点的 1"：它说的是"没人看过"，`1` 说的是"看过了，是坏的"。两者混用正是上面两个假结论的成因。
+失败仍然压过未验证（真错 + 没查到 → `1`），因为那时确实知道有东西是错的。
+
+**落点**：[`tools/release-check.mjs`](../tools/release-check.mjs)——新增导出纯函数 `summary({failed, unverified})`；
+`report(tally, …)` 与 `unverified(tally, …)` 分开计数；`checkTag` 把"文件 404"（对发布件的断言，仍算 FAIL）与
+"fetch 抛错"（没人读到，UNVERIFIED）分开；某个 helper 抓取失败只中止那一项而不是崩掉整轮；`git ls-remote`
+包在 try 里，失败时给出 `git could not ask the remote: <首行原因>`；`g()` 把 stderr 收进管道，git 的 `fatal:`
+不再喷在解释之前。[`tools/release-check-selftest.mjs`](../tools/release-check-selftest.mjs) 第 [7] 组四条驱动
+`summary`：三个码各自的措辞，以及"失败压过未验证"。[`README.md`](../README.md) 与
+[`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §7 第 5 步把三种码写进发布流程，
+并明说"`3` 就去修传输，不要当成发布件的缺陷"。
+
+**验证**：网络部分可用时 `--tag v0.14.0` → 三项 `OK`、git 那项 `UNVERIFIED`、退 **`3`**；网络全断时 →
+`UNVERIFIED the published package could be read / fetch failed`、退 `3`（旧版是 `FAIL the tag is readable`、退 `1`）；
+`release-check-selftest` 全绿。**未做**：已发布的 0.14.0 里仍是旧行为——修复随下一次发布带出（属主的选择）。
