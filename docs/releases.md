@@ -24,6 +24,8 @@
 | 0.11.0 | 2026-10-20 | §72 |
 | 0.12.0 | 2026-10-20 | §74 |
 | 0.12.1 | 2026-10-20 | §76 |
+| 0.13.0 | 2026-10-20 | §77 |
+| 0.14.0 | 2026-10-21 | §80 |
 
 ---
 
@@ -530,4 +532,47 @@ preset-release/SKILL.md` 的 Phase-1 套件清单各少一条——后一条是 
 [`docs/toolchain.md`](toolchain.md) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
 [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) ·
 [`decisions.md`](decisions.md) §76 · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) ·
+[`package.json`](../package.json)。
+
+## §80 · 0.14.0 发布：写操作的三种答案统一到每一条路径，以及第一次把"命令行的回答"当被测对象（2026-10-21）
+
+**版本**：`0.14.0`，提交 `2e8b4ea`，注解 tag `v0.14.0`（tag 对象 `e1529a3`，剥到的正是该提交；树 `b143a00`）。
+**本次推送仍未完成**：`git push origin main` 与 `git push origin v0.13.0 v0.14.0` 都返回 128
+（`Failed to connect to github.com port 443 via 127.0.0.1`）——git 配的代理 `127.0.0.1:12450` 没在运行，
+绕过代理直连也被 `Connection was reset`。与 §77 同一处故障；**`v0.13.0` 也仍未推送**，所以一次推送要把两个 tag
+一起带上，否则 README 里 `#v0.13.0` 那个 pin 仍然解析不到。
+
+**为什么是 minor**：`journal-rank.mjs` 是使用者可见的新能力；而三条写路径的三种答案与 `/agent-note`／`/reviewed`
+是**实现追上契约**，不是新增规范 —— `protocol.md` §6 与 Revision 32 早就写了"一次写入报三种答案之一"。
+**契约 Revision 不动**（32）。
+
+**相对 0.13.0 的七个提交**：`2610827`（§77 的发布记录）· `86ddcdf`（期刊分区 helper 与自测）·
+`9857985`（三种答案 + 笔记的作者标签）· `117d533`（`collection`／`link-attachments` 的 CLI 桩库测试）·
+`5762f5a`（失败的候选不再让整轮退 0；读回抛错不再记成"失败"；4xx 不再算"可能已写"）·
+`fd90b1e`（`edit`／`write` 的 CLI 桩库测试；重复命中的措辞改正）· `2e8b4ea`（版本）。
+
+**验证在 tag 的树上，不在工作树上**：本地克隆 → `checkout v0.14.0` → 树哈希 `b143a00` 与本地 `v0.14.0^{tree}`
+一致 → 在该克隆里 `release-check --local` **PASS**（声明 0.14.0、21 项自测有名、干净树）。最终树上整套离线自测
+**21/21 PASS**，`toolchain-page --check` 23 条引文成立。**仍然没有做过一次真实写入**——本版不含任何写成功路径的真库实测，
+只有它的前置（桩库与只读比对）。
+
+**推送后属主应复核三处**（与 §77 同一清单，两个 tag 都要）：`ls-remote` 的 `refs/tags/v0.13.0^{}` 应等于 `07e3f4e`、
+`refs/tags/v0.14.0^{}` 应等于 `2e8b4ea`；`git clone --depth 1 --branch v0.14.0` 的树哈希应为 `b143a00`；
+在该克隆里 `release-check --local` 应 PASS。在这三条之前，"这一版可被安装"只是关于本地一棵树的断言（§34）。
+
+**一处要重启宿主**：`skills/literature-recon/SKILL.md` 改了一句（重复命中不再用 "refuses" 描述），
+纪律只在宿主启动时注册，开新会话或刷新页面都不够（§25）；工具本体不受影响，它按绝对路径跑文件。
+
+**一处未记**：`86ddcdf` 的期刊分区 helper 在 `decisions.md` 里没有对应的裁定节——它自己的文件头有完整实测
+（为什么只有 EasyScholar 这条路、ISSN 与近似刊名各自怎么失败）。记在这里，免得下一位读者以为漏读了。
+
+**记录本身比 tag 晚一条**：本节写入后 `main` 比 `v0.14.0` 多这一个提交，tag 不动（§72／§74／§76／§77 同一做法）。
+
+**落在何处**：[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`mayHaveLanded` · `reportUnconfirmed` ·
+`refused` 标记）· [`tools/zotero-edit.mjs`](../tools/zotero-edit.mjs) · [`tools/zotero-write.mjs`](../tools/zotero-write.mjs) ·
+[`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs) · [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) ·
+[`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) · 六个自测 ·
+[`tools/journal-rank.mjs`](../tools/journal-rank.mjs) · [`protocol.md`](../protocol.md)（Revision 32）·
+[`decisions.md`](decisions.md) §77–§79 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md) ·
+[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) · [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) ·
 [`package.json`](../package.json)。
