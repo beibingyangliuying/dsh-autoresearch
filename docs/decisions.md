@@ -2247,3 +2247,19 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 自测相应加到 8 个场景（读回失败 → 3、`refused` create → 1、对话框被拒 → 1）。工具头部也第一次写下自己的退出码——这一支此前一条都没写过。
 
 **验证**：两支自测各自全绿（`PASS`）；`toolchain-page --check` 引文仍全部成立。**未做**：`zotero-edit` 与 `zotero-write` 的 CLI 没有同样补（本轮只选了两支；它们失败后的对账是"重读单条"，是四处里最简单的）；真库仍未写入。
+
+## 79. `edit` 与 `write` 也补上端到端测试：测试当场上顶回一条我差点改错的结论（2026-10-21）
+
+起因：junhan 这一轮选了两件事——把 `zotero-edit` / `zotero-write` 的 CLI 端到端测试补齐，然后发布 0.14.0。
+
+**做法**：与 §78 同一套路（桩库 + 真进程 + `ZOTERO_LOCAL_API` / `ZOTERO_LOCAL_KEY_STORE`）。`write` 多一层麻烦：元数据从 arXiv / Crossref 走网络，而产品代码在那里没有缝。解法是**只在该子进程内**用 `NODE_OPTIONS=--require <stub.cjs>` 预载，把 `globalThis.fetch` 换成桩、其余请求转给真 `fetch`。这是**注入传输**而不是改产品代码：工具不知道自己在被测试，`--arxiv` 仍然走它自己的解析器与解析逻辑。（Windows 上 `NODE_OPTIONS` 里的路径要用 `/`，否则反斜杠会被吃掉——踩过一次。）
+
+**结果**：`edit` 12 个场景（干跑 / 无变化 / 成功 / tag 整表 / 500 已落盘 / 500 未落盘 / 412 竞态 / 2xx 但没生效 / 4xx / 对话框被拒 / 拒绝字段 → 2 / 白名单外 → 2）；`write` 13 个场景（干跑 / 建成 / 带归档建成 / `UNFILED` → 3 / 500 但搜到 → 3 / 4xx → 1 / 回读不符 → 3 / 重复 / `--force` / 键形状错 → **一个请求都不发** / 库里没这个分类 → 1 / 对话框被拒 → 1 / 没有来源 → 1）。
+
+**测试立刻顶回了我自己的一个错误结论**。写 `write` 的重复场景时，我先判定它是 bug 并改成了 `exit 1`，理由两条：工具头部写着 "1 refused, nothing written"，而 `zotero-collection --create` 的同名拒绝也是 1。改完按发布纪律做**反向声明回扫**，翻到 §40.2 第 2 条——属主 2026-10-17 已经定过：命中 = 幂等无操作、**exit 0**、打印 `ALREADY RECORDED`，依据正是"要达成的状态已成立"加上 `zotero-edit` 的 "No change"。⇒ 错的是 `REFUSING` 那个**词**（词说拒绝、码说无事可做），不是码。于是**改词不改码**：打印 `ALREADY IN THE LIBRARY: the record is <key>. Nothing was written.`，头部 0 行补成"或条目已在库里"，`toolchain-page` 的引文与生成物同步，`literature-recon` 那句 "refuses to create a duplicate" 改成"点名已有记录并 exit 0，要第二份才 `--force`"。
+
+这一条值得单独记下来：**测试的用处不只是防止以后的错误，还在于它逼出一个"我以为是 bug"的判断，而回扫把它顶回了属主已经做出的裁定**。若当时直接提交，仓库里就会同时存在 §40 的"命中是 0"和 `zotero-write` 的"命中是 1"，且两者的理由都写得很像。
+
+**落点**：[`tools/zotero-write.mjs`](../tools/zotero-write.mjs)（措辞与头部 0 行）· [`tools/zotero-write-selftest.mjs`](../tools/zotero-write-selftest.mjs)（第 [7] 组）· [`tools/zotero-edit-selftest.mjs`](../tools/zotero-edit-selftest.mjs)（第 [3] 组）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`README.md`](../README.md) · [`docs/overview.md`](overview.md)。
+
+**验证**：两支自测全绿；`toolchain-page --check` 23 条引文成立；全套离线自测（21 项）与 `release-check --local` 全绿。**未做**：真库仍未写入；`--selftest` 那两条走活网的分支不在自测范围内（它们要真 arXiv 与真 Crossref）。

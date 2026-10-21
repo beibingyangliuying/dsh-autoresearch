@@ -80,8 +80,8 @@ node tools\scaffold-selftest.mjs                       # 脚手架布局：契�
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
-node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED（不连库）
-node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写（不连库）
+node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED / 命令行走桩库的 0·1·3（不连真库）
+node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写 / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表 / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-section-note-selftest.mjs            # 逐节笔记：tag 身份 / claim/rewrite/retire / 删除（不连库）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类 / 走桩库的 convert·unconfirmed·partial（不连真库）

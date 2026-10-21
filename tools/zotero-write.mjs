@@ -34,9 +34,10 @@
 //   node tools/zotero-write.mjs --doi 10.1371/journal.pone.0171234 --collection ABCDEFGH --write
 //   node tools/zotero-write.mjs --selftest                    # no writes, checks the seams
 //
-// Exit codes: 0 created and read back, or a clean dry run | 1 refused, nothing written | 2 usage |
-// 3 sent or written but unconfirmed - a record may exist, so search for it rather than creating it
-// again. `UNFILED` is 3: the record exists and only the filing did not stick.
+// Exit codes: 0 created and read back, or nothing to do (a dry run, or a record already in the
+// library) | 1 refused, nothing written | 2 usage | 3 sent or written but unconfirmed - a record may
+// exist, so search for it rather than creating it again. `UNFILED` is 3: the record exists and only
+// the filing did not stick.
 import { resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -373,7 +374,12 @@ async function run() {
   }
 
   if (existing && !flag('force')) {
-    log('\nREFUSING to create a duplicate. Pass --force if a second copy is really wanted.')
+    // Exit 0, not 1: the state this invocation asks for already holds, which is the answer `zotero-edit`
+    // gives for "No change" and the one docs/decisions.md §40 ruled for an already-recorded digest. The
+    // word that must NOT appear is "refused" - the exit codes reserve that for a write the library
+    // rejected, and a refusal here would read as "nothing exists" to a caller that needs the key.
+    log(`\nALREADY IN THE LIBRARY: the record is ${existing.key}. Nothing was written.`)
+    log('Pass --force only if a second copy is really wanted.')
     return
   }
 

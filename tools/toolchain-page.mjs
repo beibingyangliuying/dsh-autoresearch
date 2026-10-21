@@ -221,7 +221,7 @@ export const HELPERS = [
       '`--selftest`：不写库，只查接缝；纯函数那半边在 `zotero-write-selftest.mjs`',
     ],
     refuses: [
-      '库里已有的重复（DOI / archiveID / 标题）→ `REFUSING to create a duplicate`，除非显式 `--force`',
+      '库里已有同一篇（DOI / archiveID / 标题）→ **不建第二份**，打印 `ALREADY IN THE LIBRARY` 并 **exit 0**（无事可做，与 `zotero-edit` 的 No change 同构）；要第二份才 `--force`',
       '`--collection` 的 key 形状不对或库里没有 → **在第一次请求之前**拒绝，不猜分类名',
       '回读里没有这个归档 → 报 `UNFILED` 并 **exit 3**：条目**已建**，它只给 `zotero-collection.mjs --assign` 一条命令，**不会补写第二次**',
       '断线或 5xx 且没拿回 key → **先搜一遍**（DOI / archiveID / 标题）再说：搜到就点名 key，搜不到也说明请求已发出、别再建第二份',
@@ -233,7 +233,7 @@ export const HELPERS = [
     cites: [
       cite(
         'tools/zotero-write.mjs',
-        'REFUSING to create a duplicate',
+        'ALREADY IN THE LIBRARY',
         'UNFILED',
         '--selftest',
         'search again before creating it twice',
