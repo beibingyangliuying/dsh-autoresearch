@@ -23,6 +23,10 @@
 // Transport and the write gate live in ./zotero-local-api.mjs, together with the reason these calls
 // go through node:http with no timeout instead of fetch.
 //
+// Exit codes: 0 every candidate was settled (converted, recovered, redundant, a conflict left alone,
+// or a source the library cannot resolve) | 1 at least one candidate failed and nothing was written
+// for it | 3 a link may exist or a delete may have landed - read the key it names, never convert twice.
+//
 // Usage:
 //   node tools/zotero-link-attachments.mjs --target D:\Store            # dry run
 //   node tools/zotero-link-attachments.mjs --target D:\Store --write
@@ -32,7 +36,7 @@ import { createReadStream, existsSync, statSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { APP_NAME, createWriteGate, getJson, localRequest, reportUnconfirmed } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, getJson, isWriteAccepted, localRequest, mayHaveLanded, reportUnconfirmed } from './zotero-local-api.mjs'
 
 /** Set immediately before a write is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -191,12 +195,13 @@ async function createLinked(parentKey, absolutePath, contentType, title) {
   const saved = body?.successful?.['0'] ?? body?.success?.['0']
   const key = typeof saved === 'string' ? saved : saved?.key
   if (key) return key
-  // No key: a server-side failure may still have created the link, so the caller looks for it rather
-  // than reporting a failure the next run would answer with a second link.
+  // No key: an answer that might have carried the request leaves the link possibly created, so the
+  // caller looks for it rather than reporting a failure the next run would answer with a second link.
+  // A 4xx is the library refusing, which is a different answer: nothing exists to look for.
   const error = new Error(
     res.status === 200 ? 'create reported no success' : `create answered ${res.status}: ${res.text.slice(0, 300)}`,
   )
-  error.sent = true
+  if (isWriteAccepted(res.status) || mayHaveLanded(res.status)) error.sent = true
   error.status = res.status
   throw error
 }
@@ -373,7 +378,20 @@ async function main() {
         'application/pdf',
         sanitizeFilename(plan.parentTitle, plan.key),
       )
-      const verified = await verifyLink(linkedKey, { parentKey: plan.parentKey, contentType: 'application/pdf' })
+      let verified
+      try {
+        verified = await verifyLink(linkedKey, { parentKey: plan.parentKey, contentType: 'application/pdf' })
+      } catch (error) {
+        // The create answered with a key, so the link EXISTS: a read-back that fails says nothing about
+        // whether it was written, only that it cannot be confirmed. Calling this an error would invite
+        // the next run to convert the same file again.
+        console.log(
+          `    UNCONFIRMED ${plan.key}: link ${linkedKey} was created but could not be read back ` +
+            `(${error.message}); the stored copy is kept - read ${linkedKey} before converting again`,
+        )
+        results.push({ status: 'unconfirmed', key: plan.key, linkedKey })
+        continue
+      }
       if (!verified) {
         console.log(
           `    UNCONFIRMED ${plan.key}: the attachment ${linkedKey} was created but does not read back as sent; ` +
@@ -413,8 +431,12 @@ async function main() {
 
   // Exit 3 rather than 1 or 0: a link that may exist is not a failure to be retried, and not a success.
   // The per-item lines above name the key, which is what the next run reads before converting again.
+  // A candidate that failed outright leaves the run non-zero for the same reason: it did not convert,
+  // and a run that converted nothing must not answer the way a run that converted everything does.
+  // 3 outranks 1, because "may have landed" is a stronger statement than "did not".
   const unsettled = ['unconfirmed', 'partial'].reduce((total, status) => total + (counts[status] ?? 0), 0)
   if (unsettled > 0) process.exitCode = 3
+  else if ((counts.error ?? 0) > 0) process.exitCode = 1
 
   if (changed > 0 && !flag('no-wake')) {
     const wake = await wakeIndexDrain()

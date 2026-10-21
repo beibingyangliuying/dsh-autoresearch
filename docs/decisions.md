@@ -2234,8 +2234,16 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 - 归档：接受 → `0`；`500` 但回读正是要求的清单 → `3` "the write landed"；`412` → `1`。
 - 用法错 → `2`。
 
-**`zotero-link-selftest` 第 [3] 组（6 项）**，真的临时文件 + 桩库：dry run 只发 `GET`、不动盘；一次成功转换 → `0`，字节复制、旧附件从库里消失、新附件是 `linked_file`、删除只发一次；create 回 `500` 但链接已出现在 children 里 → **3**，`UNCONFIRMED`、找到 `NEWLINK01`、只发了一次 create、旧附件保留；链接建了但读回不是发出去的东西 → `3` 且不删旧附件；链接好了而删除被拒 → `3` `PARTIAL`；对话框被拒 → 一个写请求都没发。
+**`zotero-link-selftest` 第 [3] 组（8 项）**，真的临时文件 + 桩库：dry run 只发 `GET`、不动盘；一次成功转换 → `0`，字节复制、旧附件从库里消失、新附件是 `linked_file`、删除只发一次；create 回 `500` 但链接已出现在 children 里 → **3**，`UNCONFIRMED`、找到 `NEWLINK01`、只发了一次 create、旧附件保留；链接建了但读回不是发出去的东西 → `3` 且不删旧附件；链接建了但读回直接失败 → `3`；链接好了而删除被拒 → `3` `PARTIAL`；`4xx` 的 create → `1`；对话框被拒 → 一个写请求都没发、退 `1`。
 
-**一处记而未决（未改代码）**：对话框被拒之后，`link-attachments` 的整轮退出码是 **`0`**——每份失败的候选只留一行 `ERROR`、`[4] result: error=1`，然后正常结束。这与 §77 刚统一的"三种答案"方向相反：什么都没写，却说成功。同一处还有第二个洞：`verifyLink` 在读回时抛错（连接断了）会被记成 `error`，而那时**链接已经建好**。两条都只写进自测的输出（`(recorded, not asserted: this run exits 0 - see docs/decisions.md #78)`），**没有**写成断言——改退出码不属于这一轮被授权的范围。建议的改法是两行加一个小 catch：`error > 0 → exit 1`（`3` 仍优先），`verifyLink` 抛错改走 `unconfirmed` 并 `findLink` 对账。**留给 junhan 裁定**。
+**同一处收口（2026-10-21，junhan 当场说"改干净点"）**：上面两条是先记下、再裁定的——改退出码不属于"只补测试"的范围，所以自测先写成 `recorded, not asserted`。属主裁定一起改之后，第三处也在补测试的过程中看清了：
 
-**验证**：两支自测各自全绿（`PASS`）。**未做**：`zotero-edit` 与 `zotero-write` 的 CLI 没有同样补（本轮只选了两支；它们失败后的对账是"重读单条"，是四处里最简单的）；真库仍未写入。
+| 位置 | 改前 | 改后 |
+|---|---|---|
+| 整轮的退出码 | 有候选失败仍退 `0` | `error > 0 → 1`；有 `unconfirmed`/`partial` 时仍是 `3`（3 优先："可能已经写了"比"没写"是更强的陈述） |
+| `verifyLink` 抛错 | 记成 `error`（而那时**链接已经建好**） | 记成 `unconfirmed`，打印 "was created but could not be read back … read `<key>`"，退 3；不再调 `findLink`——create 既然回了 key，链接的存在不需要再找 |
+| `createLinked` 的 4xx | 一律 `error.sent = true`，于是"库拒绝了"也被说成"可能已经写了" | 只有 `2xx` 或 `5xx`/没有回答才置 `sent`（`isWriteAccepted \|\| mayHaveLanded`）；4xx 是拒绝 → 走 `error` → 退 1 |
+
+自测相应加到 8 个场景（读回失败 → 3、`refused` create → 1、对话框被拒 → 1）。工具头部也第一次写下自己的退出码——这一支此前一条都没写过。
+
+**验证**：两支自测各自全绿（`PASS`）；`toolchain-page --check` 引文仍全部成立。**未做**：`zotero-edit` 与 `zotero-write` 的 CLI 没有同样补（本轮只选了两支；它们失败后的对账是"重读单条"，是四处里最简单的）；真库仍未写入。

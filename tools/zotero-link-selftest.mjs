@@ -196,6 +196,7 @@ const stub = {
   authorize: () => ({ status: 200, body: { key: 'stub-key', remember: false } }),
   createLink: null,
   deleteAttachment: null,
+  itemReadStatus: 0,
 }
 
 const resetLibrary = () => {
@@ -208,6 +209,7 @@ const resetLibrary = () => {
   stub.authorize = () => ({ status: 200, body: { key: 'stub-key', remember: false } })
   stub.createLink = null
   stub.deleteAttachment = null
+  stub.itemReadStatus = 0
   rmSync(destinationFile, { force: true })
 }
 
@@ -302,6 +304,10 @@ const server = createServer((req, res) => {
   }
   const itemPath = /^\/api\/users\/0\/items\/([A-Z0-9]+)$/.exec(path)
   if (itemPath) {
+    if (stub.itemReadStatus) {
+      send(stub.itemReadStatus, { error: 'the stub could not read this item back' })
+      return
+    }
     const row = stub.items[itemPath[1]]
     if (!row) {
       send(404, { error: 'not found' })
@@ -374,8 +380,8 @@ check(
   'and it found the link the failed create had made',
   landed.stdout.trim().split(/\r?\n/).find((line) => line.includes('UNCONFIRMED')) ?? '',
 )
-check(createsSent() === 1, 'the create was not sent twice', String(createsSent()))
-check(deletesSent() === 0, 'and the stored copy was kept, because nothing was proven')
+check(createsSent() === 1, 'the create was not sent twice', `creates ${createsSent()}`)
+check(deletesSent() === 0, 'and the stored copy was kept, because nothing was proven', `deletes ${deletesSent()}`)
 
 // The link is created, reads back as something else, so the stored copy must not be deleted.
 resetLibrary()
@@ -391,7 +397,7 @@ check(
   'and it says the attachment exists',
   mismatched.stdout.trim().split(/\r?\n/).find((line) => line.includes('UNCONFIRMED')) ?? '',
 )
-check(deletesSent() === 0, 'and the stored copy is kept', String(deletesSent()))
+check(deletesSent() === 0, 'and the stored copy is kept', `deletes ${deletesSent()}`)
 
 // The link is good and the deletion is refused: half a conversion, which is not success.
 resetLibrary()
@@ -402,19 +408,44 @@ check(partial.stdout.includes('PARTIAL   STORED01'), 'and it is called partial, 
 check(stub.items.NEWLINK01?.linkMode === 'linked_file', 'the link exists')
 check(stub.items.STORED01 !== undefined, 'and so does the stored copy it could not delete')
 
-// Declined by the owner: nothing was written. What the RUN's exit code should say is open
-// (docs/decisions.md #78), so only the property that is not in doubt is asserted here.
+// The create answered with a key and the read-back then failed. The link exists; the only honest word
+// is "unconfirmed", because "error" invites a second convert and "converted" is not proven.
+resetLibrary()
+stub.itemReadStatus = 500
+const unreadable = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(unreadable.status === 3, 'a link whose read-back failed is exit 3, not 1', `status ${unreadable.status}`)
+check(
+  unreadable.stdout.includes('could not be read back'),
+  'and it names the read-back as what failed, not the write',
+  unreadable.stdout.trim().split(/\r?\n/).find((line) => line.includes('UNCONFIRMED')) ?? '',
+)
+check(unreadable.stdout.includes('NEWLINK01'), 'and names the key that now exists')
+check(deletesSent() === 0, 'and the stored copy is kept', `deletes ${deletesSent()}`)
+
+// A 4xx is the library refusing: nothing was written, so the answer is 1 and the run is not a success.
+resetLibrary()
+stub.createLink = () => ({ status: 400, body: { error: 'the stub refused the create' } })
+const refused = await runAsync(['--target', storeDir, '--write', '--no-wake'])
+check(refused.status === 1, 'a refused create is exit 1, not 3', `status ${refused.status}`)
+check(
+  refused.stdout.includes('refused the create'),
+  'and the line carries the library\'s own words',
+  refused.stdout.trim().split(/\r?\n/).find((line) => line.includes('ERROR')) ?? '',
+)
+check(deletesSent() === 0, 'and the stored copy is untouched', `deletes ${deletesSent()}`)
+
+// Declined by the owner: nothing was written, and a run that converted nothing does not answer success.
 resetLibrary()
 stub.authorize = () => ({ status: 403 })
 const declined = await runAsync(['--target', storeDir, '--write', '--no-wake'])
-check(createsSent() === 0, 'a declined dialog sends no write at all', String(createsSent()))
+check(declined.status === 1, 'a declined dialog is exit 1, not 0', `status ${declined.status}`)
+check(createsSent() === 0, 'and it sends no write at all', `creates ${createsSent()}`)
 check(
   declined.stdout.includes('declined'),
   'and the item line names the dialog as the reason',
   declined.stdout.trim().split(/\r?\n/).find((line) => line.includes('ERROR')) ?? '',
 )
 check(stub.items.STORED01 !== undefined, 'the stored attachment is still there')
-console.log(`    (recorded, not asserted: this run exits ${declined.status} - see docs/decisions.md #78)`)
 
 server.close()
 
