@@ -342,6 +342,7 @@ node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the fil
 node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
 node tools\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
+node tools\zotero-ensure-selftest.mjs     # where the application could be, and the seam that forbids launching for a stub
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
 # RAN rather than the value its own record carries (docs/decisions.md #26)

@@ -63,12 +63,18 @@ export function localOrigin() {
 /**
  * One request to the local API.
  *
+ * `timeoutMs` exists for a PROBE and is `0` for everything else. An authorization request BLOCKS until
+ * the owner answers a dialog, so giving it a timeout is how a legitimate write gets reported as a
+ * failure; a caller deciding "is anything listening on this address" is the opposite case, and must not
+ * be able to hang on a socket that accepted a connection and then said nothing.
+ *
  * @param {string} method HTTP method.
  * @param {string} path Path beginning with `/api/`.
- * @param {{body?: string, headers?: Record<string, string>}} [options] A body is sent verbatim.
+ * @param {{body?: string, headers?: Record<string, string>, timeoutMs?: number}} [options] A body is
+ *   sent verbatim; `timeoutMs` defaults to 0, which is "wait as long as it takes".
  * @returns {Promise<{status: number, headers: object, text: string}>} The response, unparsed.
  */
-export function localRequest(method, path, { body, headers = {} } = {}) {
+export function localRequest(method, path, { body, headers = {}, timeoutMs = 0 } = {}) {
   return new Promise((resolve, reject) => {
     const req = request(
       {
@@ -87,7 +93,16 @@ export function localRequest(method, path, { body, headers = {} } = {}) {
       },
     )
     req.on('error', reject)
-    req.setTimeout(0)
+    if (timeoutMs > 0) {
+      req.setTimeout(timeoutMs, () => {
+        const error = new Error(`nothing answered within ${timeoutMs} ms`)
+        // A real code, so a caller can tell "the socket said nothing" from "the library refused".
+        error.code = 'ETIMEDOUT'
+        req.destroy(error)
+      })
+    } else {
+      req.setTimeout(0)
+    }
     if (body) req.write(body)
     req.end()
   })
