@@ -39,6 +39,7 @@ import { existsSync } from 'node:fs'
 import { join, posix, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { localOrigin, localRequest } from './zotero-local-api.mjs'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const DEFAULT_WAIT_SECONDS = 30
 const MAX_WAIT_SECONDS = 300
@@ -56,8 +57,6 @@ const GRACE_WHEN_RUNNING_MS = 5000
 const USAGE =
   'Usage: node tools/zotero-ensure.mjs [--wait 30] [--dry-run] [--help]\n' +
   '       0 = the library answers | 1 = it does not, and this command cannot make it | 2 = usage\n'
-
-class UsageError extends Error {}
 
 /** The Windows uninstall keys, HKLM as well as HKCU: an install can be per-user or per-machine. */
 const WINDOWS_UNINSTALL_KEYS = [
@@ -419,12 +418,5 @@ const isEntryPoint =
 if (isEntryPoint) {
   main()
     .then((code) => process.exit(code))
-    .catch((error) => {
-      if (error instanceof UsageError) {
-        console.error(`${error.message}\n${USAGE}`)
-        process.exit(2)
-      }
-      console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-      process.exit(1)
-    })
+    .catch((error) => process.exit(reportFailure(error, { usage: USAGE })))
 }

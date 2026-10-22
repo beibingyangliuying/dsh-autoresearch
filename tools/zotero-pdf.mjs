@@ -41,8 +41,7 @@ import { PDFiumLibrary } from '@hyzyla/pdfium'
 import { childrenOf, localRequest, readItem } from './zotero-local-api.mjs'
 import { findPassages, sliceText } from './zotero-read.mjs'
 import { romanToNumber } from './zotero-section-note.mjs'
-
-class UsageError extends Error {}
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const READABLE = ['application/pdf', 'application/epub+zip', 'text/html']
 const DEFAULT_LIMIT = 12000
@@ -354,11 +353,6 @@ const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    process.exit(reportFailure(error, { usage: USAGE }))
   })
 }

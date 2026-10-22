@@ -55,12 +55,10 @@ import {
   readItem,
   reportUnconfirmed,
 } from './zotero-local-api.mjs'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 /** Set immediately before a write is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
-
-/** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
 
 /**
  * A collection with this name already among these siblings.
@@ -379,18 +377,14 @@ const isEntryPoint =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    if (writeAttempted && !error.refused) {
+    const code = reportFailure(error, { usage: USAGE })
+    if (code === 1 && writeAttempted && !error.refused) {
       process.exitCode = reportUnconfirmed({
         what: 'the change was sent and then the connection failed: OUTCOME UNKNOWN',
         found: 'Read the collection tree or the record before trying again.',
       })
       return
     }
-    process.exitCode = 1
+    process.exit(code)
   })
 }

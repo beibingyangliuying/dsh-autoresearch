@@ -60,6 +60,7 @@ import {
   serverInfo,
   visibleText,
 } from './zotero-local-api.mjs'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const QMODES = ['everything', 'titleCreatorYear']
 /** The library's own maximum page size for /items. */
@@ -79,9 +80,6 @@ const SCREEN_PAGE = 100
 const DEFAULT_SCREEN_LIMIT = 300
 /** A ceiling on how many rows a screening pass will read, so a runaway collection stops loudly. */
 const SCREEN_CAP = 2_000
-
-/** A malformed command line, as opposed to a read that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
 
 /**
  * What one search row IS, and which record it belongs to.
@@ -820,11 +818,6 @@ const isEntryPoint =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    process.exit(reportFailure(error, { usage: USAGE }))
   })
 }

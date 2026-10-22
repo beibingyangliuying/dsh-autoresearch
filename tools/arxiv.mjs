@@ -40,6 +40,7 @@
 // Exit codes: 0 answered, including zero results | 1 the request or the response failed | 2 usage.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const API_URL = 'https://export.arxiv.org/api/query'
 const USER_AGENT = 'dsh-autoresearch/1.0'
@@ -267,9 +268,6 @@ const USAGE =
   '       node tools/arxiv.mjs --id <id> [--id <id> ...] [--full] [--json]\n' +
   '       node tools/arxiv.mjs --selftest'
 
-/** A malformed command line, as opposed to a request that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
-
 /**
  * Read the command line.
  *
@@ -446,11 +444,6 @@ const isEntryPoint =
 // wait on itself - the self-test body never runs and the process exits 13 with only a warning.
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    process.exit(reportFailure(error, { usage: USAGE }))
   })
 }

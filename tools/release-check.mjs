@@ -55,6 +55,7 @@ export const REQUIRED_HELPERS = [
   'tools/zotero-section-note.mjs',
   'tools/zotero-link-attachments.mjs',
   'tools/zotero-local-api.mjs',
+  'tools/refusal.mjs',
   'tools/zotero-ensure.mjs',
   'tools/zotero-link-snippet.js',
 ]
@@ -210,6 +211,37 @@ export function namedHelperProblems(texts, roster) {
   return [...problems]
 }
 
+/**
+ * Every helper that can fail speaks through the same renderer.
+ *
+ * Why this exists: ten helpers each carried their own `class UsageError` and their own catch, so the
+ * shape of a failure was a per-program decision that drifted - one printed `\nERROR: ...`, one set
+ * `process.exitCode = 2`, one appended a cause in its own words. A reader cannot be asked to learn a
+ * layout per program, and the tenth program is the one nobody re-reads.
+ *
+ * Narrow on purpose: two tokens and one absence. It does not judge whether a remedy is correct -
+ * that is a judgement about meaning, and no regex can make it.
+ *
+ * @param {Array<{name: string, text: string}>} sources Helper file bodies, keyed by their path.
+ * @returns {string[]} One message per helper that speaks its own way; empty when all share the voice.
+ */
+export function refusalVoiceProblems(sources) {
+  const problems = []
+  for (const { name, text } of sources) {
+    const body = String(text)
+    if (!/from ['"]\.\/refusal\.mjs['"]/.test(body)) {
+      problems.push(`${name} does not import the shared failure voice from ./refusal.mjs`)
+    }
+    if (!/reportFailure\(/.test(body)) {
+      problems.push(`${name} never calls reportFailure(), so the shape of its failure is its own`)
+    }
+    if (/class UsageError\b/.test(body)) {
+      problems.push(`${name} defines its own UsageError; there is one, in refusal.mjs`)
+    }
+  }
+  return problems
+}
+
 // stderr is piped rather than inherited: `gitReason` turns it into one printed line, so a check that
 // could not run does not also spray git's own "fatal:" text above the explanation.
 const g = (args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
@@ -290,6 +322,16 @@ function checkLocal() {
   const skillDir = join(ROOT, 'skills')
   const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
   report(tally, 'every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
+
+  // The roster's helpers, read against the one renderer they are supposed to share. The two files that
+  // live in tools/ without being programs - the transport and the voice - are not on the roster and
+  // never fail on their own, so they are not read here.
+  const sharedModules = new Set(['tools/zotero-local-api.mjs', 'tools/refusal.mjs'])
+  const helperSources = REQUIRED_HELPERS.filter((path) => path.endsWith('.mjs') && !sharedModules.has(path)).map((path) => ({
+    name: path,
+    text: readFileSync(join(ROOT, path), 'utf8'),
+  }))
+  report(tally, 'every helper that can fail reports through the shared voice', refusalVoiceProblems(helperSources))
 
   // The clean-tree line is a precondition for tagging, so it has to be able to say "I could not look"
   // rather than "the tree is dirty" when git itself is what failed.

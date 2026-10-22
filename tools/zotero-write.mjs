@@ -51,6 +51,7 @@ import {
   reportUnconfirmed,
   serverInfo,
 } from './zotero-local-api.mjs'
+import { reportFailure } from './refusal.mjs'
 
 /** Set immediately before the create is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -531,17 +532,16 @@ if (isEntryPoint) {
     if (flag('selftest')) await selftest()
     else await run()
   } catch (error) {
-    const cause = error.cause ? ` (cause: ${error.cause.code ?? error.cause.message ?? error.cause})` : ''
-    console.error(`\nERROR: ${error.message}${cause}`)
+    const code = reportFailure(error)
     // NOT `process.exit(1)`: on Windows a forced exit while the transport is still closing a socket
     // trips a libuv assertion (`uv_async`), which replaces exit code 1 with 0xC0000409 and prints an
     // assertion line after the real error. Setting the code and letting the loop drain exits with 1.
     process.exitCode =
-      writeAttempted && !error.refused
+      code === 1 && writeAttempted && !error.refused
         ? reportUnconfirmed({
             what: 'the create was sent and then the connection failed: OUTCOME UNKNOWN',
             found: 'The record may exist. Search the library for it before creating it a second time.',
           })
-        : 1
+        : code
   }
 }

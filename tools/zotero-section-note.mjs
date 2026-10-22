@@ -64,6 +64,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { UsageError, reportFailure } from './refusal.mjs'
 import { APP_NAME, childrenOf, createWriteGate, isWriteAccepted, localRequest, patchItem, readItem, visibleText } from './zotero-local-api.mjs'
 
 /** The tag prefix that records which top-level section a note explains. */
@@ -89,9 +90,6 @@ export const LEGACY_AGENT_TAG = 'agent-note'
 
 /** The tag the owner adds when they accept an agent-written body. */
 export const REVIEWED_TAG = '/reviewed'
-
-/** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
 
 /**
  * Whether this invocation has sent a write.
@@ -1371,19 +1369,14 @@ const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exitCode = 2
-      return
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    if (writeAttempted && !error.refused) {
+    const code = reportFailure(error, { usage: USAGE })
+    if (code === 1 && writeAttempted && !error.refused) {
       console.error('OUTCOME UNKNOWN: a write had been sent before this error, so exit 1 would claim')
       console.error('nothing was written. Do not resend it: re-run the plan (--item <recordKey>) and read')
       console.error('the record. This is exit 3, the answer for a write that may exist.')
       process.exitCode = 3
       return
     }
-    process.exitCode = 1
+    process.exitCode = code
   })
 }

@@ -37,6 +37,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { APP_NAME, createWriteGate, getJson, isWriteAccepted, localRequest, mayHaveLanded, reportUnconfirmed } from './zotero-local-api.mjs'
+import { reportFailure } from './refusal.mjs'
 
 /** Set immediately before a write is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -498,15 +499,14 @@ if (isEntryPoint) {
     try {
       await main()
     } catch (error) {
-      const cause = error.cause ? ` (cause: ${error.cause.code ?? error.cause.message ?? error.cause})` : ''
-      console.error(`\nERROR: ${error.message}${cause}`)
+      const code = reportFailure(error)
       process.exitCode =
-        writeAttempted && !error.refused
+        code === 1 && writeAttempted && !error.refused
           ? reportUnconfirmed({
               what: 'a write was sent and then the connection failed: OUTCOME UNKNOWN',
               found: 'A link may exist. Read the record before running the conversion again.',
             })
-          : 1
+          : code
     }
   }
 }

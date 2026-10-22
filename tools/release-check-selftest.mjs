@@ -19,6 +19,7 @@ import {
   documentedSelftests,
   exportProblems,
   namedHelperProblems,
+  refusalVoiceProblems,
   summary,
   taggedCommit,
   tagRefQuery,
@@ -141,6 +142,29 @@ check(
 )
 const absent = REQUIRED_HELPERS.filter((path) => !existsSync(join(ROOT, path)))
 check(absent.length === 0, 'every path on the roster exists in this tree - a typo would fail every tag', absent.join(', '))
+
+console.log('\n[5b] every helper that can fail speaks through one voice')
+
+// Ten helpers each carried their own `class UsageError` and their own catch, so the shape of a failure
+// was a per-program decision, and a reader had to learn a layout per program. This guard is narrow on
+// purpose: two tokens and one absence, never a judgement about wording.
+const voice = (name, body) => refusalVoiceProblems([{ name, text: body }])
+check(
+  voice('a.mjs', "import { reportFailure } from './refusal.mjs'\n  process.exitCode = reportFailure(error)").length === 0,
+  'a helper that imports the voice and reports through it is fine',
+)
+check(
+  voice('a.mjs', "console.error('\\nERROR: ' + error.message)\n  process.exit(1)").length === 2,
+  'a helper that prints its own failure block is reported twice: no import, and no renderer - this check can fail',
+)
+check(
+  voice('a.mjs', "import { reportFailure } from './refusal.mjs'\nclass UsageError extends Error {}\nprocess.exitCode = reportFailure(error)").length === 1,
+  'a helper that keeps its own UsageError is reported - a second class is where the two behaviours drift',
+)
+check(
+  voice('a.mjs', "import { UsageError } from './refusal.mjs'").length === 1,
+  'importing only the usage class still leaves the failure unwritten',
+)
 
 console.log('\n[6] which commit a tag names')
 

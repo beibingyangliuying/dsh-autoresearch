@@ -28,6 +28,7 @@
 import { APP_NAME, createWriteGate, mayHaveLanded, normalizeTags, patchItem, readItem, reportUnconfirmed } from './zotero-local-api.mjs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 /** Set immediately before the PATCH is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -59,9 +60,6 @@ export const REFUSED_FIELDS = {
   dateAdded: 'the library owns this',
   dateModified: 'the library owns this',
 }
-
-/** A malformed command line, as opposed to a write that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
 
 /**
  * Read `--set field=value` arguments.
@@ -307,12 +305,8 @@ const isEntryPoint =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    if (writeAttempted && !error.refused) {
+    const code = reportFailure(error, { usage: USAGE })
+    if (code === 1 && writeAttempted && !error.refused) {
       process.exitCode = reportUnconfirmed({
         key: '',
         what: 'the change was sent and then the connection failed: OUTCOME UNKNOWN',
@@ -320,6 +314,6 @@ if (isEntryPoint) {
       })
       return
     }
-    process.exitCode = 1
+    process.exitCode = code
   })
 }

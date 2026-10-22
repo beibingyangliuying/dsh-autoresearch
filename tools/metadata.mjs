@@ -63,6 +63,7 @@
 // Exit codes: 0 answered, including zero results | 1 the request or the response failed | 2 usage.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const OPENALEX_URL = 'https://api.openalex.org'
 const CROSSREF_URL = 'https://api.crossref.org'
@@ -391,9 +392,6 @@ const USAGE =
   '       node tools/metadata.mjs --cited-by <openalex-id> [--rows 1-10] [--mailto <address>]\n' +
   '       node tools/metadata.mjs --oa <doi> --mailto <address>\n' +
   '       node tools/metadata.mjs --selftest'
-
-/** A malformed command line, as opposed to a request that failed. Exit code 2 rather than 1. */
-class UsageError extends Error {}
 
 /**
  * Read the command line, and refuse the combinations that cannot be honoured.
@@ -752,11 +750,6 @@ const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) =
 // on itself - the self-test body never runs and the process exits 13 with only a warning.
 if (isEntryPoint) {
   main().catch((error) => {
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n${USAGE}`)
-      process.exit(2)
-    }
-    console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    process.exit(reportFailure(error, { usage: USAGE }))
   })
 }

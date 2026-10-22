@@ -90,6 +90,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { normalizeDoi, plainText } from './metadata.mjs'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 const PROVIDER_URL = 'https://www.easyscholar.cc/open/getPublicationRank'
 const CROSSREF_URL = 'https://api.crossref.org'
@@ -342,9 +343,6 @@ const USAGE =
   `       key: $${KEY_ENV}, else the key the installed ZoteroStyle plugin stores\n` +
   '       node tools/journal-rank.mjs --selftest'
 
-/** A malformed command line, or a machine that cannot ask. Exit code 2, not 1. */
-class UsageError extends Error {}
-
 /**
  * Read the command line, and refuse the inputs this channel cannot honour.
  *
@@ -504,7 +502,5 @@ if (isEntryPoint) {
     // write is still pending makes libuv assert (`!(handle->flags & UV_HANDLE_CLOSING)`, async.c:76) and
     // the process dies with 0xC0000409 instead of the code that was asked for. Setting the code lets
     // Node flush and leave on its own.
-    console.error(error instanceof UsageError ? error.message : `\nERROR: ${error instanceof Error ? error.message : String(error)}`)
-    process.exitCode = error instanceof UsageError ? 2 : 1
-  })
+    process.exitCode = reportFailure(error)  })
 }
