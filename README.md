@@ -161,7 +161,16 @@ arXiv DOI answered with the work's other DOI), and every citation count is print
 gave it and the date it was read, because the same work measured 43,412 citations on one source and
 46,513 on the other.
 
-**What the reference-library channel is.** Seven helper programs, not a server. `tools/zotero-read.mjs`
+**What the reference-library channel is.** Eight helper programs, not a server. Every one of them reaches
+the library through the application's own local API, so a reference manager that is not running fails all
+of them at once: `tools/zotero-ensure.mjs` is the way out — it probes the address, starts the application
+when nothing answers and no process is running, and prints one of four states (`already answering`,
+`started`, `not answering` with the setting to fix, `cannot start` with the places it looked). It never
+writes a preference, never kills or restarts anything, and it **refuses to launch behind
+`ZOTERO_LOCAL_API`**, because that seam means a stub library and a test must never wake the real
+application. The library is read only through that API: when it does not answer, the round says so and
+stops rather than reading the database file or picking stored attachments out by path — a reading that
+cannot name its record can be written onto nothing. Then `tools/zotero-read.mjs`
 reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
 `tools/zotero-pdf.mjs` reads the attachment **itself** where the library's index cannot answer: the file's
 own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),

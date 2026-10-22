@@ -55,6 +55,7 @@ export const REQUIRED_HELPERS = [
   'tools/zotero-section-note.mjs',
   'tools/zotero-link-attachments.mjs',
   'tools/zotero-local-api.mjs',
+  'tools/zotero-ensure.mjs',
   'tools/zotero-link-snippet.js',
 ]
 

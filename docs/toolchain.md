@@ -25,7 +25,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
 | 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
 | 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `16,000` |
-| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Seven helper programs` |
+| 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
 | **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
 | **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
@@ -34,6 +34,27 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 ## 二、每个 helper
 
 ### 参考库通道
+
+#### `zotero-ensure.mjs` — 让库答话，或说清为什么它不会答
+
+**能做**
+
+- 探测 `127.0.0.1:23119`；没人应答且进程不在 → 启动应用，等它答话（`--wait 30`，默认 30 秒，500 ms 一轮）
+- `--dry-run`：只打印将执行的命令与解析到的路径，**不启动**
+- 四态各自附一行原因：`already answering` · `started` · `not answering`（含 `fix`）· `cannot start`（含 `checked` 清单）
+
+**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
+
+- `ZOTERO_LOCAL_API` 指了别的地址时**绝不启动**：那条缝意味着桩库或另一个实例，测试以为在打桩却惊动了真应用是它唯一不能有的失效
+- `ZOTERO_EXE=off` 只探测；找不到可执行时报 `cannot start` 并列出查过的地方（注册表 → 标准路径 → PATH）
+- 不写偏好、不杀进程、不重启；应用是单实例，重复调用只会把窗口提到前面
+
+**撞上怎么办**
+
+- 第一次碰参考库之前**先跑它**；exit 1 ⇒ 库不可用，说清并**停下**，不换一条路读（数据库文件、按路径挑附件）
+- 其他 helper 报 `the reference library is not answering` 时，它给出的就是这条命令
+
+**出处**：`tools/zotero-ensure.mjs` · `ZOTERO_LOCAL_API` · `ZOTERO_EXE=off` · `already answering` · `cannot start`
 
 #### `zotero-read.mjs` — 读：检索 / 一条记录 / 笔记正文 / 附件文本切片 / 分类树 / 分类扫描 / 标签
 

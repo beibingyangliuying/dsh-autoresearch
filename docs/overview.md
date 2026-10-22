@@ -85,7 +85,8 @@ node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段�
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表 / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-section-note-selftest.mjs            # 逐节笔记：tag 身份 / claim/rewrite/retire / 删除（不连库）
 node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类 / 走桩库的 convert·unconfirmed·partial（不连真库）
-node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝（不连库）
+node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝 / 库没应答时的那句话（不连库）
+node tools\zotero-ensure-selftest.mjs                  # 启动器：先看哪里 / 指了缝就不启动 / 一个答案或一份报告（不启动任何东西）
 node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
 node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）
 node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_  # 常驻提示里点名了哪些工具（隔离挡不住散文）

@@ -91,6 +91,7 @@ node tools\zotero-collection-selftest.mjs
 node tools\zotero-section-note-selftest.mjs
 node tools\zotero-link-selftest.mjs
 node tools\zotero-local-api-selftest.mjs
+node tools\zotero-ensure-selftest.mjs
 node tools\dump-session-selftest.mjs
 node tools\release-check-selftest.mjs
 
