@@ -639,3 +639,47 @@ Zotero 冷启动到端口可用的耗时**没有测**（不为测它去杀属主
 [`docs/decisions.md`](decisions.md) §81–§83 · [`docs/backlog.md`](backlog.md) 第 10 行 ·
 [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md) ·
 [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4。
+
+## §86 · 0.16.0 发布：一次检查换来的四项更正，与一条有仪器的窄动作（2026-10-22）
+
+**版本**：`0.16.0`，提交 `e2d6631`，注解 tag `v0.16.0`（剥到的正是该提交；远端 `v0.16.0^{}` = `e2d6631`，
+与 `refs/heads/main` 同指一个提交）。四个提交按关注点分开：`6cea77b`（usage 里的绝对路径）·
+`626970c`（`--unclaim` ＋ Revision 35）· `40685e2`（六处说法与各自正文对齐）· `e2d6631`（版本）。
+
+**为什么是 minor**：Revision 35 新增一条能力（`--unclaim`）与一条拒绝（单 tag 不许摘），读者可见行为变了；
+前例是 0.11.0–0.14.0 随 Revision 升 minor。
+
+**这一版不是新功能，是把上一轮检查出来的账结掉**。四项：
+
+1. **16,000 那句话引错了包**（`docs/decisions.md` §84）。反证是一次 30,000 字符的命令输出**完整到达**；
+   本预设挂的是 `dsh-tool-pwsh`（每流 `maxOutputBytes` 默认 64,000、**保留尾部**），16,000 与
+   `<response clipped>` 属于**没有挂**的 `dsh-tool-pwsh-persistent`。五处纪律／覆盖地图／生成物统一改成
+   "所挂那支、版本锚、超过就丢**开头**"。
+2. **`ambiguous` 终于有仪器**（§85，Revision 35）。此前 claim／rewrite／`--replaces` 三条路全拒，而纪律写
+   "先修 tags"——拒绝存在，它点的那一步不存在。现在 `--unclaim --note <key> --section <ordinal>` 只对带
+   多枚 section tag 的笔记生效，一次一枚，干跑／版本守卫／回读／正文不动；单枚 tag 一律拒绝并打印 §6。
+3. **usage 错误自带绝对路径**：usage 块是仓库相对写法，study 工作区里照抄必失败；一行加在共享渲染器里。
+4. **四处文本矛盾**（section-notes 的 description、reading-triage 的裁决表、metadata-query 的 §0、
+   coverage 的四动作清单）改到与各自正文一致；S2 给裁决表补了 `full` 一行，没有动 §63 已经裁过的复读条件口径。
+
+**验证在最终树上**：改完 `package.json` 后**重新生成** `composed-web.txt` 再跑，**23/23 PASS**（含
+`doc-selftest --negative-controls`、`toolchain-page --check` 25 条引文全部成立）；`release-check --local` **PASS**，
+"工作树干净"这项是真绿。新护栏做了**两次反向控制**并各自真红：关掉 ambiguity 判断 ⇒ 3 条 FAIL；关掉回读判断 ⇒
+3 条 FAIL；恢复即 PASS。
+
+**远端复核**：`release-check --tag v0.16.0` 四项 `OK`、**exit 0**。第一次跑是 `exit 3`（两项 `UNVERIFIED`，
+`fetch failed`）——不是发布件坏了，是这台机器的传输问题：git 里存着一个**已经没人监听**的
+`http.proxy=127.0.0.1:12450`，而 `fetch` 在 IPv6 优先下解析 `raw.githubusercontent.com` 会失败。两处都只是
+**这条命令的环境**，仓库配置一个字没改：`GIT_CONFIG_COUNT/KEY_0/VALUE_0` 把代理置空，`NODE_OPTIONS=
+--dns-result-order=ipv4first`，第三次跑即 `PASS`。这条也解释了 0.14.0 那次"代理死掉换来一次误指控"：
+`exit 3` 的语义是对的，坏的是传输。
+
+**仍然未做**：`zotero-pdf` 的"记录在、文件不在"分支**从未在真实记录上跑过**（本机库没有这种记录）；
+arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有测——三条仍在 `backlog.md` 第 10 行。
+`--unclaim` 也一样：它只在桩库上跑过，**没有在属主真库上执行过一次写**（本轮没有库可写，也不该写）。
+
+**落在何处**：[`package.json`](../package.json) · [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) 与
+[自测](../tools/zotero-section-note-selftest.mjs) · [`tools/refusal.mjs`](../tools/refusal.mjs) 与
+[自测](../tools/refusal-selftest.mjs) · [`protocol.md`](../protocol.md)（Revision 35）· [`docs/decisions.md`](decisions.md)
+§84、§85 · 四份纪律 · [`docs/coverage.md`](coverage.md) · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) →
+[`docs/toolchain.md`](toolchain.md) · [`README.md`](../README.md) · [`backlog.md`](backlog.md)（未动，三项仍未结）。
