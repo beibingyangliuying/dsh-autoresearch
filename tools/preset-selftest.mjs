@@ -54,6 +54,7 @@ const ROUTED_NAMES = [
   'reading-triage',
   'section-notes',
   'adoption-ruling',
+  'direction-probe',
   'redteam-ruling',
   'progress-sync',
   'metadata-query',

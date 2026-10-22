@@ -2,7 +2,7 @@
 # DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
 #   - `persona` carries a resident research discipline (three-way typing, no
 #     unfalsifiable wording, no memory-based citations, read-before-write) plus
-#     routing to twelve research-discipline skills.
+#     routing to thirteen research-discipline skills.
 #   - `persona` deliberately has NO `suffix`. The kernel registered `cwd` as a prompt variable only
 #     through 0.2.0; from 0.2.1 its registry holds `provider` and `model` alone, and prompt
 #     assembly interpolates strictly - any other name THROWS, which fails every turn before the
@@ -30,7 +30,7 @@
       config:
         id: autoresearch
         name: Autoresearch
-        description: Domain-neutral research workbench — a resident evidence-typing discipline plus on-demand disciplines covering the whole research loop (scoping → literature → adoption → challenge → synthesis → runs → settlement), with keep-list tool isolation.
+        description: Domain-neutral research workbench — a resident evidence-typing discipline plus on-demand disciplines covering the whole research loop (scoping → literature → adoption → direction → challenge → synthesis → runs → settlement), with keep-list tool isolation.
         order: 20
         plugins:
           - id: persona
@@ -64,6 +64,7 @@
                 - Needs bibliographic metadata (DOI, venue, citation counts, reference lists) rather than full text → `metadata-query`
                 - A paper's method-section notes were pasted in from outside and have to be claimed to the sections they name, or a record has to say which sections still carry no note → `section-notes` (it claims them and reports the gaps; it writes a note body only when you name a section and ask)
                 - A paper has been read and the study will build on it, code is about to be written from its equations, or existing code cites one → `adoption-ruling`
+                - What the record refused, an unchecked precondition, a parked paper's re-open condition, two sources that disagree, or a gap in what has been covered has to become a cheap next step → `direction-probe` (it mines the record into moves that each carry a conjecture and the observation that would kill it; it composes competing directions only when two surviving moves cannot both hold)
                 - Work is about to be handed to a subagent (an explorer, or an implementer who writes or runs code) → `subagent-contract`
                 - Code is about to run to test a hypothesis, or a run's outcome is being reported → `experiment-protocol`
                 - Exploration produced several directions and one must be committed to, or the user asks "so what do we do now" → `synthesis-plan`
