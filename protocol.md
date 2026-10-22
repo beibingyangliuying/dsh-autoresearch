@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 35.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 36.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 35 states the one way an **ambiguous** note is resolved: a
+independent of any package version. Revision 36 un-defers the **direction loop**, and hands it two
+locks. A **candidate move** exists only when it names a position the study's own record already settled
+— a refused item and its ground, an unchecked precondition, a parked paper's re-open condition, two
+sources that disagree, a gap, or the boundary of a ruled item — a conjecture that could fail, and
+**the observation that would kill it**; a move that cannot name the observation is not a candidate, and
+one that cannot name the position is exploratory and never becomes a direction. A **direction** is
+composed of surviving moves and adds exactly **one** component, which must point back at such a
+position, so a direction that needs something nobody has established is not a direction but a request
+for a reading or a run. Generating a route from nothing stays deferred, and that is the half of the old
+non-goal that survives. §4, §7, §8 and §9 state it, with `INV-IDEA-1` and `INV-IDEA-2`. Revision 35
+states the one way an **ambiguous** note is resolved: a
 note carrying two `/section-N` tags claims nothing, every write on that record is refused while the
 ambiguity stands, and the owner's tags are not a round's to rewrite — so the act is the narrowest one,
 one tag removed after the note has been read, one tag per command, which restores the claim the
@@ -390,6 +400,11 @@ adoption     what a paper read may lend becomes a ruled ledger: the paper's own 
              becomes, and the number a test can assert — the owner rules, nothing enters code
              without an anchor, an unreviewed agent note supports no adoption, and the ledger
              grounds no conclusion
+direction    what the study's record already settled against itself becomes candidate moves: each
+             names the position it was derived from, a conjecture that could fail, and the cheapest
+             observation that would kill it; survivors become competing directions only when two of
+             them cannot both hold, and a direction's one new component must trace back to such a
+             position — no seed, no direction
 challenge    a claim is opposed with a counterexample, contradicting evidence, or a
              falsification path — or the challenge reports that it cannot challenge
 settlement   conclusions, rejected directions and rulings are settled into three layers
@@ -404,10 +419,12 @@ synthesis    several explored directions become one executable draft: the choice
              criterion that would refute it
 ```
 
-Two invariants follow from the shape of these contracts:
+Three invariants follow from the shape of these contracts:
 
 - A discipline that cannot name a **local exclusion condition** is decorative.
 - A discipline that cannot state its **artifact shape** produces prose, not evidence.
+- A discipline whose candidate cannot name the **observation it would fail on** produces an intention,
+  not a test.
 
 ## 5. Tool visibility and isolation
 
@@ -613,12 +630,12 @@ a study scaffolded either way needs no migration.
 
 **What is created up front is the literature layer, the scoping document and the draft directory
 (`.section-notes/`).**
-Every other layer a discipline writes into — adoption ledgers, rulings, the journal, the experiments,
-the pitfalls — is created by the discipline that first writes there, and that round names the
-path it used in its report. A scaffold that pre-built all of them stated a shape none of the studies it
-was measured against had adopted, and a directory made for later says nothing by being empty. The
-archive is not one of these: it holds retired documents, and moving one there is the owner's act,
-stated below.
+Every other layer a discipline writes into — adoption ledgers, direction ledgers, rulings, the journal,
+the experiments, the pitfalls — is created by the discipline that first writes there, and that round
+names the path it used in its report. A scaffold that pre-built all of them stated a shape none of the
+studies it was measured against had adopted, and a directory made for later says nothing by being
+empty. The archive is not one of these: it holds retired documents, and moving one there is the owner's
+act, stated below.
 
 A study scaffolded before Revision 22 may still carry `research/literature/refs/`. No discipline reads
 it — a ledger now sits in each question's own literature file — and a round that finds it reports it and
@@ -672,6 +689,8 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, a note carrying more than one `/section-N` tag is **ambiguous** and is not coverage either — it is resolved by removing one stale tag (one per command, after the note is read), never by guessing which tag was meant — retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. An ambiguous note blocks every write on its record, so leaving the ambiguity to be "worked around" is how a claim gets invented rather than read. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
 | `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round. |
+| `INV-IDEA-1` | A candidate move exists only with a position already in the study's record, a conjecture that could fail, and the observation that would kill it, with the threshold that refutes it; a move that cannot name the observation is not a candidate, and one that cannot name the position is exploratory — never scored, never a direction. | A conjecture nobody can point at reads exactly like one that cost a reading to establish, and a conjecture nothing could refute cannot be told from a preference; both are what this step exists to keep out of the record. |
+| `INV-IDEA-2` | A direction is composed of at least one surviving move and adds exactly one component, which names the record position it came from; a component nobody has established is reported as needing a reading or a run, and is never supplied by the composition. | A route allowed to invent one ingredient has already decided the question it was meant to test, and a cull can only score what already exists — which is the whole difference between this loop and a brainstorm. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
@@ -706,8 +725,11 @@ Revision 25, and is never reused — so the gap in the sequence is a record rath
 - No version control of the study workspace, and no opinion about it.
 - No domain-specific rule. Domain invariants belong to the study.
 - No cost, schedule, or resource optimization.
-- No direction-divergence loop. Generating several mutually distinct directions and killing them on
-  explicit criteria is deliberately deferred; the scoping discipline currently offers candidates but
-  not a cull.
+- No unseeded divergence. Directions are generated only from what the study's own record already settled,
+  and each is killed by an observation with a written threshold rather than by preference: a move names
+  its seed, a direction carries at most one new component and names that component's seed, and a
+  direction that needs something nobody has established is a request for a reading or a run.
+  Brainstorming a route out of nothing remains out of scope, and that is the half of the older
+  deferral which stays deferred.
 - No claim about the truth of any study's conclusion. The preset constrains how conclusions are
   reached and recorded, and nothing more.
