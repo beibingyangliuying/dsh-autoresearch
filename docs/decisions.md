@@ -2292,3 +2292,54 @@ README 里那条**过去时**的实测（"when it shipped eight disciplines"）�
 **验证**：网络部分可用时 `--tag v0.14.0` → 三项 `OK`、git 那项 `UNVERIFIED`、退 **`3`**；网络全断时 →
 `UNVERIFIED the published package could be read / fetch failed`、退 `3`（旧版是 `FAIL the tag is readable`、退 `1`）；
 `release-check-selftest` 全绿。**未做**：已发布的 0.14.0 里仍是旧行为——修复随下一次发布带出（属主的选择）。
+
+## 82. 库没应答不再是一句裸错误：`zotero-ensure` 与 `INV-EVID-7`（2026-10-22）
+
+**起因（junhan 提的问题）**：他有时忘记先启动 Zotero 就开了预设，这时 agent 可能**绕过**库去读（翻数据目录、按文件名挑存储的 PDF、拿网上副本顶替），问预设能不能自己把 Zotero 拉起来。
+
+**先说实测到的现状**：预设里七个参考库 helper 全部只经 `tools/zotero-local-api.mjs` 发 HTTP 到
+`127.0.0.1:23119`，`tools/` 里**没有一处** spawn Zotero；库没开时 agent 拿到的是
+`ERROR: connect ECONNREFUSED 127.0.0.1:23119`、exit 1——一句既不说下一步、又读起来像"仪器坏了"的话。
+**这就是诱使它绕道的动因**：没有任何一句告诉它"库不应答时该停下"，读侧连一条管通道的规矩都没有（写侧有 `INV-EVID-3`）。
+另一件必须承认的事：agent **技术上早就能**自己拉起它（预设带 `tool-bash`/`tool-pwsh`），缺的不是能力而是仪器与规则。
+
+**决策**：三样东西，分三层。①**仪器** `tools/zotero-ensure.mjs`：探测 → 没人应答且进程不在才启动 → 轮询到上限 → 四态
+（`already answering` / `started` / `not answering` 附 `fix` / `cannot start` 附 `checked` 清单）。**只有显式跑它才启动**，
+任何读写 helper 都不隐式启动；不写偏好、不 kill、不重启。②**出路**放在共享传输层：`ECONNREFUSED` / `ENOTFOUND` /
+`EHOSTUNREACH` / `ENETUNREACH` 翻成一句含绝对路径命令的话，六个 helper 自动继承；`code` 保留、原错挂 `cause`，
+`ECONNRESET` 与探测超时**不翻**（插入点可能在请求中间，此时说"从未起来"是假话）。③**契约**：`protocol.md` 升
+**Revision 33**，§6 加一条"不应答是停，不是替代"，§8 新增 `INV-EVID-7`；两份纪律（`literature-recon` 全文、
+`reading-triage` 第 0 步指向它）各一句。**常驻提示 0 新增字符**——那句话只在失败时出现。
+
+**为什么拒绝"自动拉起"（B 之外的两个选项）**：`ZOTERO_LOCAL_API` 一旦被设置就**拒绝启动**。那条缝的语义是"对面是桩库或
+另一个实例"，而"测试以为在打桩、实际惊动了真应用"正是 `zotero-local-api.mjs` 里写明唯一不能有的失效方式。所以启动权限由
+**显式命令**授予，而不是由一次读顺带触发。
+
+**实测（本机，非推断）**：Zotero 10.0.6，`C:\Program Files\Zotero\zotero.exe`（注册表 `InstallLocation` 一致），
+**PATH 里没有 `zotero.exe`** ⇒ 定位必须走 注册表 → 标准路径 → PATH 三级，靠命令名找会在这台机器上找不到；
+`/api/` 活端口 **7 ms** 回 `Zotero-Server-ID`，死端口 **4 ms** 即拒 ⇒ 探测零成本；
+prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就有端口。**未实测**：冷启动到端口可用的耗时——
+不能为了测它去杀属主正在用的 Zotero，所以设计不依赖这个数（`--wait` 上限 + 如实报）。
+
+**退出码只用两种**：0 = 库答话（已经答的，或本次启动后答的，以及 `--dry-run` 的计划）；1 = 它不答且这件事没有属主就改不了。
+**没有 3**：3 在本仓库的语义是"可能已落盘，读回来再重发"，而启动一个进程不存在"可能"，一个"也许一会儿就好"的码只会请出这个命令
+本来要消灭的重试循环。
+
+**落在何处**：[`tools/zotero-ensure.mjs`](../tools/zotero-ensure.mjs) 与其 [自测](../tools/zotero-ensure-selftest.mjs) ·
+[`tools/zotero-local-api.mjs`](../tools/zotero-local-api.mjs)（`libraryUnreachable` + `localRequest` 的 `timeoutMs` 探测）与其
+[自测](../tools/zotero-local-api-selftest.mjs) 第 [12] 组 · [`protocol.md`](../protocol.md)（Revision 33：§6、`INV-EVID-7`）·
+[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md) ·
+[`tools/release-check.mjs`](../tools/release-check.mjs)（名册）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) →
+[`docs/toolchain.md`](toolchain.md)（重生成，24 条出处全部成立）· [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) ·
+[`README.md`](../README.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的套件清单。
+
+**反向控制（两次）**：删掉 `nextAction` 里的 seam 分支 → `zotero-ensure-selftest` **FAIL (3)**（[5] 一条、[7] 两条）；
+把传输层的错误翻译改回 `reject` → `zotero-local-api-selftest` **FAIL (1)**（[12] 的接线断言）。两次都即装即 PASS。
+**注意那条断言为什么改成读措辞**：裸消息 `connect ECONNREFUSED 127.0.0.1:<port>` 同样带 code 与端口，
+所以只断言这两样时**翻译关掉也照样通过**——这是第一版反向控制没抓住它的原因。
+
+**验证**：`zotero-ensure-selftest` 39 条断言全绿（[1]–[8]）、`zotero-local-api-selftest` 86 条全绿（新增第 [12] 组 13 条）、9 个 zotero 离线自测全绿、`node --check` 通过、`toolchain-page --check` 24 条出处成立、
+`doc-selftest` / `skills-selftest` / `toolchain-selftest` / `contact-bridge-selftest` / `client-selftest` 全绿、
+`release-check --local` 除"工作树干净"（打 tag 的前置，开发期本就为脏）外全绿。**未做**：不对真实"应用没跑"的机器做端到端实测
+（本机 Zotero 一直开着，杀它去测等于毁掉属主正在用的东西）；`zotero-ensure` 的 live 启动分支因此只由 `nextAction` 的纯判定覆盖，
+这一点写在自测文件头里。

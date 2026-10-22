@@ -36,6 +36,11 @@ serve this question*, each with the sentence that decided it.
 Read-only, before reading the paper. Paths below are relative to the study's **layer root** — `research/`
 where that directory exists, the study root otherwise (protocol §7):
 
+0. **The library has to answer first.** The helpers below reach the reference manager through its own
+   local API, so run `{{presetTools}}/zotero-ensure.mjs` before them: exit 0 means it answers (the
+   application was started when it was not running), exit 1 means it does not — say so, stop, and do not
+   read the library's database file or its stored PDFs by path instead. `literature-recon` states the
+   reasoning; protocol `INV-EVID-7` is the rule.
 1. **The question.** `<layer root>/00_scoping.md` carries the candidate questions with their ids. A
    judgement is per **(question × paper)**; with no named question there is no unit to judge, and the
    round stops and asks which question it is for.

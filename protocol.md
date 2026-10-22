@@ -1,9 +1,20 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 32.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 33.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 32 names the provenance this contract did not have: who
+independent of any package version. Revision 33 gives the reference-library channel the one thing it
+did not have: a way back from "the library is not answering". That failure reached the caller as a
+transport error, which names no next step and reads like a broken instrument — and an instrument that
+looks broken is how a round talks itself into reading the library by another route. Two things follow.
+A helper program now starts the reference manager when nothing answers and no process is running, and
+reports which of four states it found; it launches nothing at an address `ZOTERO_LOCAL_API` names,
+because that address belongs to a stub. And the channel states its own boundary: the library is read
+through the application's own API, keyed by a record, so a round that cannot make it answer reports
+that and stops rather than reading the database file or picking stored attachments out by path — a
+reading that cannot name its record can be written onto nothing, matched against no note, and checked
+by no reader. §6 and `INV-EVID-7` state it.
+Revision 32 names the provenance this contract did not have: who
 wrote a note's body. A section note the preset's own discipline writes carries `/agent-note`; the
 owner's acceptance of that body is `/reviewed`; an unreviewed agent body is a draft that may be
 rewritten in place and that supports a candidate and nothing stronger, while a reviewed one is a
@@ -469,6 +480,17 @@ These rules bound their use:
 - **The owner's library is searched by full text, not only by metadata.** A library read as a title
   index turns work it already holds into a false absence, and that absence is a statement about the
   query rather than about the library.
+- **A channel that is not answering is a stop, not a substitute.** The library has one entrance: the
+  reference manager's own local API, keyed by the record. When that API does not answer, the round says
+  the library is unavailable and stops; it does not read the database file, and it does not pick stored
+  attachments out by path. The reason is not tidiness: a reading that cannot name its record can be
+  written onto nothing, matched against no note, and checked by no reader, and a file found by its name
+  may be another edition of the work. Reaching the entrance is an instrument rather than an argument —
+  `zotero-ensure.mjs` probes the address, starts the application when nothing answers and no process is
+  running, and reports one of four states (`already answering`, `started`, `not answering` with the
+  setting that fixes it, `cannot start` with the places it looked). It writes no preference, restarts
+  nothing, and launches nothing at an address `ZOTERO_LOCAL_API` names, since that address belongs to a
+  stub library rather than to the owner's.
 - **The reference-library channel also carries writes, and they are bounded by the same gate.**
   Adding, editing, filing or removing a record is a write, so it needs `INV-EVID-3`'s authorization and
   its read-back before it is reported. The authorization is the reference manager's, not this preset's:
@@ -611,6 +633,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-4` | A source already read is not read again to recover what it or its section notes say: how far a paper was read, and why that reading stopped, are a row in the question's own ledger, the section notes are the transcription of the reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round: the ledger row says where the last reading stopped, and the section notes are what makes that reading reusable for a question that was not the one it was made for. |
 | `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
 | `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
+| `INV-EVID-7` | A reading of the owner's library comes through the reference manager's own local API and is keyed by a record; when that API does not answer, the round reports the library unavailable and stops, and no reading is taken from the library's database file or from its stored attachment files by path. | A reading that cannot name its record can be written onto nothing, matched against no note, and checked by no reader; a library read behind the running application is not even the same library, since the two are one write apart. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |

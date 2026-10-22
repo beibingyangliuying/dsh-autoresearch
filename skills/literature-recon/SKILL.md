@@ -153,6 +153,15 @@ Fixed sections:
   literature file. Report it in the round's result and propose removing it — but **do not delete it**.
   Tidying the owner's workspace is not a search round's act, and a stale index that is silently gone is
   worse than one that was named out loud and left in place.
+- **Make the library answer before reading from it, and stop if it cannot.** Every helper below reaches
+  the reference manager through its own local API, so the first move of any library work is
+  `{{presetTools}}/zotero-ensure.mjs`: it probes the address, starts the application when nothing answers
+  and no process is running, and prints one of four states. Exit 0 means the library answers. Exit 1
+  means it does not: say so in the round's result and **stop**. Do not read its database file, do not
+  pick stored PDFs out by path, and do not let a preprint or a web copy stand in for the record — a
+  reading that cannot name its record can be written onto nothing, matched against no note, and checked
+  by no reader (protocol `INV-EVID-7`). Every other helper says the same thing when it finds the address
+  closed (`the reference library is not answering …`), and it names that command.
 - **Search the library in full-text mode.** `{{presetTools}}/zotero-read.mjs --search "<query>"` defaults
   to the mode that matters: `qmode=everything` looks in abstracts, notes and **attachment full text**,
   while the library's own default searches titles, creators and years only — so a paywalled paper the
