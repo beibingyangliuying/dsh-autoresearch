@@ -13,6 +13,7 @@ mounts no MCP server. This file answers one question only — *which name implem
 | Reading-triage discipline — how far one paper is worth reading for one named question, recorded in that question's own ledger (§4) | `reading-triage` |
 | Section-notes discipline — one `/section-N` explanation note per top-level method section (§4) | `section-notes` |
 | Adoption discipline — what a paper read may lend, under what condition, into which module (§4) | `adoption-ruling` |
+| Direction discipline — what the record refused becomes candidate moves with a kill condition, and competing directions only when two survivors exclude each other (§4) | `direction-probe` |
 | Challenge discipline — objections, or an honest refusal (§4) | `redteam-ruling` |
 | Settlement discipline — conclusions, rejections and rulings (§4) | `progress-sync` |
 | Metadata discipline — bibliographic records, never evidence (§4) | `metadata-query` |
