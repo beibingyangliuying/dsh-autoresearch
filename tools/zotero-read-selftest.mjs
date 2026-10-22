@@ -20,6 +20,7 @@ import {
   groupHits,
   parseArgs,
   pickAttachment,
+  readItemOrRefuse,
   screenRows,
   selectRequested,
   sliceText,
@@ -268,6 +269,37 @@ throws('--screen without --collection is refused', () => parseArgs(['--search', 
 throws('--screen with --limit is refused, because it would mean two things at once', () =>
   parseArgs(['--collection', 'k', '--screen', '--limit', '20']),
 )
+
+// --- what a 404 from the library means ------------------------------------------------------------
+
+console.log('\n[10] a key that is not in this library')
+
+// The transport cannot say this: a 404 also means "no such collection" to a write. The reader is the
+// one place where it means "the key you were given is not here", so the reader owns the sentence - and
+// it offers no command, because the search terms belong to whoever holds the key.
+const thrower = (status) => async () => {
+  const error = new Error(`/api/users/0/items/X answered ${status}`)
+  error.status = status
+  throw error
+}
+
+const missing = await readItemOrRefuse('NOTAKEY1', thrower(404)).then(
+  () => null,
+  (error) => error,
+)
+check(missing?.name === 'Refusal', 'a 404 becomes a refusal, not a bare status line')
+check(missing?.message.includes('NOTAKEY1') && !missing?.message.includes('/api/'), 'the key is named, and the API path is not shown to a reader')
+check(missing?.fix.includes('search the record by its title'), 'and the next action is to find the record and read its key')
+check(missing?.command === '', 'no command is offered: a `try` line with a placeholder in it gets pasted and fails')
+
+const other = await readItemOrRefuse('X', thrower(500)).then(
+  () => null,
+  (error) => error,
+)
+check(other?.name !== 'Refusal' && other?.status === 500, 'a non-404 passes through untouched - negative control')
+
+const found = await readItemOrRefuse('REALKEY1', async () => ({ key: 'REALKEY1' }))
+check(found.key === 'REALKEY1', 'and a record that exists is returned as it came')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

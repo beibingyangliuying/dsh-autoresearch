@@ -418,5 +418,7 @@ const isEntryPoint =
 if (isEntryPoint) {
   main()
     .then((code) => process.exit(code))
-    .catch((error) => process.exit(reportFailure(error, { usage: USAGE })))
+    .catch((error) => {
+      process.exitCode = reportFailure(error, { usage: USAGE })
+    })
 }

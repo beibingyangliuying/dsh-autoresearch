@@ -402,7 +402,9 @@ check(creates().length === 0, 'and no create reached the library', `${creates().
 
 resetLibrary()
 const noSource = await runAsync(['--write'])
-check(noSource.status === 1, 'no --arxiv and no --doi is an error, not a silent no-op', `status ${noSource.status}`)
+// Exit 2, not 1: naming neither source is a malformed command line, and a caller that reads 1 would go
+// looking for a write that refused when the program never got as far as asking the library.
+check(noSource.status === 2, 'no --arxiv and no --doi is a usage error, and says so with exit 2', `status ${noSource.status}`)
 
 server.close()
 

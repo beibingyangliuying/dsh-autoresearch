@@ -17,6 +17,7 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  arxivFailure,
   buildQueryUrl,
   decodeXml,
   describeSort,
@@ -267,6 +268,25 @@ check(
   describeSort({ order: 'ascending' }) === 'relevance (API default)/ascending',
   'an order alone still says which sort it applies to',
 )
+
+// --- what a refusal means, and what follows it ---------------------------------------------------
+
+console.log('\n[9] a refusal says which of the three nothings this was')
+
+// The three cases look identical from outside ("not 200") and need opposite advice: fixing the query,
+// lowering the page size, or waiting. Telling a reader to wait for a malformed id wastes the minute;
+// telling them to fix the query for a 429 is what walks them into the loop that caused it.
+const badQuery = arxivFailure({ status: 400, feedError: 'incorrect id format for 2401' })
+check(badQuery.message.includes('refused this query') && badQuery.fix.includes('objects to the query itself'), 'a 400 with a sentinel entry is about the query, not the rate')
+const tooBig = arxivFailure({ status: 500, feedError: 'start + max_results > 30000' })
+check(tooBig.fix.includes('lower --max'), 'a 500 with a sentinel entry is about the page size')
+const throttled = arxivFailure({ status: 429 })
+check(throttled.message.includes('throttling') && throttled.fix.startsWith('wait a minute'), '429 is the rate limiter, and the advice is to wait')
+const down = arxivFailure({ status: 503 })
+check(down.message.includes('throttling') && down.fix.startsWith('wait a minute'), '503 is read the same way')
+const broken = arxivFailure({ status: 500 })
+check(!broken.message.includes('throttling') && broken.fix.includes('its own side'), 'a 500 with no sentinel is arXiv failing on its side, and is not read as "no such paper" - negative control')
+check(arxivFailure({ status: 429 }).command === '', 'no command is offered: it would be the one that just failed')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 

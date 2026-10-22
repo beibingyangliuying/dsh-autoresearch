@@ -51,7 +51,7 @@ import {
   reportUnconfirmed,
   serverInfo,
 } from './zotero-local-api.mjs'
-import { reportFailure } from './refusal.mjs'
+import { UsageError, reportFailure } from './refusal.mjs'
 
 /** Set immediately before the create is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -313,7 +313,7 @@ async function resolve() {
   const doi = value('doi')
   if (arxiv) return { source: `arXiv ${arxiv}`, meta: await metadataFromArxiv(arxiv) }
   if (doi) return { source: `DOI ${doi}`, meta: await metadataFromCrossref(doi) }
-  throw new Error('pass --arxiv <id> or --doi <doi>')
+  throw new UsageError('pass --arxiv <id> or --doi <doi>')
 }
 
 /** Build the payload without writing anything. Shared by the dry run, the write and the test. */

@@ -385,6 +385,5 @@ if (isEntryPoint) {
       })
       return
     }
-    process.exit(code)
-  })
-}
+    process.exitCode = code
+  })}

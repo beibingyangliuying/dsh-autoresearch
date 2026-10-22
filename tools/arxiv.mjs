@@ -40,7 +40,7 @@
 // Exit codes: 0 answered, including zero results | 1 the request or the response failed | 2 usage.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { UsageError, reportFailure } from './refusal.mjs'
+import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 
 const API_URL = 'https://export.arxiv.org/api/query'
 const USER_AGENT = 'dsh-autoresearch/1.0'
@@ -269,6 +269,36 @@ const USAGE =
   '       node tools/arxiv.mjs --selftest'
 
 /**
+ * What an arXiv refusal means, and the one action that follows it.
+ *
+ * Three different situations hide behind "not 200", and they need different advice: a 4xx with a
+ * sentinel entry is arXiv objecting to the QUERY, a 5xx with one is usually a page that was too large,
+ * and 429/503 is the rate limiter. Telling a reader to "wait a minute" for a malformed id wastes the
+ * minute and teaches nothing; telling them to fix the query for a 429 invites the loop that caused it.
+ *
+ * Pure, and exported, so every branch is checked without asking arXiv to fail on demand.
+ *
+ * @param {{status: number, feedError?: string}} answer The status, and the sentinel text when there is one.
+ * @returns {Error} A refusal carrying the action.
+ */
+export function arxivFailure({ status, feedError = '' }) {
+  if (feedError) {
+    return new Refusal(`arXiv refused this query (HTTP ${status}): ${feedError}`, {
+      fix:
+        status === 400
+          ? 'arXiv objects to the query itself, not to the rate: correct the id or the terms and ask again'
+          : 'arXiv answered 500 on this page size; lower --max and ask again',
+    })
+  }
+  const throttled = status === 429 || status === 503
+  return new Refusal(`arXiv answered HTTP ${status}${throttled ? ' (it is throttling this client)' : ''}`, {
+    fix: throttled
+      ? 'wait a minute and ask again - the number is a limit on rate, not a verdict on the query'
+      : 'arXiv failed on its own side; ask again in a minute, and do not read this as "no such paper"',
+  })
+}
+
+/**
  * Read the command line.
  *
  * @param {string[]} argv Arguments after the script name.
@@ -387,15 +417,9 @@ async function main() {
   if (feed.error) {
     // Measured shapes: HTTP 400 for an invalid query, HTTP 500 for an oversized page. In both, the
     // feed carries exactly one sentinel <entry> and `totalResults` is 1. Never a record.
-    console.error(`arXiv reported an error (HTTP ${response.status}): ${feed.error}`)
-    process.exitCode = 1
-    return
+    throw arxivFailure({ status: response.status, feedError: feed.error })
   }
-  if (!response.ok) {
-    console.error(`arXiv answered HTTP ${response.status}: ${response.body.replace(/\s+/g, ' ').slice(0, 300)}`)
-    process.exitCode = 1
-    return
-  }
+  if (!response.ok) throw arxivFailure({ status: response.status })
 
   const missing = findMissingIds(options.ids, feed.entries)
   if (options.json) {
@@ -444,6 +468,6 @@ const isEntryPoint =
 // wait on itself - the self-test body never runs and the process exits 13 with only a warning.
 if (isEntryPoint) {
   main().catch((error) => {
-    process.exit(reportFailure(error, { usage: USAGE }))
+    process.exitCode = reportFailure(error, { usage: USAGE })
   })
 }

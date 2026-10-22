@@ -24,11 +24,13 @@ import {
   normalizeDoi,
   normalizeOpenAlexWork,
   normalizeUnpaywall,
+  missingRecordRemedy,
   openAlexIdOf,
   parseArgs,
   plainText,
   reconstructAbstract,
   referenceLabel,
+  summaryOf,
   workRef,
 } from './metadata.mjs'
 
@@ -257,6 +259,30 @@ check(classifyResponse({ status: 500, body: '{"error":"boom"}' }) === 'failed', 
 check(errorMessage({ error: 'boom' }) === 'boom' && errorMessage({ message: 'boom' }) === 'boom', 'an error envelope is read either way')
 check(errorMessage({ meta: { notice: MEASURED_OPENALEX_NOTICE } }) === '', 'a notice is NOT an error envelope')
 check(errorMessage(null) === '', 'and nothing has no message')
+
+console.log('\n[6b] the remedy a 404 carries, per mode')
+
+// The first draft of this change offered "run --fulltext <key>" for a record with no attachment -
+// which is the command that had just failed. The same rule applies here: a `try` line is only offered
+// where the command it prints would work, so these assertions pin which modes may hand one over.
+const doi404 = missingRecordRemedy({ mode: 'doi', source: 'openalex', target: '10.1038/x' })
+check(doi404.command.includes('--doi 10.1038/x --source crossref'), 'a DOI missing from OpenAlex is asked of Crossref, with the same DOI')
+check(doi404.command.startsWith('node "'), 'and the path is absolute, so the line can be pasted anywhere')
+const crossref404 = missingRecordRemedy({ mode: 'refs', source: 'crossref', target: '10.1038/x' })
+check(crossref404.command.includes('--source openalex'), 'the swap works the other way for references')
+const id404 = missingRecordRemedy({ mode: 'refs', source: 'openalex', target: 'W123' })
+check(!id404.command, 'an OpenAlex ID is not handed to Crossref, which cannot resolve one - negative control')
+const oa404 = missingRecordRemedy({ mode: 'oa', source: 'openalex', target: '10.1038/x' })
+check(oa404.command.includes('--doi 10.1038/x') && !oa404.command.includes('--source'), 'a DOI with no open copy is asked of OpenAlex as a record, not of another channel')
+const cited404 = missingRecordRemedy({ mode: 'cited-by', source: 'openalex', target: 'W123' })
+check(!cited404.command, 'and --cited-by, which reads one channel only, offers prose rather than a command that would fail')
+const search404 = missingRecordRemedy({ mode: 'search', source: 'openalex', search: 'graph neural' })
+check(search404.command.includes('--search "graph neural"') && search404.command.includes('--source crossref'), 'a search is re-asked verbatim of the other channel')
+
+check(summaryOf(MEASURED_404_HTML) === '', 'an HTML body is not quoted into an error - the status already said it')
+check(summaryOf('{"error":"x"}') === '{"error":"x"}', 'while a short text body still is')
+check(summaryOf('   ') === '', 'and an empty one is not')
+check(summaryOf('x'.repeat(400)).length === 160, 'a long body is cut, not printed whole')
 
 // --- the urls, which is where the prose rules become mechanical ------------------------------------
 

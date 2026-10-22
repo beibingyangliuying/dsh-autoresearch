@@ -165,8 +165,26 @@ export function localRequest(method, path, { body, headers = {}, timeoutMs = 0 }
  */
 export async function getJson(path) {
   const res = await localRequest('GET', path)
-  if (res.status !== 200) throw new Error(`${path} answered ${res.status}: ${res.text.slice(0, 200)}`)
+  if (res.status !== 200) throw statusError(path, res)
   return JSON.parse(res.text)
+}
+
+/**
+ * A non-200 answer, carrying the status as a FIELD rather than only as a number in a sentence.
+ *
+ * The same 404 means "that key is not in this library" to a reader and "no such collection" to a write,
+ * and the remedy differs, so the transport keeps the fact and names no remedy. A caller that knows what
+ * its own 404 means reads `error.status`; nothing anywhere parses this message.
+ *
+ * @param {string} path The path that was asked.
+ * @param {{status: number, text: string}} res What answered.
+ * @returns {Error} The error to throw, with `status` and `path` attached.
+ */
+function statusError(path, res) {
+  const error = new Error(`${path} answered ${res.status}: ${res.text.slice(0, 200)}`)
+  error.status = res.status
+  error.path = path
+  return error
 }
 
 /**

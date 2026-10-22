@@ -60,7 +60,7 @@ import {
   serverInfo,
   visibleText,
 } from './zotero-local-api.mjs'
-import { UsageError, reportFailure } from './refusal.mjs'
+import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 
 const QMODES = ['everything', 'titleCreatorYear']
 /** The library's own maximum page size for /items. */
@@ -455,9 +455,28 @@ async function runSearch(options) {
   })
 }
 
+/**
+ * One record, with a 404 turned into the one thing a reader can do about it.
+ *
+ * The transport cannot say this: a 404 also means "no such collection" to a write, and the remedy
+ * differs. Here the key came from the reader, so the only next action is to find the record and read its
+ * key - and no command is offered, because the search terms are the reader's. A `try` line with a
+ * placeholder in it gets pasted and fails, which is worse than prose.
+ */
+export async function readItemOrRefuse(key, read = readItem) {
+  try {
+    return await read(key)
+  } catch (error) {
+    if (error.status !== 404) throw error
+    throw new Refusal(`the library has no record under the key ${key} (404)`, {
+      fix: 'a key is copied from a search result or from the item pane; search the record by its title or author, and read the key from that answer',
+    })
+  }
+}
+
 async function runItem(options) {
   const key = options.value
-  const [data, children, names] = await Promise.all([readItem(key), childrenOf(key), collectionNames()])
+  const [data, children, names] = await Promise.all([readItemOrRefuse(key), childrenOf(key), collectionNames()])
   const collections = normalizeCollections(data.collections)
   const picked = pickAttachment(children)
   if (options.json) {
@@ -495,7 +514,7 @@ async function runItem(options) {
 
 async function runFulltext(options) {
   const key = options.value
-  const record = await readItem(key)
+  const record = await readItemOrRefuse(key)
   let attachmentKey = options.attachment
   let source = null
   let children = []
@@ -507,9 +526,12 @@ async function runFulltext(options) {
       children = await childrenOf(key)
       const picked = pickAttachment(children)
       if (!picked) {
-        throw new Error(
+        throw new Refusal(
           `record ${key} has no PDF, EPUB or HTML attachment to read` +
             (children.length ? ` (its ${children.length} child item(s) are none of those)` : ' (it has no children)'),
+          {
+            fix: 'attach the file to the record in the library; the indexed text is keyed by the attachment, so there is nothing to read until one exists',
+          },
         )
       }
       attachmentKey = picked.key
@@ -818,6 +840,6 @@ const isEntryPoint =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    process.exit(reportFailure(error, { usage: USAGE }))
+    process.exitCode = reportFailure(error, { usage: USAGE })
   })
 }

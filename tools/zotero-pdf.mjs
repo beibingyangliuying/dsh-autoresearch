@@ -38,10 +38,10 @@ import { deflateSync } from 'node:zlib'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PDFiumLibrary } from '@hyzyla/pdfium'
-import { childrenOf, localRequest, readItem } from './zotero-local-api.mjs'
-import { findPassages, sliceText } from './zotero-read.mjs'
+import { childrenOf, localRequest } from './zotero-local-api.mjs'
+import { findPassages, readItemOrRefuse, sliceText } from './zotero-read.mjs'
 import { romanToNumber } from './zotero-section-note.mjs'
-import { UsageError, reportFailure } from './refusal.mjs'
+import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 
 const READABLE = ['application/pdf', 'application/epub+zip', 'text/html']
 const DEFAULT_LIMIT = 12000
@@ -207,11 +207,17 @@ const RUNG = {
 }
 
 async function openFile(itemKey) {
-  const record = await readItem(itemKey)
+  const record = await readItemOrRefuse(itemKey)
   if (record.itemType === 'note') throw new UsageError(`${itemKey} is a note; pass the record the attachment belongs to`)
   const children = await childrenOf(itemKey)
   const attachment = attachmentOf(children)
-  if (!attachment) throw new UsageError(`${itemKey} carries no PDF, EPUB or HTML attachment`)
+  if (!attachment) {
+    // Exit 1, not 2: the command line was right, the record simply carries nothing to read. Saying
+    // "usage" here sent a reader back to re-type a command that had already been typed correctly.
+    throw new Refusal(`${itemKey} carries no PDF, EPUB or HTML attachment, so there is no file to read`, {
+      fix: 'attach the file to the record in the library; a record without one has no text for any rung',
+    })
+  }
   const redirect = await localRequest('GET', `/api/users/0/items/${attachment.key}/file`)
   if (redirect.status !== 302) {
     throw new Error(`the library did not hand over a path for ${attachment.key} (HTTP ${redirect.status})`)
@@ -353,6 +359,6 @@ const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) =
 
 if (isEntryPoint) {
   main().catch((error) => {
-    process.exit(reportFailure(error, { usage: USAGE }))
+    process.exitCode = reportFailure(error, { usage: USAGE })
   })
 }

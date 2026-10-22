@@ -63,7 +63,7 @@
 // Exit codes: 0 answered, including zero results | 1 the request or the response failed | 2 usage.
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { UsageError, reportFailure } from './refusal.mjs'
+import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 
 const OPENALEX_URL = 'https://api.openalex.org'
 const CROSSREF_URL = 'https://api.crossref.org'
@@ -638,19 +638,84 @@ export function formatOa(record) {
   return lines.join('\n')
 }
 
-/** One line per kind of nothing, each distinguishable from the others. */
-function channelFinding(kind, response, options) {
-  const head = String(response.body ?? '').replace(/\s+/g, ' ').slice(0, 160)
+/** The name this round should use for the channel it asked. Unpaywall answers `--oa` only. */
+function channelName(options) {
+  return options.mode === 'oa' ? 'Unpaywall' : options.source
+}
+
+/**
+ * A short excerpt of an answer body, and nothing at all when that body is markup.
+ *
+ * A 404 from these channels often carries an HTML error page. Dumping it printed a screen of tags with
+ * no information in it, and the reader's question was already answered by the status.
+ */
+export function summaryOf(body) {
+  const text = String(body ?? '').replace(/\s+/g, ' ').trim()
+  if (text === '' || text.startsWith('<') || /<html|<!doctype/i.test(text.slice(0, 200))) return ''
+  return text.slice(0, 160)
+}
+
+/** The command that would run this same tool, as an absolute path a reader can paste. */
+const CLI = `node "${fileURLToPath(import.meta.url)}"`
+
+/**
+ * The one thing to do when a channel answers 404, per mode.
+ *
+ * Narrow on purpose. `--cited-by` reads OpenAlex ids only, `--oa` reads Unpaywall only, and `--refs`
+ * accepts a bare OpenAlex id that Crossref cannot resolve - so the "ask the other channel" swap is
+ * offered only where the command it hands over would actually work. Everything else gets prose.
+ */
+export function missingRecordRemedy(options) {
+  const target = options.target
+  if (options.mode === 'cited-by') {
+    return { fix: '--cited-by reads OpenAlex work ids; if this is a DOI, resolve it with --doi first' }
+  }
+  if (options.mode === 'oa') {
+    return {
+      fix: 'Unpaywall lists open-access copies only, so a DOI with no open copy answers 404 here - the record itself may still exist',
+      command: `${CLI} --doi ${target}`,
+    }
+  }
+  const other = options.source === 'crossref' ? 'openalex' : 'crossref'
+  if (options.mode !== 'search' && !target.startsWith('10.')) {
+    return { fix: `the two channels index different records; ${other} resolves DOIs, so ask by DOI with --doi` }
+  }
+  const asked = options.mode === 'search' ? `--search "${options.search}"` : `--${options.mode} ${target}`
+  return {
+    fix: `the two channels index different records - the same DOI is often in one and not the other; ask ${other}`,
+    command: `${CLI} ${asked} --source ${other}`,
+  }
+}
+
+/**
+ * One line per kind of nothing, each distinguishable from the others - and, where exactly one action
+ * helps, that action.
+ *
+ * The 404 is the one that matters: this file's header records a measured case where the same arXiv DOI
+ * answered 200 on OpenAlex and 404 on Crossref. That knowledge used to live in a comment; the reader who
+ * hits the 404 is the one who needs it.
+ *
+ * @param {'rate-limited'|'not-found'|'not-json'|'failed'} kind What kind of answer this was.
+ * @param {{status: number, body: string}} response The raw answer.
+ * @param {object} options The parsed command line.
+ * @returns {Error} A Refusal when the way out is known, a plain Error when it is not.
+ */
+function channelFailure(kind, response, options) {
+  const head = summaryOf(response.body)
+  const source = channelName(options)
   if (kind === 'rate-limited') {
-    return `HTTP 429: the channel is asking this client to slow down (${head}). Back off and report it; do not retry in a loop.`
+    return new Refusal(`HTTP 429: ${source} is asking this client to slow down`, {
+      fix: 'wait a minute and ask again - the number is a limit on rate, not a verdict on the query',
+    })
   }
   if (kind === 'not-found') {
-    return `HTTP 404: nothing at this address in ${options.mode === 'oa' ? 'Unpaywall' : options.source}. Serving: ${head}`
+    const asked = options.mode === 'search' ? `"${options.search}"` : options.target
+    return new Refusal(`${source} has no record for ${asked}`, missingRecordRemedy(options))
   }
   if (kind === 'not-json') {
-    return `HTTP ${response.status}, and the body is not JSON: ${head}`
+    return new Error(`HTTP ${response.status} from ${source}, and the body is not JSON${head ? `: ${head}` : ''}`)
   }
-  return `HTTP ${response.status}: ${head}`
+  return new Error(`HTTP ${response.status} from ${source}${head ? `: ${head}` : ''}`)
 }
 
 /** Render one answered request. */
@@ -726,17 +791,11 @@ async function main() {
   const url = buildUrl(options)
   const response = await fetchOnce(url)
   const kind = classifyResponse(response)
-  if (kind !== 'json') {
-    console.error(channelFinding(kind, response, options))
-    process.exitCode = 1
-    return
-  }
+  if (kind !== 'json') throw channelFailure(kind, response, options)
   const payload = JSON.parse(response.body)
   const error = errorMessage(payload)
   if (error !== '') {
-    console.error(`${options.source} reported an error at HTTP ${response.status}: ${error}`)
-    process.exitCode = 1
-    return
+    throw new Error(`${options.source} reported an error at HTTP ${response.status}: ${error}`)
   }
   console.log(options.json ? JSON.stringify(jsonView(options, payload), null, 2) : render(options, payload))
 }
@@ -750,6 +809,6 @@ const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) =
 // on itself - the self-test body never runs and the process exits 13 with only a warning.
 if (isEntryPoint) {
   main().catch((error) => {
-    process.exit(reportFailure(error, { usage: USAGE }))
+    process.exitCode = reportFailure(error, { usage: USAGE })
   })
 }
