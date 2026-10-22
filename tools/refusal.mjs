@@ -90,11 +90,28 @@ export function refusalLines(error, { width = LABEL_WIDTH } = {}) {
 }
 
 /**
+ * The script this process is running, as the absolute path its reader needs.
+ *
+ * A usage block is written by hand and names the program the repository-relative way (`node
+ * tools/<name>.mjs`), which is correct for someone standing in this checkout and wrong for the agent
+ * that meets it: the agent's working directory is a study workspace, which carries no `tools/`. Rather
+ * than restating the path in eighteen programs, one line here names the path the reader can actually
+ * use. Node resolves `argv[1]` to an absolute path, so no import and no filesystem call is needed.
+ */
+const ENTRY_PATH = typeof process.argv[1] === 'string' ? process.argv[1] : ''
+
+/** The line that turns a repository-relative usage block into something a study round can run. */
+const ENTRY_LINE = ENTRY_PATH === ''
+  ? ''
+  : `This script is at ${ENTRY_PATH} - invoke it by that absolute path; a relative tools/... does not resolve in a study workspace.`
+
+/**
  * Write the failure block and return the exit code the caller must set.
  *
  * The blank line in front separates the block from whatever the tool printed before it failing; the
  * usage block keeps its old place directly under the message, so a malformed command still reads as
- * one paragraph rather than as a failure report.
+ * one paragraph rather than as a failure report. A usage block also carries the absolute path of the
+ * script it describes, because the relative one it prints by hand names nothing outside this checkout.
  *
  * @param {unknown} error Whatever was thrown.
  * @param {object} [options]
@@ -105,7 +122,9 @@ export function refusalLines(error, { width = LABEL_WIDTH } = {}) {
  */
 export function reportFailure(error, { usage = '', write = (text) => console.error(text), width = LABEL_WIDTH } = {}) {
   if (error instanceof UsageError) {
-    write(usage ? `${error.message}\n${usage}` : error.message)
+    const lines = [usage ? `${error.message}\n${usage}` : error.message]
+    if (ENTRY_LINE) lines.push(ENTRY_LINE)
+    write(lines.join('\n'))
     return 2
   }
   write(`\n${refusalLines(error, { width }).join('\n')}`)

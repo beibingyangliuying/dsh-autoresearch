@@ -67,11 +67,25 @@ same(printed[0], '\nERROR   : boom', 'written as one block, with a blank line in
 same(reportFailure(new Refusal('refused', { fix: 'do this' }), { write: sink }), 1, 'a refusal is exit 1 too: it is still nothing written')
 printed.length = 0
 same(reportFailure(new UsageError('pass one of --outline, --extract or --render'), { usage: 'usage: node tools/zotero-pdf.mjs --item <key> --outline', write: sink }), 2, 'a malformed command line is exit 2')
-same(printed[0], 'pass one of --outline, --extract or --render\nusage: node tools/zotero-pdf.mjs --item <key> --outline', 'and keeps its usage block directly underneath, as one paragraph')
+check(
+  printed[0].startsWith('pass one of --outline, --extract or --render\nusage: node tools/zotero-pdf.mjs --item <key> --outline'),
+  'and keeps its usage block directly underneath, as one paragraph',
+  printed[0],
+)
+check(
+  printed[0].includes(`This script is at ${process.argv[1]}`),
+  'plus the absolute path the reader can actually run: a relative tools/... names nothing in a study workspace',
+  printed[0],
+)
+check(
+  printed[0].includes('does not resolve in a study workspace'),
+  'and says why the relative form is not enough',
+)
 check(!printed[0].includes('ERROR'), 'a malformed command is not reported as a failure block - negative control')
 printed.length = 0
 same(reportFailure(new UsageError('bad flag'), { write: sink }), 2, 'a usage error without a usage block still exits 2')
-same(printed[0], 'bad flag', 'and prints just its message')
+check(printed[0].startsWith('bad flag'), 'and prints its message first', printed[0])
+check(printed[0].includes('This script is at'), 'with the same path line, so no usage error is a dead end')
 
 console.log('\n[5] alignment survives multi-line values')
 const multi = new Refusal('first line\nsecond line', { fix: 'do this\nthen that' })
