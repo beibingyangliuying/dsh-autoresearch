@@ -19,6 +19,7 @@
 //     decides before it opens the write gate can be tested against a stub library. A malformed value
 //     must throw rather than fall back: talking to the reference manager while a test believed it was
 //     talking to a stub is the one failure this seam must not have.
+import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import {
   APP_NAME,
@@ -27,7 +28,9 @@ import {
   grantFilePath,
   isWriteAccepted,
   keptGrant,
+  libraryUnreachable,
   localOrigin,
+  localRequest,
   mayHaveLanded,
   parseGrantStore,
   reportUnconfirmed,
@@ -41,8 +44,10 @@ const check = (condition, label, detail = '') => {
   if (!condition) failures += 1
 }
 
-/** Run one reporter and collect what it wrote to stderr, without letting it reach the terminal. */
-function captureStderr(run) {
+/** The first line of a multi-line message, which is all a detail column can hold. */
+const firstLine = (text) => String(text).split(/\r?\n/)[0]
+
+/** Run one reporter and collect what it wrote to stderr, without letting it reach the terminal. */function captureStderr(run) {
   const original = console.error
   const lines = []
   console.error = (...args) => lines.push(args.map((part) => String(part)).join(' '))
@@ -314,6 +319,60 @@ check(/host:port/.test(malformed), 'a malformed address throws rather than falli
 if (originalAddress === undefined) delete process.env.ZOTERO_LOCAL_API
 else process.env.ZOTERO_LOCAL_API = originalAddress
 check(process.env.ZOTERO_LOCAL_API === originalAddress, 'and the environment is left as it was found')
+
+console.log('\n[12] a library that never answered says what to do about it')
+
+const unreachable = libraryUnreachable(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))
+check(unreachable !== null && unreachable.message.includes('is not answering'), 'ECONNREFUSED becomes a sentence about the library', firstLine(unreachable.message))
+check(unreachable.code === 'ECONNREFUSED', 'and the code survives, so a caller can still classify the failure', String(unreachable.code))
+check(unreachable.cause instanceof Error, 'the transport error is kept as the cause rather than replaced')
+check(unreachable.message.includes('zotero-ensure.mjs'), 'the way out is named, by path, because a relative tools/... resolves to nothing')
+check(unreachable.message.includes('not read by path'), 'and the alternative this exists to prevent is named too')
+check(libraryUnreachable(Object.assign(new Error('x'), { code: 'ENOTFOUND' })).message.includes('not answering'), 'a name that does not resolve is the same class')
+check(libraryUnreachable(Object.assign(new Error('x'), { code: 'EHOSTUNREACH' })).message.includes('not answering'), 'so is a host that cannot be reached')
+
+const reset = Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })
+check(libraryUnreachable(reset) === reset, 'a reset is NOT translated: it can arrive mid-request, where "never up" would be a false statement')
+const timedOut = Object.assign(new Error('nothing answered within 2000 ms'), { code: 'ETIMEDOUT' })
+check(libraryUnreachable(timedOut) === timedOut, 'and a probe timeout is not translated either, for the same reason')
+
+process.env.ZOTERO_LOCAL_API = '127.0.0.1:23998'
+const behindSeam = libraryUnreachable(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))
+check(behindSeam.message.includes('ZOTERO_LOCAL_API'), 'behind the seam the message names the seam', firstLine(behindSeam.message))
+check(!behindSeam.message.includes('zotero-ensure.mjs'), 'and does not offer to start an application this run is not talking to')
+if (originalAddress === undefined) delete process.env.ZOTERO_LOCAL_API
+else process.env.ZOTERO_LOCAL_API = originalAddress
+
+// The wiring, against a socket that is closed rather than a fake error: a predicate that is never called
+// is the shape of every "it should have said" defect.
+const closedPort = await new Promise((done) => {
+  const probe = createServer()
+  probe.listen(0, '127.0.0.1', () => {
+    const { port } = probe.address()
+    probe.close(() => done(port))
+  })
+})
+process.env.ZOTERO_LOCAL_API = `127.0.0.1:${closedPort}`
+let wired = null
+try {
+  await localRequest('GET', '/api/')
+} catch (error) {
+  wired = error
+}
+// The prose, not the code: a raw `connect ECONNREFUSED 127.0.0.1:<port>` also carries the code and the
+// port, so an assertion on those two alone passes with the translation switched off. The wording this
+// run sees is the SEAM one - a closed port here is only reachable by naming it, and naming it is what
+// keeps this test off the real library - so the sentence is matched by its shape, not by one branch's
+// exact words.
+const sentenceAboutTheLibrary = (text) => /(is not answering|did not answer)/.test(String(text))
+check(
+  wired !== null && wired.code === 'ECONNREFUSED' && sentenceAboutTheLibrary(wired.message),
+  'a request to a closed port really does reach the translation, prose and all',
+  firstLine(wired?.message ?? ''),
+)
+check((wired?.message ?? '').includes(String(closedPort)), 'and names the address it tried', firstLine(wired?.message ?? ''))
+if (originalAddress === undefined) delete process.env.ZOTERO_LOCAL_API
+else process.env.ZOTERO_LOCAL_API = originalAddress
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

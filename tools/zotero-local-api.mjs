@@ -30,9 +30,18 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { request } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 23119
+
+/**
+ * Failures that mean "nothing answered at all", as opposed to something that answered badly.
+ *
+ * `ECONNRESET` is deliberately absent: a reset can arrive in the middle of a request, so it belongs to
+ * the class a write tool reports as "sent but unconfirmed" rather than to "the library was never up".
+ */
+const UNREACHABLE_CODES = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EHOSTUNREACH', 'ENETUNREACH'])
 
 /**
  * Where the reference manager answers, as `host:port`.
@@ -58,6 +67,45 @@ export function localOrigin() {
     throw new Error(`ZOTERO_LOCAL_API must be host:port, got '${override}'`)
   }
   return { host: override.slice(0, separator), port }
+}
+
+/**
+ * Turn "nothing answered" into an error that names the way out.
+ *
+ * A bare `ECONNREFUSED` says the socket was refused and nothing else: it reads like a broken
+ * instrument, and an instrument that looks broken is what invites a caller to read the library by
+ * another route - the database file, or the stored attachments picked out by path. Those routes lose
+ * the record key, so what they read can be written onto nothing and checked by no reader. This is the
+ * one place every helper passes through, so the sentence is written once here instead of seven times.
+ *
+ * What is changed is the prose and nothing else: `code` is carried over, and a failure that is not in
+ * {@link UNREACHABLE_CODES} is returned as the same object, so a caller that classifies failures (the
+ * write tools' unconfirmed branch does) keeps seeing what the transport saw.
+ *
+ * @param {Error & {code?: string}} error What the transport raised.
+ * @returns {Error} The same error, or a new one whose message says what to do next.
+ */
+export function libraryUnreachable(error) {
+  if (!UNREACHABLE_CODES.has(error?.code)) return error
+  const { host, port } = localOrigin()
+  const address = `${host}:${port}`
+  const overridden = String(process.env.ZOTERO_LOCAL_API ?? '').trim() !== ''
+  const message = overridden
+    ? [
+        `the address ${address} did not answer (${error.code}), and ZOTERO_LOCAL_API names it:`,
+        'this run was pointed at a stub library or another instance, so the reference manager is not',
+        'involved and nothing here will start it.',
+      ].join('\n')
+    : [
+        `the reference library is not answering on ${address} (${error.code}).`,
+        "The library is read only through the reference manager's own API; start it with",
+        `    node "${fileURLToPath(new URL('./zotero-ensure.mjs', import.meta.url))}"`,
+        'and run this command again. Its database and its stored attachments are not read by path:',
+        'a reading that cannot name its record cannot be recorded onto it.',
+      ].join('\n')
+  const translated = new Error(message, { cause: error })
+  translated.code = error.code
+  return translated
 }
 
 /**
@@ -92,7 +140,7 @@ export function localRequest(method, path, { body, headers = {}, timeoutMs = 0 }
         res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, text }))
       },
     )
-    req.on('error', reject)
+    req.on('error', (error) => reject(libraryUnreachable(error)))
     if (timeoutMs > 0) {
       req.setTimeout(timeoutMs, () => {
         const error = new Error(`nothing answered within ${timeoutMs} ms`)
