@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). This skill never rewrites, merges or reformats an imported note.
+description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). A claim round never rewrites, merges or reformats an imported note; a rewrite happens only in Part II, when the owner names that section.
 ---
 
 # section-notes — keep a paper's record section-addressable
@@ -72,7 +72,7 @@ Read-only, before claiming or writing anything:
    | `retired` | notes marked `/retired` (tombstones), each with the note that names itself its successor |
    | `legacy` | a whole-paper summary an earlier version tagged `/digest`; never a section note, never written now |
    | `unknown` | notes with no `/section-` tag; **read these** |
-   | `ambiguous` | notes carrying more than one `/section-` tag; fix them first |
+   | `ambiguous` | notes carrying more than one `/section-` tag; **read them, then remove the stale tag** — `--unclaim --note <key> --section <ordinal>`, one tag per command |
 
    **The tool does not parse prose.** A note is coverage only if it carries `/section-N`; a note
    without one is `unknown`, and the judgement is yours. The tool's `covered` line is a claim about a
@@ -89,8 +89,11 @@ Read-only, before claiming or writing anything:
    | wrong, junk, or in the way | `--retire --note <key> --reason "<why>"` — a tombstone; it may be erased later with `--delete --write` |
    | a whole-paper summary, or not a section note | **leave it.** It is not a section note and must not be claimed for one. A note an earlier version tagged `/digest` is this case: the plan lists it as `legacy`, and it is never claimed for a section |
 
-   **In Part I only two of those four moves exist**: `--claim`, and *leave it*. `--rewrite` and
-   `--retire` are Part II moves, taken only when the owner asks for a section.
+   **In Part I only three moves exist**: `--claim`, `--unclaim` on an **ambiguous** note (a tag
+   mistake, resolved by removing one tag), and *leave it*. `--rewrite` and `--retire` are Part II
+   moves, taken only when the owner asks for a section. An ambiguous note claims nothing, so resolving
+   it is what makes the record's other notes claimable again; a note that carries **one** tag is a
+   claim and is never unclaimed here.
 
 3. **State the coverage table before any claim or write.** One line per section you are considering: the paper's
    own ordinal and heading · the note key that already covers it, or `none` · what it was judged on.
@@ -305,7 +308,7 @@ record carries an attachment: it reads the notes, not the paper. Two rows belong
 |---|---|
 | The record has no PDF/EPUB/HTML attachment, or the library has not indexed it | Report "no readable text"; write nothing. The note is not owed from the abstract. |
 | The section is already claimed — the plan says so, **or your reading of the notes says so** | Report "already covered by note `<key>`" and skip it. Never create a second note for one section. |
-| A note carries two `/section-` tags (`ambiguous`) | Fix the tags first; do not write while coverage is ambiguous. |
+| A note carries two `/section-` tags (`ambiguous`) | Read it, then remove the stale one: `--unclaim --note <noteKey> --section <ordinal>` (dry run first; one tag per command). If you cannot tell which tag is stale, report both and **stop** — do not write while coverage is ambiguous. |
 | An `unknown` note explains §N | Claim it (`--claim`) — both halves act here. Part II may rewrite it if it needs our format; do not write a second note beside it. |
 | A note is a subsection-keyed note from an earlier round | Report it. Part II merges its content into the top-level note and retires it; Part I only reports it and claims nothing on the parent. Never create a note for the parent while it is there. |
 | The paper is a survey/review with no derivation anywhere | Report "no method section". Do not force a note onto a background section. |
@@ -394,6 +397,11 @@ The artifact is the notes on the library record. The report is what a later roun
   your reading and the tag disagree, report both and stop.
 - **A write needs the owner's authorization** (`INV-EVID-3`). "Allow" covers one write; a lasting grant
   for that library means no dialog at all, and it is revoked in the reference manager, not here.
+- **Resolving an ambiguous note is a tag removal, and the tool is narrow about it.** `--unclaim
+  --note <key> --section <ordinal>` removes exactly one `/section-N`, dry run first, version guarded,
+  body untouched, and it **refuses a note carrying a single tag** — that is a claim, not a tag mistake.
+  The plan names both tags and the one that survives, so the report can quote it. One tag per
+  command: an ambiguous note with three tags needs two invocations, and each is its own decision.
 - **Retiring is one note, one write, and it states its reason before it acts.** Dry run first, then
   `--write`; the read-back asserts that `/retired` came back. Whether a tag survives the application
   rewriting a note's body is measured: it does (`/retired`, 2026-10-18). A missing tag is reported, not
@@ -416,9 +424,10 @@ The artifact is the notes on the library record. The report is what a later roun
   plan does: every note's tags, section, retired/imported/legacy state, and the `unknown` and
   `ambiguous` lists. Assemble the coverage and gap table from that, never by parsing the prose.
 - **Reading is a budget.** An attachment's whole text comes back in one response — measured at 33k to
-  88k characters for the papers this discipline is used on — while the shell tool clips one command's
-  output at 16,000 characters and the result pruner reduces any tool result over 8,192 to its head and
-  tail once the context is compacted. Read in slices:
+  88k characters for the papers this discipline is used on — while the result pruner reduces any tool
+  result over 8,192 to its head and tail once the context is compacted, and the shell's own cap sits
+  above that: `dsh-tool-pwsh` retains the **last 64,000 bytes** of a stream (measured on DSH
+  0.2.1-rc.2), so a pull past it loses the **beginning**. Read in slices:
 
   ```powershell
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --limit 12000
@@ -456,6 +465,9 @@ The artifact is the notes on the library record. The report is what a later roun
   the file's outline, or the notes' consistent ordinals where the file carries none, said which
 - [ ] No claim was made against a claim the plan already reports; no section is claimed twice
 - [ ] Every claim was a dry run first, and its tag read-back is quoted
+- [ ] Any `ambiguous` note was either resolved with `--unclaim`, one tag at a time and quoted from the
+  plan, or reported unresolved with both tags named — never guessed at, and no single-tag note was
+  unclaimed
 - [ ] Every note left unclaimed appears in `## Left alone` with its reason
 - [ ] The `## Missing` list is in the paper's own order, and nothing in it was generated
 - [ ] The number of tags the round wrote is stated
@@ -490,6 +502,9 @@ The artifact is the notes on the library record. The report is what a later roun
 
 - Do not claim a note whose own text does not name its section. A claim is a durable statement a later
   round checks, and a wrong one blocks the section until the owner retires it.
+- Do not unclaim a single-tag note. One tag is a claim, and a reading that disagrees with a claim stops
+  the round for the owner to settle (protocol §6); `--unclaim` exists only to resolve a note that
+  carries more than one tag.
 - Do not rewrite, merge, retire or reformat an imported note in a claim round. What the owner pasted
   is the owner's text; Part II touches an import only when the owner asks for that section.
 - Do not turn a claim round into a reading: no paper is opened, and no `depth` is written for it.

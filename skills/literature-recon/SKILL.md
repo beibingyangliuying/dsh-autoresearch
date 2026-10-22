@@ -174,9 +174,10 @@ Fixed sections:
 - Do not modify the conclusions of existing literature notes; only **append** new evidence.
 - **Reading a long full text without destroying the context.** The library answers with an attachment's
   whole indexed text in one response — measured **76,908 characters** for a 17-page paper — which is far
-  above the 16,000 characters the shell tool returns from one command, and far above the 8,192-character
-  point at which the result pruner reduces a tool result to its head and tail when the context is
-  compacted. Read it in slices, and let the tool do the arithmetic:
+  above the 8,192-character point at which the result pruner reduces a tool result to its head and tail
+  when the context is compacted, and it is also past the shell's own cap: `dsh-tool-pwsh` retains the
+  **last 64,000 bytes** of each stream (measured on DSH 0.2.1-rc.2), so a pull that large loses its
+  **beginning** — the abstract goes first. Read it in slices, and let the tool do the arithmetic:
 
   ```powershell
   node "{{presetTools}}/zotero-read.mjs" --fulltext "<itemKey>" --limit 12000

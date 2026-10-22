@@ -31,7 +31,7 @@
 | 初筛 `collection-sweep` | 一个 Zotero 分类 → **一个具名课题的候选队列**：枚举整个分类（`--screen` 分页读满，notes/attachments 跳过并计数），摘要级判掉"不可能服务这一问"的（`depth: abstract` · `verdict: stop` · `basis` 指到摘要哪句），在范围的留空 `verdict` 排队，读不了的 `park`；**词表照抄 `reading-triage`，一个新词都不加**，`enough` 永不写在摘要上；产物只有台账行与锚定集补行 | 不判一篇读到哪（那是 `reading-triage`），不写库笔记，不裁"借不借"；**没有具名课题或没有具名分类就停**；不扫全库；父分类不含子分类条目（实测），所以逐叶扫 | 属主点名一个分类问"哪些能用"、一个课题的锚定集还没逐叶扫过、一条分类扫描留下的 `park` 复看条件成立 | [`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) |
 | 筛读 `reading-triage` | 一篇文献对**一个具名课题**该读到哪：`depth` 记读到第几节（`—` / `abstract` / `§N` / `full`），`verdict` 记为什么停（`park` / `enough` / `stop`），判定按（课题 × 文献）写进**该课题自己的台账行**，并带判定依据；复看条件在 `park`、`stop` 与**没读到全文的 `enough`** 上是必填，只有读完全文才说"够了"的 `enough` 可空；默认从前往后顺序读，可复用一个别的课题已经写下的 `/section-N` 笔记 | 不评价论文质量，不解释某一节，不决定借什么，不写库笔记；跨篇轮次的分派见 §8（按读进去的源文本片数，不按篇数）；**没有具名课题就不判定**；跳读只在"大纲有这一节 + `--grep` 命中标题 + 打印命中的标题行原文"三条同时成立时允许 | 即将为一篇文献花时间读、读到某节末要决定是否继续、一条 `park` 的复看条件成立、一条 `stop` 正被质疑 | [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md) |
 | 元数据 `metadata-query` | 书目元数据：DOI / 刊物 / 年份 / 作者 / 引用数 / 参考文献表，走 OpenAlex 与 Crossref 的 REST；**已在库**的作品据此补一行台账（`itemKey` · `year` · `found via`，不写 `grade`），不在库的只进本轮报告 | **只有元数据**：没有全文，也不给证据等级 | 解析或确认一条参考文献、找规范标识符、扩展谁引谁 | [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) |
-| 逐节笔记 `section-notes` | **默认路径**：外部贴入的**节笔记** → 按笔记自己写明的节号 **claim** 成 `/section-N` 覆盖（只写 tag、正文一字不动），并报出仍缺笔记的顶层节；属主点名某一节时才从论文**生成**一条（Part II）；身份是 tag，不是隐形 marker；claim 轮不读 PDF、不写正文、不 rewrite/merge/retire、不记台账 `depth`；已 claim 的节被工具拒绝重复创建；旧版本 `/digest` 整篇总结只作 legacy 识别，不再写；**代理写的正文一律带 `/agent-note`，业主接受后才加 `/reviewed`**——未复核的草稿可原地改、只够撑 `candidate`，复核过的按记录处理；记录上还有无 tag 笔记时 create 要 `--acknowledge-unknown` 放行 | 不写摘要、引言、背景、综述、案例、结果、讨论、结论、附录；不写整篇总结；**不拆节**；不写子节键，claim 轮遇到子节键只报告、不合并；claim 轮不判断笔记质量、不改写导入笔记、**不做机械公式修复**；生成只在你点名某一节时进行；**不替业主加 `/reviewed`** | 属主从外部贴入节笔记、要一份覆盖与缺口表时；或属主点名某一节要生成／重写时 | [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) |
+| 逐节笔记 `section-notes` | **默认路径**：外部贴入的**节笔记** → 按笔记自己写明的节号 **claim** 成 `/section-N` 覆盖（只写 tag、正文一字不动），并报出仍缺笔记的顶层节；属主点名某一节时才从论文**生成**一条（Part II）；身份是 tag，不是隐形 marker；claim 轮不读 PDF、不写正文、不 rewrite/merge/retire、不记台账 `depth`；已 claim 的节被工具拒绝重复创建；旧版本 `/digest` 整篇总结只作 legacy 识别，不再写；**代理写的正文一律带 `/agent-note`，业主接受后才加 `/reviewed`**——未复核的草稿可原地改、只够撑 `candidate`，复核过的按记录处理；记录上还有无 tag 笔记时 create 要 `--acknowledge-unknown` 放行 | 不写摘要、引言、背景、综述、案例、结果、讨论、结论、附录；不写整篇总结；**不拆节**；不写子节键，claim 轮遇到子节键只报告、不合并；claim 轮不判断笔记质量、不改写导入笔记、**不做机械公式修复**；ambiguous 只用 `--unclaim` 移掉陈旧的那一枚 tag（一次一枚，**单枚 tag 拒绝**）；生成只在你点名某一节时进行；**不替业主加 `/reviewed`** | 属主从外部贴入节笔记、要一份覆盖与缺口表时；或属主点名某一节要生成／重写时 | [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) |
 | 借鉴 `adoption-ruling` | 一篇**读过全文（A 级）**的文献 → 逐项台账"能借什么"：每条带原文定位（节 · 公式号 · 读到哪一片）、成立条件与"在这里怎么验"、原文式与我们的归一化式**分栏**、意图目标、**数值锚点**（测试能断言的那个数），拒用单列并带理由；读者是**没读过这篇论文的实现者** | 不评证据等级、不解释论文、不选方向、**不替所有者裁定**、不写代码、**不在这里重推原文公式** | 读定一篇要据以建东西的文献之后、按论文公式写代码之前、审计已有代码引用的公式是否真被这篇支持 | [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) |
 | 质疑 `redteam-ruling` | 对一个已成形的主张提出**可检验**的反驳，写成"请人裁定"的文件（反例 / 矛盾证据 / 可证伪路径至少其一，且指到具体句子） | **不发出裁定本身**；不许写"值得进一步研究" | 承诺一个方案之前、结论要出这个房间之前、两条路线冲突 | [`skills/redteam-ruling/SKILL.md`](../skills/redteam-ruling/SKILL.md) |
 | 交接 `subagent-contract` | 把活交给子代理并收回来而不洗白主张：先定交付物、要产物路径与确切命令、报告写文件只传指针 | 子代理的结论**不是事实**——父代理必须自己重新导出 | 要开一个探索或实现子代理时、决定要不要接受它返回的东西 | [`skills/subagent-contract/SKILL.md`](../skills/subagent-contract/SKILL.md) |
@@ -128,7 +128,7 @@ covered     : §2 · §3          # 带 /section-N 的活笔记，按顶层节
 retired     : §4 (KEY -> ...)  # 墓碑
 legacy      : KEY              # 旧版本留下的整篇总结，不是节笔记
 unknown     : KEY · KEY        # 没有 /section- tag 的笔记，交给你读
-ambiguous   : KEY              # 带多个 /section- tag，先修
+ambiguous   : KEY (§2 · §3)    # 带多个 /section- tag：不是覆盖；读过之后 --unclaim 移掉陈旧那枚（一次一枚）
 ```
 
 工具**不解析正文**：带 `/section-N` 才是覆盖；没带 claim 的进 `unknown`，旧版本留下的 `/digest` 整篇总结单列 `legacy`。读 `unknown` 的第一段；不够就整条打开：
@@ -137,7 +137,7 @@ ambiguous   : KEY              # 带多个 /section- tag，先修
 node tools\zotero-read.mjs --item <noteKey> --limit 12000
 ```
 
-然后只有四种动作：`--claim`（内容可用，只打 tag；无 tag 的会同时带 `/imported`，**但 agent 笔记除外**）、`--rewrite`（要改格式/正文，原地 + 版本守卫；改写后带 `/agent-note`）、`--retire`（垃圾/错误，墓碑），或**不动**（它是整篇总结，不是节笔记）。
+然后只有三种动作（Part I）：`--claim`（内容可用，只打 tag；无 tag 的会同时带 `/imported`，**但 agent 笔记除外**）、`--unclaim`（**只**用于带多枚 `/section-` tag 的笔记，移掉陈旧那一枚，一次一枚；单枚 tag 是 claim，工具拒绝，读数与 claim 不一致仍归你裁）、或**不动**（它是整篇总结，不是节笔记）。属主点名某一节时（Part II）才有 `--rewrite`（要改格式/正文，原地 + 版本守卫；改写后带 `/agent-note`）与 `--retire`（垃圾/错误，墓碑）。
 
 **写出去的正文是谁写的，也由 tag 回答**：本纪律写的每一份正文都带 `/agent-note`，业主说"这条对"之后才由 `--review` 加 `/reviewed`。未复核的草稿可以原地改，但它只够撑 `candidate`；复核过的按记录处理，只能退休重写。**`--review` 只改 tag，一个字都不动。**
 
@@ -150,13 +150,15 @@ node tools\zotero-read.mjs --item <noteKey> --limit 12000
 - **全文按附件索引，不按条目。** 一个条目可能有多个附件，工具按 `PDF → EPUB → HTML` 挑一个，并**明说读了哪一个**
   ——读了哪个文件本身就是证据的一部分。
 - **读的花费梯度，越便宜越先**：元数据 / 摘要 → `--grep` 定位段落取上下文 → 全文按 `--offset` 切片。
-  两处机制各有各的到期时点，不要混成一处：**shell 工具**只在一条命令的输出超过 **16,000 字符**时截到前
-  16,000（并明说截了、把全文落到 spill 文件）——所以 12,000 的片**完整到达**；**结果裁剪器**则在**压缩**时
-  把超过 **8,192 字符**的工具结果重写成前 4,096 + `[... tool result middle pruned ...]` + 后 1,024——所以一片
-  读完之后、上下文一压缩，它的中段就不再可读。切片取工具的默认 **12,000**：它在 16,000 之下（一片完整），
+  两处机制各有各的到期时点，不要混成一处：**shell 工具**的上限属于**它所挂的那个包**，不是本仓定的常数——
+  `dsh-tool-pwsh` 在 DSH 0.2.1-rc.2 上实测每流保留**最后 64,000 字节**，超过就把**开头**丢掉并用
+  `[output truncated; full output: …]` 给出 spill 文件（所以一次拉 88k 全文丢掉的是摘要，不是结尾）；
+  **结果裁剪器**则在**压缩**时把超过 **8,192 字符**的工具结果重写成前 4,096 + `[... tool result middle pruned ...]` + 后 1,024——所以一片
+  读完之后、上下文一压缩，它的中段就不再可读。切片取工具的默认 **12,000**：它在 64,000 之下（一片完整），
   在 8,192 之上（压缩后必被裁）。因此纪律要求两件事：把**读到的 offset 区间**写进报告，且**不得从被裁的片里
   引用标题或句子**——要用就按 offset 重取。2026-10-19 查清：早先"超 8,192 就当场被掐"的说法把这两处机制
-  混成一处，一次 14,999 字符的结果完整到达正是因为它低于 16,000 且当时没有压缩。
+  混成一处，一次 14,999 字符的结果完整到达正是因为它低于 64,000 且当时没有压缩；2026-10-22 更正：当时的更正
+  引的是本预设**没有挂**的 `dsh-tool-pwsh-persistent`（那一个才是 16,000 字符、截头部），挂着的这个按字节截尾部。
 
   ```powershell
   node tools\zotero-read.mjs --fulltext <recordKey> --limit 12000

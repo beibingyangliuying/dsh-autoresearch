@@ -24,7 +24,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 回收站端点**静默忽略 `itemType`**：`?itemType=note` 会答 `Total-Results: 0`，而回收站里可能躺着几百条 note。 | `README.md` · `ignores the type filter silently` |
 | 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
 | 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
-| 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `16,000` |
+| 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另有一道上限，它属于**所挂的 shell 工具**（`dsh-tool-pwsh` 在 DSH 0.2.1-rc.2 上实测每流保留**最后 64,000 字节**，超过丢**开头**并给 spill 文件）⇒ 长文本切片读（12,000），被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `64,000` |
 | 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
 | 失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。 | `tools/refusal.mjs` · `export function refusalLines`<br>`README.md` · `What a failure says`<br>`protocol.md` · `INV-FAIL-1` |
@@ -100,13 +100,14 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 **出处**：`tools/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give`
 
-#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划（含作者） · 写 · claim · 复核 · 原地改写 · 归退 · 删除（仅 `/retired`，永久）
+#### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划（含作者） · 写 · claim · 解 ambiguous · 复核 · 原地改写 · 归退 · 删除（仅 `/retired`，永久）
 
 **能做**
 
 - `--item` / `--json`：这条记录 claim 了哪些节、哪些是 `unknown`、`ambiguous`、墓碑、legacy，以及每条的**作者**（`owner` / `import` / `agent` / `agent+reviewed`）
 - 写一条节的解释笔记（干跑默认，写后回读 `/section-N`＋`/agent-note`）
 - `--claim --note <key> --section N`：给已有笔记打 claim，正文不动；无 tag 时带 `/imported`，**agent 笔记除外**
+- `--unclaim --note <key> --section N`：**只**对带多枚 `/section-` tag 的笔记，移掉陈旧那一枚（干跑 + 版本守卫 + 回读；正文不动）
 - `--rewrite --note <key> --file ...`：改导入笔记或**未复核的 agent 草稿**（版本守卫，不写备份），改写后带 `/agent-note`
 - `--review --note <key>`：业主确认一份 agent 正文，加 `/reviewed`（只改 tag、正文不动）；`--undo` 退回草稿
 - `--retire --note <key> --reason "<why>"`：任何笔记都可变成**墓碑**，`--undo` 可逆
@@ -119,7 +120,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 - 已被 claim 的顶层节（`REFUSED: §…`）——**不要绕过它**
 - 点号序号 `--section 3.1`：**不写也不读**（计数单位是顶层节）
 - 记录（`/section-N` 无 `/imported`、无未复核 `/agent-note`）与**已复核**的 agent 笔记：**不原地改写**，走退休 + 新写
-- 多条 `/section-` tag 的笔记：`ambiguous`，不计覆盖
+- 多条 `/section-` tag 的笔记：`ambiguous`，不计覆盖，**写前必须用 `--unclaim` 解掉**；单枚 tag 的笔记**拒绝 unclaim**——那是 claim，分歧归业主裁定
 - `--replaces` 的对象没退休，或它讲的是另一节
 - `--delete` 一个不是 `/retired` 的笔记：`REFUSED`
 - 记录上还有无 tag 笔记时的 create（`--acknowledge-unknown` 是唯一的放行口）
@@ -128,12 +129,13 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 - 要改正一条已有记录：**先 `--retire`，再 `--replaces`**——不删、不重写，正文一个字不动
 - 网页版粘贴的笔记：读 → `--claim` 或 `--rewrite`；垃圾 → `--retire`
+- `ambiguous`：读过之后 `--unclaim` 移掉陈旧那枚，一次一枚；分不清哪枚陈旧就报出两枚并停
 - 确认一条 retired 笔记没有保留价值 → `--delete --write`；不可恢复，且回收站里不会有它
 - 没有 `--tidy`；公式坏了由 agent 读文字层/页图后重写
 - **退出码是三种答案**：0 写入并回读 · 1 拒绝且确定没写 · 3 已发送/已写但未确认（打印 key，**不要重发**）
 - agent 草稿要升成记录：**业主**说可以之后 `--review`，工具不替业主加 `/reviewed`
 
-**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `AGENT_TAG` · `REVIEWED_TAG` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched` · `WRITTEN BUT UNCONFIRMED` · `SENT BUT UNCONFIRMED` · `--acknowledge-unknown`
+**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `AGENT_TAG` · `REVIEWED_TAG` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched` · `WRITTEN BUT UNCONFIRMED` · `SENT BUT UNCONFIRMED` · `--acknowledge-unknown` · `--unclaim` · `protocol §6`
 
 #### `zotero-edit.mjs` — 改一条记录的字段与标签
 

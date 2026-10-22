@@ -42,9 +42,10 @@ A request without a deliverable produces a paragraph of prose that cannot be che
 ### 3.1 Reports go to files; the message is a pointer
 
 A tool result over 8,192 characters is rewritten to its first 4,096 and last 1,024 **when the context is
-compacted**, so a long inline report cannot be read back afterwards; a single command's output is
-already clipped at 16,000 in the first place. Require the child to write its report to a file and
-return only: `path + one-line conclusion + the command`.
+compacted**, so a long inline report cannot be read back afterwards; and one command's output is capped
+by the shell before that — `dsh-tool-pwsh` keeps the **last 64,000 bytes** of a stream (measured on DSH
+0.2.1-rc.2) and drops the beginning, so an oversized report loses its **start**, not its middle. Require
+the child to write its report to a file and return only: `path + one-line conclusion + the command`.
 
 ### 3.2 A subagent's conclusion is `[unverified]` until re-derived
 

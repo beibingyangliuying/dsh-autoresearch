@@ -187,7 +187,11 @@ are read before anything is written. **Claiming is the default and writing is th
 pasted in from outside is claimed to the top-level section its own heading names, which writes a tag and
 nothing else, and a claim round reports the sections still carrying no note instead of writing them; a
 note body is generated from the paper only when the owner names a section and asks, and a claim round
-never opens the paper at all. **A body an agent writes is tagged `/agent-note`**, and stays a
+never opens the paper at all. **A note carrying two `/section-N` tags is ambiguous**: it claims nothing,
+every write on that record is refused while it stands, and it is resolved by reading the note and then
+removing one stale tag — `--unclaim --note <key> --section <ordinal>`, one tag per command — which is
+also the only thing `--unclaim` will do: a note carrying a single tag is a claim, and that disagreement
+is still the owner's to settle. **A body an agent writes is tagged `/agent-note`**, and stays a
 candidate-grade draft until the owner accepts it with `--review`, which adds `/reviewed` and never
 touches a word; `--rewrite` upgrades an **import** or an unreviewed draft in place (no workspace
 backup: the paper remains the source); a claimed record and a reviewed note are retired rather than
@@ -205,7 +209,8 @@ tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
 
 **What a failure says.** Every helper fails through one renderer (`tools/refusal.mjs`): the line that says
 what did not happen, and — when exactly one next action is known — a `fix` line carrying it, and a `try`
-line carrying a command that works **as printed**. Nothing is added where nothing is known: a guessed
+line carrying a command that works **as printed**. A usage error also ends with the script's **absolute
+path**: the usage block is written repository-relative, which names nothing in a study workspace. Nothing is added where nothing is known: a guessed
 remedy turns a retry into a drift, and drift is what makes an agent leave the channel. The remedy travels
 from the site that knows what the request meant, because a 404 means "that key is not in this library" to
 a reader and "no such collection" to a write: the transport carries `error.status` and names no remedy,
@@ -362,7 +367,7 @@ node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths,
 node tools\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
 node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
-node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, and the deletion path
+node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, unclaim one of two tags, and the deletion path
 node tools\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
 node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
 node tools\zotero-ensure-selftest.mjs     # where the application could be, and the seam that forbids launching for a stub

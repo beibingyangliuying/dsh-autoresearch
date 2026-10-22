@@ -59,6 +59,12 @@ the old sentence to be read on its own.
 - **A check that cannot fail is not a check.** Drive every new guard with a mutation that must be
   detected, and assert that the old wrong thing is NOT registered — naming a replacement without naming
   the mistake invites the mistake back.
+- **A host default belongs to the host, not to this repository.** When a doc states a harness limit —
+  the shell's output cap, the pruner threshold — name the package this composition actually mounts and
+  the DSH version it was measured on, and re-measure after a DSH upgrade. The 16,000-character cap was
+  `dsh-tool-pwsh-persistent`, which this preset does not mount; the mounted `dsh-tool-pwsh` keeps the
+  last 64,000 **bytes** per stream (`docs/decisions.md` §84). The probe is one command that prints
+  30,000 characters: if it arrives whole, the cap is not 16,000.
 - **A green local suite says nothing about the published artifact.** The release check exists for
   exactly this; see §7.
 - **A preset source edit reaches a session only after the HOST restarts.** Opening a new session, or

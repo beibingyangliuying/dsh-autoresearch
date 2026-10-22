@@ -168,7 +168,8 @@ them is a thing the next round cannot read. If the study has its own convention,
 
 ## 9. Don't
 
-- Do not read or claim to read full text: the channel helpers named in §0 own that, not this skill
+- Do not read or claim to read full text: the channel helpers named in **Scope boundary** above own
+  that, not this skill
 - Do not hand-build these requests with `web_fetch`: `{{presetTools}}/metadata.mjs` carries the contact
   address, the refusals and the classification that keep a failed lookup from reading like an answer
 - Do not assign evidence grades (that is `literature-recon`)

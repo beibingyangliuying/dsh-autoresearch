@@ -81,7 +81,7 @@ and neither can overwrite the other. Nothing is shared between the files — the
 | `verdict` | Needs `depth` | Means |
 |---|---|---|
 | `park` | `—`, or `abstract` | `—`: not started; `abstract`: screened and worth reading once the condition in `re-open if` holds |
-| `enough` | `§N` | §N answered the question; stop reading |
+| `enough` | `§N`, or `full` | §N answered the question — or the reading reached the end of the paper and `full` records that; stop reading |
 | `stop` | `abstract`, or `§N`, or `—` when the record carries no readable text and the bibliographic record is all the evidence there is | the abstract settled that the paper cannot serve this question; a section settled it; or nothing is readable |
 | (empty) | `—`, `abstract`, or `§N` | not judged yet: in the queue (`—`), screened and still queued (`abstract`), or being read (`§N`) |
 | (empty) | `full` | every method section read, no verdict yet |
@@ -144,11 +144,13 @@ an outline mapped to a position.
 
 **Why slices, and why 12,000.** A paper's whole indexed text arrives as one result — measured at 33k to
 88k characters for the papers this discipline is used on — so it is read in slices of 12,000 characters,
-the reader's own default. Nothing cuts a result at 8,192 characters as it arrives: the shell tool clips
-a single command's output at 16,000 characters and says so, spilling the rest to a file, so a
-12,000-character slice comes back whole. The composition's result pruner acts elsewhere — when the
-context is **compacted**, it rewrites any tool result over 8,192 characters down to its first 4,096 and
-last 1,024 around a `[... tool result middle pruned ...]` marker.
+the reader's own default. The cap that matters belongs to the shell this preset mounts, not to this
+repository: `dsh-tool-pwsh` retains the **last 64,000 bytes** of each stream (measured on DSH
+0.2.1-rc.2), and past that the **beginning** is dropped, with `[output truncated; full output: …]`
+naming the spill file. So a 12,000-character slice is complete, and one pull of an 88k paper is not — it
+would lose the abstract first, which is the opposite of what a reader expects. The composition's result
+pruner acts elsewhere — when the context is **compacted**, it rewrites any tool result over 8,192
+characters down to its first 4,096 and last 1,024 around a `[... tool result middle pruned ...]` marker.
 
 A slice is therefore read in full once, and **a slice needed a second time is re-fetched by its offset,
 never recalled from a pruned result**. A heading quoted verbatim, or the sentence that decided a verdict,
@@ -196,7 +198,7 @@ in, and that number is on screen before the first slice is read.
    `node "{{presetTools}}/zotero-read.mjs" --fulltext "<recordKey>" --offset 0 --limit 3000`. Its
    `text:` line gives the paper's whole length, its `rung:` line says whether the index answers, and
    the slice itself is the paper's own abstract. Five records cost about 15,000 characters — under the
-   shell's 16,000-character clip and small against what one paper costs. **A queue of one or two is
+   shell's cap and small against what one paper costs. **A queue of one or two is
    not screened**: they would never be handed over, so screening them buys nothing.
 2. **The budget is eight slices of source text (≈96,000 characters) per round**, screening included.
    The figure is not a preference: it is above the largest paper measured for this discipline
