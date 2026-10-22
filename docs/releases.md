@@ -26,6 +26,7 @@
 | 0.12.1 | 2026-10-20 | §76 |
 | 0.13.0 | 2026-10-20 | §77 |
 | 0.14.0 | 2026-10-21 | §80 |
+| 0.15.0 | 2026-10-22 | §84 |
 
 ---
 
@@ -592,3 +593,49 @@ origin main` 成功**（`4ebefd9..255a474`），随后同一条命令把 `v0.13.
 [`decisions.md`](decisions.md) §77–§79 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md) ·
 [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) · [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) ·
 [`package.json`](../package.json)。
+
+## §84 · 0.15.0 发布：两个契约 Revision 一起出包，以及欠了一轮的三笔账（2026-10-22）
+
+**版本**：`0.15.0`，提交 `1506250`，注解 tag `v0.15.0`（tag 对象 `35cd40c`，剥到的正是该提交；树 `fb4a986`）。
+**推送一次成功**：`git -c http.proxy= -c https.proxy= push origin main`（`bba394f..1506250`）随后同法推 tag
+（`* [new tag] v0.15.0`）。远端剥离与本地一致：`refs/tags/v0.15.0^{}` = `1506250`，`refs/heads/main` 也是 `1506250`
+——**tag 与分支头同指一个提交**，这一点 `--tag` 的最后一项自己核对过。
+
+**这一版主要在还账，不是在做新东西**。§81、§82、§83 三笔裁定都各自写了"随下一次发布带出"，而 0.14.0 的发布件里
+**`zotero-ensure.mjs` 根本不存在**、库不应答仍是一句裸 `ECONNREFUSED`、失败块仍是 `ERROR: …` 一行、`release-check --tag`
+仍把"没查到"报成"发布件坏了"。三笔账同时到期，所以合成一版：**这是本仓库第一次一个版本带出两条契约 Revision**（33 与 34）。
+
+**为什么是 minor**：两条 Revision 都新增了不变式（`INV-EVID-7`、`INV-FAIL-1`）并改了读者可见行为（多了一个 helper、
+失败多行、两个 exit 码换了归属）。前例是 0.11.0／0.12.0／0.13.0／0.14.0 都随 Revision 升 minor；**0.14.0 那次例外是因为它
+没动契约**（Rev 32 早就写在纸上，那次只是实现追上）。
+
+**相对 0.14.0 的十四个提交**，按它在还哪笔账分：`255a474`／`e4164f0`／`94bd6d0`（0.14.0 的记录、一条自我更正、以及把远端复核
+从"读文件"改成"克隆 tag"）· `468be5c`（§81：第三种答案）· `2a7ea8b`／`4900772`／`7119afe`／`03e31d3`（§82：启动器、传输层那句话、
+名册与覆盖地图、Rev 33）· `5e3e040`／`ea44b85`／`2fb3909`／`bba394f`（§83：一个渲染器、十个尾部、五类建议、Rev 34）·
+`2c265f1`（backlog 补登剩下三类）· `1506250`（版本）。
+
+**验证在最终树上，不在顺手那次上**：改完 `package.json` 之后**重新生成** `composed-web.txt` 再跑（`preset-selftest` 会拒绝比
+`package.json` 旧的 dump，这是它刻意的守卫），结果 22 个 helper 自测 + `preset-selftest` **23/23 PASS**；`toolchain-page --check`
+**25 条引文全部成立**；`release-check --local` **PASS**，且"工作树干净"这一项这次是真的绿（tag 的前置条件，开发期本就为脏）。
+`release-check --local` 同时报出 `2 commit(s) not on origin/main`——那是版本提交与 backlog 提交，推完即消失。
+
+**远端复核**：`node tools/release-check.mjs --tag v0.15.0` → 四项 `OK`（发布件声明 0.15.0 · 组合不挂 MCP 也不启动进程 ·
+三个通道的 helper 都在包里 · tag 与分支头同一提交），**exit `0`**。这次代理是通的，`--tag` 一次过；0.14.0 那次同一命令因
+代理死掉报 `3` 并换来一次误指控，正是 §81 要修的那种情形，所以这一次的 `0` 读作"四项都真查了且成立"，而不是"没报错"。
+
+**仍然未做（继承下来，不是这一版新增）**：`zotero-pdf` 的"记录在、附件文件不在"分支**从未在真实记录上跑过**——本机库没有
+这样的记录，该路径只有读代码与 `node --check` 覆盖；arXiv／Crossref 的 429／503 **没有真触发过**，只由纯判定函数配用例覆盖；
+Zotero 冷启动到端口可用的耗时**没有测**（不为测它去杀属主正开着的应用），所以 `--wait` 只按上限与如实报账设计。
+三条都写进了 [`backlog.md`](backlog.md) 第 10 行与 §82／§83 的末段。
+
+**两个 23 不是巧合，但也不是同一个数**：`release-check --local` 说"23 项自测有名"，数的是 `tools/*-selftest.mjs` 的**文件**
+个数，README 逐个点名；这一轮实际跑的也是 23 次（含需要 dump 参数的 `preset-selftest`）。目录里数一遍与套件里跑一遍给的是
+同一个数，这份一致性是刻意维持的——`release-check` 另有一项就专门查"README 里没有已消失的自测"。
+
+**记录本身比 tag 晚一条**：本节写入后 `main` 比 `v0.15.0` 多这一个提交，tag 不动（§72／§74／§76／§77／§80 同一做法）。
+
+**落在何处**：[`package.json`](../package.json)（版本）· [`tools/zotero-ensure.mjs`](../tools/zotero-ensure.mjs) ·
+[`tools/refusal.mjs`](../tools/refusal.mjs) · 十个 helper 的尾部 · [`protocol.md`](../protocol.md)（Revision 33、34）·
+[`docs/decisions.md`](decisions.md) §81–§83 · [`docs/backlog.md`](backlog.md) 第 10 行 ·
+[`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md) ·
+[`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4。
