@@ -81,6 +81,14 @@ export const FACTS = [
     cites: [cite('protocol.md', 'INV-HELPER-1')],
   },
   {
+    says: '失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。',
+    cites: [
+      cite('tools/refusal.mjs', 'export function refusalLines'),
+      cite('README.md', 'What a failure says'),
+      cite('protocol.md', 'INV-FAIL-1'),
+    ],
+  },
+  {
     says: '**同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。',
     cites: [
       cite('protocol.md', 'quoted with the source that produced it'),

@@ -1,9 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 33.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 34.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 33 gives the reference-library channel the one thing it
+independent of any package version. Revision 34 governs what a failure says. Every helper program now
+fails through one renderer: the line that states what did not happen, and, when exactly one next action
+is known, a line carrying it — plus a command only where that command works as printed. Nothing is added
+where nothing is known, because a guessed remedy turns a retry into a drift, and a drifting round is the
+one that leaves the channel. The remedy travels from the site that knows what the request meant rather
+than from a reader of the text: the transport carries a status and names no remedy, so a 404 that means
+"that key is not in this library" and a 404 that means "no such collection" are never confusable. It also
+corrects two answers that were merely wrong: a record carrying no readable attachment is a refusal, not a
+malformed command line, and naming neither a source nor a DOI is the command line's fault and not a
+write's. §6 and `INV-FAIL-1` state it.
+Revision 33 gives the reference-library channel the one thing it
 did not have: a way back from "the library is not answering". That failure reached the caller as a
 transport error, which names no next step and reads like a broken instrument — and an instrument that
 looks broken is how a round talks itself into reading the library by another route. Two things follow.
@@ -552,6 +562,12 @@ These rules bound their use:
   what they contain, and many papers carry none; a rendered page answers questions neither can.
   Spending a rung that costs more than the one below it is a decision to state, not a default, and what
   a rendered page yields is read as an image rather than quoted as though it were text.
+- **A failure that knows the one next action names it, and a failure that does not names none.** The
+  remedy is stated where the request's meaning is known, never reconstructed from the text of an error:
+  the same status means different things at different call sites, and a rule that reads the sentence is
+  a rule that guesses. A command is offered only when it runs as printed; a placeholder is worse than
+  nothing, because it is pasted. A refusal that carries no way out is still honest, and the answer to it
+  is the owner's.
 
 The channels are reached through **helper programs this preset itself ships and its disciplines name**,
 never through a profile-level mount, so that enabling a research channel cannot change what an unrelated
@@ -634,6 +650,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
 | `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
 | `INV-EVID-7` | A reading of the owner's library comes through the reference manager's own local API and is keyed by a record; when that API does not answer, the round reports the library unavailable and stops, and no reading is taken from the library's database file or from its stored attachment files by path. | A reading that cannot name its record can be written onto nothing, matched against no note, and checked by no reader; a library read behind the running application is not even the same library, since the two are one write apart. |
+| `INV-FAIL-1` | Every helper reports a failure in one shape, and a failure whose way out is unique states it, while a failure whose way out is not unique states none; the remedy is decided where the request's meaning is known, and a command is offered only when it runs as printed. | A guessed remedy is worse than silence: it turns a retry into a drift, and a round that drifts has already begun working around the instrument it was given. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |

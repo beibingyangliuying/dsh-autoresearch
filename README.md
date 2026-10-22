@@ -203,6 +203,16 @@ manager, at their own keyboard and under no API authorization at all. Together t
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
 tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
 
+**What a failure says.** Every helper fails through one renderer (`tools/refusal.mjs`): the line that says
+what did not happen, and — when exactly one next action is known — a `fix` line carrying it, and a `try`
+line carrying a command that works **as printed**. Nothing is added where nothing is known: a guessed
+remedy turns a retry into a drift, and drift is what makes an agent leave the channel. The remedy travels
+from the site that knows what the request meant, because a 404 means "that key is not in this library" to
+a reader and "no such collection" to a write: the transport carries `error.status` and names no remedy,
+and no message is ever parsed. A failure with no single next action still prints the one line it always
+did. Exit codes stay the contract's — 2 for a malformed command line, 1 for a request the channel refused
+or answered with nothing.
+
 Every write states the change first and is a **dry run until `--write` is given**; it carries the version
 the record was read at and is refused outright if the record moved meanwhile; and it reads back what it
 wrote before reporting success. One invocation states one change. A create that also names a collection
@@ -341,6 +351,10 @@ node tools\metadata-selftest.mjs
 # the journal-ranking channel: one journal's provider reading, the key it needs and never prints, and
 # the ISSN the provider answers about something else — without the network or a key
 node tools\journal-rank-selftest.mjs
+
+# the shared voice every helper fails through: the block it renders, the cause it appends, and the two
+# exit codes — no library, no network, and nothing that leaves a process
+node tools\refusal-selftest.mjs
 
 # the reference-library helpers: their pure halves run without a library, and write nothing
 node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing

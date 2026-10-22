@@ -2343,3 +2343,26 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 `release-check --local` 除"工作树干净"（打 tag 的前置，开发期本就为脏）外全绿。**未做**：不对真实"应用没跑"的机器做端到端实测
 （本机 Zotero 一直开着，杀它去测等于毁掉属主正在用的东西）；`zotero-ensure` 的 live 启动分支因此只由 `nextAction` 的纯判定覆盖，
 这一点写在自测文件头里。
+## 83. 失败只说它知道的事：一个共享渲染器、`INV-FAIL-1`，与两处 exit 码的误分类（2026-10-22）
+
+**起因（junhan）**：上一轮把"库没应答"那句裸错误改掉之后，他提出第二问——**其他工具的报错信息是不是也该这么明确**，并要求"尽可能地让报错信息明确"，同时先做一次普查再动手。普查结论放在选项里：形状统一（十个 helper 尾部是同一个 catch，`class UsageError` 各写十遍），但**清晰度在抛出处就定了**。
+
+**决定做法的三条先验（都实测过，不是推断）**：①同一个 `404` 在库路径上意味着"键不在这个库"，在元数据源上意味着"这个源没有它"，**收口处看不到区别** ⇒ 按状态码在 catch 里分类会给出错建议，做法必须是"抛出处说、收口处只排版"。②准备写进 `try` 行的命令必须真能跑：`zotero-read.mjs --search`（usage 第 231 行）与 `metadata.mjs --source openalex|crossref` 都已核对存在。③selftest 里 29 处 `ERROR:` 绝大多数是桩服务器的 JSON 载荷，不是对打印行的断言 ⇒ 改文案的测试成本低。另外 `preset-paths.js` 只被一个 helper 引用，**不能**当共享层（先例是 `tools/zotero-local-api.mjs`：tools/ 里的共享模块）。
+
+**决策**：新模块 `tools/refusal.mjs` 提供 `UsageError`（exit 2）、`Refusal`（携带 `what` + 至多一个 `fix` + 一条**能照抄**的 `command` + `checked` 清单）、纯函数 `refusalLines()`、以及**返回退出码**的 `reportFailure()`（不自己退出：三个工具要用 3 回答"已发出、随后断线"，那是调用方的记忆）。标签对齐第 8 列，与 `library : ` / `state   : ` / `fix     : ` 同列；**普通 `Error` 仍只打一行**，不倒退。十个 helper 的尾部塌成一行调用，十份本地 `UsageError` 删掉（含不在名册上的 `journal-rank.mjs`——留一个第二类就是漂移的起点）。新增 `release-check` 护栏 `refusalVoiceProblems`：名册里每个 `.mjs` 必须 import 该模块、必须调用 `reportFailure(`、不许自定义 `UsageError`；两个共享模块豁免（它们不是程序）。
+
+**配上下一步的五类，与两处只是"答错了码"的**：①记录键 404 → 说"库里没有这个键"，**不给命令**（查询词在读者手里，占位符会被照抄然后失败）；②元数据源 404 → 点名另一个源并给出可粘贴的命令，但**只在那个命令真能跑时**（`--cited-by` 只有 OpenAlex、`--oa` 只有 Unpaywall、`--refs` 若给的是裸 OpenAlex id 则 Crossref 解析不了）；③无附件 → 从 `UsageError`(2) 改成 `Refusal`(1)；④arXiv 400/500 带哨兵 entry → 说"拒绝的是查询/页太大"，429/503 → 说"限流，等一分钟"；⑤`zotero-write` 没给源 → 从 `Error`(1) 改成 `UsageError`(2)。**传输层只多挂一个 `error.status`**，任何地方都不解析消息。
+
+**为什么不给占位符 `try`**：这是判据第三条的诚实应用，也是稿子里被改掉的一处——初稿给"无附件"配的 `try` 是 `zotero-read --fulltext <key>`，而那条命令在无附件的记录上会以同样的方式失败（库索引文本也按附件键）。一条会被照抄、然后失败第二次的命令，比没有更坏。
+
+**途中撞到并修掉的**：块从一行变成三行之后，`process.exit()` 在 stderr 还是管道时把块截断，Windows 打出
+`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76`、退出码 `0xC0000409`——正是 `journal-rank.mjs` 早就记录过的 libuv 现象。所以失败路径一律改成 `process.exitCode`，实测七个工具失败即退（metadata 633 ms、read 2.2 s，无挂起）。
+
+**反向控制**：把 `refusalLines` 里推 `fix` 那一行改成 `if (false)` → `refusal-selftest` **FAIL (5)**（并顺手把断言改成 `lines[1]?.startsWith`，让反向控制报 FAIL 而不是抛栈）；恢复即 PASS。
+
+**实测对照**：改前 `ERROR: /api/users/0/items/NOTAKEY1 answered 404: Not found`（泄通道路径、三种起因压成一句）；
+改后三行——`ERROR   : the library has no record under the key NOTAKEY1 (404)` + `fix     : …`。元数据 404 从倒出 300 字符 HTML 变成三行且 `try` 可直接粘贴。**未实测**：`zotero-pdf` 的无附件分支没有在真有这种记录上跑过（本机库没有已知的无附件记录），该分支由读代码与 `node --check` 覆盖。
+
+**落在何处**：[`tools/refusal.mjs`](../tools/refusal.mjs) 与 [自测](../tools/refusal-selftest.mjs) · 十个 helper 的尾部与 [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 套件清单 ·
+[`protocol.md`](../protocol.md)（Revision 34：§6 一条、`INV-FAIL-1`）· [`tools/release-check.mjs`](../tools/release-check.mjs)（`refusalVoiceProblems` + 名册加 `refusal.mjs`）·
+[`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成，25 条出处全部成立）· [`README.md`](../README.md)。

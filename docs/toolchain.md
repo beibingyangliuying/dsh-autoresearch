@@ -27,6 +27,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 | 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另在 **16,000 字符**处被 shell 截断 ⇒ 长文本切片读，被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `16,000` |
 | 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Eight helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
+| 失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。 | `tools/refusal.mjs` · `export function refusalLines`<br>`README.md` · `What a failure says`<br>`protocol.md` · `INV-FAIL-1` |
 | **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
 | **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
 | `mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。 | `tools/metadata.mjs` · `mailto parameter doesn't raise this limit` |
