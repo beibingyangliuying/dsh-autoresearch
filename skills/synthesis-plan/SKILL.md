@@ -14,6 +14,9 @@ already finished by the time it runs.
 - Exploration produced several candidate paths and one must be committed to
 - The user asks "so what do we do now"
 - Two routes conflict and the work cannot proceed on both
+- A probing round left two or more surviving moves that cannot both hold, so the conflict is resolved by
+  a commitment rather than by another probe
+- A direction candidate came back `needs-a-move` and that piece is now in hand
 - A round of experiments came back and the next round must be chosen
 
 **Not applicable**: there is only one obvious next step (just do it), or the question itself is still
@@ -26,9 +29,15 @@ unsettled (that is the scoping discipline's job — a plan for an undecidable qu
 3. The rejected directions and **why** they were rejected — a plan that resurrects one silently is a
    regression.
 4. The experiment cards: what was actually observed, and what was ruled invalid.
+5. **The move ledger** (`<layer root>/directions/<topic>.md`), when the study has one: which moves
+   survived, which were killed and on what ground, and which direction candidates came back
+   `needs-a-move`. A plan that commits to a route cites the survivors it took and the moves it dropped;
+   a route no surviving move supports is a preference, and the plan says so rather than dressing it as
+   a finding.
 
 **A plan that contradicts an existing ruling is not a plan.** Either follow the ruling or ask for it
-to be revisited, explicitly.
+to be revisited, explicitly. **A plan that revives a killed move is not a plan either**: the killed row
+already carries the observation that refuted it, so reviving it means naming what changed.
 
 ## 3. Criteria: what makes a draft executable
 
@@ -78,6 +87,8 @@ confident about is usually the inference.
 | The plan needs a decision that belongs to the owner | Stop and ask; never decide it for them. |
 | The draft lists everything instead of choosing | Force the choice; a plan that does everything decides nothing. |
 | The plan silently assumes a rejected direction is still live | Point at the rejection; either revive it explicitly or drop the assumption. |
+| The chosen path rests on a move the ledger records as `killed` | The killing observation already settled it. Pick a path that survives it, or name what changed about the observation. |
+| The chosen path needs a component that no seed supports | That is a `needs-a-move`, not a plan. Send it back to probing, or write the reading it requires as the first step. |
 
 ## 5. Wording discipline
 
