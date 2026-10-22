@@ -122,7 +122,7 @@ skill 里。
 | 方案 | 处置 | 理由 |
 |---|---|---|
 | 常驻自组织多代理 + 共识投票 | 否决 | 属于另一个量级的工程（单个插件 64KB 起），且与"工作台"定位不符 |
-| 方向发散循环（生成 N 个互异方向 + 显式淘汰判据） | **暂缓** | 收敛纪律已能给候选，但没有淘汰循环；等真实课题暴露需求再做 |
+| 方向发散循环（生成 N 个互异方向 + 显式淘汰判据） | **已解除一半**（§86） | 生成那一端解除了，但只许从已裁定产物派生、且每条候选必须带杀死条件；"凭空发散"仍然不做。两把锁与解除理由见 §86 |
 | 加回 ralph 循环工具 | 不加 | 续跑已由目标工具提供（跨轮自动续跑 + 轮数上限） |
 | 注册语义检索的 API key | 不注册 | 该源在无 key 时限流；改用两个无需 key 的元数据源 |
 | 保留表格/看板、配置管理、代码审查三类工具 | 屏蔽 | 研究场景用不上，且它们是全局工具，会稀释预设的工具面 |
@@ -2407,3 +2407,27 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **与契约的关系**：这不是"agent 可以改属主的 claim"。§6 原有的"读数与 tag 不一致就停下"一个字没放宽；新增的只是"一个模糊状态可以被一次显式、只减不增的摘除解掉"。`INV-NOTE-1` 补了一句：ambiguous 不算覆盖。
 
 **落在何处**：[`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)（模式、usage、计划行、三处拒绝语）· [自测](../tools/zotero-section-note-selftest.mjs) · [`skills/section-notes`](../skills/section-notes/SKILL.md)（description、§0、§2、§2.1、§4.2、§7、§8.1、§9）· [`docs/coverage.md`](coverage.md)（名册、五项计划行、§四.3）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md) · [`protocol.md`](../protocol.md)（Revision 35：§4、§6、`INV-NOTE-1`）· [`README.md`](../README.md)。
+
+---
+
+## 86. 新增第十三条纪律：从"已裁定为不能用"里榨下一条便宜的问题（Revision 36，2026-10-22）
+
+**起因**：junhan 问——预设现在有"裁决参考文献"的功能，那顺着往下，怎么根据这些已有信息探索对本课题有帮助的启发式想法？他判断这个功能值得做。
+
+**先核前提，两条都成立。** ① 裁决信息实际有三层：`reading-triage` 把（课题 × 文献）的 `depth`/`verdict` 写进该课题台账；`adoption-ruling` 把一篇 A 级论文逐项裁定成台账（`adopt` / `adopt-modified` / `reference-only` / `reject`，各带定位、成立条件、目标模块与数值锚点）；`section-notes` 提供带来源的 `/section-N` 解释。② 缺口是仓库自己登记过的：`protocol.md` §9 把"方向发散循环"列为 deliberately deferred，`docs/decisions.md` §11 记的是"等真实课题暴露需求再做"，`synthesis-plan` 第一句写"不探索，探索在它之前结束"。
+
+**一处实测**：改动前的 12 份纪律正文里 grep `adoption/`，只有 `adoption-ruling` 自己读写。也就是说，`adoption-ruling` §3.6 要求拒用项带理由（*"the reason is what saves the next round"*），而那批理由**没有任何纪律消费**——已经付过阅读成本、已经裁定为不可直接用的信息，是死的。这是本轮真正的发现：缺的不是"想法"，是"没人读被拒的那一半"。一句"这个超参是在别人的数据上调出来的，不是默认值"，正是一个便宜问题的种子：**在我们数据上它还是不是最优？**
+
+**裁定（junhan 逐项确认，2026-10-22）**：① 一个纪律两半，照 `section-notes` §0 的先例；② Part II 两种入口（冲突 / 属主点名发散），但**每条候选必须带种子**；③ 名字 `direction-probe`，中文标签"探路"；④ 招 ID `M-<topic>-NN`，方向 ID `D-<topic>-NN`，两份台账不同形；⑤ 一轮 Part I 上限 10 条，超过只做零成本筛。
+
+**三处硬约束。** ① **六类种子是闭词表**（拒用项及理由 / 未验前提 / 到期的 `park` 复看条件 / 两份来源矛盾 / 缺口 / 裁定项的适用边界），指不到具体行的念头标 `[exploratory]`、不打分、不进 Part II——这是常驻规则 3 在这一步的具体化，也是这一步与"头脑风暴"之间唯一的那堵墙。② **每条招必须有一条杀死条件**：一次可执行的观察 + 判死的阈值；写不出就不成立。③ **方向不是"还能往哪走"，是"冲突的解法"**：新增成分有且仅有一个且必须指回种子；缺的那个报 `needs-a-move` 并退回 Part I 或文献轮——**不许在组装时补上**，否则这条路线已经替自己回答了它本该检验的问题。
+
+**为什么不做成两个纪律**（本轮推敲最久的一处）。① `section-notes` 已有"一份纪律两半"的先例（§0 决定哪一半跑，报告与清单各分两套），不必发明结构；② 依赖是单向的——方向级的候选由招级台账供给，拆开会把同一条锚定规则写两遍，而"方向"那一遍最先漂；③ 常驻路由是每轮都付的成本，`decisions.md` §2 早就警告过它线性增长；④ "两条路线冲突"这个情形已经挂在 `redteam-ruling` 与 `synthesis-plan` 两条 bullet 上，再加一条会让路由变成三选一，而路由是硬规则。三者现在的分工写进路由那一行：**探**（这条能不能被杀）· **疑**（打）· **选**（承诺）。
+
+**代价**：新增一条常驻路由 bullet = **384 字符**（按本仓 3.6 字符/token 约 **107 token/请求**）；合成后 persona 5,812 字符（约 1,614 token/请求）。按需纪律本身不触发时零成本——这是把它写成纪律、而不是写进 persona 的全部理由。
+
+**否掉的替代方案**：① 让 agent 凭空生成 N 个方向再淘汰——淘汰判据对不存在的东西打不了分，等于把最不可证伪的一步塞进链条（这正是原 §9 那条 non-goal 的理由）；② 并进 `synthesis-plan`——它会从"不探索"变成"探索 + 选择"，且发散与承诺落在同一双手上；③ 并进 `adoption-ruling`——它是逐项裁定、只读单篇，看不到两份来源的矛盾，也不该由裁定者自己派生新问题（会把自己的裁定当成种子）；④ 新增一个 helper 程序——这一步的输入全是工作区已有文件，输出是一份文档，没有新通道，也没有需要授权的写。
+
+**落在何处**：[`skills/direction-probe/SKILL.md`](../skills/direction-probe/SKILL.md) · [`skills/synthesis-plan/SKILL.md`](../skills/synthesis-plan/SKILL.md)（§1 触发、§2 ruler 第五项、§4.2 两行） · [`protocol.md`](../protocol.md)（Revision 36：§4、§7 的层枚举、`INV-IDEA-1`、`INV-IDEA-2`、§9 改写） · [`surface.md`](../surface.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`cordis.patch.yml`](../cordis.patch.yml) · [`package.json`](../package.json) · [`README.md`](../README.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs) · [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) · [`docs/plans/direction-probe.md`](plans/direction-probe.md)。
+
+**一处账目**：这一条原先只活在 §11 那张暂缓表里，`docs/backlog.md` 没有登记过它；本轮把暂缓表那一行改成"已解除一半"并指到这里，不另开 backlog 行。
