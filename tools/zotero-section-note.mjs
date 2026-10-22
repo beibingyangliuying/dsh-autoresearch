@@ -26,6 +26,13 @@
 // No dotted tag is written or read. A subsection-keyed note from an earlier round is `unknown` here
 // and is merged into its top-level section or retired by a later round; nothing is folded silently.
 //
+// AN AMBIGUOUS NOTE IS RESOLVED BY REMOVING ONE TAG, NEVER BY GUESSING
+//
+// A note carrying two `/section-N` tags claims nothing: `readSectionTag` reports it as ambiguous and
+// every write on that record is refused until one tag is gone. `--unclaim` removes exactly one, one
+// tag per command, and refuses a note carrying a single tag - a single claim is not a tag mistake, and
+// a reading that disagrees with it stops the round for the owner (protocol Revision 35).
+//
 // NO PROSE PARSING
 //
 // A note with no `/section-` tag is UNKNOWN: this tool does not guess from its first paragraph. The
@@ -45,6 +52,8 @@
 //   node tools/zotero-section-note.mjs --item <recordKey> --section 2 --file n2.html --write
 //   node tools/zotero-section-note.mjs --claim --note <noteKey> --section 2             # dry run
 //   node tools/zotero-section-note.mjs --claim --note <noteKey> --section 2 --write
+//   node tools/zotero-section-note.mjs --unclaim --note <noteKey> --section 3             # dry run
+//   node tools/zotero-section-note.mjs --unclaim --note <noteKey> --section 3 --write
 //   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html        # dry run
 //   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html --write
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"        # dry run
@@ -606,7 +615,11 @@ async function runPlan(itemKey, { json = false } = {}) {
   )
   console.log(`legacy      : ${legacy.length ? legacy.map((note) => note.key).join(' · ') : 'none'}`)
   console.log(`unknown     : ${unknown.length ? unknown.map((note) => note.key).join(' · ') : 'none'}`)
-  console.log(`ambiguous   : ${ambiguous.length ? ambiguous.map((note) => note.key).join(' · ') : 'none'}`)
+  console.log(
+    `ambiguous   : ${
+      ambiguous.length ? ambiguous.map((note) => `${note.key} (${note.claim.tags.join(' · ')})`).join(' · ') : 'none'
+    }`,
+  )
   const drafts = notes.filter((note) => isAgentNote(note.tags) && !isReviewed(note.tags) && !note.retired)
   console.log(
     `provenance  : ${AGENT_TAG} ${notes.filter((note) => isAgentNote(note.tags)).length} (` +
@@ -625,11 +638,15 @@ async function runPlan(itemKey, { json = false } = {}) {
   console.log('\nNOTE: `covered` is what explicit /section-N tags claim, counted per TOP-LEVEL section.')
   console.log('`unknown` notes have no claim: read the first paragraph above (the whole note with')
   console.log('zotero-read.mjs --item <noteKey> when it is not enough), then --claim it, --rewrite it, or')
-  console.log('--retire it. A note marked RETIRED is a tombstone: it is NOT coverage, and only a retired')
-  console.log('note is deletable. A legacy /digest note is an earlier version\'s whole-paper summary: not a')
-  console.log('section note, and never claimed for one. An AGENT note was written by an agent from the paper:')
-  console.log('until it also carries /reviewed it is a DRAFT - rewritable in place, and candidate-grade only.')
-  console.log('--review --note <key> records the owner\'s acceptance as a tag; the body is never touched.')
+  console.log('--retire it. An `ambiguous` note carries MORE THAN ONE /section- tag: it is not coverage, so')
+  console.log("read it, then remove the stale tag with --unclaim --note <noteKey> --section <that tag's ordinal>")
+  console.log('(one tag per command). --unclaim refuses a single-tag note: that is a claim, and a reading that')
+  console.log('disagrees with a claim stops the round for the owner. A note marked RETIRED is a tombstone: it is')
+  console.log('NOT coverage, and only a retired note is deletable. A legacy /digest note is an earlier version\'s')
+  console.log('whole-paper summary: not a section note, and never claimed for one. An AGENT note was written by')
+  console.log('an agent from the paper: until it also carries /reviewed it is a DRAFT - rewritable in place, and')
+  console.log('candidate-grade only. --review --note <key> records the owner\'s acceptance as a tag; the body is')
+  console.log('never touched.')
 }
 
 /**
@@ -689,7 +706,8 @@ async function runCreate(options) {
   const ambiguous = ambiguousLive(notes)
   if (ambiguous.length) {
     console.error(`\nREFUSED: ${ambiguous.map((note) => note.key).join(' · ')} carry more than one /section- tag.`)
-    console.error('Fix the tags before writing: an ambiguous note is not coverage and cannot be counted.')
+    console.error('An ambiguous note is not coverage. Read it, then remove the stale tag:')
+    console.error('  --unclaim --note <noteKey> --section <ordinal> --write   (one tag per command)')
     process.exitCode = 1
     return
   }
@@ -719,7 +737,7 @@ async function runCreate(options) {
     }
     if (isDigest(oldTags)) throw new UsageError(`--replaces ${replacedKey} is a legacy /digest summary, not a section note`)
     const oldClaim = readSectionTag(oldTags)
-    if (oldClaim.ambiguous) throw new UsageError(`--replaces ${replacedKey} carries more than one /section- tag; fix it first`)
+    if (oldClaim.ambiguous) throw new UsageError(`--replaces ${replacedKey} carries more than one /section- tag; resolve it first: --unclaim --note ${replacedKey} --section <ordinal> --write`)
     if (oldClaim.token && oldClaim.token !== token) {
       throw new UsageError(`--replaces ${replacedKey} explains §${oldClaim.token}, not §${token}: retiring one section's note does not free another's`)
     }
@@ -846,7 +864,8 @@ async function runClaim(options) {
   const claim = readSectionTag(tags)
   if (claim.ambiguous) {
     console.error(`\nREFUSED: ${options.note} carries more than one /section- tag (${claim.tags.join(' · ')}).`)
-    console.error('Fix the tags before claiming: an ambiguous note is not coverage.')
+    console.error('An ambiguous note is not coverage. Remove the stale tag first:')
+    console.error(`  --unclaim --note ${options.note} --section <ordinal> --write   (one tag per command)`)
     process.exitCode = 1
     return
   }
@@ -855,7 +874,8 @@ async function runClaim(options) {
   const ambiguous = ambiguousLive(notes.filter((entry) => entry.key !== options.note))
   if (ambiguous.length) {
     console.error(`\nREFUSED: ${ambiguous.map((entry) => entry.key).join(' · ')} carry more than one /section- tag.`)
-    console.error('Fix those tags before claiming another note on this record.')
+    console.error('An ambiguous note is not coverage. Read it, then remove the stale tag:')
+    console.error('  --unclaim --note <noteKey> --section <ordinal> --write   (one tag per command)')
     process.exitCode = 1
     return
   }
@@ -917,6 +937,86 @@ async function runClaim(options) {
   if (authorityOf(backTags, token) === 'candidate') {
     console.log(`It is an agent draft: ${REVIEWED_TAG} is the owner's act (--review --note ${options.note}).`)
   }
+}
+
+/**
+ * Remove ONE stale `/section-N` tag from a note that carries more than one.
+ *
+ * The only state this mode may resolve is ambiguity: a note carrying two section tags is not coverage
+ * at all (`readSectionTag` refuses to guess), and every write path on this record is blocked until one
+ * of the two tags is gone. Retiring the note would work too, but it takes a note out of service over a
+ * tag mistake, and it loses the claim the surviving tag still makes.
+ *
+ * It is deliberately narrow. A note carrying ONE tag is a claim, and protocol §6 says a reading that
+ * disagrees with a claim stops the round for the owner to settle - so this mode refuses that case and
+ * names the refusal rather than offering a way around it. One tag per invocation, `--write` to apply,
+ * the body untouched, and the version read at is what the plan was formed on.
+ */
+async function runUnclaim(options) {
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  if (isRetired(tags)) {
+    throw new UsageError(
+      `${options.note} is retired; a tombstone is not rewritten. Put its claim back first: --retire --note ${options.note} --undo --write`,
+    )
+  }
+  if (isDigest(tags)) throw new UsageError(`${options.note} is a legacy /digest whole-paper summary; it carries no section claim to remove`)
+  const claim = readSectionTag(tags)
+  if (!claim.ambiguous) {
+    console.error(`\nREFUSED: ${options.note} carries ${claim.tags.length === 1 ? `one tag (${claim.tags[0]})` : 'no /section- tag'}.`)
+    console.error('--unclaim removes one tag from a note carrying MORE THAN ONE: it resolves ambiguity and')
+    console.error('nothing else. A single claim is not removed here - a reading that disagrees with it')
+    console.error('stops the round for the owner to settle (protocol §6).')
+    process.exitCode = 1
+    return
+  }
+
+  const token = sectionWriteToken(options.section)
+  if (!claim.tags.some((tag) => sectionTokenFromTag(tag) === token)) {
+    throw new UsageError(`${options.note} carries no §${token} tag; it carries ${claim.tags.join(' · ')}`)
+  }
+  const after = tags.filter((tag) => lowered(tag) !== lowered(sectionTag(token)))
+  const remaining = readSectionTag(after)
+
+  console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
+  console.log(`claim   : ambiguous (${claim.tags.join(' · ')})  ->  ${remaining.token ? `§${remaining.token}` : 'none'}`)
+  console.log(`tags    : ${tags.join(' · ')}  ->  ${after.join(' · ') || '(none)'}`)
+  console.log(`change  : remove ${sectionTag(token)}   (the body is NOT touched)`)
+  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{tags: [...]}]`)
+  console.log(
+    remaining.token
+      ? `effect  : the note claims §${remaining.token} again, and this record is no longer ambiguous.`
+      : 'effect  : the note carries no claim again - it is UNKNOWN until it is read and claimed.',
+  )
+
+  if (!options.write) {
+    console.log('\nDRY RUN - nothing was written. Re-run with --write.')
+    return
+  }
+
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  writeAttempted = true
+  const result = await patchItem({ gate, key: options.note, patch: { tags: after.map((tag) => ({ tag })) }, apply: true })
+  if (result.conflict) {
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
+    process.exitCode = 1
+    return
+  }
+  if (!result.applied) {
+    console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
+    process.exitCode = 1
+    return
+  }
+  const back = (result.after.tags ?? []).map((entry) => entry.tag)
+  if (readSectionTag(back).tags.some((tag) => sectionTokenFromTag(tag) === token)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} still carries ${sectionTag(token)}.`)
+    return
+  }
+  console.log(`\nOK - note ${options.note} no longer carries ${sectionTag(token)} (version ${result.after.version}).`)
+  if (remaining.token) console.log(`It claims §${remaining.token} again; nothing else on the note changed.`)
+  else console.log('It carries no claim again: read it and claim it before anything is written for its section.')
 }
 
 /** Retire one note, or put its claim back. One note, one write, and the body is never touched. */
@@ -999,7 +1099,7 @@ async function runRewrite(options) {
   const tags = (note.tags ?? []).map((entry) => entry.tag)
   const claim = readSectionTag(tags)
   if (isRetired(tags)) throw new UsageError(`${options.note} is retired; a tombstone is not rewritten`)
-  if (claim.ambiguous) throw new UsageError(`${options.note} carries more than one /section- tag; fix it before rewriting`)
+  if (claim.ambiguous) throw new UsageError(`${options.note} carries more than one /section- tag; resolve it before rewriting: --unclaim --note ${options.note} --section <ordinal> --write`)
   if (isReviewed(tags)) {
     throw new UsageError(
       `${options.note} carries ${REVIEWED_TAG}: the owner accepted that body, so it is a record. Retire it and write the replacement, or --review --note ${options.note} --undo --write first.`,
@@ -1229,6 +1329,7 @@ const USAGE =
   '       node tools/zotero-section-note.mjs --item <recordKey> --section <ordinal> (--text "<html>" | --file <path>)\n' +
   '                                       [--replaces <retiredNoteKey>] [--acknowledge-unknown "<what you read>"] [--write]\n' +
   '       node tools/zotero-section-note.mjs --claim --note <noteKey> --section <ordinal> [--write]\n' +
+  '       node tools/zotero-section-note.mjs --unclaim --note <noteKey> --section <ordinal> [--write]\n' +
   '       node tools/zotero-section-note.mjs --rewrite --note <noteKey> (--text "<html>" | --file <path>) [--section <ordinal>] [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
@@ -1240,6 +1341,8 @@ const USAGE =
   '       /retired takes a note out of service. No invisible marker is written or read, and no prose is\n' +
   '       parsed: a note with no /section- tag is UNKNOWN and is read before anything is written.\n' +
   '       --tidy does not exist; a damaged body is rewritten by the agent or retired and written again.\n' +
+  '       --unclaim removes ONE /section- tag and only from a note carrying more than one: it resolves\n' +
+  '       ambiguity, never a disagreement with a single claim.\n' +
   '       --delete erases only a /retired note, permanently: this API has no trash, and the plan states\n' +
   '       that before --write is accepted.\n' +
   '       Exit 0 = written and read back | 1 = refused, nothing written | 2 = usage |\n' +
@@ -1248,11 +1351,11 @@ const USAGE =
 function parseArgs(argv) {
   const options = {
     item: '', note: '', section: '', text: '', file: '', reason: '', replaces: '', acknowledgeUnknown: '',
-    claim: false, rewrite: false, delete: false, retire: false, review: false, undo: false,
+    claim: false, unclaim: false, rewrite: false, delete: false, retire: false, review: false, undo: false,
     plan: false, json: false, write: false,
   }
   const valued = new Set(['--item', '--note', '--section', '--text', '--file', '--reason', '--replaces', '--acknowledge-unknown'])
-  const switches = new Set(['--claim', '--rewrite', '--delete', '--retire', '--review', '--undo', '--plan', '--json', '--write'])
+  const switches = new Set(['--claim', '--unclaim', '--rewrite', '--delete', '--retire', '--review', '--undo', '--plan', '--json', '--write'])
   const keyOf = (flag) => flag.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
@@ -1267,8 +1370,8 @@ function parseArgs(argv) {
     index += 1
   }
 
-  const modes = ['claim', 'rewrite', 'delete', 'retire', 'review'].filter((mode) => options[mode])
-  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --rewrite, --delete, --retire, --review')
+  const modes = ['claim', 'unclaim', 'rewrite', 'delete', 'retire', 'review'].filter((mode) => options[mode])
+  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --unclaim, --rewrite, --delete, --retire, --review')
   if (options.undo && !options.retire && !options.review) throw new UsageError('--undo belongs to --retire or --review')
   if (options.reason && !options.retire) throw new UsageError('--reason belongs to --retire')
   if (options.replaces && !options.section) throw new UsageError('--replaces goes with the --section it replaces')
@@ -1282,6 +1385,14 @@ function parseArgs(argv) {
     if (!options.section) throw new UsageError('--claim takes --section <ordinal>')
     if (options.item || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--claim changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.unclaim) {
+    if (!options.note) throw new UsageError('--unclaim takes --note <noteKey>')
+    if (!options.section) throw new UsageError('--unclaim takes --section <ordinal>: the tag to remove')
+    if (options.item || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
+      throw new UsageError('--unclaim changes one note and nothing else; drop the other arguments')
     }
     return options
   }
@@ -1330,8 +1441,8 @@ function parseArgs(argv) {
     return options
   }
   if (options.acknowledgeUnknown) throw new UsageError('--acknowledge-unknown belongs to a --section create')
-  if (options.note) throw new UsageError('--note belongs to --claim, --rewrite, --review, --delete or --retire')
-  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--rewrite/--review/--delete/--retire')
+  if (options.note) throw new UsageError('--note belongs to --claim, --unclaim, --rewrite, --review, --delete or --retire')
+  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--unclaim/--rewrite/--review/--delete/--retire')
   if (options.write) throw new UsageError('--write belongs to --section or one of the note modes')
   return options
 }
@@ -1340,6 +1451,10 @@ async function main() {
   const options = parseArgs(process.argv.slice(2))
   if (options.claim) {
     await runClaim(options)
+    return
+  }
+  if (options.unclaim) {
+    await runUnclaim(options)
     return
   }
   if (options.rewrite) {

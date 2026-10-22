@@ -2366,3 +2366,44 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **落在何处**：[`tools/refusal.mjs`](../tools/refusal.mjs) 与 [自测](../tools/refusal-selftest.mjs) · 十个 helper 的尾部与 [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 套件清单 ·
 [`protocol.md`](../protocol.md)（Revision 34：§6 一条、`INV-FAIL-1`）· [`tools/release-check.mjs`](../tools/release-check.mjs)（`refusalVoiceProblems` + 名册加 `refusal.mjs`）·
 [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成，25 条出处全部成立）· [`README.md`](../README.md)。
+
+---
+
+## 84. 16,000 那句话引错了包：挂的是 `dsh-tool-pwsh`，不是持久化那一支（2026-10-22）
+
+**起因**：2026-10-22 对这整套预设的一次整体检查。四份纪律、覆盖地图、生成物 `toolchain.md` 与 §63 那张表都说"单条命令的输出在 16,000 字符处被截断、截到前 16,000"。
+
+**反证**：一条 **30,000 字符**的命令输出完整到达（本轮实测：`pwsh` 一条命令打印 30,000 个字符，返回的就是 30,000）。16,000 的闸门若真存在，这条当场就被截了。
+
+**事实**（读源码核对的，不是推断）：
+
+| 事实 | 出处 |
+|---|---|
+| 本预设挂的是 `@deepseek-ai/dsh-tool-pwsh`（`cordis.patch.yml`） | 组合文件 |
+| 它的本地执行层默认 `maxOutputBytes: 64e3`，**stdout / stderr 各算一份** | `dsh-pwsh-local/lib/index.js` |
+| 底层是 "bounded **tail-keep** collection with spill"：保留**尾部**、丢开头，提示语 `[output truncated; full output: …]` | `dsh-subprocess-local/lib/index.js`、`dsh-tool-pwsh/lib/index.js` |
+| `maxOutputChars: 16e3` ＋ `<response clipped>` 属于 `dsh-tool-pwsh-persistent`——本预设**没有挂**它 | `dsh-tool-pwsh-persistent/lib/index.js` |
+
+**根因**：§63 把上一轮的"未查清"查清时，第二行引的正是 persistent 那一支。那条更正本身没有被任何能失败的检查验过——这是本轮唯一一个"证据引错、结论照抄进六份正文"的例子，也说明"查清"这个动作同样需要证据。
+
+**裁定**：数字只留一处口径，并且写明**它属于谁、测在哪**——`dsh-tool-pwsh`（本预设挂的那支）在 **DSH 0.2.1-rc.2** 上保留每流**最后 64,000 字节**，超过就丢**开头**。纪律里补上原先没有的那半句警告：丢的是开头，所以一次拉一篇 88k 的全文，丢的第一个东西是**摘要**。**不加机器护栏**：宿主默认值不在离线套件能验的范围，去解析 `node_modules` 里的字符串又属于脆判据（与 2026-10-17 那条"反对宽判据"的立场一致）；改为在 `preset-release` 里写明"升 DSH 必重测这一行"，并留下本轮探针（打印 30,000 字符看是否完整到达）。
+
+**影响**：结论"12,000 的片完整到达"不变（12k ≪ 64k）；变的是对"一次拉整篇"的失效描述——从"截尾"变成"丢头"，而后者恰好是纪律从没警告过的那一半。
+
+**落在何处**：[`skills/reading-triage`](../skills/reading-triage/SKILL.md)（两处）· [`literature-recon`](../skills/literature-recon/SKILL.md) · [`section-notes`](../skills/section-notes/SKILL.md) · [`subagent-contract`](../skills/subagent-contract/SKILL.md) · [`docs/coverage.md`](coverage.md) §四.4 · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md)（重生成）· [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §3。
+
+---
+
+## 85. `ambiguous` 从"先修 tags"变成一条有仪器的窄动作：`--unclaim`（Revision 35，2026-10-22）
+
+**起因**：同一次检查。一条笔记带两枚 `/section-N` 时不算覆盖，claim / rewrite / `--replaces` 三条路**全拒**，而全仓**没有**删 tag 的入口；纪律却写着"先修 tags"。当时唯一的出路是把这条笔记 `--retire`（把一个 tag 错误升级成墓碑），或者请属主在应用里手改。拒绝是真的，但它点的那一步没有仪器——`INV-FAIL-1` 要的恰好不是这种拒绝。
+
+**裁定（junhan 逐项确认，2026-10-22）**：新增 `--unclaim --note <key> --section <ordinal>`，**只对带多于一枚 section tag 的笔记**，**一次一枚**；单枚 tag 的笔记一律拒绝，并打印 protocol §6 那一条——一枚 tag 是 claim，读数与它不一致归属主裁定，工具不给绕道。写进契约：**Revision 35**（能力变更 ⇒ minor ⇒ 0.16.0）。
+
+**设计**：干跑默认、`--write` 才写、版本前置（412 ⇒ 拒绝，什么都不写）、回读断言被摘的那枚不再出现（不成立 ⇒ **exit 3**，绝不报"没写"）、正文一字不动、不加 `--reason`（理由进报告；`--retire` 要 reason 是因为"退役"本身是一个语义判断，摘 tag 不是）。工具的边界就是"只能降低模糊度"：它**不能**表达"这枚 claim 错了"。
+
+**测试与反向控制**：`zotero-section-note-selftest` 新增 10 条——干跑计划、拒绝单 tag 并点名 §6、缺 tag 是 usage 2、墓碑 2、写后回读只剩一枚、只剩一枚后第二次拒绝、解掉后同记录 create 放行、PATCH 被接受却不生效 ⇒ exit 3 并点名仍在的那枚。两次反向控制都真红：把 ambiguity 判断改成 `if (false)` ⇒ 3 条 FAIL；把回读判断改成 `if (false)` ⇒ 3 条 FAIL；恢复即 PASS。
+
+**与契约的关系**：这不是"agent 可以改属主的 claim"。§6 原有的"读数与 tag 不一致就停下"一个字没放宽；新增的只是"一个模糊状态可以被一次显式、只减不增的摘除解掉"。`INV-NOTE-1` 补了一句：ambiguous 不算覆盖。
+
+**落在何处**：[`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)（模式、usage、计划行、三处拒绝语）· [自测](../tools/zotero-section-note-selftest.mjs) · [`skills/section-notes`](../skills/section-notes/SKILL.md)（description、§0、§2、§2.1、§4.2、§7、§8.1、§9）· [`docs/coverage.md`](coverage.md)（名册、五项计划行、§四.3）· [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) → [`docs/toolchain.md`](toolchain.md) · [`protocol.md`](../protocol.md)（Revision 35：§4、§6、`INV-NOTE-1`）· [`README.md`](../README.md)。

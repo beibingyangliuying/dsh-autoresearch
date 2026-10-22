@@ -1,9 +1,15 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 34.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 35.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 34 governs what a failure says. Every helper program now
+independent of any package version. Revision 35 states the one way an **ambiguous** note is resolved: a
+note carrying two `/section-N` tags claims nothing, every write on that record is refused while the
+ambiguity stands, and the owner's tags are not a round's to rewrite — so the act is the narrowest one,
+one tag removed after the note has been read, one tag per command, which restores the claim the
+surviving tag was making. A note carrying **one** tag is a claim, and the tool refuses to remove it: a
+reading that disagrees with a claim still stops the round for the owner to settle. §4, §6 and
+`INV-NOTE-1` state it. Revision 34 governs what a failure says. Every helper program now
 fails through one renderer: the line that states what did not happen, and, when exactly one next action
 is known, a line carrying it — plus a command only where that command works as printed. Nothing is added
 where nothing is known, because a guessed remedy turns a retry into a drift, and a drifting round is the
@@ -376,7 +382,9 @@ sections     one `/section-N` note per TOP-LEVEL section, attached to its librar
              is never written twice, a dotted key is neither written nor read, a pasted note is
              claimed or rewritten in place, a wrong record is retired rather than deleted, an
              agent-written body is tagged `/agent-note` until the owner accepts it with `/reviewed`,
-             and one record carries one explanation per section and no paper-level summary
+             and one record carries one explanation per section and no paper-level summary; an
+             ambiguous note — more than one `/section-N` — claims nothing, is read before it is
+             touched, and is resolved by removing one stale tag, one tag per command
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code
@@ -524,7 +532,12 @@ These rules bound their use:
   channel does not parse prose and a note carrying no claim is not coverage — and `covered: none` is a
   statement about claims, never about whether an explanation exists, so no round reports a section
   uncovered while an unclaimed note on that record is unread. A reading that disagrees with a
-  tag stops the round for the owner to settle; it is never written around. A section a record already claims is
+  tag stops the round for the owner to settle; it is never written around. A note carrying **two** or
+  more `/section-N` tags is **ambiguous**: it claims nothing, every write on that record is refused
+  while it stands, and it is resolved by reading the note and then removing one stale tag, one tag per
+  command, which restores the claim the surviving tag made. A note carrying one tag is a claim, and
+  removing it is not a repaired ambiguity — that disagreement is still the owner's to settle, and the
+  tool refuses the attempt rather than offering a way around it. A section a record already claims is
   refused rather than written twice, and **what is counted is the top-level section**: a dotted key is
   neither written nor read, and a note keyed to a subsection is unknown until it is merged into its
   top-level section or retired. A note with no `/section-` tag, `/section-N` + `/imported`, or an
@@ -656,7 +669,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
 | `INV-ADOPT-5` | An adoption item names the section note it rests on and that note's provenance; an unreviewed `/agent-note` supports no `adopt`, `adopt-modified` or `verified`. | An agent's transcription of a paper is a candidate's ground, not the owner's accepted record; without the tag the two read identically and the ledger cannot be re-examined. |
-| `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. |
+| `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, a note carrying more than one `/section-N` tag is **ambiguous** and is not coverage either — it is resolved by removing one stale tag (one per command, after the note is read), never by guessing which tag was meant — retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. An ambiguous note blocks every write on its record, so leaving the ambiguity to be "worked around" is how a claim gets invented rather than read. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
 | `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |

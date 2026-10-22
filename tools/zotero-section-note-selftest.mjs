@@ -201,6 +201,9 @@ console.log('\n[8] the command line refuses usage errors before it reads a libra
 const tool = fileURLToPath(new URL('./zotero-section-note.mjs', import.meta.url))
 const run = (...args) => spawnSync(process.execPath, [tool, ...args], { encoding: 'utf8' })
 same(run('--claim').status, 2, '--claim without --note is a usage error')
+same(run('--unclaim').status, 2, '--unclaim without --note is a usage error')
+same(run('--unclaim', '--note', 'X').status, 2, '--unclaim names the tag it removes with --section')
+same(run('--unclaim', '--note', 'X', '--section', '2', '--reason', 'why').status, 2, '--unclaim does not take --reason')
 same(run('--delete').status, 2, '--delete without --note is a usage error')
 same(run('--delete', '--note', 'X', '--reason', 'why').status, 2, '--delete does not take --reason')
 same(run('--tidy', '--note', 'X').status, 2, '--tidy is gone')
@@ -211,6 +214,24 @@ console.log('\n[9] the command line against a stub library, not the owner\'s')
 const stubItems = {
   REC1: { key: 'REC1', itemType: 'journalArticle', title: 'A paper', version: 1 },
   REC2: { key: 'REC2', itemType: 'journalArticle', title: 'An empty record', version: 1 },
+  REC3: { key: 'REC3', itemType: 'journalArticle', title: 'A record whose note is ambiguous', version: 1 },
+  REC4: { key: 'REC4', itemType: 'journalArticle', title: 'A record whose tag removal never reads back', version: 1 },
+  AMB2: {
+    key: 'AMB2',
+    itemType: 'note',
+    note: '<p>§2 and §5</p>',
+    tags: [{ tag: '/section-2' }, { tag: '/section-5' }],
+    version: 9,
+    parentItem: 'REC4',
+  },
+  AMB1: {
+    key: 'AMB1',
+    itemType: 'note',
+    note: '<p>§2 and §3</p>',
+    tags: [{ tag: '/section-2' }, { tag: '/section-3' }],
+    version: 8,
+    parentItem: 'REC3',
+  },
   LIVE2: { key: 'LIVE2', itemType: 'note', note: '<p>第2节</p>', tags: [{ tag: '/section-2' }], version: 2, parentItem: 'REC1' },
   UNK: { key: 'UNK', itemType: 'note', note: '<p>一段话总结</p>', tags: [], version: 3, parentItem: 'REC1' },
   DIG: { key: 'DIG', itemType: 'note', note: '<p>digest</p>', tags: [{ tag: '/digest' }], version: 4, parentItem: 'REC1' },
@@ -225,7 +246,7 @@ const stubItems = {
     parentItem: 'REC1',
   },
 }
-const childKeys = { REC1: ['LIVE2', 'UNK', 'DIG', 'OLD', 'AGU', 'RV6'], REC2: [] }
+const childKeys = { REC1: ['LIVE2', 'UNK', 'DIG', 'OLD', 'AGU', 'RV6'], REC2: [], REC3: ['AMB1'], REC4: ['AMB2'] }
 const requests = []
 const deleted = new Set()
 const scratch = mkdtempSync(join(tmpdir(), 'section-note-'))
@@ -294,6 +315,13 @@ const server = createServer((req, res) => {
     }
     if (req.method === 'PATCH') {
       readBody((body) => {
+        if (key === 'AMB2') {
+          // Accepted and never applied: the class a write tool must report as 3, never as "nothing
+          // was written". This is the only stub behaviour that is wrong on purpose.
+          res.writeHead(204)
+          res.end()
+          return
+        }
         if (req.headers['if-unmodified-since-version'] !== String(stubItems[key].version)) {
           send(412, { error: 'precondition failed' })
           return
@@ -377,6 +405,22 @@ check(deleteRun.stdout.includes('permanent'), 'and that the channel cannot undo 
 const liveDelete = await runAsync(['--delete', '--note', 'LIVE2'])
 same(liveDelete.status, 1, 'a live note is refused')
 
+const ambiguousCreate = await runAsync(['--item', 'REC3', '--section', '3', '--file', createBody])
+same(ambiguousCreate.status, 1, 'a create on a record whose note carries two tags is refused')
+check(ambiguousCreate.stderr.includes('--unclaim'), 'and the refusal names the command that resolves it - not a dead end')
+
+const unclaimRun = await runAsync(['--unclaim', '--note', 'AMB1', '--section', '3'])
+same(unclaimRun.status, 0, 'removing one of two tags is a dry run')
+check(unclaimRun.stdout.includes('ambiguous (/section-2 · /section-3)'), 'the plan names both tags and which one survives', unclaimRun.stdout)
+check(unclaimRun.stdout.includes('the body is NOT touched'), 'and that the body is left alone')
+const unclaimSingle = await runAsync(['--unclaim', '--note', 'LIVE2', '--section', '2'])
+same(unclaimSingle.status, 1, 'a single claim is not unclaimed')
+check(unclaimSingle.stderr.includes('protocol §6'), 'and the refusal says why: a disagreement is the owner\'s to settle', unclaimSingle.stderr)
+const unclaimAbsent = await runAsync(['--unclaim', '--note', 'AMB1', '--section', '9'])
+same(unclaimAbsent.status, 2, 'removing a tag the note does not carry is a usage error')
+const unclaimRetired = await runAsync(['--unclaim', '--note', 'OLD', '--section', '3'])
+same(unclaimRetired.status, 2, 'a tombstone is not edited: put its claim back first')
+
 check(requests.every((line) => line.startsWith('GET ')), 'every dry run sent GET only: nothing was written', requests.join(' | '))
 
 // --- writes --------------------------------------------------------------------------------------
@@ -439,6 +483,22 @@ check(deleted.has('OLD'), 'the stub library erased the note')
 check(deleteWrite.stdout.includes('It answers 404, and the trash does not hold it'), 'and the read-back proved it')
 const goneRun = await runAsync(['--delete', '--note', 'OLD'])
 same(goneRun.status, 1, 'a deleted note can no longer be planned')
+
+const unclaimWrite = await runAsync(['--unclaim', '--note', 'AMB1', '--section', '3', '--write'])
+same(unclaimWrite.status, 0, 'removing the stale tag writes')
+same(stubItems.AMB1.tags.map((tag) => tag.tag).sort().join(' '), '/section-2', 'and exactly one tag is gone')
+check(unclaimWrite.stdout.includes('claims §2 again'), 'the plan says what the note claims again', unclaimWrite.stdout)
+check(requests.includes('PATCH /api/users/0/items/AMB1'), 'the PATCH was sent')
+const unclaimAgain = await runAsync(['--unclaim', '--note', 'AMB1', '--section', '2'])
+same(unclaimAgain.status, 1, 'with one tag left it is a claim again: no second unclaim')
+
+const createAfterUnclaim = await runAsync(['--item', 'REC3', '--section', '3', '--file', createBody, '--write'])
+same(createAfterUnclaim.status, 0, 'the record is writable again once the ambiguity is gone')
+
+const unclaimUnconfirmed = await runAsync(['--unclaim', '--note', 'AMB2', '--section', '5', '--write'])
+same(unclaimUnconfirmed.status, 3, 'a tag removal that is accepted but does not read back is exit 3')
+check(unclaimUnconfirmed.stderr.includes('WRITTEN BUT UNCONFIRMED'), 'and it never says nothing was written', unclaimUnconfirmed.stderr)
+check(unclaimUnconfirmed.stderr.includes('still carries /section-5'), 'the mismatch names the tag that is still there', unclaimUnconfirmed.stderr)
 
 server.close()
 
