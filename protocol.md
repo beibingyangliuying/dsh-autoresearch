@@ -1,12 +1,19 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 38.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 39.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 38 makes a record answer the question it is read for. A
-document states **what holds now**: a replaced statement survives as one dated line naming what
-replaced it, the history is git and the log rather than a transcript inside the artifact, and a
-judgement has **one carrier** — every other mention is a pointer. An empty section is not written.
+independent of any package version. Revision 39 makes a record answer at the resolution its reader
+decides at, not the resolution an auditor would need. A section is a **ledger** or a **state note**
+and never both: a ledger's cells hold fields, and the argument a cell would need is carried by the
+note it points at. A budget now states its **cut order** — what is given up first and what is never
+given up. A source and a date follow the same rule as a class: named once where the claim enters a
+record, never stamped on a mention. Rule 12 also puts the current state first, so a reader can stop
+after the opening block. §3, §4 and §8 state it, with `INV-DOC-2` and `INV-DOC-3`. Revision 38
+makes a record answer the question it is read for. A document states **what holds now**: a replaced
+statement survives as one dated line naming what replaced it, the history is git and the log rather
+than a transcript inside the artifact, and a judgement has **one carrier** — every other mention is a
+pointer. An empty section is not written.
 Typing moves from every sentence to the block that shares one footing, because a label on every
 sentence is noise the finding has to be read past: a fact is the default and carries no mark, an
 inference carries its chain, and an exploratory item says what would settle it. An absence claim
@@ -370,8 +377,11 @@ be **decidable**: a reader must be able to say whether it was violated.
    measurement               of the definition, not a finding
 11 re-anchor to the request  the requested items are tracked as delivered or outstanding, and a
                              new branch names the outstanding item it serves
-12 one carrier,              a record states what holds now; a judgement has one carrier and every
-   current state only        other mention is a pointer; an empty section is not written
+12 one carrier,              a record states what holds now, and first: its opening block
+   current state first       carries the conclusion that holds and what would change it; a
+                             replaced statement survives as one dated line; a judgement has one
+                             carrier and every other mention is a pointer; an empty section is
+                             not written
 ```
 
 ```text
@@ -391,8 +401,10 @@ original request visible, so that a chain of individually justified steps cannot
 
 Rule 12 is aimed at the document rather than at a statement: a record that carries its own history is
 read as if every entry were still current, and a judgement repeated across three layers cannot be
-corrected in one place. It is also what makes a line budget enforceable — a document that states only
-what holds now can be compacted without losing a decision.
+corrected in one place. It also fixes the order a record is read in — the current state first, so a
+reader can stop after the opening block — and that order is what makes a line budget enforceable: a
+document that states only what holds now, and states it up front, can be compacted without losing a
+decision.
 
 The resident discipline also carries **routing**: each on-demand discipline states the situation
 that triggers it. Routing is a hard rule, not a suggestion — a trigger that is met without the
@@ -462,6 +474,22 @@ Three invariants follow from the shape of these contracts:
   is the current state, not a transcript of the round.
 - A discipline whose candidate cannot name the **observation it would fail on** produces an intention,
   not a test.
+
+Two rules govern the artifact itself, and they are what separates a record a reader can use from one
+an auditor can only re-check:
+
+- An artifact section is a **ledger** or a **state note**, and never both: a ledger carries one row per
+  object and fields in its cells, while a state note carries claims in prose and points at the ledgers
+  that hold the per-object detail. A cell that has grown an argument is a state note wearing a table,
+  and it is then neither — the argument belongs in the note, and the cell keeps the value it is read
+  for plus the pointer. A row that argues cannot be compared down its column, which is the only thing a
+  ledger is for; the same text in a note is where an argument is read.
+- A budget without a **cut order** is a wish: told only to be shorter, a writer gives up what is
+  cheapest to give up — the load-bearing limit — and keeps what is easiest to keep — the evidence
+  restated. So an artifact with a line budget states the order it gives things up in: evidence restated
+  from its carrier, then the second and later reasons for one claim, then per-object detail the ledger
+  already holds, then how the statement changed. The load-bearing limit, the falsification condition and
+  a rejected alternative's ground are never what is cut.
 
 ## 5. Tool visibility and isolation
 
@@ -743,7 +771,8 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
 | `INV-DOC-1` | The contract names no public symbol, and the index is a bijection with the authoritative list. | It keeps the contract stable under renames and stops the index drifting from reality. |
-| `INV-DOC-2` | A judgement has one carrier: a document states what holds now, every other mention is a pointer, a replaced statement leaves one dated line, and an empty section is not written. | A record that restates another carrier is a duplicate rather than corroboration; a reader who must reconstruct the current state from a transcript cannot tell it from the history, and a judgement copied into three layers cannot be corrected in one place. |
+| `INV-DOC-2` | A judgement has one carrier, and it states the current state first: a document's opening block carries the conclusion that holds and what would change it, every other mention is a pointer, a replaced statement leaves one dated line, and an empty section is not written. | A record that restates another carrier is a duplicate rather than corroboration; a reader who must reconstruct the current state from a transcript cannot tell it from the history, and a judgement copied into three layers cannot be corrected in one place. A record whose conclusion sits under its evidence is read to the end before it is understood. |
+| `INV-DOC-3` | A ledger row is read as a row: each cell holds a value, a key, or one short phrase, and the argument a cell would need is carried by the state note it points at. | A row that argues cannot be compared down a column, which is the only thing a ledger is for; the same text in a note is where an argument is read. |
 
 A retired invariant keeps its id. `INV-NOTE-2` bounded the paper-level digest, was retired with it in
 Revision 25, and is never reused — so the gap in the sequence is a record rather than a missing row.

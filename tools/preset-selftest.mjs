@@ -330,8 +330,9 @@ if (!existsSync(composedFile)) {
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
     ok(rules.length === 12, 'twelve numbered discipline rules', `found ${rules.length}`)
     // The count alone cannot tell "12 rules" from "11 rules plus a stray sentence turned rule".
-    // Named on purpose: the document-shape rule is the one this preset just paid to add.
-    ok(composedPersona.includes('One carrier, current state only'), 'rule 12 carries the one-carrier rule')
+    // Named on purpose: the document-shape rule is the one this preset just paid to add, and it now
+    // carries two clauses — one carrier, and the current state first.
+    ok(composedPersona.includes('One carrier, current state first'), 'rule 12 carries the one-carrier and state-first rule')
     const flatPersona = composedPersona.replace(/\s+/g, '')
     const bullets = ROUTED_NAMES.filter((n) => flatPersona.includes(`→\`${n}\``))
     ok(bullets.length === ROUTED_NAMES.length, `all ${ROUTED_NAMES.length} skill-routing bullets present`, `found ${bullets.length}`)
