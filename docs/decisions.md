@@ -927,167 +927,52 @@ junhan 选的落法（**父子归并**）：`parentSectionToken('3.1') === '3'`�
 
 ## 45. 脚手架向一个成熟课题的文档架构借了六件机制、拒了它的六层骨架（契约 Revision 16，2026-10-17）
 
-### 45.1 起因
+**起因**：对照 junhan 一个成熟课题的文档架构（六层、195 份 md、三代重组）与本预设的通用脚手架，问"保持通用性的前提下借什么"。
 
-junhan 要求把本预设推荐的文档组织，与一个**已经成熟的课题**逐项对照：
-`doc/<课题B>/`——六层（`specs` / `records` / `design` /
-`prospects` / `audit` / `references`）、根 README 一份 21 条规则的总表、195 份 `.md`、已经历过三代结构重组。
-问题是"哪种方式更好，以及保持通用性的前提下有什么可改"。
+**先验**（已核对）：
+- 两边不是同一种东西（通用默认 vs 成熟实例）⇒ 借机制、不借骨架。
+- 脚手架的布局声明有三份，且没有自测读过 `project-template/`——与 §43 自己立的规矩相抵。
+- 那边的可维护性代价有实测数字：125 份活动文档里 84 份判不出层、索引与计数漂移 ≥9 处、2 份无落点。
+- 同一个"列目录"动作有三种写法，护栏必须归一化（第一版因此报 2 处假阳性）。
+- P3 初稿的 "fresh clone" 替课题假定版本控制，已改成不含 VCS 的可得性说法。
+- P1 不需升版（契约 §7 本就按问题类型写，是模板把它拍平了）；P2/P3/P4 必须升版（卡字段与协议分家）。
+- 常驻成本为零：路由只写触发条件，不写产物形状。
 
-### 45.2 先验（核对过的事实，不是推测）
+**裁定（junhan 逐项确认；P6 未取）**：
+- **P1** 模板 §3 由线性排序改为按问题类型分配，补 `adoption/` 行。
+- **P2** 预注册独立成 `protocols/<id>.md`；协议、卡、产物共用一个 id；卡引用协议、不重抄预测；先于规则的运行登记缺口、不回填。
+- **P3** 卡引用的产物须对这份记录的读者可得；跑在外面的在 `evidence/` 留副本。
+- **P4** 退休＝移动 + README 说明（从哪来、为什么、谁接替）；正文不更正、活指针照改。
+- **P5** 反复出现的坑升格为带编号规则（生效日期 + 首例，只约束今后）。
+- **P6** mnemon Documents 与课题自带规范层的边界**本轮不取**，记为 open item，不是否决。
+- **P7** 新增 `scaffold-selftest`，把契约 §7、本仓 README、课题权威表三份名单互校。
+- **P8** 新课题根 README 用课题口吻，且不携带目录图（名单只有一份，在 `AGENTS.md` §3）。
 
-- **两边不是同一种东西**：这边是**通用默认**（11 个文件、8 个目录、0 份文档），那边是**成熟实例**。所以下面
-  的取舍都按"借机制、不借骨架"来做，而不是整体换布局。
-- **脚手架的布局声明有三份，而没有任何自测读过 `project-template/`。** 实测：`tools/` 里除 `new-project.ps1`
-  之外，无一处引用它。这与 §43 自己立的规矩相抵——"病因不是名单多，是没有一份名单有仪器校"。
-- **那边的可维护性代价有它自己的实测数字**：活动区 125 份里 **84 份**脚本判不出属于哪一层（Q2）、索引与
-  计数漂移 **≥ 9 处**（Q3）、2 份文档没有落点依据（Q1）。⇒ 它换来的是承载复杂度的能力，代价是层界与索引
-  靠散文维持；这也正是"不搬它的六层"的证据，而不是审美。
-- **同一个"列出目录"的动作，那边有三种写法**（契约用缩进树、README 用带文件名的树、权威表用 glob）。
-  护栏必须做归一化——这一点在护栏第一版上直接表现为 **2 处假阳性**（见 §45.5）。
-- **P3 的初稿措辞与本仓库既有裁定冲突**：§11 记"给工作区上 git | **不上**"、`archive/plan-v0.md:354` 记
-  "**有意不做**：不含 git 初始化"、`AGENTS.md.template` 与契约 §9 都声明不对版本控制表态。⇒ 初稿那句
-  "必须挺过 fresh clone"是**替课题假定版本控制**，已改写为不含 VCS 语义的可得性说法（"对这份记录的读者
-  可得"，跑在外面的留一份副本在身边，取不到的就在记录上写成缺陷）。
-- **P1 不需要契约升版**：契约 §7 的权威段**本来就是按问题类型写的**（"域约束 > scoping > 非规范笔记"这条
-  唯一真实的排序，其余是"是记录、不支撑主张"）。是**模板**把它拍平成 8 行排序。⇒ P1 消除的是模板与自家
-  契约的分歧，不是新增契约文本。
-- **P2/P3/P4 必须升版**：契约 §1 把 Card 定义成含 `prediction`、§4 写 "run — a hypothesis becomes a card"。
-  预测一旦独立成文件，**契约与脚手架就自相矛盾**——这比"布局块变了"更硬。
-- **常驻成本为零。** 路由那一行写的是**触发条件**（"代码即将跑以检验假设，或一次运行的结果正在被报告"），
-  不是产物形状，所以这次拆分**不加任何常驻 token**，§2 记的"十条线已到边"不必动。
+**否掉**：整体换成六层骨架（层界与索引靠散文维持，实测漂移）；把 P6 顺带做掉（需单独一轮）。
 
-### 45.3 决策（逐项由 junhan 确认；P6 未取）
+**落点与验证**：[`protocol.md`](../protocol.md)（Revision 16：§1/§4/§7/`INV-EVID-5`）· 模板六改 · [`tools/scaffold-selftest.mjs`](../tools/scaffold-selftest.mjs) · 六份纪律 · [`docs/coverage.md`](coverage.md)。`scaffold-selftest` 6/6 + 5 条反向控制；`doc-selftest`、`skills-selftest` PASS。护栏第一次跑就抓到：`research/adoption/` 进了契约与布局 README，唯独没进课题继承的权威表。
 
-| # | 决策 | 落点 |
-|---|---|---|
-| **P1** | 模板 §3 由 1–8 线性排序改为**按问题类型分配**，并补上 `adoption/` 那一行 | `project-template/AGENTS.md.template` |
-| **P2** | 预注册独立成 `research/experiments/protocols/<id>.md`；协议、卡、产物脚本**共用一个 id**；卡引用协议而不重抄预测；跑在规则之前的运行**登记缺口**、不回填 | 脚手架 + 纪律正文 + 契约 §1/§4/§7 |
-| **P3** | 卡引用的产物必须**对这份记录的读者可得**；跑在外面的在 `research/experiments/evidence/` 留副本 | 脚手架 + 纪律就地排除条件 + 契约 `INV-EVID-5` |
-| **P4** | 退休＝**移动 + 一份 README 说明**（从哪来、为什么、谁接替）；正文不更正、活指针照改、dated 记录不改 | `project-template/research/archive/` |
-| **P5** | 反复出现的坑**升格为带编号的规则**，带生效日期与**首例**，只约束今后、不追溯改写旧记录 | `pitfalls/README.md` + `AGENTS.md.template` §2.1 |
-| **P6** | **本轮不取**：mnemon Documents 与"课题自带规范层"的边界。那边自己的文档地图实测同一批阴性证据出现在 **5 处**（含两份 mnemon），所以重复是真的；但它需要单独一轮，**记为 open item，不是否决** | — |
-| **P7** | 新增 `tools/scaffold-selftest.mjs`：把契约 §7、本仓 README、课题继承的权威表**三份名单**互相校 | `tools/` + README + `overview.md` |
-| **P8** | 新课题的根 README 取**课题口吻**（不再自称模板、不再教人建课题），且**不携带目录图**——因为名单只有一份，就是 `AGENTS.md` §3 | `project-template/README.md` + 本仓 README 承接脚手架自述 |
-
-### 45.4 落点与验证（六个提交，每个都能跑绿）
-
-| 提交 | 内容 | 验证 |
-|---|---|---|
-| `5fd8659` | 脚手架六改（P1–P5、P8） | `doc-selftest --negative-controls` PASS · `skills-selftest` PASS |
-| `61b501c` | 契约 **Revision 16**（§1 · §4 · §7 · §8 `INV-EVID-5`） | `doc-selftest --negative-controls` PASS；§7 的树**故意只用裸目录名**，因为 DOC-8 会断言"带扩展名的反引号路径必须存在"——从契约里点名课题文件，就等于让契约替每个课题断言其内容 |
-| `2153fa8` | 护栏 P7 + 三处落点 | `scaffold-selftest --negative-controls` **6/6 + 5 条反向控制全部咬住**；`release-check-selftest` 的"每个自测都在 README 里有名字"PASS |
-| `b544733` | 纪律正文（P2/P3 的技能侧） | `skills-selftest` PASS · `doc-selftest` PASS |
-| 本轮 | 决策 §45 + 覆盖地图 §二"运行"那一行 | `doc-selftest --negative-controls` PASS |
-| 本轮 | 两处陈旧计数（见 §45.6） | `preset-selftest`（读组合树，须重新 dump） |
-
-**护栏的判决（这是这一轮唯一一条不是"写下来的"证据）：**
-
-```text
-对今天这棵树：  4/6   FAIL S1/S2  research/adoption/: not named in AGENTS.md.template §3
-对提议后的树：  6/6
-```
-
-也就是说：`research/adoption/` 在 `d07e09d` 里进了契约 §7、进了布局 README，**唯独没进课题继承的那张权威
-表**——脚手架的布局声明在**一个提交周期之内**就自相矛盾了。这条缺陷不是推演的，是护栏第一次跑就抓到的。
-
-### 45.5 过程中被护栏与约束抓到的四件事
-
-1. **护栏第一版报了 3 处失败，其中 2 处是它自己的假阳性**：布局 README 写的是 `pitfalls/README.md` 与
-   `rulings/ruling_<target>_<date>.md`，被读成了目录名；嵌套的 `experiments/protocols/` 又被拍平成了
-   `literature/` 的兄弟。修法是**把判据改窄**（要求 token 是路径形、按缩进建路径），不是放松检查。
-   并补一条 **S0：某份名单解析为空即失败**——三份空集合互相"一致"，正是"不会失败的检查"的另一种形态。
-   ⇒ 这条与 junhan 2026-10-17 的偏好一致：机械部分只做窄到可信的护栏，宽判据会乱咬，咬了就会被关掉。
-2. **反向控制是必需的，不是装饰**：五条控制各改一份输入，每条必须打破它对应那一项；哪条没咬住，整轮报红。
-   仓库的发布纪律早就写了这条（"一条不会失败的检查不算检查"），这次是第一次把它用在脚手架上。
-3. **我自己的 PowerShell 正则改写把 `sim-build.mjs` 弄坏了**（`join(draft, 'proposed'), ...` 括号错位）。
-   教训仍然成立：**别对代码做正则手术**，重写整个文件比修它便宜，也不会留下一个看着像对的中间态。
-4. **OneDrive 云同步让"已读过"的文件 mtime 变化**，版本守卫两次拒绝编辑（`skills/experiment-protocol/SKILL.md`、
-   `docs/coverage.md`）。README 的"已知约束"里本来就写着这一条——这次是它第一次咬到自己仓库的编辑。
-
-### 45.6 未做与边界
-
-- **没有任何真实课题跑过这套新脚手架。** 判定它好坏的证据目前只有"三份名单一致"与"读起来更清楚"，与
-  §44.6 同样诚实：判据是写下来的，不是试过的。最便宜的端到端试验是：开一个临时课题 → 写一份协议 →
-  跑一次 → 镜像一个产物 → 退休一份文档，然后看这四条规则**花的力气是否大于省下的**。
-- **P6 仍开着**（mnemon Documents 与课题自带规范层的边界），理由与证据见 §45.3 那一行。
-- **顺手发现的两处陈旧计数已单独修掉**（`.agents/skills/preset-release/SKILL.md` 说"eight routing names"
-  实为 10；`project-template/.agents/skills/domain-discipline/SKILL.md` 说"four skills"实为 10）——它们是
-  [`releases.md`](releases.md) §36"不写散文计数"那条规矩的同族缺陷，不属于本轮关注点，所以单独一个提交，便于单独回滚。
-
-### 45.7 取代关系（发布自检时补记）
-
-- **本节取代 §8 记的卡字段表**（2026-10-13 那次把预测列在卡里）。§8 是当时的决策记录，原样保留；今天
-  卡片与协议的权威定义在契约 §1、§4 与纪律 §3.1，而字段本身分成两份文件。
-- [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) §4 的发布自检清单
-  **漏了两个自测**（`zotero-section-note-selftest.mjs` 是 §41 那轮加的、`scaffold-selftest.mjs` 是本轮加的）。
-  README 的那份清单有仪器校（`release-check-selftest` 的 [4] 段），这份没有 ⇒ 这是同一类漂移的第二个实例，
-  处置记在本轮的发布条目里。
+**边界**：没有真实课题跑过新脚手架；P6 仍开；两处陈旧计数已单独修（`preset-release` 说 8 实为 10、域纪律说 4 实为 10）。
 
 ## 47. 内核 0.2.1 移除了 `cwd` 提示词变量，预设的 persona 后缀随之删除（2026-10-18）
 
-### 47.1 起因与现象
+**起因**：junhan 把内核从 `0.2.0-rc.2` 升到 `0.2.1-rc.2` 后，预设每一轮都失败，而它仍在新建会话名单上、设置页也不报 broken：
 
-junhan 升级 DSH 内核（`0.2.0-rc.2` → `0.2.1-rc.2`）后运行本预设，**每一轮**都以同一句话失败，而预设本身
-仍在新建会话名单上，设置页也不报 broken：
+> 本轮运行失败 unknown prompt variable "{{cwd}}" in section "deployment:persona-suffix"; registered variables: provider, model
 
-> 本轮运行失败 unknown prompt variable "{{cwd}}" in section "deployment:persona-suffix";
-> registered variables: provider, model
+**先验**：
+- 旧内核注册三个变量（`provider`/`model`/`cwd`），新内核同文件只剩两个。
+- 严格插值对未注册名字直接 `throw`，且装配发生在请求之前——所以是"每轮在请求前死"，与 §15/§19 那种"被标 broken 后静默隐藏"是两种故障。
+- `cwd` 改道为必需运行时上下文 `Current working directory: "<path>".`（`dsh-working-directory`，全局挂载，每次装配刷新，`cd` 后更新）；预设不挂也能拿到，且比旧变量准（旧变量读初始目录）。
+- 上游 `standard.patch.yml` 同版做了同样的清理；本预设当初就是照抄它——判据是"内核升级要重扫"，不是独有缺陷。
 
-### 47.2 先验（核对过的事实，不是推断）
+**决策（junhan 逐项确认）**：删掉 suffix 那一行，不在预设内自补变量——工作目录已由必需上下文给出，自补是把被废弃的契约请回来。
 
-- **旧内核注册三个变量**：下载 `@deepseek-ai/dsh-agent-loop@0.2.0-rc.2` 实测，`lib/index.js:1564-1566`
-  依次注册 `provider`、`model`、`cwd`。
-- **新内核只剩两个**：已装的 `0.2.1-rc.2` 同文件 `1591-1592` 只有 `provider`、`model`，`cwd` 那行不存在。
-- **严格插值 ⇒ 每轮在请求之前就死**：`@deepseek-ai/dsh-system-prompt` 的 `interpolate()` 对未注册名字直接
-  `throw`（`lib/index.js:172-174`），而装配发生在请求之前。**这一层必须说清**：注册表试挂载只挂行、不装配
-  提示词，所以设置页没有红徽章、名单也不会过滤它——它与 §15/§19 那类"预设被标 broken 后静默隐藏"是**两种
-  不同的故障**，只有真实会话的第一次装配能暴露。
-- **cwd 没丢，改道成了运行时上下文**：新增包 `@deepseek-ai/dsh-working-directory`（npm 首发版本即
-  `0.2.1-alpha.2`）注册**必需**上下文 `working-directory:current`，文本为
-  `Current working directory: "<path>".`（`lib/index.js:41-47,121-123`），由 `dsh-base` 全局挂载
-  （`cordis.patch.yml:166-167`）；每次装配刷新，`cd` 之后还以用户消息追加"目录已改变"。作用域装配会先并入
-  **全局层**（`dsh-scope` 的 `merge()` 从 `global` 起算，`lib/index.js:177-179`）⇒ 预设自己**不需要**挂这
-  一行也能拿到，而且比旧变量更准：旧变量读的是 `session.header.cwd`（初始目录，`cd` 之后不更新）。注意
-  **上下文与工具是两件事**：本预设的隔离行把 agent 可见的 `working_directory` 工具屏蔽掉了
-  （`isolation-report.json` 的 denied 里就有它），但每轮的上下文来自服务侧的注册，屏蔽工具动不了它。
-- **上游同版做了同样的清理**：官方 `standard.patch.yml` 在 `0.2.0-rc.2` 里正是
-  `suffix: Your working directory is {{cwd}}.` + `{{model}}` 前缀，在 `0.2.1-rc.2` 里 suffix 整行已删。
-  **本预设当初就是照抄官方 standard 的写法**——这正是"内核升级要重扫"的判据，而不是我们独有的缺陷。
+**否掉**：预设内自补 `ctx.systemPrompt.variable('cwd', …)`（可行，但只为我们一行文本多维护一条内核契约；拿 cwd 拼绝对路径的第三方预设仍需走它或改写措辞）；保留句子、去掉变量（与上下文重复）。
 
-### 47.3 决策与落点
+**落点与验证**：[`cordis.patch.yml`](../cordis.patch.yml)（suffix 删除 + 就地写明理由）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)。第 [4] 段原守着这个 bug（断言 `{{cwd}}` 必须存在），改为三条：点名旧错误、按内核注册表校验所有占位符、变异驱动（注进 `{{cwd}}` 与未注册名字各须 FAIL）。
 
-**决策（junhan 逐项确认，取推荐项）**：**删掉 suffix 那一行**，不做变量自补——工作目录已由必需运行时上下文
-每轮给出，自补只是把一条被内核废弃的契约请回预设。
-
-**否掉的替代方案**：
-
-- **在预设内自补 `ctx.systemPrompt.variable('cwd', …)`**（可行：`workingDirectory` 是全局服务，子作用域可
-  注入；变量 provider 同步求值、`get()` 无 I/O；作用域变量遮蔽而非冲突于未来的全局同名变量）。否掉的理由是
-  它只为我们自己的一行文本服务，却多维护一条内核契约——**但 `vibe-math-*` 那类拿 cwd 拼绝对路径的预设仍需
-  走这条路或改写措辞（见 47.5）**。
-- **保留句子、去掉变量**：与运行时上下文重复陈述，零收益。
-
-**落点**：[`cordis.patch.yml`](../cordis.patch.yml)（suffix 删除；头部注释与 persona 行就地写明理由，使下
-一个读到这一行的人不会把它加回来）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（新增两条
-检查）· 本文件 §23 的现象段就地标注更正（**不改写历史决策**，沿用 [`releases.md`](releases.md) §46.3 的规矩）。
-
-### 47.4 护栏与验证
-
-`preset-selftest` 的第 [4] 段原来**守着这个 bug**：它断言 `{{cwd}}` 占位符必须存在。现在改为三条：
-
-1. **点名旧错误**：`{{cwd}}` 不得出现在预设块里——"命名替代品而不命名错误，就是在请错误回来"。
-2. **守住整类错误**：组合后预设块里出现的每个 `{{name}}`，与**内核注册表**逐一比对。注册表不是硬编码名单，
-   而是从 profile 解析到的 `@deepseek-ai/dsh-agent-loop` 里读出的 `systemPrompt.variable(...)` 字符串实参
-   （并合并本包自己的行，使预设日后自注册变量不会被误报）；**读不到内核时响亮 FAIL**，不静默通过。
-3. **变异驱动**（§3 的规矩）：把 `{{cwd}}` 与一个从未注册的名字分别注进 dump，新检查必须各自 FAIL，然后
-   还原。
-
-### 47.5 未做与边界
-
-- **没有回改 `docs/archive/plan-v0.md`**：那是归档时间线，`{{cwd}}` 在那里是当时的记录。
-- `$DSH_HOME/.agent-presets/vibe-math-v1..v4` **不在**内核读取范围内（**已更正，2026-10-18 见 §49**）：它们位于内核**已不再读取**的旧预设目录，因此**不会运行、也不会"整轮失败"**——真正的问题是它们已经**不是可用预设**了。若将来要恢复它们，必须按 DSH 自带的 `editing-cordis-compositions` skill 的"Migrate a legacy preset"路径改成声明行，**到那一步**才需要处理正文里的 `{{cwd}}`（每文件 2 处，其中三处拿它拼 `<cwd>/VibeMath/Projects/<project>/` 绝对路径）。
-- 本轮**不是发布**：没有 bump 版本、没有 tag——只做修复、护栏与记录。
+**边界**：没有回改 `archive/plan-v0.md`（历史记录）；`vibe-math-v1..v4` 在旧预设目录里，内核已不读，不会整轮失败，但已不是可用预设（见 §49）；本轮不是发布，未 bump 未 tag。
 
 ## 49. 更正：旧预设目录里的 `{{cwd}}` 不会"整轮失败"，因为没人读那个目录（2026-10-18）
 
@@ -1233,161 +1118,45 @@ E8/E9 留在 `.tmp/engine-probe/`（`smoke.mjs`、`outline-census.mjs`），待�
 
 ## 54. 工具粒度的判据，与 keep-list 从"名字名单"改成"命名空间"（2026-10-19）
 
-**起因**：junhan 问"这套预设提供的工具，粒度足够细了吗"，并确认四个强化方向（A 量前提 · B 改 keep-list 粒度 · C 给 metadata 通道落一个 helper · D 评估读侧模式改子命令）都做。本轮做的是 **A 与 B**（C/D 各占后续一节）。
+**起因**：junhan 问工具粒度是否够细，确认四个方向（量前提 / 改 keep-list 粒度 / 给 metadata 落 helper / 评估读侧子命令）；本轮做前两个。
 
-### 54.1 先验（全部是本次实测，不是推断）
+**先验（本次实测）**：
+- 现役工具面 44 个 / 38,282 字符 ≈10.6k token 每请求；预设自带领域工具占 0 个名字（九个 helper 走 `pwsh`）。
+- mnemon 是最大单项：17 个工具 15,112 字符 ≈4.2k token，占工具面 39%，是 persona 的 3.7 倍。
+- 57 个 autoresearch 会话里 mnemon 被调用 88 次（1.4%），来自 17 个里的 6 个；其余 11 个一次未用。语料会动，稳定的是"6/17"与比例，不是总数。
+- 常驻散文与工具集解耦：57/57 会话的系统提示里 mnemon 工具名 0 个——那段协议块由 profile 的 mnemon View 拼出，从不查工具注册表。⇒ **隔离挡得住工具，挡不住散文**。
 
-1. **现役工具面的成本**：取 2026-10-19 08:34 一个顶层 autoresearch 会话的 `request/header`，
-   `node tools/dump-session.mjs <dir> .tmp/as-session.jsonl` + `node tools/list-tools.mjs` 数出
-   **44 个工具 / 38,282 字符 ≈ 10.6k token，每请求常驻**（估算尺 3.6 字符/token，与 §29/§31 同一把）。
-   组成：宿主行 24 个 · 保留的 profile 全局 20 个（mnemon 17 + `read_page`/`x_search` + `read_image`）。
-   **预设自带的领域工具在这 44 里占 0 个名字**——九个 helper 走 `pwsh`，工具面 0 字符。
-   对照：§29/§31 删掉的两条 MCP 行是 77,586 字符 ≈ 21.5k token/请求 ⇒ 现在整个面是当年的一半。
-2. **mnemon 是最大的单项**：17 个工具 15,112 字符 ≈ **4.2k token/请求（占 44 个工具 token 的 39%）**，
-   是 persona（4,726 字符 ≈ 1.3k）的 **3.7 倍**。
-3. **实际调用**（现已转正为 [`tools/session-tool-usage.mjs`](../tools/session-tool-usage.mjs)；57 个 autoresearch 会话）：
-   mnemon 共 **88 次 = 1.4%**（当轮）／**89 次**（转正后复测），来自 **17 个里的 6 个**——`runtime_memory` 49→50 ·
-   `document_search` 15 · `document_create` 11 · `document_manage` 7 · `recall` 4 · `remember` 2；
-   **其余 11 个一次也没被调用**。**语料会动**：同一批 57 个会话在约 40 分钟内从 6,081 次调用涨到 **6,161** 次
-   （有一个会话还在追加），所以稳定的是"6/17"与那个比例，不是总数——重跑时按工具打印的数字读，不要拿总数对差。
-4. **常驻散文与工具集是解耦的**（`.tmp/mnemon-resident-names.mjs`，同一批 57 个会话）：
-   它们的**系统提示里出现的 mnemon 工具名 = 0 个，57/57**。那段协议块由 profile 级的
-   `dsh-mnemon-strategy-default-three-tier` 按 **mnemon View 的 offers** 拼出来，`mnemon_recall` /
-   `mnemon_runtime_memory` 是字符串常量，**它从不查 DSH 的工具注册表**。
-   ⇒ **隔离挡得住工具，挡不住散文**：`ctx.tools.restrict()` 只能对注册表里的名字生效。
+**裁定：不缩名单，改命名空间级保留**。原 17 名单同时比依赖窄（provider 新增工具会被默认 deny，而 `progress-sync` 架在它上面）、比需要宽（保留 11 个从未调用的名字）；而"今天没被点名"是 View 状态不是结构保证。改法：`KEEP_NAMESPACES = ['mnemon_']`，`isKept` 同时接受精确名与前缀。
 
-### 54.2 裁定：不缩名单，改成命名空间级保留
+**加宽必须响亮**：解析出的确切名字进 `isolation-report.json` 的 `keptByNamespace`，集合变化时打一行——工具面被加宽而不留痕迹才是真危险。
 
-原先的写法是 17 个名字的硬名单，它**同时比依赖窄、比需要宽**：
+**落点与验证**：[`isolation.js`](../isolation.js)（`KEEP_NAMESPACES` / `isKept` / `keptByNamespace`）· [`tools/isolation-selftest.mjs`](../tools/isolation-selftest.mjs) 四条新断言（包含前缀≠前缀开头仍拒；provider 事后新增被保留；报告解析成确切名；晚到工具被记录）。`isolation-selftest` PASS。离线证明；真实会话要等宿主重启后的新会话。
 
-- **比依赖窄**：那组名字属于装上的 mnemon provider，不属于本预设。provider 升级新增一个 `mnemon_*`
-  时，它是"全局视图里不在 KEEP 的工具"，会被 `deny = 全局视图 − KEEP` **默认屏蔽**——
-  而 `progress-sync` 的三层沉淀整个架在它上面，却没有东西会报告这件事。这与 §33 抓到的是同一类缺口：
-  **名单式检查看不见自己名册之外的东西**。
-- **比需要宽**：它保留了 11 个在 57 个会话里从未被调用的名字。
-- **缩名单是不可选的**：第 4 条实测说明"今天没被点名"是 **View 状态**，不是结构保证；哪天 View 重新提供
-  route，点名就回来，而被 deny 的工具就成了一条**悬空指令**（让 agent 去调一个它看不见的工具）。
-  用一句"实测过没点名"去换这个风险，是把状态当成了契约。
-
-所以保留的**方向**（拉黑制）与护栏都不动，只把名单里那一段换成**意图**：
-
-```js
-const KEEP_NAMESPACES = ['mnemon_']        // 记忆层是"一层"，不是它的工具快照
-const isKept = (n) => KEEP.includes(n) || KEEP_NAMESPACES.some((p) => n.startsWith(p))
-```
-
-**加宽必须是响亮的**：命名空间解析出的确切名字进 `isolation-report.json` 的 `keptByNamespace`，
-并且在**该集合发生变化**时打一行（`kept by namespace mnemon_ - …`）。这是这道宽判据唯一的代价，
-也是它必须自己说出来的那件事——工具面被加宽时不留下痕迹，才是真危险。
-
-### 54.3 落点与验证
-
-- [`isolation.js`](../isolation.js)：`KEEP_NAMESPACES` + `isKept()` + `splitGlobalView()` 返回
-  `keptByNamespace` + 报告与那行提示；`kept` 每轮反映**当前**视图，`denied` 仍只由"真的施加过过滤的那一轮"写入
-  （收缩视图不许抹掉证据，这条语义原来就有，这里只是没被顺手破坏）。
-- [`tools/isolation-selftest.mjs`](../tools/isolation-selftest.mjs)：**4 条新断言**——
-  ① 只在**包含**前缀（`xmnemon_recall`）而不以前缀开头的名字**仍被拒**；
-  ② **provider 事后新增**的工具被**保留**而不是屏蔽（命名空间替代名单的全部理由）；
-  ③ 报告把命名空间**解析成确切名字**；
-  ④ 晚到的命名空间工具**被记录**，加宽不是静默的。
-- 验证：`node tools/isolation-selftest.mjs` **PASS**（含上述新断言）。
-- **生效时点**（§25）：预设源改动只有宿主重启才生效，所以这四条断言是**离线**证明，
-  它对真实会话的验证要等下一次重启后的新会话（`isolation-report.json` 的 `keptByNamespace` 是那时读的凭据）。
-
-### 54.4 未做与边界（登记）
-
-- **省下那 4.2k token 不在预设这一侧**：能裁 mnemon 工具面的地方是 profile 的 `dsh-mnemon` 配置
-  （`writeEnabled` / `memoryView` 等），那是所有者自己的设置。**预设不得依赖 profile 配置**，
-  所以"mnemon 占 39%"这条登记在这里，作为下一轮如果要动的**前提**，而不是本轮的动作。
-- **命名空间保留是宽容方向的判据**，与"窄到可信、命中就响亮拒绝"的护栏偏好方向相反；
-  它之所以可接受，是因为它只放宽**一个具名前缀**，且解析结果每轮入报告。若将来出现第二个前缀，
-  该按同一标准逐项裁定，不要合成一张前缀表。
-- **A 的探针已转正**为 [`tools/session-tool-usage.mjs`](../tools/session-tool-usage.mjs) 与
-  [`tools/session-prompt-names.mjs`](../tools/session-prompt-names.mjs)（共用 `dump-session.mjs` 的
-  `readSession`）。它们不是通道 helper、不进 `REQUIRED_HELPERS`，但**能被重跑**——所以上面的数字是测量而不是断言
-  （[`releases.md`](releases.md) §53 同一条规矩：重跑不了的数字会退化）。
+**边界**：省下 4.2k token 不在预设侧——能裁 mnemon 工具面的是 profile 的 `dsh-mnemon` 配置，预设不得依赖；命名空间保留是宽容方向的判据，只放宽一个具名前缀，出现第二个前缀要逐项裁定；两项探针已转正为 `session-tool-usage.mjs` / `session-prompt-names.mjs`（能重跑，所以是测量不是断言）。
 
 ---
 
 ## 55. 第三条通道也有程序了：书目元数据的 helper（契约 Revision 18，2026-10-19）
 
-**起因**：B 之后做 C——给 metadata 通道落一个 helper，把 `mailto` 注入、禁循环、429 退避、字段收敛从散文变成程序属性。
+**起因**：给 metadata 通道落 helper，把 `mailto` 注入、禁循环、429 退避、字段收敛从散文变成程序属性。
 
-### 55.1 先验（本次实测，全部可复现）
+**先验（实测，可复现）**：
+- 契约 §6 早已声明三类通道由自带 helper 抵达；前两类有程序，第三类只有"手拼 URL 交给 `web_fetch`"——C 是补齐，不是新通道。
+- 原始响应装不进去：一个 OpenAlex 作品 24,580 字符、三行 search 65,619 字符，收敛后 `--json` 是 4,867。
+- 答回的 DOI 可能不是问的那个（`10.48550/arXiv.1706.03762` → `10.65215/2q58a426`，标题年份相同）。
+- 两个源不可互换：同一 arXiv DOI 在 OpenAlex 200、Crossref 404（arXiv 注册在 DataCite）；引用数 43,412 vs 46,513。
+- 四种"没有"必须分开：Unpaywall 未知 DOI 是 HTML 404、OpenAlex 也是 HTML 404、限流 429、body 不是 JSON 另一回事。
+- `mailto` 不是配额杠杆（官方 notice 明说它不提高共享日预算；带不带逐字节相同）；OpenAlex 的标题搜索其实是全文搜索。
 
-1. **契约与实现本来就差着一半**：`protocol.md` §6 写的是**三类通道**（预印本 / 本地参考库 / 书目 REST），
-   并明文说"通道由**本预设自带、纪律点名的 helper 程序**抵达"。前两类有程序，第三类此前只有散文——
-   纪律教模型**手拼 URL 再交给 `web_fetch`**。所以 C 不是新加通道，是补齐契约早已声明的那一半。
-2. **原始响应装不进去**：一个 OpenAlex 作品记录实测 **24,580 字符**，三行 search **65,619 字符**，
-   而裁剪器只在压缩时留 8,192（头 4,096 + 尾 1,024；时点已更正，见 §63）⇒ 必须先把字段收敛。实测收敛后 `--json` 是 **4,867 字符**。
-3. **答回来的 DOI 可能不是问的那个**：OpenAlex 对 `doi:10.48550/arXiv.1706.03762` 答回的作品，
-   它自己的 `doi` 是 `10.65215/2q58a426`（标题与年份都是这篇）。只报标题与数字会把这次替换藏起来。
-4. **两个源不可互换，差别在注册而不在质量**：同一个 arXiv DOI 在 OpenAlex 是 200、在 Crossref 是 404
-   （"Resource not found."）—— arXiv 注册在 DataCite。
-5. **同一个作品的引用数在两个源上不同**：43,412（OpenAlex `cited_by_count`）对 46,513（Crossref
-   `is-referenced-by-count`），分钟级相邻实测。
-6. **四种"没有"必须分开**：Unpaywall 对不认识的 DOI 答 **HTML 的 404**；OpenAlex 对未知 DOI 也答 HTML 404；
-   限流是 429；body 不是 JSON 是另一回事。
-7. **`mailto` 不是 OpenAlex 的配额杠杆**：它自己的 `meta.notice` 写着共享日预算（$0.10/IP）并明说
-   "The mailto parameter doesn't raise this limit"；另一次同请求带/不带 `mailto` 的答复逐字节相同。
-   另外 OpenAlex 的"标题式搜索"其实是**全文搜索**：`attention is all you need` 的 `total` 是 3,230,801，
-   它自己的读法是 `get works where full text has (...)`。
+**做法**：`tools/metadata.mjs` 五模式（`--doi` / `--search` / `--refs` / `--cited-by` / `--oa`），一次调用一个请求一种模式；地址有就注入、没有就省略（`--oa` 无地址直接拒绝）；禁循环（`--cited-by` 只收 OpenAlex id）；`classifyResponse` 分开四类；每个模式先收敛字段；摘要只在能从倒排索引完整重建时给出；引用数每行带来源与检索日期。
 
-### 55.2 做法：规则搬进程序，**来源与日期搬到数字旁边**
+**被自己的测试抓到的真 bug**：`Array.prototype.filter` 跳过稀疏数组的空洞，第一版"位置有洞就拒绝重建"的护栏是空转的——`join(' ')` 会把洞打成空格，输出一份读起来像完整摘要的部分摘要。改成显式下标后才成立。
 
-`tools/metadata.mjs`（五模式：`--doi` / `--search` / `--refs` / `--cited-by` / `--oa`；一次调用一个请求）：
+**契约 Revision 18**：第三通道有程序；§6 新增"引用数必须带来源与检索日期"；"Three rules"改为"These rules"（实际列了七条）。
 
-- **地址**：`--mailto`（或 `AUTORESEARCH_MAILTO`）有就注入、没有就**整个省略**（不是留空参数）；
-  `--oa` 没有地址直接拒绝——Unpaywall 用 `email=` 收地址，猜不得。
-- **禁循环**：一次调用一个请求、一种模式；`--cited-by` 只收 OpenAlex id（`cites:` 是 id 过滤器，给 DOI 就拒绝并说明先 `--doi`）。
-- **分类**：`classifyResponse` 把 429 / 404 / body 不是 JSON / 其它失败分开，`channelFinding` 各说各话。
-- **收敛**：每个模式先收敛到固定字段集；`--json` 打印的是**收敛后的记录**，不是原始响应。
-- **摘要**：`reconstructAbstract` 只在能从倒排索引**完整重建**时给出文本；位置有洞就报 absent。
-- **引用数**：每行都带**来源与检索日期**（这条同时升格为契约规则，见 55.3）。
+**落点与验证**：[`tools/metadata.mjs`](../tools/metadata.mjs) 与[自测](../tools/metadata-selftest.mjs)（fixture 是真捕获响应）· [`protocol.md`](../protocol.md) · [`surface.md`](../surface.md) · [`README.md`](../README.md) · [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) · [`contact-bridge.js`](../contact-bridge.js) · [`tools/release-check.mjs`](../tools/release-check.mjs) · 重生成的 [`toolchain.md`](toolchain.md)。`metadata-selftest` PASS（69 项含负向控制）；四模式真网端到端；退出码 0/1/2 各自实测；`toolchain-page --check` 24 条成立。
 
-**实现里被自己的测试抓到的一个真 bug**：`Array.prototype.filter` **跳过稀疏数组的空洞**，所以第一版
-"位置有洞就拒绝重建"的护栏是空转的——`join(' ')` 会把洞打成空格，输出一份**读起来像完整摘要的部分摘要**。
-这正是"不许报一个你没有重建的摘要"要防的东西，而它差一点就藏在护栏里。改成显式走下标后，那条断言才真的成立。
-
-### 55.3 契约：Revision 18
-
-- 第三通道现在也有程序 ⇒ §6"通道由本预设自带的 helper 抵达"对**三条**都成立（原来只对两条）。
-- §6 新增一条规则：**引用数必须带来源与检索日期**（依据 55.1 第 5 条）。
-- §6 原文自称"Three rules"，而它实际列了七条 ⇒ 改为"These rules"。三条都由 Revision 18 记录，**契约里不写符号名**。
-
-### 55.4 落点
-
-[`tools/metadata.mjs`](../tools/metadata.mjs) ·
-[`tools/metadata-selftest.mjs`](../tools/metadata-selftest.mjs)（fixture 是 2026-10-19 真捕获的响应，
-含 Unpaywall 那段逐字节的 404 HTML）· [`protocol.md`](../protocol.md)（Revision 18 + §6）·
-[`surface.md`](../surface.md)（第三条通道行）· [`README.md`](../README.md)（通道数、联系地址那条声明、
-新 helper 段落、自测清单、一条坑）· [`docs/coverage.md`](coverage.md) ·
-[`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md)（instrument 从 `web_fetch` 改成 helper）·
-[`contact-bridge.js`](../contact-bridge.js)（常驻行不再教模型手拼 `&mailto=`）·
-[`tools/release-check.mjs`](../tools/release-check.mjs)（`REQUIRED_HELPERS` 补上它）·
-[`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs)（三通道分组 + 三条新事实）· 重生成的
-[`docs/toolchain.md`](toolchain.md)（20 → **24 条声明**）。
-
-**顺手修掉一个会静默吞东西的地方**：`docs/04` 的通道分组原先写成"`zotero-*` 一类、其余一类"，
-新 helper 会被归进"预印本通道"。现在分组由 `CHANNELS` 显式声明，且**匹配数不等于 1 就抛错**——
-一个没被任何通道认领的 helper 不会从页面上悄悄消失。
-
-### 55.5 验证
-
-`node tools/metadata-selftest.mjs` **PASS**（69 项，含负向控制）；`node tools/metadata.mjs --selftest` 同结果。
-真实网络端到端：`--doi` / `--oa` / `--search` / `--refs` 四种输出如上，退出码 **0（答了）/ 1（请求或响应失败）/ 2（用法）**
-各自实测；`--doi 10.9999/does-not-exist` 走 404 分支并 exit 1；`--cited-by 10.1/x` 走拒绝分支并 exit 2。
-`toolchain-page --write/--check` 报 *current and every citation holds (24 claims)*，`toolchain-selftest` PASS。
-
-### 55.6 未做与边界（登记）
-
-- **Unpaywall 的 422**：纪律里那句"占位域名被 422 拒绝"是**继承来的声明**，本轮**没有复核**。
-  helper 的拒绝条件是"没有地址"（与 422 无关），所以那句改成不带数字的表述，而不是照抄一个我没测的数。
-- **不翻页、不建引用图**：`--refs` / `--cited-by` 各取一页并把总数与"还有多少条held back"报出来；
-  翻页是下一次调用。这与"禁循环"是同一条规矩的两面。
-- **Crossref 侧的引用列表**只按它返回的 `reference` 数组读，不做解析或补全。
-- **`--oa` 的地址来源**仍是系统提示里宣布的那个（`contact-bridge` 注入），helper 不读 profile 配置——
-  预设不得依赖所有者自己的设置（§54.4 同一条边界）。
+**边界**：Unpaywall 的 422 是继承声明，本轮未复核（改成不带数字的表述）；不翻页、不建引用图；Crossref 引用列表只按返回数组读；`--oa` 地址仍来自系统提示，helper 不读 profile 配置。
 
 ---
 
@@ -1700,63 +1469,22 @@ Revision 22 划走的职责；判决归读轮）。
 
 ## 64. 废除 digest、保留两套裁定、A/B/C 定义收敛（Revision 25，2026-10-19）
 
-**缘起**：junhan 盘这套预设时提出三件事——(1) digest 生成规范还在，但已经有逐节笔记，"感觉鸡肋"；
-(2) "裁决笔记"也像鸡肋，因为他自己按 `doc/<课题>/references` 安排哪些文献值得参考；(3) A/B/C 评级
-标准是从哪来的，值得保留。
+**缘起**：junhan 提出三件事：digest 已有逐节笔记、"感觉鸡肋"；"裁决笔记"也像鸡肋；A/B/C 评级从哪来、值不值得留。
 
-**先验（本轮实读，不是回忆）**：
+**先验（实读）**：
+- digest 在真库 0 条，回收站也是 0；它的定义禁止引入节笔记没有的事实 ⇒ 信息量 ≤ 节笔记。
+- 没有纪律把它当主输入：`reading-triage` 禁止凭它判 `enough`，`adoption-ruling` 以节笔记为 primary input。
+- 写一次 digest = 两次库写入（retired 快照 + PATCH），刷新会累积墓碑。
+- 两套裁定早已是"按需、不进主流程"，不加载时零成本。
+- A/B/C 是本预设自定，不是外部量表；Rev 22 把 `A` 从"读了全文"改成"读了这句话靠的那几段"。
 
-| 事实 | 出处 |
-|---|---|
-| digest 在真库 **0 条**，回收站也是 0 | [`plans/note-pipeline.md` §2](plans/note-pipeline.md) · 本文 §58 |
-| digest 的定义禁止它引入节笔记没有的事实 ⇒ 信息量 ≤ 节笔记 | `skills/section-notes/SKILL.md` §4（删除前） |
-| 没有纪律把它当主输入：`reading-triage` 禁止凭它判 `enough`，`adoption-ruling` 以节笔记为 primary input | 两份纪律 §3.4 / §2 |
-| 写一次 digest = 两次库写入（retired 快照 + PATCH），刷新会累积墓碑 | `protocol.md` §6（删除前）· `plans/note-pipeline.md` §12.3 |
-| 两套裁定早已是"按需、不进主流程"，不加载时零成本 | `plans/note-pipeline.md` §14 裁定 8 · `cordis.patch.yml` 路由 |
-| A/B/C 是本预设自定，不是外部量表；Rev 22 把 `A` 从"读了全文"改成"读了这句话靠的那几段" | `skills/literature-recon/SKILL.md` §3.1 · 本文 §62 S1 |
+**裁定（junhan 逐项确认）**：digest **彻底删除**（不是降级为可选）；两套裁定**都保留**，补"按需、不是读文献的步骤"的边界；A/B/C **保留定义、收敛到单一权威源**（`literature-recon` §3.1 是定义，其余引用）；`doc/<课题>/references` 是 study 自己的布局，预设不改模板。
 
-**裁定（junhan 逐项确认）**：
+**否掉**：digest 降级为可选（仍留判断与两写路径，而信息量上限就是节笔记，0 条使用说明它不会被写）；A/B/C 加工具枚举校验（工具不是 `grade` 的写者）；删掉两套裁定（不占运行时成本，且是"结论要对抗""代码要有数值锚点"的唯一闸门）；把 study 布局写进模板（契约已有"已有层级优先"）。
 
-| # | 项 | 裁定 |
-|---|---|---|
-| 1 | digest | **彻底删除**（不是降级为可选）：不再有任何纪律步骤、不变量或工具写它 |
-| 2 | 两套裁定 | **都保留**，补"按需、不是读文献的步骤"的触发边界 |
-| 3 | A/B/C | **保留定义，收敛到单一权威源**：`literature-recon` §3.1 是定义，其余四处改成引用 |
-| 4 | `doc/<课题>/references` | 他的工作区里 Markdown 笔记与索引都有；那是 study 自己的布局，预设不改模板 |
+**实现**：契约升 Revision 25（删 §6 digest 条款、`INV-NOTE-2`、`INV-EVID-4` 的 projection；`/digest` 只作 legacy 识别）；`section-notes` 删 digest 一节并顺延编号；`literature-recon` 删 digest 步骤；`reading-triage` / `adoption-ruling` 的 `grade` 改为指向 §3.1；两套裁定各加 "On demand, never a step in reading"；删除 `tools/zotero-note.mjs` 与其自测，名册同步；`section-note` 保留 `/digest` 只读 legacy 识别；生成物与五份读者文档同步。
 
-**否掉的方案**：
-
-- **digest 降级为可选**：仍留一条"什么时候该写"的判断与一次两写的路径，而它的信息量上限就是节笔记；
-  0 条使用说明它不会被写。
-- **A/B/C 加工具枚举校验**：与 §63 裁定 5（列级归属先不加机器校验）相抵，且工具不是 `grade` 的写者。
-- **删掉两套裁定**：它们不占运行时成本，且是"结论要对抗""代码要有数值锚点"的唯一闸门。
-- **把 `doc/<课题>/references` 写进模板**：那是 study 的布局；契约已有"已有层级优先"（§2）。
-
-**实现**：
-
-- 契约升 **Revision 25**：删 §6 的 digest 条款、§8 的 `INV-NOTE-2`、`INV-EVID-4` 里的"projection"；
-  §4 的 `sections` 行与 §6 的标签清单同步；`/digest` 只作 legacy 识别（旧笔记不算覆盖、不可 claim、
-  不再写）。
-- `skills/section-notes`：删原 §4（digest 一节），后续编号顺延；frontmatter、报告、清单、Don't 同步；
-  §2 的 plan 输出加 `legacy` 行。
-- `skills/literature-recon`：删 §7 的 digest 步骤与 §4.2 的"补 `/digest` tag"规则；§3.1 声明
-  "这张表就是定义，其他文档只引用"。
-- `skills/reading-triage` / `skills/adoption-ruling`：`grade` 定义改成指向 `literature-recon` §3.1；
-  plan 输出 `digest` → `legacy`；删 digest 相关句子。
-- `skills/redteam-ruling` / `skills/adoption-ruling`：各加一段 "On demand, never a step in reading"；
-  `docs/coverage.md` 加同一条。
-- `tools/zotero-note.mjs` 与其自测**删除**；`release-check` 与 `zotero-local-api-selftest` 的名册同步；
-  `zotero-section-note.mjs` 保留 `/digest` 的**只读 legacy 识别**（只防止旧整篇总结被当成节笔记/
-  覆盖，不写、不刷新）。
-- `docs/toolchain.md` 由生成器重写；`README.md` / `docs/overview.md` / `docs/coverage.md` /
-  `surface.md` / 台账 README 同步；`docs/plans/note-pipeline.md` §5 标为历史。
-
-**未做／边界**：
-
-- **没 bump 版本、没打 tag**：这是契约修订；版本提交与发布按 `preset-release` §7 单独走。
-- 别的库可能仍有 `/digest` 笔记：工具只认、不算覆盖、不迁移、不删除；本库 0 条。
-- 删掉写入路径后，旧 digest 只能手工改；纪律已禁止再写，所以这不是日常路径。
-
+**边界**：没 bump、没 tag（按 `preset-release` 单独走）；别的库可能仍有 `/digest` 笔记，工具只认、不算覆盖、不迁移、不删除；删掉写入路径后旧 digest 只能手工改。
 
 ---
 
@@ -2002,141 +1730,58 @@ is written at a method section's end"——那是修订史里的历史句，不�
 
 ## 73. Revision 31：把第 17 版自己写下却漏掉的那一级补回契约，并让 §7 的两句话追上脚手架（2026-10-20）
 
-**起因**：junhan 在 §72 之后问"能不能系统排查一遍还有哪里不一致、或与先前拍定的原则不符"。排查按判定表做：
-先立一张"契约拍定的语义 × 12 份纪律 × 6 份读者文档 × 组合与模板 × 工具自述"的对照，再逐条对撞，最后用
-反向重扫（把结论写成一句话，去搜它的旧形状）。共命中 14 处：硬矛盾 6、半矛盾 4、措辞 4。机器侧先跑过
-`doc-selftest` 11/11、`toolchain-page --check` 23 条、`scaffold-selftest` 6/6，全绿——所以这 14 处**全在仪器
-射程之外**，这正是它们能活下来的原因。
+**起因**：junhan 问"能不能系统排查还有哪里不一致"。按"契约 × 12 份纪律 × 6 份读者文档 × 组合模板 × 工具自述"对撞，再用反向重扫（把结论写成一句话去搜旧形状）。命中 14 处：硬矛盾 6、半矛盾 4、措辞 4。机器侧先跑 `doc-selftest` 11/11、`toolchain-page --check` 23 条、`scaffold-selftest` 6/6 全绿——14 处全在仪器射程之外，这正是它们活下来的原因。
 
-**先验**（每条都落到行）：①读的阶梯——契约只列三级（§6 的 bullet、`INV-CTX-1`、Rev 17 段落），而
-[`zotero-pdf.mjs`](../tools/zotero-pdf.mjs) 按四级编号并打印 `rung (2)(3)(4)`、覆盖图照四级写还标"Rev 17 ·
-`INV-CTX-1`"、[`backlog.md`](backlog.md) 把 `--outline` 叫"梯级 ③"，而
-[`literature-recon`](../skills/literature-recon/SKILL.md) 明写"结构/大纲这一级 **deliberately absent: nothing in
-the toolchain offers one**"——三方打架，且那句是假事实。②[`metadata-query`](../skills/metadata-query/SKILL.md) §6
-让往台账文件追加四列"证据表"，与九列台账、模板"no new judgement"、覆盖图"不给证据等级"、它自己 §9"不给等级"
-四处冲突（Revision 22 把文献纪律的证据表改成台账时漏了这一份）。③[`cordis.patch.yml`](../cordis.patch.yml) 头注
-`ten research-discipline skills`，路由块 12 条、`preset-selftest` 断言 12。④契约 §7"Only the literature layer and
-the scoping document are created up front"与 README"and nothing else"，而同一节的树、模板与 `scaffold-selftest`
-都把 `.section-notes/` 算进布局——散文说两样，机器名单三样。⑤[`collection-sweep`](../skills/collection-sweep/SKILL.md)
-§3.5 已改成"点名才生成"，§6.5 仍写"which sections `section-notes` is expected to write"。⑥
-[`adoption-ruling`](../skills/adoption-ruling/SKILL.md) 入口要求 `grade A`，§4.2 又让"从原文读"、§2 还写"先跑
-`section-notes`"——后者在 Rev 29 之后已不成立；而这次阅读没有任何人写回台账（`INV-EVID-6` 要那一行）。⑦
-README 的技能目录实测"20 条 / 8 条本预设"未标日期，现在船上是 12 条。⑧四份纪律引用的 `AGENTS.md §2/§3/§4/§6`
-来自 Rev 26 整份删掉的模板，编号悬空，且 §4 在两处指的不是同一件事。⑨§7"退役文档进 archive"没有任何纪律执行，
-而 `progress-sync` 的 "archive flow" 指的是 mnemon 的归档。⑩-⑭措辞类：README 的 `--tag v0.2.0` 示例、
-`D:\Zotero` 盘符示例、覆盖图两个同名的"阶梯"、§8 表里跳号的 `INV-NOTE-2`、`section-notes` §3.1 仍是"读轮读到哪"
-的旧框架。
+**代表性先验**：
+- 读的阶梯：契约只列三级，而 `zotero-pdf.mjs` 按四级编号、覆盖图照四级写、`literature-recon` 却写"大纲这一级不存在"——三方打架且那句是假事实。
+- `metadata-query` §6 让往台账追加四列"证据表"，与九列台账、模板"no new judgement"、覆盖图"不给等级"、它自己 §9 四处冲突。
+- 组合头注写 `ten`、路由 12 条、`preset-selftest` 断言 12；契约 §7/README 说预先创建两样，而树与 `scaffold-selftest` 算进 `.section-notes/` 三样。
+- 四份纪律引用的 `AGENTS.md §2/§3/§4/§6` 来自已删模板，编号悬空；§7"退役文档进 archive"没有纪律执行。
 
-**为什么自测没抓**：仪器校的是名册、路径、分工与"名字是否还存在"；条数、级数、散文里的行为句都不在其中。三次
-陈旧计数（§36／§64／§70）都是发版前通读抓住的，这一轮第四次仍是这样——组合注释从来没进过通读范围。
+**为什么自测没抓**：仪器校名册、路径、分工与"名字是否还存在"；条数、级数、散文行为句都不在其中。第四次陈旧计数仍靠发版前通读抓住——组合注释从未进通读范围。
 
-**裁定**（junhan 选"硬矛盾 + 半矛盾 + 措辞全修"；阶梯选"四级，契约补'论文自带目录'"）：
+**裁定（junhan：硬矛盾+半矛盾+措辞全修；阶梯选四级）**：
+1. 契约 Revision 31：§6 bullet 与 `INV-CTX-1` 补第 3 级"论文自己的目录"（答结构不答内容、很多论文没有），并明说 Rev 17 的段落只列了三级。
+2. §7 改成预先创建"文献层、scoping 文档与草稿目录"，"one pre-created layer"→"two pre-created directories"。
+3. archive 归属主；轮次发现活指针只报不动；`progress-sync` 的 "archive flow" 改指 mnemon 归档。
+4. §8 表下补 `INV-NOTE-2` 退役注记（编号不复用）。
+5. `metadata-query`：已在库才追加台账行（`grade`/`depth` 留空），不在库只进报告交 `literature-recon` 决定；删四列证据表。
+6. `adoption-ruling`：不读原文、不触发生成；grade 不到 A 时报告依赖哪几节、哪几节没笔记。
+7. `literature-recon`：删"大纲不存在"，改成"结构级是 `INV-CTX-1` 第 3 级，由 `--outline` 提供"。
+8. `collection-sweep` §6.5 改成"从论文目录列顶层节，是结构事实不是笔记承诺"。
+9. 四份纪律去掉 `AGENTS.md` 章节编号，改成"无论那个文件把它放在哪"。
+10. `section-notes` §3.1 改为只解释被点名那节，没被点名写"未到达"。
+11. 组合头注 `ten → twelve`；`zotero-pdf.mjs` 头注 `two → three rungs`。
+12. 读者页：阶梯归因改 Rev 31、两个"阶梯"分开命名；README "nothing else"改三样、目录计数加口径、`--tag vX.Y.Z`、盘符占位符。
 
-1. 契约升 **Revision 31**：§6 的 bullet 与 `INV-CTX-1` 补第 3 级"论文自己的目录"，并写明它答结构、不答内容、
-   很多论文没有；Rev 31 段落明说 **Rev 17 的段落只列了三级、漏掉同一次修订交付的那一级**——旧句因此不被单独
-   读成本条。
-2. §7 改成"预先创建的是文献层、scoping 文档与草稿目录（`.section-notes/`）"，并把"one pre-created layer"改成
-   "two pre-created directories"。
-3. archive 归**属主**：§7 明说移动退役文档是 owner 的动作，轮次发现活指针只报不动（与"移除属主工作区的文件不是
-   轮次的动作"同一条理由）；`progress-sync` 里那句"use the archive flow"改成 mnemon 自己的归档，并说明课题
-   `archive/` 是另一个地方。
-4. §8 表下补一行：`INV-NOTE-2` 随 digest 在 Rev 25 退役，编号不复用——缺口是记录，不是漏行。
-5. `metadata-query`：**已在库**的作品才追加台账行（`itemKey` · `year` · `found via`=来源+检索日期，`grade` 与
-   `depth` 留空）；**不在库**的作品没有 `itemKey`，只进本轮报告并交 `literature-recon` 决定要不要成行。删掉四列
-   证据表与"at most B"那句——等级说的是"读了什么"，元数据什么都没读。
-6. `adoption-ruling`：**不读原文、也不触发生成**。grade 不到 A 时报告"这一项依赖哪几节、其中哪几节没有笔记"，
-   交回读轮或请属主点名；§2 的"先跑 `section-notes`"改为"请属主点名或开一次读轮"。
-7. `literature-recon`：删"nothing in the toolchain offers one"，改成"结构级是 `INV-CTX-1` 的第 3 级，由
-   `--outline` 提供，答结构不答内容"，并把"加载多少的花费梯度"与"文本从哪一级来的读取阶梯"分成两个名字。
-8. `collection-sweep` §6.5 改成"从论文自己的目录列出它有哪些顶层节——关于论文的结构事实，不是'会有笔记'的承诺"。
-9. 四份纪律里 `AGENTS.md` 的 §2/§3/§4/§6 编号去掉，改成"无论那个文件把这几项放在哪"——脚手架不规定章节顺序，
-   引用编号就是引用一份没人写过的文件。
-10. `section-notes` §3.1 改成本轮只解释被点名的那一节；没被点名的节没有笔记，报告里写"未到达"而不是"不需要"。
-11. `cordis.patch.yml` 头注 `ten → twelve`；`zotero-pdf.mjs` 头注 `the two rungs → the three rungs`。
-12. 读者页：覆盖图的阶梯归因改 Rev 31、两个"阶梯"分开命名；README 的"and nothing else"改三样、目录实测加口径
-    （"when it shipped eight disciplines"）、`--tag v0.2.0 → vX.Y.Z`、盘符示例换成占位符。
+**边界**：`plans/*`、`releases.md` 与本文件旧条目不回改；目录比例未重测（只补口径）；非库作品元数据不另存；0.9.0 起的课题真名另行处理（§75）；计数以外（级数、行为句）仍无护栏。
 
-**未做／边界**：`docs/plans/*`、`docs/releases.md` 与本文件旧条目不改；**目录实测没有重测**——重测要开两个新会话，
-且那条结论是"目录会混"，比例本身不是结论，所以只补口径不造新数字；非库作品的元数据"要不要另存一份"按裁定只进
-报告，不引入第三份名单；`docs/` 里 0.9.0 起就随包发出的属主课题真名仍未处理（[`releases.md`](releases.md) §70
-已登记）；触发语义、级数这类"散文对散文"的东西依旧没有机械护栏，这条边界不变。**补记（同日，见 §75）**：
-`docs/` 里的课题真名已换成代号，理由记在 §75；**计数**这一类现在有机械护栏（`preset-selftest` 的 `[2]`），
-但**级数**与**行为句**仍无护栏——上面那句"这条边界不变"应读作"**计数以外**不变"。
-
-**落在何处**：[`protocol.md`](../protocol.md)（头部、§6、§7、§8 `INV-CTX-1` 与表下注释）· 本文件 ·
-[`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) ·
-[`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) ·
-[`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) ·
-[`skills/collection-sweep/SKILL.md`](../skills/collection-sweep/SKILL.md) ·
-[`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) ·
-[`skills/experiment-protocol/SKILL.md`](../skills/experiment-protocol/SKILL.md) ·
-[`skills/progress-sync/SKILL.md`](../skills/progress-sync/SKILL.md) ·
-[`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) · [`cordis.patch.yml`](../cordis.patch.yml) ·
-[`docs/coverage.md`](coverage.md) · [`README.md`](../README.md)。
+**落点**：[`protocol.md`](../protocol.md)（头部/§6/§7/§8）· 六份纪律 · [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) · [`cordis.patch.yml`](../cordis.patch.yml) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md)。
 
 ## 75. 结清 §73 剩下的三笔：一处编号誊写、一条计数护栏、六处课题真名（2026-10-20）
 
-**起因**：0.12.0 发布后 junhan 问"是不是还有待办，讨论一下"。清点下来不是两笔而是三类：**欠的账**（
-[`backlog.md`](backlog.md) 的 9 行登记 + 3 行分批余量，各有触发条件，不该现在做）、**我该做但等他点头的**
-（计数无仪器、`docs/` 里的课题真名）、以及**§73 自己漏的一处**。三样他全选了。
+**起因**：0.12.0 发布后清点待办，不是两笔而是三类：欠的账（backlog 9 行登记 + 3 行分批余量，各有触发条件）、该做但等点头的（计数无仪器、`docs/` 里的课题真名）、§73 自己漏的一处。三样他全选了。
 
-**先验**（每条都落到行）：
-
-① [`backlog.md`](backlog.md) 第 1 行把"写回库索引"标成**「梯级 ⑤」**——全仓唯一一处 `⑤`。Rev 31 之后读的梯级是
-四级；`plans/revision-17.md` §4.1 表里的 `⑤` 是 OCR，且那一格写着"④ 已覆盖同一需求，**不引入**"；更根本的是
-写回是**写**，不是"读的一级"。那一行的"依据"列本来就写着「`plans/revision-17.md` §10 裁定 5」，所以它是
-一次**誊写**（裁定 5 → 梯级 ⑤），不是一次裁定。§73 扫 backlog 时拿 `--outline` 当锚点去找 ③，对上了就收工，
-没把"梯级 + 数字"当成一个待穷举的模式——同型的边角可能还有。
-
-② **计数第四次复发之后仍无仪器**（§36／§64／§70／§73）。[`preset-selftest`](../tools/preset-selftest.mjs)
-断言的是"我知道的那十二个名字各有 bullet"，从不断言**散文宣称的数**——所以 0.12.0 之前组合头注写 `ten`、
-README 写 `eleven`，套件照样全绿。
-
-③ `package.json` 没有 `files` 白名单，仓库没有 `.npmignore`，`.gitignore` 只挡 `.tmp/`、`.mnemon/`、
-`node_modules/` 与 `isolation-report.json` ⇒ **`docs/` 整个随 npm 包与 GitHub 一起公开**。三条课题标题落在
-6 处（本文件 3 处、`plans/revision-17.md` 1 处、`plans/revision-26.md` 2 处），0.9.0 起就发出去了，§70 登记过、
-两版未处理。
-
-④ backlog 另有两条**前提**被 Rev 31 动了，属记账漂移而非触发成立：#8 的触发条件以"`zotero-pdf.mjs` 57 个会话
-0 次"为基线，而 Rev 31 把 `--outline` 写成读梯级第三级；#6 的"20 篇里 11 篇有目录"现在是契约级事实。
+**先验**：
+- `backlog` 第 1 行把"写回库索引"标成"梯级 ⑤"——全仓唯一一处 `⑤`；Rev 31 后梯级是四级，且写回是写不是读的一级。那是誊写（裁定 5 → 梯级 ⑤），不是裁定。
+- 计数第四次复发仍无仪器：`preset-selftest` 只断言"我知道的十二个名字各有 bullet"，从不断言散文宣称的数。
+- `package.json` 没有 `files` 白名单、仓库没有 `.npmignore` ⇒ `docs/` 随 npm 包与 GitHub 公开；三条课题标题落在 6 处，0.9.0 起就发出去了。
+- backlog #8 的触发基线被 Rev 31 动了；#6 的"20 篇里 11 篇有目录"现在是契约级事实。
 
 **裁定**：
+1. backlog 第 1 行去掉"梯级 ⑤"，改"不在读的梯级里"。
+2. backlog #8 旧基线标作废，写"判这条前先在新口径下重测"——没有新数据就不重算。
+3. backlog #6 补一句：Rev 31 已把"论文自带目录"写成第三级并说明很多论文没有，那 9 篇是已裁定的边界。
+4. `preset-selftest` 新增 `[2]`：锚点取 `skills/<name>/SKILL.md` 目录数（不需 dump，排在 dump 检查前）；盘上数=路由名册数、互为子集；再让组合头注、`package.json` description、README 三处散文各与它比。匹配不上时 FAIL 并提示去教这条检查新说法；十二个名字只留一份（`ROUTED_NAMES`），`[2]` 与 `[5]` 共用。
+5. 护栏射程只覆盖计数；级数与行为句仍靠发版前通读——绿灯不是免读证。
+6. 6 处课题标题换成 `课题A/B/C` 与 `doc/<课题A>/` 占位符；本节不誊写原标题（誊写等于再泄漏一次）。不做 `files` 白名单排除 `docs/`——论证文档是新用户理解这套东西的一半，堵标题比堵文档便宜。
+7. 破例：本文件与 `plans/*` 一向"历史不改"，这次改的是第三方可识别信息，按"改写 + 本条目记录"处理；`revision-26.md` 头部写明不再维护，这次是一次性更正。
 
-1. backlog 第 1 行去掉"梯级 ⑤"，改成"不在读的梯级里"——写是写，不是读的一级。
-2. backlog #8 把旧基线**标为作废**，并写"判这条之前先在新口径下重测"：现在不重算，因为没有新数据，而旧数字
-   一旦被当现状读，会推出错误结论。
-3. backlog #6 补一句：Rev 31 已把"论文自带目录"写成第三级并明说很多论文没有它，那 9 篇因此是**已裁定的边界**，
-   不是遗漏。
-4. `preset-selftest` 新增 `[2]`，锚点取 `skills/<name>/SKILL.md` 的**目录数**（它不需要 dump，所以排在 dump
-   检查之前，缺失或过期的 dump 不再能连带跳过一个计数检查）：盘上数 = 路由名册数、两边互为子集；再让三处散文
-   （组合头注、`package.json` 的 description、README）各自与它比。散文那句被改写而匹配不上时 **FAIL 并提示去教
-   这条检查新说法**，不静默通过——停止查看的护栏正是它要防的那种缺陷。十二个名字只留一份（`ROUTED_NAMES`），
-   `[2]` 与 `[5]` 共用，因为第二份名单就是漂移的来源。
-5. 护栏的射程写进代码注释与本节：它只覆盖**计数**。**级数**（§73 的病：梯级三级还是四级）与**行为句**（§7 的
-   病："creates X and nothing else"）仍只能靠发版前通读——**绿灯不是免读证**。
-6. 6 处课题标题换成 `课题A/B/C` 与 `doc/<课题A>/` 占位符。**本节不誊写原标题**：誊写等于换个地方再泄漏一次，
-   原文只在属主的私有台账。不做 `files` 白名单把 `docs/` 排除——论证文档是新用户理解这套东西的一半，堵标题比
-   堵文档便宜。
-7. **破例**：本文件与 `docs/plans/*` 一直是"历史不改，新条目说明为什么变"。这次改的是**第三方的可识别信息**，
-   不是我们自己的推理，所以按"改写 + 本条目记录"处理，而不是"追加一句声明"。`plans/revision-26.md` 头部写着
-   "不再维护"，这次是一次性更正、不是恢复维护；留指针的方式按文件定：本文件三处与 `revision-17.md` 一处写明
-   `标题略，见 §75`，`revision-26.md` 两处用 A/B 与占位路径，读者不需要指针也知道那是代号。
+**验证**：反例——把 README 的 `Twelve` 改成 `Ten`，`[2]` 立刻 FAIL 并同时报"盘上 12"与"散文 ten"，改回即绿；三处正则另用一次性脚本核对；19 项离线自测 + `toolchain-page --check`（23 条）+ `release-check --local` 提交后重跑通过。
 
-**验证**：护栏做了反例——把 README 的 `Twelve` 改成 `Ten`，`[2]` 立刻 FAIL 并同时报出"盘上 12"与"散文 ten"，
-改回即绿（§36／§64／§70 那三次若有它，会在提交前就红）。三处正则另用一次性脚本核对过各自捕获到 `twelve`／
-`twelve`／`Twelve`。全套 19 项离线自测 + `toolchain-page --check`（23 条）+ `release-check --local` 在提交后
-重跑通过。
+**边界**：新口径下重测 `zotero-pdf` 使用率不在本轮；护栏不加第三处锚点，也不比 README 里"过去时"的实测；0.12.0 里仍带旧标题，清理要到下一次发布；0.9.0–0.12.0 的 tag 仍含原标题——属主裁定不改写历史，所以"不再随包发出"只覆盖当前版本及以后。
 
-**未做／边界**：新口径下重测 `zotero-pdf.mjs` 的使用率不在本轮（要新会话数据）；护栏不加第三处锚点，也不比
-README 里那条**过去时**的实测（"when it shipped eight disciplines"）——那是历史记录，不该被当下数判错；
-**已发出的 0.12.0 里仍带着旧标题**，清理要到下一次发布才真正生效；[`releases.md`](releases.md) 只在新版发布时记。
-**补记（同日收口）**：0.12.1 已带上这些改写（属主推送，`releases.md` §76）；**0.9.0–0.12.0 的 tag 里仍有原标题，
-属主裁定不改写历史**——改写要重算全部 tag 与所有引用过其哈希的记录，收益只是清掉**已经公开过**的标题，代价是
-整条历史失去可核对的锚点。所以"不再随包发出"这个保证只覆盖**当前版本及以后**。
-
-**落在何处**：[`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（`ROUTED_NAMES`、`NUMBER_WORDS`、
-`[2]` 块、`[3]`–`[6]` 重编号）· [`docs/backlog.md`](backlog.md)（第 1 行、#6、#8）· 本文件（三处标题）·
-[`plans/revision-17.md`](plans/revision-17.md) · [`plans/revision-26.md`](plans/revision-26.md)。
+**落点**：[`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) · [`docs/backlog.md`](backlog.md) · 本文件 · [`plans/revision-17.md`](plans/revision-17.md) · [`plans/revision-26.md`](plans/revision-26.md)。
 
 ## 76. 建条目时可以同时指定分类：一次写入，`UNFILED` 自成一个结论（2026-10-20）
 
