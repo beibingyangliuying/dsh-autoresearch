@@ -1,5 +1,5 @@
-// The section-note tool's offline suite: identity is a tag, nothing is parsed from prose, and the
-// mechanical repair is gone. Runnable with no library and no authorization.
+// The section-note tool's offline suite: identity is a tag, nothing is parsed from prose, and no
+// automatic prose repair exists. Runnable with no library and no authorization.
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
@@ -8,8 +8,11 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   AGENT_TAG,
+  REPAIRED_TAG,
   REVIEWED_TAG,
   authorityOf,
+  changeClass,
+  changedSpan,
   composeSectionNote,
   coveringNote,
   firstBlockText,
@@ -17,6 +20,7 @@ import {
   isApplicationWrapped,
   isDigest,
   isImported,
+  isRepaired,
   isRetired,
   isReviewed,
   looksLikeHtml,
@@ -24,6 +28,7 @@ import {
   planJson,
   provenanceOf,
   readSectionTag,
+  repairTags,
   replacesKey,
   replacesTag,
   retireTags,
@@ -109,6 +114,31 @@ same(authorityOf(['/section-2', AGENT_TAG], '2'), 'candidate', 'an unreviewed ag
 same(authorityOf(['/section-2', AGENT_TAG, REVIEWED_TAG], '2'), 'record', 'reviewing restores record authority')
 same(authorityOf([AGENT_TAG], ''), 'none', 'an agent note that claims no section carries no authority')
 same(authorityOf(['/section-2', '/retired'], '2'), 'none', 'a tombstone carries none either')
+
+console.log('\n[3b] a repair keeps the note, its claim and its provenance')
+check(!isRepaired(['/section-2']), 'a note never repaired carries no mark')
+same(repairTags(['/section-2']).join(' '), '/section-2 /repaired', 'a repair adds one mark and keeps the claim')
+same(repairTags(['/section-2', REPAIRED_TAG]).join(' '), '/section-2 /repaired', 'and it is idempotent')
+same(
+  repairTags(['/section-2', AGENT_TAG, REVIEWED_TAG]).join(' '),
+  '/section-2 /agent-note /reviewed /repaired',
+  'a mechanical repair keeps the owner acceptance',
+)
+same(
+  repairTags(['/section-2', AGENT_TAG, REVIEWED_TAG], { substantive: true }).join(' '),
+  '/section-2 /agent-note /repaired',
+  'a substantive repair drops it',
+)
+same(repairTags(['/section-2', '/imported']).join(' '), '/section-2 /imported /repaired', 'an import mark survives')
+check(!repairTags(['/section-2', REVIEWED_TAG], { substantive: true }).includes(AGENT_TAG), 'a repair never invents the agent mark')
+check(!changeClass('<p>recieve</p>', '<p>receive</p>').substantive, 'a spelling correction is mechanical')
+check(changeClass('<p>x = 3</p>', '<p>x = 4</p>').substantive, 'a changed digit is substantive')
+check(changeClass('<p>$\\alpha$</p>', '<p>$\\beta$</p>').substantive, 'a change inside math is substantive')
+check(
+  changeClass(`<p>${'a'.repeat(600)}</p>`, `<p>${'b'.repeat(600)}</p>`).substantive,
+  'a rewrite of more than half the body is substantive',
+)
+same(changedSpan('abcdef', 'abXdef').before, 'c', 'the changed span is the smallest one, not the whole body')
 
 console.log('\n[4] claiming a section, and what covers it')
 const live = (token, extra = {}) => ({ key: `N${token}`, retired: false, digest: false, claim: { token }, ...extra })
@@ -232,6 +262,15 @@ const stubItems = {
     version: 8,
     parentItem: 'REC3',
   },
+  RET1: {
+    key: 'RET1',
+    itemType: 'note',
+    note: '<p>retired</p>',
+    tags: [{ tag: '/section-8' }, { tag: '/retired' }],
+    version: 11,
+    parentItem: 'REC4',
+  },
+  UNCONF1: { key: 'UNCONF1', itemType: 'note', note: '<p>nine</p>', tags: [{ tag: '/section-9' }], version: 12, parentItem: 'REC4' },
   LIVE2: { key: 'LIVE2', itemType: 'note', note: '<p>第2节</p>', tags: [{ tag: '/section-2' }], version: 2, parentItem: 'REC1' },
   UNK: { key: 'UNK', itemType: 'note', note: '<p>一段话总结</p>', tags: [], version: 3, parentItem: 'REC1' },
   DIG: { key: 'DIG', itemType: 'note', note: '<p>digest</p>', tags: [{ tag: '/digest' }], version: 4, parentItem: 'REC1' },
@@ -246,7 +285,7 @@ const stubItems = {
     parentItem: 'REC1',
   },
 }
-const childKeys = { REC1: ['LIVE2', 'UNK', 'DIG', 'OLD', 'AGU', 'RV6'], REC2: [], REC3: ['AMB1'], REC4: ['AMB2'] }
+const childKeys = { REC1: ['LIVE2', 'UNK', 'DIG', 'OLD', 'AGU', 'RV6'], REC2: [], REC3: ['AMB1'], REC4: ['AMB2', 'RET1', 'UNCONF1'] }
 const requests = []
 const deleted = new Set()
 const scratch = mkdtempSync(join(tmpdir(), 'section-note-'))
@@ -315,7 +354,7 @@ const server = createServer((req, res) => {
     }
     if (req.method === 'PATCH') {
       readBody((body) => {
-        if (key === 'AMB2') {
+        if (key === 'AMB2' || key === 'UNCONF1') {
           // Accepted and never applied: the class a write tool must report as 3, never as "nothing
           // was written". This is the only stub behaviour that is wrong on purpose.
           res.writeHead(204)
@@ -500,7 +539,93 @@ same(unclaimUnconfirmed.status, 3, 'a tag removal that is accepted but does not 
 check(unclaimUnconfirmed.stderr.includes('WRITTEN BUT UNCONFIRMED'), 'and it never says nothing was written', unclaimUnconfirmed.stderr)
 check(unclaimUnconfirmed.stderr.includes('still carries /section-5'), 'the mismatch names the tag that is still there', unclaimUnconfirmed.stderr)
 
+console.log('\n[10] a repair corrects a record in place, and a substantive one drops the acceptance')
+const typoBody = join(scratch, 'typo.html')
+writeFileSync(typoBody, '<p>第2节的内容</p>', 'utf8')
+const digitBody = join(scratch, 'digit.html')
+writeFileSync(digitBody, '<p>第3节</p>', 'utf8')
+const mathBody = join(scratch, 'math.html')
+writeFileSync(mathBody, '<p>第2节 $x$</p>', 'utf8')
+const reviewedTypo = join(scratch, 'reviewed-typo.html')
+writeFileSync(reviewedTypo, '<p>reviewed body</p>', 'utf8')
+const reviewedDigit = join(scratch, 'reviewed-digit.html')
+writeFileSync(reviewedDigit, '<p>reviewed 2</p>', 'utf8')
+const unconfirmedBody = join(scratch, 'unconfirmed.html')
+writeFileSync(unconfirmedBody, '<p>nine!</p>', 'utf8')
+
+same(run('--repair', '--note', 'LIVE2', '--file', typoBody).status, 2, '--repair without --reason is a usage error')
+same(run('--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'x').status, 2, '--repair needs --mechanical or --substantive')
+same(
+  run('--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'x', '--mechanical', '--substantive').status,
+  2,
+  'and not both',
+)
+same(run('--mechanical').status, 2, '--mechanical belongs to --repair')
+same(
+  run('--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'x', '--mechanical', '--section', '2').status,
+  2,
+  '--repair does not take --section: a changed claim is a retirement',
+)
+
+const repairPlan = await runAsync(['--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'a typo', '--mechanical'])
+same(repairPlan.status, 0, 'repairing an owner record mechanically is a dry run')
+check(repairPlan.stdout.includes(REPAIRED_TAG), 'the plan shows the mark it would add')
+check(repairPlan.stdout.includes('class   : mechanical'), 'and states the class it intends')
+check(!repairPlan.stdout.includes('CLEARED'), 'and that the acceptance is not touched')
+
+const digitMechanical = await runAsync(['--repair', '--note', 'LIVE2', '--file', digitBody, '--reason', 'x', '--mechanical'])
+same(digitMechanical.status, 2, 'a changed digit refuses --mechanical')
+check(digitMechanical.stderr.includes('digit'), 'and names the reason it refuses', digitMechanical.stderr)
+
+const mathMechanical = await runAsync(['--repair', '--note', 'LIVE2', '--file', mathBody, '--reason', 'x', '--mechanical'])
+same(mathMechanical.status, 2, 'a change inside math refuses --mechanical')
+check(mathMechanical.stderr.includes('math segment'), 'and names math, not a digit', mathMechanical.stderr)
+
+const ownerSubstantive = await runAsync(['--repair', '--note', 'LIVE2', '--file', digitBody, '--reason', 'x', '--substantive'])
+same(ownerSubstantive.status, 2, "an owner's own record is not repaired substantively")
+check(ownerSubstantive.stderr.includes("owner's own record"), 'and the refusal says why', ownerSubstantive.stderr)
+
+const draftRepair = await runAsync(['--repair', '--note', 'AGU', '--file', typoBody, '--reason', 'x', '--mechanical'])
+same(draftRepair.status, 2, 'a draft is rewritten, not repaired')
+check(draftRepair.stderr.includes('agent draft'), 'and the refusal points at --rewrite', draftRepair.stderr)
+
+const importRepair = await runAsync(['--repair', '--note', 'UNK', '--file', typoBody, '--reason', 'x', '--mechanical'])
+same(importRepair.status, 2, 'an import is rewritten, not repaired')
+check(importRepair.stderr.includes('is an import'), 'and the refusal points at --rewrite', importRepair.stderr)
+
+const retiredRepair = await runAsync(['--repair', '--note', 'RET1', '--file', typoBody, '--reason', 'x', '--mechanical'])
+same(retiredRepair.status, 2, 'a tombstone is never repaired')
+const ambiguousRepair = await runAsync(['--repair', '--note', 'AMB2', '--file', typoBody, '--reason', 'x', '--mechanical'])
+same(ambiguousRepair.status, 2, 'an ambiguous note is resolved before it is repaired')
+
+const repairWrite = await runAsync(['--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'a typo', '--mechanical', '--write'])
+same(repairWrite.status, 0, 'a mechanical repair writes')
+same(stubItems.LIVE2.tags.map((tag) => tag.tag).sort().join(' '), '/repaired /section-2', 'the key, the claim and the provenance stay')
+check(String(stubItems.LIVE2.note).includes('的内容'), 'and the body is the corrected one')
+check(repairWrite.stdout.includes('/repaired'), 'the write says what it carries now')
+
+const repairNoop = await runAsync(['--repair', '--note', 'LIVE2', '--file', typoBody, '--reason', 'a typo', '--mechanical'])
+same(repairNoop.status, 0, 'repairing to the same body again is a no-op')
+check(repairNoop.stdout.includes('nothing to do'), 'and it says so rather than writing twice')
+
+const reviewedRepair = await runAsync(['--repair', '--note', 'RV6', '--file', reviewedTypo, '--reason', 'a typo', '--mechanical', '--write'])
+same(reviewedRepair.status, 0, 'a mechanical repair of a reviewed body writes')
+check(stubItems.RV6.tags.some((tag) => tag.tag === REVIEWED_TAG), 'and keeps the owner acceptance')
+check(stubItems.RV6.tags.some((tag) => tag.tag === REPAIRED_TAG), 'with the repair mark beside it')
+
+const substantiveWrite = await runAsync([
+  '--repair', '--note', 'RV6', '--file', reviewedDigit, '--reason', 'the number was transcribed wrong', '--substantive', '--write',
+])
+same(substantiveWrite.status, 0, 'a substantive repair writes')
+check(!stubItems.RV6.tags.some((tag) => tag.tag === REVIEWED_TAG), 'and clears the owner acceptance')
+check(stubItems.RV6.tags.some((tag) => tag.tag === REPAIRED_TAG), 'while the repair mark remains')
+check(substantiveWrite.stdout.includes('is cleared'), 'the write says the body is a draft again')
+
+const repairUnconfirmed = await runAsync(['--repair', '--note', 'UNCONF1', '--file', unconfirmedBody, '--reason', 'x', '--mechanical', '--write'])
+same(repairUnconfirmed.status, 3, 'a repair that is accepted but does not read back is exit 3')
+check(repairUnconfirmed.stderr.includes('UNCONFIRMED'), 'and it never says nothing was written', repairUnconfirmed.stderr)
+
 server.close()
 
-console.log(failures === 0 ? '\nPASS - identity is tags, authorship is a tag, a draft is not a record, and a failed write is not called "nothing written"' : `\nFAIL (${failures})`)
+console.log(failures === 0 ? '\nPASS - identity is tags, authorship is a tag, a draft is not a record, a repair is not a replacement, and a failed write is not called "nothing written"' : `\nFAIL (${failures})`)
 process.exit(failures === 0 ? 0 : 1)

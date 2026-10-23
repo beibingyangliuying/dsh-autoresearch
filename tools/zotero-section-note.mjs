@@ -13,6 +13,7 @@
 //   /imported        this claim came from an imported/pasted note, so it may still be rewritten
 //   /agent-note      an agent wrote this body from the paper; until /reviewed it is candidate-grade
 //   /reviewed        the owner read and accepted an /agent-note body: it is a record again
+//   /repaired        the body was corrected in place; a substantive repair drops /reviewed
 //   /digest          LEGACY: an earlier version's whole-paper summary; never a section note, never written now
 //   /retired         out of service: not coverage, and the only note a delete may target
 //   /replaces-<key>  this note replaced a retired note
@@ -40,11 +41,14 @@
 // before writing. The judgement is the reader's; this tool only refuses what an explicit tag says is
 // already claimed. That is why the wide regex and the marker are both gone.
 //
-// NO AUTOMATIC REPAIR
+// NO AUTOMATIC REPAIR, BUT A REPAIR THE AGENT MAKES
 //
 // `--tidy` is deleted with its math-delimiter rules. Writing a note is the agent's work, and a tool
 // that rewrote a formula because it looked like LaTeX was making a content decision while claiming to
-// format one. A damaged note is rewritten (`--rewrite`, for an import) or retired and written again.
+// format one. `--repair` is the agent's own correction, printed before it is sent: it keeps the note's
+// key, its claim and its provenance, adds `/repaired`, and refuses `--mechanical` where the change
+// carries a digit or falls inside math. A record the owner wrote is repaired mechanically only; a
+// changed claim is still a retirement and a replacement, and an import or a draft is rewritten.
 //
 // Usage:
 //   node tools/zotero-section-note.mjs --item <recordKey>                              # coverage plan
@@ -56,6 +60,8 @@
 //   node tools/zotero-section-note.mjs --unclaim --note <noteKey> --section 3 --write
 //   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html        # dry run
 //   node tools/zotero-section-note.mjs --rewrite --note <noteKey> --file n2.html --write
+//   node tools/zotero-section-note.mjs --repair --note <noteKey> --file n2.html --reason "why" --mechanical   # dry run
+//   node tools/zotero-section-note.mjs --repair --note <noteKey> --file n2.html --reason "why" --substantive --write
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>"        # dry run
 //   node tools/zotero-section-note.mjs --retire --note <noteKey> --undo --write
 //   node tools/zotero-section-note.mjs --delete --note <noteKey>                        # dry run
@@ -99,6 +105,9 @@ export const LEGACY_AGENT_TAG = 'agent-note'
 
 /** The tag the owner adds when they accept an agent-written body. */
 export const REVIEWED_TAG = '/reviewed'
+
+/** The tag a body corrected in place carries, so a reader can tell it from the one first written. */
+export const REPAIRED_TAG = '/repaired'
 
 /**
  * Whether this invocation has sent a write.
@@ -312,6 +321,110 @@ export function authorityOf(tags, token) {
 export function reviewTags(tags, { undo = false } = {}) {
   const kept = (tags ?? []).filter((tag) => !isReviewed([tag]))
   return undo ? kept : [...kept, REVIEWED_TAG]
+}
+
+/**
+ * Whether a body was corrected in place.
+ *
+ * @param {string[]} tags The note's tags, bare text.
+ * @returns {boolean} True when the note carries {@link REPAIRED_TAG}.
+ */
+export function isRepaired(tags) {
+  return (tags ?? []).some((tag) => lowered(tag) === REPAIRED_TAG)
+}
+
+/**
+ * The tag list a repair leaves behind.
+ *
+ * A repair never adds a provenance mark: the note keeps whatever says who wrote it. It adds
+ * {@link REPAIRED_TAG} once, and a substantive repair drops {@link REVIEWED_TAG} because the owner
+ * accepted prose that is no longer there.
+ *
+ * @param {string[]} tags The note's current tags.
+ * @param {{substantive?: boolean}} [options] `substantive` clears the owner acceptance.
+ * @returns {string[]} The tags to send.
+ */
+export function repairTags(tags, { substantive = false } = {}) {
+  const kept = (tags ?? []).filter((tag) => !(substantive && isReviewed([tag])))
+  return isRepaired(kept) ? kept : [...kept, REPAIRED_TAG]
+}
+
+/**
+ * The smallest span that differs between two bodies.
+ *
+ * Compared on visible text, because the application rewrites the HTML around a body it has edited
+ * and a byte diff would report every note as changed.
+ *
+ * @param {string} before The body the note carries now.
+ * @param {string} after The body the repair would write.
+ * @returns {{start: number, before: string, after: string, length: number}} The changed span.
+ */
+export function changedSpan(before, after) {
+  const left = String(before ?? '')
+  const right = String(after ?? '')
+  let start = 0
+  while (start < left.length && start < right.length && left[start] === right[start]) start += 1
+  let endLeft = left.length
+  let endRight = right.length
+  while (endLeft > start && endRight > start && left[endLeft - 1] === right[endRight - 1]) {
+    endLeft -= 1
+    endRight -= 1
+  }
+  return {
+    start,
+    before: left.slice(start, endLeft),
+    after: right.slice(start, endRight),
+    length: Math.max(endLeft - start, endRight - start),
+  }
+}
+
+/** The `[from, to)` ranges a body uses for inline and display math. */
+function mathRanges(text) {
+  const ranges = []
+  let index = 0
+  while (index < text.length) {
+    if (text[index] !== '$') {
+      index += 1
+      continue
+    }
+    const double = text[index + 1] === '$'
+    const close = text.indexOf(double ? '$$' : '$', index + (double ? 2 : 1))
+    if (close === -1) break
+    const end = close + (double ? 2 : 1)
+    ranges.push([index, end])
+    index = end
+  }
+  return ranges
+}
+
+/**
+ * Whether a correction changes a symbol, a number or an equation.
+ *
+ * This is a floor, not a ceiling: it catches a changed digit, a change inside `$…$`, and a rewrite
+ * of more than half the body. A symbol replaced in prose outside math is invisible here, so the
+ * caller states the class it intends; this function only refuses `mechanical` where it can prove
+ * otherwise.
+ *
+ * @param {string} before The body the note carries now.
+ * @param {string} after The body the repair would write.
+ * @returns {{substantive: boolean, why: string}} The class, with the reason a plan can print.
+ */
+export function changeClass(before, after) {
+  const span = changedSpan(before, after)
+  const changed = span.before + span.after
+  if (/[0-9]/.test(changed)) return { substantive: true, why: 'the changed text carries a digit' }
+  const endLeft = span.start + span.before.length
+  const endRight = span.start + span.after.length
+  const inMath = (text, from, to) => mathRanges(text).some(([start, end]) => start < to && from < end)
+  const left = String(before ?? '')
+  const right = String(after ?? '')
+  if (inMath(left, span.start, endLeft) || inMath(right, span.start, endRight)) {
+    return { substantive: true, why: 'the change falls inside a math segment' }
+  }
+  if (span.length > 400 && span.length * 2 > Math.max(left.length, right.length)) {
+    return { substantive: true, why: 'the change rewrites more than half of the body' }
+  }
+  return { substantive: false, why: 'a local correction outside math, carrying no digit' }
 }
 
 /**
@@ -1186,6 +1299,133 @@ async function runRewrite(options) {
 }
 
 /**
+ * Correct a record's body in place, keeping its key, its claim and its provenance.
+ *
+ * A repair changes how the note states something and never what it claims: the section tag is not
+ * touched, no `/replaces-` pointer is written, and no second note is created. Every repair adds
+ * {@link REPAIRED_TAG}; a substantive one (a symbol, a number, an equation) drops {@link REVIEWED_TAG}
+ * so the body reads as a draft until the owner accepts it again. A body the owner wrote is repaired
+ * mechanically only, because no tag can record an owner's re-acceptance of a changed statement: its
+ * substantive correction is a retirement and a replacement.
+ *
+ * The class is the caller's to state, and this tool refuses `mechanical` where it can prove the
+ * change is substantive ({@link changeClass}). The plan prints the old and new first blocks, the
+ * changed span and the reason, and the version guard is what keeps a note the application edited
+ * meanwhile from being overwritten. No workspace backup is written: the paper remains the source.
+ *
+ * @param {{note: string, text: string, file: string, reason: string, mechanical?: boolean, substantive?: boolean, write?: boolean}} options Parsed command line.
+ */
+async function runRepair(options) {
+  const body = options.file ? readFileSync(options.file, 'utf8') : options.text
+  const composed = composeSectionNote(body)
+  if (composed === '') throw new UsageError('the note body is empty')
+  if (!looksLikeHtml(composed)) {
+    throw new UsageError('the note body is not HTML; the library stores note bodies as HTML and a Markdown guess would silently change what is stored')
+  }
+  const note = await readItem(options.note)
+  if (note.itemType !== 'note') throw new UsageError(`${options.note} is a ${note.itemType}, not a note`)
+  const tags = (note.tags ?? []).map((entry) => entry.tag)
+  const claim = readSectionTag(tags)
+  if (isRetired(tags)) {
+    throw new UsageError(`${options.note} is retired; a tombstone is repaired by writing its successor, not by editing it`)
+  }
+  if (isDigest(tags)) {
+    throw new UsageError(`${options.note} carries ${DIGEST_TAG}: a legacy whole-paper summary is not a section note and is never repaired`)
+  }
+  if (claim.ambiguous) {
+    throw new UsageError(`${options.note} carries more than one /section- tag; resolve it before repairing: --unclaim --note ${options.note} --section <ordinal> --write`)
+  }
+  if (!claim.token) {
+    throw new UsageError(`${options.note} claims no section; an unclaimed note is rewritten, not repaired: --rewrite --note ${options.note} --file <draft>`)
+  }
+  if (isImported(tags)) {
+    throw new UsageError(`${options.note} is an import; an import is rewritten in place, not repaired: --rewrite --note ${options.note} --file <draft>`)
+  }
+  if (authorityOf(tags, claim.token) !== 'record') {
+    throw new UsageError(`${options.note} is an agent draft; a draft is rewritten, not repaired: --rewrite --note ${options.note} --file <draft>`)
+  }
+
+  const provenance = provenanceOf(tags)
+  const substantive = options.substantive === true
+  const change = changeClass(visibleText(note.note ?? ''), visibleText(composed))
+  if (!substantive && change.substantive) {
+    throw new UsageError(
+      `--mechanical is refused: ${change.why}. Re-run with --substantive (the body becomes a draft again), or retire the note and write its replacement.`,
+    )
+  }
+  if (provenance === 'owner' && substantive) {
+    throw new UsageError(
+      `${options.note} is the owner's own record: it is repaired mechanically only. A correction to a symbol, a number or an equation is a retirement and a replacement, or the owner's own edit in the application.`,
+    )
+  }
+
+  const after = repairTags(tags, { substantive })
+  const span = changedSpan(visibleText(note.note ?? ''), visibleText(composed))
+  const clearsReview = substantive && isReviewed(tags)
+
+  console.log(`note    : ${options.note}  parent ${note.parentItem ?? '(none)'}  version ${note.version}`)
+  console.log(`claim   : §${claim.token}  author: ${provenance}`)
+  console.log(`size    : ${String(note.note ?? '').length} -> ${composed.length} characters`)
+  console.log(`old     : ${firstBlockText(note.note ?? '').slice(0, 96)}`)
+  console.log(`new     : ${firstBlockText(composed).slice(0, 96)}`)
+  console.log(`changed : ${JSON.stringify(span.before).slice(0, 120)} -> ${JSON.stringify(span.after).slice(0, 120)}`)
+  console.log(`class   : ${substantive ? 'substantive' : 'mechanical'} - ${substantive ? 'stated' : change.why}`)
+  console.log(`reason  : ${options.reason}`)
+  console.log(`tags    : ${tags.join(' · ') || '(none)'}  ->  ${after.join(' · ')}`)
+  console.log(`effect  : the body is corrected in place; the key, §${claim.token} and ${provenance} provenance stay`)
+  console.log(`          ${clearsReview ? `${REVIEWED_TAG} is CLEARED: the body is a draft again` : `${REVIEWED_TAG} is kept`}`)
+  console.log(`write   : PATCH /api/users/0/items/${options.note}  [{note: ..., tags: [...]}]`)
+
+  if (sameTags(after, tags) && visibleText(note.note ?? '') === visibleText(composed)) {
+    console.log('\nnothing to do - the body already reads the same and the tags would not change.')
+    return
+  }
+  if (!options.write) {
+    console.log('\nDRY RUN - nothing was written. Re-run with --write.')
+    return
+  }
+
+  const gate = createWriteGate({ appName: APP_NAME })
+  await gate.open()
+  const patch = { note: composed, tags: after.map((tag) => ({ tag })) }
+  writeAttempted = true
+  const result = await patchItem({ gate, key: options.note, patch, apply: true })
+  if (result.conflict) {
+    console.error(`\nCONFLICT: note ${options.note} changed since this plan was read. Nothing was written.`)
+    process.exitCode = 1
+    return
+  }
+  if (!result.applied) {
+    console.error(`\nThe library refused the write (HTTP ${result.status}): ${result.detail}`)
+    process.exitCode = 1
+    return
+  }
+  if (visibleText(result.after.note ?? '') !== visibleText(composed)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back with the text that was sent.`)
+    return
+  }
+  const backTags = (result.after.tags ?? []).map((entry) => entry.tag)
+  if (readSectionTag(backTags).token !== claim.token) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying /section-${claim.token}.`)
+    return
+  }
+  if (!isRepaired(backTags)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} does not read back carrying ${REPAIRED_TAG}.`)
+    return
+  }
+  if (clearsReview && isReviewed(backTags)) {
+    reportUnconfirmed(options.note, `READ-BACK MISMATCH: note ${options.note} still carries ${REVIEWED_TAG} after a substantive repair.`)
+    return
+  }
+  console.log(`\nOK - note ${options.note} repaired in place (now ${result.after.note.length} characters, version ${result.after.version}).`)
+  console.log(`It keeps §${claim.token} and ${provenance} provenance, and carries ${REPAIRED_TAG}.`)
+  if (clearsReview) {
+    console.log(`${REVIEWED_TAG} is cleared: the body is a draft until the owner accepts it (--review --note ${options.note}).`)
+    console.log('An adoption item resting on this note is a candidate again until then (INV-ADOPT-5).')
+  }
+}
+
+/**
  * Record the owner's acceptance of an agent-written body, or take it back.
  *
  * This is a tag and never a body edit: the owner's judgement is that the prose is right, and the prose
@@ -1331,16 +1571,21 @@ const USAGE =
   '       node tools/zotero-section-note.mjs --claim --note <noteKey> --section <ordinal> [--write]\n' +
   '       node tools/zotero-section-note.mjs --unclaim --note <noteKey> --section <ordinal> [--write]\n' +
   '       node tools/zotero-section-note.mjs --rewrite --note <noteKey> (--text "<html>" | --file <path>) [--section <ordinal>] [--write]\n' +
+  '       node tools/zotero-section-note.mjs --repair --note <noteKey> (--text "<html>" | --file <path>) --reason "<why>"\n' +
+  '                                       --mechanical|--substantive [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --reason "<why>" [--write]\n' +
   '       node tools/zotero-section-note.mjs --retire --note <noteKey> --undo [--write]\n' +
   '       node tools/zotero-section-note.mjs --review --note <noteKey> [--undo] [--write]\n' +
   '       node tools/zotero-section-note.mjs --delete --note <noteKey> [--write]\n' +
   '       Identity is a tag: /section-N claims a top-level section, /imported marks an import that may\n' +
   '       still be rewritten, /agent-note marks a body an agent wrote from the paper, /reviewed marks the\n' +
-  '       owner accepting that body, /digest is a LEGACY whole-paper summary from an earlier version,\n' +
-  '       /retired takes a note out of service. No invisible marker is written or read, and no prose is\n' +
-  '       parsed: a note with no /section- tag is UNKNOWN and is read before anything is written.\n' +
-  '       --tidy does not exist; a damaged body is rewritten by the agent or retired and written again.\n' +
+  '       owner accepting that body, /repaired marks a body corrected in place, /digest is a LEGACY\n' +
+  '       whole-paper summary from an earlier version, /retired takes a note out of service. No invisible\n' +
+  '       marker is written or read, and no prose is parsed: a note with no /section- tag is UNKNOWN and\n' +
+  '       is read before anything is written.\n' +
+  '       --repair corrects a record in place and keeps its key, claim and provenance; a changed claim is\n' +
+  '       a retirement and a replacement. --mechanical keeps /reviewed, --substantive clears it.\n' +
+  '       --tidy does not exist; a damaged body is repaired by the agent or retired and written again.\n' +
   '       --unclaim removes ONE /section- tag and only from a note carrying more than one: it resolves\n' +
   '       ambiguity, never a disagreement with a single claim.\n' +
   '       --delete erases only a /retired note, permanently: this API has no trash, and the plan states\n' +
@@ -1351,11 +1596,12 @@ const USAGE =
 function parseArgs(argv) {
   const options = {
     item: '', note: '', section: '', text: '', file: '', reason: '', replaces: '', acknowledgeUnknown: '',
-    claim: false, unclaim: false, rewrite: false, delete: false, retire: false, review: false, undo: false,
+    claim: false, unclaim: false, rewrite: false, repair: false, delete: false, retire: false, review: false,
+    mechanical: false, substantive: false, undo: false,
     plan: false, json: false, write: false,
   }
   const valued = new Set(['--item', '--note', '--section', '--text', '--file', '--reason', '--replaces', '--acknowledge-unknown'])
-  const switches = new Set(['--claim', '--unclaim', '--rewrite', '--delete', '--retire', '--review', '--undo', '--plan', '--json', '--write'])
+  const switches = new Set(['--claim', '--unclaim', '--rewrite', '--repair', '--delete', '--retire', '--review', '--mechanical', '--substantive', '--undo', '--plan', '--json', '--write'])
   const keyOf = (flag) => flag.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
@@ -1370,10 +1616,11 @@ function parseArgs(argv) {
     index += 1
   }
 
-  const modes = ['claim', 'unclaim', 'rewrite', 'delete', 'retire', 'review'].filter((mode) => options[mode])
-  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --unclaim, --rewrite, --delete, --retire, --review')
+  const modes = ['claim', 'unclaim', 'rewrite', 'repair', 'delete', 'retire', 'review'].filter((mode) => options[mode])
+  if (modes.length > 1) throw new UsageError('pass at most one of --claim, --unclaim, --rewrite, --repair, --delete, --retire, --review')
   if (options.undo && !options.retire && !options.review) throw new UsageError('--undo belongs to --retire or --review')
-  if (options.reason && !options.retire) throw new UsageError('--reason belongs to --retire')
+  if (options.reason && !options.retire && !options.repair) throw new UsageError('--reason belongs to --retire or --repair')
+  if ((options.mechanical || options.substantive) && !options.repair) throw new UsageError('--mechanical and --substantive belong to --repair')
   if (options.replaces && !options.section) throw new UsageError('--replaces goes with the --section it replaces')
   if (options.acknowledgeUnknown && !options.section) throw new UsageError('--acknowledge-unknown belongs to a --section create')
   if (options.json && (modes.length || options.section || options.text || options.file || options.replaces || options.note)) {
@@ -1393,6 +1640,20 @@ function parseArgs(argv) {
     if (!options.section) throw new UsageError('--unclaim takes --section <ordinal>: the tag to remove')
     if (options.item || options.text || options.file || options.reason || options.replaces || options.plan || options.acknowledgeUnknown) {
       throw new UsageError('--unclaim changes one note and nothing else; drop the other arguments')
+    }
+    return options
+  }
+  if (options.repair) {
+    if (!options.note) throw new UsageError('--repair takes --note <noteKey>')
+    if (Boolean(options.text) === Boolean(options.file)) throw new UsageError('pass --text or --file, not both')
+    if (String(options.reason).trim() === '') {
+      throw new UsageError('--repair needs --reason "<why>": the reason is the record of the correction, and this tool stores no prose on the note')
+    }
+    if (options.mechanical === options.substantive) {
+      throw new UsageError('--repair takes exactly one of --mechanical (keeps the owner acceptance) or --substantive (clears it)')
+    }
+    if (options.item || options.section || options.replaces || options.plan || options.acknowledgeUnknown || options.undo) {
+      throw new UsageError('--repair corrects one note and nothing else; drop the other arguments (a changed claim is a retirement and a replacement)')
     }
     return options
   }
@@ -1441,8 +1702,8 @@ function parseArgs(argv) {
     return options
   }
   if (options.acknowledgeUnknown) throw new UsageError('--acknowledge-unknown belongs to a --section create')
-  if (options.note) throw new UsageError('--note belongs to --claim, --unclaim, --rewrite, --review, --delete or --retire')
-  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--unclaim/--rewrite/--review/--delete/--retire')
+  if (options.note) throw new UsageError('--note belongs to --claim, --unclaim, --rewrite, --repair, --review, --delete or --retire')
+  if (!options.item) throw new UsageError('pass --item <recordKey>, or one of --claim/--unclaim/--rewrite/--repair/--review/--delete/--retire')
   if (options.write) throw new UsageError('--write belongs to --section or one of the note modes')
   return options
 }
@@ -1459,6 +1720,10 @@ async function main() {
   }
   if (options.rewrite) {
     await runRewrite(options)
+    return
+  }
+  if (options.repair) {
+    await runRepair(options)
     return
   }
   if (options.review) {
