@@ -685,3 +685,42 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 [自测](../tools/refusal-selftest.mjs) · [`protocol.md`](../protocol.md)（Revision 35）· [`docs/decisions.md`](decisions.md)
 §84、§85 · 四份纪律 · [`docs/coverage.md`](coverage.md) · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) →
 [`docs/toolchain.md`](toolchain.md) · [`README.md`](../README.md) · [`backlog.md`](backlog.md)（未动，三项仍未结）。
+
+## §89 · 0.17.0 发布：记录只陈述当前态（Revision 36–38，2026-10-23）
+
+**版本**：`0.17.0`，提交 `753db8f`，注解 tag `v0.17.0`；远端 `main` 与 tag 同指该提交。
+**记录本身比 tag 晚一条**：本节写入后 main 比 `v0.17.0` 多这一个提交，tag 不动（§72／§74／§80 同一做法）。
+
+**为什么是 minor**：三条契约 Revision 都改了读者可见的行为与产物形状——新增第十三条纪律（36）、
+记录可原地修（37）、文档只放当前态并带预算（38）。前例是 0.11.0–0.16.0 随 Revision 升 minor。
+
+**这一版的三条变更**：
+
+1. **Revision 36**：`direction-probe` 成为第十三条纪律——把记录里"已裁定不能用 / 未验前提 / `park`
+   条件 / 两源矛盾 / 缺口"转成带杀死条件的候选招，方向的新增成分有且仅有一个。
+2. **Revision 37**：库内节笔记**修复原地、修订接替**——主张不变走 `--repair`，主张变了才退休重写；
+   `/reviewed` 在改动符号或等式时失效。
+3. **Revision 38**：文档只放**当前态**——按块分型（事实默认不标）、一条判断一个载体、空节不写、
+   每产物行数预算与三档压缩时钟（写前 / 越线 / 结算）；12 条纪律的 §6 改成"写进文件 / 按需 /
+   只回话 / 预算"；脚手架 non-goals 由"至少 3"改为 1–3。
+
+**验证在最终树上**：23/23 离线自测 PASS（含 `preset-selftest` 的 12 条规则与 13 条路由）；
+`release-check --local` PASS，工作树干净；`release-check --tag v0.17.0` 四项 `OK`、**exit 0**。
+新护栏做了反向控制：删掉规则 12 ⇒ `twelve numbered discipline rules` 与
+`rule 12 carries the one-carrier rule` 两条 FAIL，恢复即 PASS。
+
+**传输**：分支推送第一次因无凭据失败（凭据弹窗），第二次直连成功；`--tag` 首次因本机失效的
+`http.proxy=127.0.0.1:12450` 得 `UNVERIFIED`，置空代理 + IPv4 后 PASS。**仓库配置一个字没改**。
+
+**仍然未做**：
+
+- 80 篇旧 Documents 的合并**只出了清单**（[`plans/documents-merge.md`](plans/documents-merge.md)），未执行；
+  且闲时 review 可能在每轮自动新建一篇（推断，未做对照实测）。
+- `decisions.md` / `releases.md` 旧条目的压缩未做（B4）。
+- Revision 38 的预算与三档时钟**没有在真实课题上跑过**；判据是一轮之后 journal ≤60 行、
+  同主题不再出现第二篇。
+
+**落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 38）·
+[`cordis.patch.yml`](../cordis.patch.yml) · [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) ·
+12 条纪律的 §6 · [`plans/compaction.md`](plans/compaction.md) · [`plans/documents-merge.md`](plans/documents-merge.md) ·
+[`decisions.md`](decisions.md) §88 · [`coverage.md`](coverage.md) · [`project-template/`](../project-template/)。
