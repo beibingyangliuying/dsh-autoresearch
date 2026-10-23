@@ -12,7 +12,7 @@
 | [`overview.md`](overview.md) | 这套东西**是什么**（一页纸） | 只写结构、不写数字，所以耐久 | — |
 | [`coverage.md`](coverage.md) | 每个部分**覆盖什么、明确拒绝什么** | 随纪律增减更新 | `doc-selftest` 的 DOC-8 / DOC-9 / DOC-10 |
 | [`toolchain.md`](toolchain.md) | 手上这件工具**现在**能做什么、拒绝什么 | **生成物**：改 `tools/toolchain-page.mjs`，不手改 | `toolchain-page --check` · `toolchain-selftest` |
-| [`decisions.md`](decisions.md) | **为什么**是现在这样、否掉了什么 | 追加；节号是引用主键，不重排 | `toolchain-page` 的两条引用 |
+| [`decisions.md`](decisions.md) | **为什么**是现在这样、否掉了什么 | 追加；节号是引用主键，不重排；**新条目 ≤40 行**，测量进 `releases.md` | `toolchain-page` 的两条引用 |
 | [`releases.md`](releases.md) | 每个**版本**发了什么、从哪个 tag、复核结论 | 追加 | — |
 | [`backlog.md`](backlog.md) | **还剩什么**、什么条件到了才做 | 活账，结清即删 | — |
 | [`plans/`](plans/) | 一轮**怎么决定的、执行到哪** | 完成后只读（状态行写明剩什么） | — |

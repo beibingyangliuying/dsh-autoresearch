@@ -158,7 +158,9 @@ measurement into an assertion.
    own verification a dead proxy and a failing `fetch` each produced a false accusation, which is why the
    tool now says `UNVERIFIED` instead. On `3`, fix the transport and run it again rather than reading it
    as a defect in the release.
-6. Record the release in `docs/decisions.md` when it carries a contract-relevant change.
+6. Record the release in `docs/decisions.md` when it carries a contract-relevant change. An entry is
+   at most **40 lines** — cause, ruling, landing, boundary; measurements and the before/after numbers
+   belong to `docs/releases.md`, and the file list belongs to one closing line, not a wall of links.
 
 ## 8. Before saying "published"
 
