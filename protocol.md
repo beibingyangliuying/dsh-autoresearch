@@ -1,9 +1,24 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 36.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 37.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 36 un-defers the **direction loop**, and hands it two
+independent of any package version. Revision 37 lets a record be **repaired** in place. Revision 32
+made a reviewed body a record that may not be rewritten, and the only way to correct a
+mis-transcribed symbol, a broken formula or a wrong locator was to retire the note and write it
+again — which cost a second note per correction and kept a history the reader of the note never asks
+for. A repair changes how a note states something and never what it claims: the text is corrected
+against the source the note cites, the section and the provenance stay, `/repaired` is added, and
+the plan prints the old first block with the reason. A repair that changes a symbol, a number or an
+equation drops `/reviewed`, so an accepted body that was corrected reads as a draft until the owner
+accepts it again; a body the owner wrote is repaired mechanically only, because no tag records an
+owner's re-acceptance of a changed statement. The same line separates repair from revision in the
+other records this contract touches: a transcription error in a ledger's key columns is corrected in
+place with the same dated line, an adoption item's locator may be corrected while its verdict may
+not, and a run card's command or artifact path may be corrected to the artifact it already cited
+while its observation, validity and verdict may not. Finally, a correction that changes no
+rule-bearing word — spelling, formatting, a dead link — is not a revision of this contract. §3, §4,
+§6 and §8 state it, with `INV-NOTE-4`, `INV-EVID-5`, `INV-EVID-6` and `INV-ADOPT-3`. Revision 36 un-defers the **direction loop**, and hands it two
 locks. A **candidate move** exists only when it names a position the study's own record already settled
 — a refused item and its ground, an unchecked precondition, a parked paper's re-open condition, two
 sources that disagree, a gap, or the boundary of a ruled item — a conjecture that could fail, and
@@ -335,7 +350,9 @@ be **decidable**: a reader must be able to say whether it was violated.
 5  three kinds of "nothing"  not searched | searched and absent | not yet searched; an absence
                              claim carries its targeted check, its scope and its hit count
 6  decisions belong to the user
-7  no silent contract change  revision + reason, or request a ruling
+7  no silent contract change  revision + reason, or request a ruling; a correction of spelling,
+                             formatting or a dead link is not a revision and is stated where it
+                             is made
 8  no exceeding the mandate
 9  a subagent report is evidence, not a fact
 10 a construction is not a   a number that follows from how the object was built is a property
@@ -390,7 +407,8 @@ sections     one `/section-N` note per TOP-LEVEL section, attached to its librar
              round that only claims reports the sections still carrying no note instead of writing
              them; background, case study and conclusion sections are not written, a claimed section
              is never written twice, a dotted key is neither written nor read, a pasted note is
-             claimed or rewritten in place, a wrong record is retired rather than deleted, an
+             claimed or rewritten in place, a record is repaired in place when only its statement
+             changed and retired rather than deleted when what it claims changed, an
              agent-written body is tagged `/agent-note` until the owner accepts it with `/reviewed`,
              and one record carries one explanation per section and no paper-level summary; an
              ambiguous note — more than one `/section-N` — claims nothing, is read before it is
@@ -541,8 +559,9 @@ These rules bound their use:
 - **A note written onto a record stays the owner's.** The channel's note writes are additive, a claim,
   or a replacement of an import the owner pasted. Identity is a tag, not a comment in the body: a
   section note carries `/section-N`, a note out of service carries `/retired`, a note that came
-  from outside carries `/imported`, a body an agent wrote from the paper carries `/agent-note`, and
-  the owner's acceptance of that body is `/reviewed`. A note carrying `/digest` was written by an
+  from outside carries `/imported`, a body an agent wrote from the paper carries `/agent-note`, the
+  owner's acceptance of that body is `/reviewed`, and a body corrected in place carries `/repaired`.
+  A note carrying `/digest` was written by an
   earlier version as a whole-paper summary: it is **legacy**, it is never coverage, and nothing writes
   one now. The application may rewrite a note's body and eat an invisible comment; it does not touch a
   tag. A note with no `/section-` tag is **unknown**: it is read before anything is written, because the
@@ -560,12 +579,22 @@ These rules bound their use:
   top-level section or retired. A note with no `/section-` tag, `/section-N` + `/imported`, or an
   unreviewed `/agent-note` is an import or a draft and may be rewritten in place, after a dry run and a
   version guard. A `/section-N` note without `/imported` and without an unreviewed `/agent-note` is a
-  record: its prose is not rewritten in place, and a change to it is a retirement and a replacement.
+  **record**: its prose is not rewritten in place, and a change to what it claims is a retirement and
+  a replacement. A record may be **repaired** in place when the correction changes how the note
+  states something and not what it claims: the text is corrected against the source the note cites,
+  the section it claims and its provenance do not change, the plan prints the old first block and the
+  reason, and the body carries `/repaired`. A record an agent wrote and the owner reviewed may be
+  repaired substantively, and the repair drops `/reviewed`, so the body reads as a draft until the
+  owner accepts it again. A record the owner wrote is repaired mechanically only — spelling,
+  formatting, a broken delimiter, a citation that no longer resolves — because no tag records an
+  owner's re-acceptance of a changed statement; a correction to a symbol, a number or an equation in
+  it is a retirement and a replacement. A repair writes no workspace backup: the paper remains the
+  source, and the library keeps the corrected body rather than the one it replaced.
   A note created as an agent draft never receives `/imported`, and a claim never adds it to one: the
   tag says where the text first came from, and an agent's own body did not come from outside. A
   rewritten import keeps the mark it had, because that mark records the text it replaced. There is no
-  automatic prose repair, and a rewrite writes no workspace
-  backup: the plan prints the old first block, the paper remains the source, and a note the
+  automatic prose repair — a repair is the agent's, and the plan prints it — and a rewrite writes no
+  workspace backup: the plan prints the old first block, the paper remains the source, and a note the
   application edited while the write ran is refused rather than overwritten.
 - **A write reports one of three outcomes, and "refused" is only one of them.** Exit 0 means written
   and read back; exit 1 means refused and nothing was written; a write that may exist — the request
@@ -677,18 +706,18 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
 | `INV-EVID-3` | A write into the reference library happens only under an authorization the owner granted for that library, and is reported only after a read-back matches what was sent; a write whose outcome is not confirmed is reported as sent-but-unconfirmed, never as refused. | The library is the owner's curated evidence base; an unauthorized or unverified write corrupts the very thing the preset depends on, and a false "nothing was written" is how one note becomes two. |
 | `INV-EVID-4` | A source already read is not read again to recover what it or its section notes say: how far a paper was read, and why that reading stopped, are a row in the question's own ledger, the section notes are the transcription of the reading, and one reading is recorded once, so a round that is re-run writes nothing. | Re-reading is the dominant avoidable cost of a literature round: the ledger row says where the last reading stopped, and the section notes are what makes that reading reusable for a question that was not the one it was made for. |
-| `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
-| `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
+| `INV-EVID-5` | An artifact a run's record cites is obtainable by a reader of that record: where a run writes outside the study's own record, a copy is kept with the record, and a citation that cannot be obtained is stated as such rather than presented as evidence. A locator corrected in place resolves to the artifact the record already cited — same command, same bytes — and the correction states the old value beside the new one. | Evidence a later reader cannot reach is not evidence, and a citation that silently degrades into a dangling path is indistinguishable from one that was never checked. |
+| `INV-EVID-6` | One paper is recorded once per research question: the question's ledger carries its `depth` and `verdict`, a row is never deleted, a verdict that changes leaves a dated line beside the old one, a transcription error in the key columns is corrected in place with the same dated line, and no study-level record of what has been read exists. | A study has several questions in flight, and they read the same paper to different depths; a shared read state collapses them into one blurry "read" that neither question can act on, while a deleted row destroys the judgement it recorded. |
 | `INV-EVID-7` | A reading of the owner's library comes through the reference manager's own local API and is keyed by a record; when that API does not answer, the round reports the library unavailable and stops, and no reading is taken from the library's database file or from its stored attachment files by path. | A reading that cannot name its record can be written onto nothing, matched against no note, and checked by no reader; a library read behind the running application is not even the same library, since the two are one write apart. |
 | `INV-FAIL-1` | Every helper reports a failure in one shape, and a failure whose way out is unique states it, while a failure whose way out is not unique states none; the remedy is decided where the request's meaning is known, and a command is offered only when it runs as printed. | A guessed remedy is worse than silence: it turns a retry into a drift, and a round that drifts has already begun working around the instrument it was given. |
 | `INV-ADOPT-1` | An item of an adoption ledger reaches code only with the paper's own locator, the condition it holds under, our normalized form beside the paper's verbatim one, and a numeric anchor; an item without an anchor is a candidate and is never reported as adopted or verified. | A correct transcription and a wrong implementation read the same in prose, so the anchor is the only check in this chain that can fail — without it the ledger records an intention rather than a gate. |
 | `INV-ADOPT-2` | One formula has one transcription: where a section note already holds it, the ledger cites that note and does not derive the formula again. | Two transcriptions of one equation produce two versions, and nothing later can say which one the code was written from. |
-| `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
+| `INV-ADOPT-3` | Every verdict in the ledger is the owner's, dated and recorded with its grounds; the agent proposes candidates only, and a transcription or locator correction that changes no verdict is recorded as a dated correction beside the item rather than as a ruling. | A ledger that rules for its owner replaces the owner's judgement with the agent's, and the record can then no longer be re-examined. |
 | `INV-ADOPT-4` | The ledger grounds no research conclusion, and it binds the code it rules into. | Treated as evidence it would let a plan masquerade as a finding; treated as advisory it would let the code drift from what was ruled. |
 | `INV-ADOPT-5` | An adoption item names the section note it rests on and that note's provenance; an unreviewed `/agent-note` supports no `adopt`, `adopt-modified` or `verified`. | An agent's transcription of a paper is a candidate's ground, not the owner's accepted record; without the tag the two read identically and the ledger cannot be re-examined. |
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, a note carrying more than one `/section-N` tag is **ambiguous** and is not coverage either — it is resolved by removing one stale tag (one per command, after the note is read), never by guessing which tag was meant — retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. An ambiguous note blocks every write on its record, so leaving the ambiguity to be "worked around" is how a claim gets invented rather than read. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
-| `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round. |
+| `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. A record may be repaired in place but not rewritten: the repair keeps the section and the provenance, the body carries `/repaired`, and a repair that changes a symbol, a number or an equation drops `/reviewed` — so an accepted body that was corrected reads as a draft until the owner accepts it again. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round — and a corrected body that kept its acceptance would claim a review of prose the owner never read. |
 | `INV-IDEA-1` | A candidate move exists only with a position already in the study's record, a conjecture that could fail, and the observation that would kill it, with the threshold that refutes it; a move that cannot name the observation is not a candidate, and one that cannot name the position is exploratory — never scored, never a direction. | A conjecture nobody can point at reads exactly like one that cost a reading to establish, and a conjecture nothing could refute cannot be told from a preference; both are what this step exists to keep out of the record. |
 | `INV-IDEA-2` | A direction is composed of at least one surviving move and adds exactly one component, which names the record position it came from; a component nobody has established is reported as needing a reading or a run, and is never supplied by the composition. | A route allowed to invent one ingredient has already decided the question it was meant to test, and a cull can only score what already exists — which is the whole difference between this loop and a brainstorm. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
