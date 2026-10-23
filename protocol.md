@@ -1,18 +1,28 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 37.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 38.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 37 lets a record be **repaired** in place. Revision 32
-made a reviewed body a record that may not be rewritten, and the only way to correct a
-mis-transcribed symbol, a broken formula or a wrong locator was to retire the note and write it
-again — which cost a second note per correction and kept a history the reader of the note never asks
-for. A repair changes how a note states something and never what it claims: the text is corrected
-against the source the note cites, the section and the provenance stay, `/repaired` is added, and
-the plan prints the old first block with the reason. A repair that changes a symbol, a number or an
-equation drops `/reviewed`, so an accepted body that was corrected reads as a draft until the owner
-accepts it again; a body the owner wrote is repaired mechanically only, because no tag records an
-owner's re-acceptance of a changed statement. The same line separates repair from revision in the
+independent of any package version. Revision 38 makes a record answer the question it is read for. A
+document states **what holds now**: a replaced statement survives as one dated line naming what
+replaced it, the history is git and the log rather than a transcript inside the artifact, and a
+judgement has **one carrier** — every other mention is a pointer. An empty section is not written.
+Typing moves from every sentence to the block that shares one footing, because a label on every
+sentence is noise the finding has to be read past: a fact is the default and carries no mark, an
+inference carries its chain, and an exploratory item says what would settle it. An absence claim
+becomes one line — `absent: <targeted check> · <scope> · N hits`. Each discipline's artifact declares
+what is written, what is optional, and what is only answered to the owner, with a line budget; a file
+over budget is compacted before it is written to, and a second document on one topic is merged rather
+than added. §3, §4 and §8 state it, with `INV-DISC-2` and `INV-DOC-2`. Revision 37 lets a record be
+**repaired** in place. Revision 32 made a reviewed body a record that may not be rewritten, and the
+only way to correct a mis-transcribed symbol, a broken formula or a wrong locator was to retire the
+note and write it again — which cost a second note per correction and kept a history the reader of the
+note never asks for. A repair changes how a note states something and never what it claims: the text is
+corrected against the source the note cites, the section and the provenance stay, `/repaired` is
+added, and the plan prints the old first block with the reason. A repair that changes a symbol, a
+number or an equation drops `/reviewed`, so an accepted body that was corrected reads as a draft until
+the owner accepts it again; a body the owner wrote is repaired mechanically only, because no tag
+records an owner's re-acceptance of a changed statement. The same line separates repair from revision in the
 other records this contract touches: a transcription error in a ledger's key columns is corrected in
 place with the same dated line, an adoption item's locator may be corrected while its verdict may
 not, and a run card's command or artifact path may be corrected to the artifact it already cited
@@ -291,7 +301,7 @@ boolean state.
 | **Scope-local tool** | A tool registered by a row the preset itself declares. Visible to that preset's agents, and unaffected by masking. |
 | **Keep-list** | The explicit set of global tools a preset chooses to retain. |
 | **Discipline** | A written rule set that constrains how research is conducted. Resident disciplines are always in force; on-demand disciplines are loaded when their trigger is met. |
-| **Three-way typing** | The obligation to mark every statement as evidence-backed, an inference, or undecided. |
+| **Three-way typing** | The obligation to keep a block's class visible: a fact is the default and unmarked, an inference carries its chain, and an undecided item says what would settle it. |
 | **Handoff** | Delegating a deliverable to a subagent, and receiving it back. |
 | **Run** | One execution of code intended to test a hypothesis. |
 | **Protocol** | What one run was declared to do before it ran: prediction, reference population, the closed variant set, validity gates, decision rule. Written before the run, never revised after it. |
@@ -343,12 +353,13 @@ The resident discipline is part of every request. It is small on purpose, and ev
 be **decidable**: a reader must be able to say whether it was violated.
 
 ```text
-1  three-way typing          fact | inference | exploratory, on every statement
+1  typing by block           a fact is the default and unmarked; an inference carries its chain; an
+                             [exploratory] item says what would settle it
 2  no unfalsifiable wording  no "study further", "promising", "many studies show"
 3  no citations from memory  every source actually read, with a path or an identifier
 4  read before writing       survey first; follow an existing hierarchy
-5  three kinds of "nothing"  not searched | searched and absent | not yet searched; an absence
-                             claim carries its targeted check, its scope and its hit count
+5  three kinds of "nothing"  not searched | searched and absent | not yet searched; "confirmed
+                             absent" is one line: targeted check · scope · hit count
 6  decisions belong to the user
 7  no silent contract change  revision + reason, or request a ruling; a correction of spelling,
                              formatting or a dead link is not a revision and is stated where it
@@ -359,6 +370,8 @@ be **decidable**: a reader must be able to say whether it was violated.
    measurement               of the definition, not a finding
 11 re-anchor to the request  the requested items are tracked as delivered or outstanding, and a
                              new branch names the outstanding item it serves
+12 one carrier,              a record states what holds now; a judgement has one carrier and every
+   current state only        other mention is a pointer; an empty section is not written
 ```
 
 ```text
@@ -375,6 +388,11 @@ Rule 10 guards the opposite failure: a number that is exact and reproducible yet
 measurement, because it follows from how the object was built rather than from the world. Rule 11 is
 the only rule aimed at the shape of a session rather than at a statement — it keeps a round's
 original request visible, so that a chain of individually justified steps cannot quietly replace it.
+
+Rule 12 is aimed at the document rather than at a statement: a record that carries its own history is
+read as if every entry were still current, and a judgement repeated across three layers cannot be
+corrected in one place. It is also what makes a line budget enforceable — a document that states only
+what holds now can be compacted without losing a decision.
 
 The resident discipline also carries **routing**: each on-demand discipline states the situation
 that triggers it. Routing is a hard rule, not a suggestion — a trigger that is met without the
@@ -440,7 +458,8 @@ synthesis    several explored directions become one executable draft: the choice
 Three invariants follow from the shape of these contracts:
 
 - A discipline that cannot name a **local exclusion condition** is decorative.
-- A discipline that cannot state its **artifact shape** produces prose, not evidence.
+- A discipline that cannot state its **artifact shape** produces prose, not evidence — and that shape
+  is the current state, not a transcript of the round.
 - A discipline whose candidate cannot name the **observation it would fail on** produces an intention,
   not a test.
 
@@ -700,7 +719,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-ROW-1` | Every row name this preset declares resolves, through the host's module resolver and from the profile's base URL, to the module that row intends. | A name that resolves while the composition is built but not during the registry's trial mount marks the whole preset unusable, and the roster hides such a preset instead of reporting it. |
 | `INV-HELPER-1` | Every path this preset gives an agent for one of its own helper programs resolves from the agent's working directory. | A study workspace carries no copy of those programs, so a path relative to this repository names nothing there: the discipline reads as actionable while the tool it names is unreachable. |
 | `INV-DISC-1` | Every resident rule is decidable by a reader. | An undecidable rule cannot be enforced, so it is decorative. |
-| `INV-DISC-2` | Every statement is classed as evidence-backed, inference, or undecided, and is presented as no more than its class. | This is what separates a research record from a plausible narrative. |
+| `INV-DISC-2` | Every block is presented as no more than its class: a fact is the default and carries no mark, an inference carries its chain, and an undecided item says what would settle it. | This is what separates a research record from a plausible narrative; a class marked on every sentence is noise the finding has to be read past. |
 | `INV-DISC-3` | A delegated conclusion is not the parent's fact until the parent has read the artifact itself. | Verification and attribution must not collapse into one act. |
 | `INV-EVID-1` | A run with no artifact path is not reportable. | Reproducibility is the only property that makes a run evidence. |
 | `INV-EVID-2` | A read-only input is never mutated, and a negative result is never deleted. | Both preserve the meaning of results already published. |
@@ -724,6 +743,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
 | `INV-PROJ-1` | An existing study hierarchy outranks the scaffold's default layout. | The preset is domain-neutral; a study's conventions carry its meaning. |
 | `INV-DOC-1` | The contract names no public symbol, and the index is a bijection with the authoritative list. | It keeps the contract stable under renames and stops the index drifting from reality. |
+| `INV-DOC-2` | A judgement has one carrier: a document states what holds now, every other mention is a pointer, a replaced statement leaves one dated line, and an empty section is not written. | A record that restates another carrier is a duplicate rather than corroboration; a reader who must reconstruct the current state from a transcript cannot tell it from the history, and a judgement copied into three layers cannot be corrected in one place. |
 
 A retired invariant keeps its id. `INV-NOTE-2` bounded the paper-level digest, was retired with it in
 Revision 25, and is never reused — so the gap in the sequence is a record rather than a missing row.

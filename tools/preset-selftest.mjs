@@ -328,7 +328,7 @@ if (!existsSync(composedFile)) {
 
     console.log('\n[5] discipline rules and routing bullets')
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
-    ok(rules.length === 11, 'eleven numbered discipline rules', `found ${rules.length}`)
+    ok(rules.length === 12, 'twelve numbered discipline rules', `found ${rules.length}`)
     const flatPersona = composedPersona.replace(/\s+/g, '')
     const bullets = ROUTED_NAMES.filter((n) => flatPersona.includes(`→\`${n}\``))
     ok(bullets.length === ROUTED_NAMES.length, `all ${ROUTED_NAMES.length} skill-routing bullets present`, `found ${bullets.length}`)
