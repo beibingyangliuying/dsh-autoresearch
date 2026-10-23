@@ -15,7 +15,8 @@ nothing here decides whether a paper is used.
   judgement traceable: the state columns (`grade`, `depth`, `verdict`, `basis`, `re-open if`, `date`) are
   advanced in place and the log carries the history. A transcription error in the key columns (`itemKey`,
   `year`, `found via`) is corrected in place with the same dated line — a wrong key is a row no later
-  `grep` can find, so it is worth one correction and one line rather than a new row beside it.
+  `grep` can find, so it is worth one correction and one line rather than a new row beside it. The log
+  line is the whole history: the prose above states what holds now and does not retell the change.
 - **Adoption is decided elsewhere.** What may be borrowed, on what terms, and the number that proves the
   code belongs to the adoption chain and its own ledger. A row here saying a paper was read is not a claim
   that anything was taken from it.

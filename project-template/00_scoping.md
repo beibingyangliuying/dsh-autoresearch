@@ -13,7 +13,7 @@ TODO — what is in scope: the physical/mathematical/data limits of this study.
 
 ## Non-goals
 
-TODO — at least three, each with "why not now".
+TODO — one to three, each with "why not now". A third invented to reach a count is a false boundary.
 
 ## Decidability
 

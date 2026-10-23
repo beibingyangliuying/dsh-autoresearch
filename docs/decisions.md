@@ -2456,3 +2456,24 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **已知边界**：数学式**外面**的符号替换（`alpha` → `α`）机械判定看不见，必须由 agent 声明 `--substantive`；这道闸是下限，不是上限。
 
 **未做**：没有在真库上执行一次修复（新路径由 stub 覆盖，真库写仍要下一次逐条授权）；`INV-EVID-6` 的"按课题重复"没动——那是重复，不是改写，要动得单独一轮。
+
+## 88. 文档只放当前态：按块分型、空节不写、超预算先合（Revision 38，2026-10-23）
+
+**起因**：junhan 觉得这套预设写出的文档"太臃肿"，判断主因是日志式追加。核查后确认：上一轮（§87）只把"修复 vs 修订"这一处改成了原地；让文档变长的是另外七条机制——固定节模板要求空节留痕、过程证据（`Ruler` / `Read-back` / `Not judged`）写进产物、报告与产物不分流、一条判断在 journal / Documents / memory 三处复写、Documents 按轮建、逐对象清单进正文、以及没有任何长度预算。实测：Documents **80 篇 / 521 KB**，单篇中位 **78 行**（p90 101）。
+
+**判据**：这条记录是某个判断的唯一载体吗？是 → 展开；不是 → 指针。文档回答"现在成立什么"，不回答"这一轮先看了什么"。这条判据就是 §87 那条，只是从库内笔记推广到层与层之间。
+
+**裁定（junhan 逐项确认，2026-10-23）**：
+
+1. 类型标注改为**按块**：事实默认不标，推断带链条，探索项说清什么能定它（B1）。
+2. 采用预算：journal 60 / Document 120 / 产物 40–100 行（B2）。
+3. `research-scoping` 的 non-goals 由"至少 3"改为 **1–3**（B3）。
+4. 本仓库 `decisions.md` / `releases.md` 的既有条目**下一轮再压**（B4）。
+
+**为什么不是对话里提醒"精简一下"**：不可判（多长算长、删哪段）、不可测，且触发在写完以后。闸放在写入路径上，三档：写前（同题更新、空节不写）、越线（超预算先合后写）、结算（同主题 Documents ≥ 2 篇或 journal > 12 个则合并）。三档覆盖一次写入、一篇文档、一个研究三种尺度。
+
+**落点**：[`protocol.md`](../protocol.md)（Revision 38：§3 规则 1/5/12、§4 产物形状、§8 `INV-DISC-2` / `INV-DOC-2`）· [`cordis.patch.yml`](../cordis.patch.yml)（persona 规则 1/5/12、头部注释）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（11 → 12）· 12 条纪律的 §6（`metadata-query` 无固定节，未动）· [`skills/progress-sync`](../skills/progress-sync/SKILL.md) §6.4 · [`project-template`](../project-template/00_scoping.md)（`00_scoping` / `references/README`）· [`docs/coverage.md`](coverage.md)（重扫；README 无陈旧声明）· [`docs/plans/compaction.md`](plans/compaction.md)。
+
+**已知边界**：模板的"空节 / 预算"**没有**机器护栏——文本质量不是机械可判的，不为它造脆判据；现有 80 篇 Documents 不批量重写，由下一次 `progress-sync` 按同主题合并并写回执。
+
+**未做**：仓库 docs 的条目压缩（B4，下一轮）；真实课题上的第一轮实测（判据：一轮之后 journal ≤ 60 行、同主题不再出现第二篇）。

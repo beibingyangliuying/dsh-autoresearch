@@ -38,7 +38,7 @@
 | 交接 `subagent-contract` | 把活交给子代理并收回来而不洗白主张：先定交付物、要产物路径与确切命令、报告写文件只传指针 | 子代理的结论**不是事实**——父代理必须自己重新导出 | 要开一个探索或实现子代理时、决定要不要接受它返回的东西 | [`skills/subagent-contract/SKILL.md`](../skills/subagent-contract/SKILL.md) |
 | 运行 `experiment-protocol` | 一次运行分成**预注册**与**实验卡**两件：预测、参考总体、封闭的变体集、有效性门禁与判定规则写在前者里（跑之前；协议、卡与产物脚本共用同一个 id），命令 / 配置与种子 / 产物路径 / 观察 / 有效性 / 裁决写进后者，而卡**引用协议**、不重抄预测 | 不决定测什么；**预测只活在卡里就不算检验**；"跑了"≠"有效"；卡引用的产物取不到就不是证据；只读基线不许被改动 | 开子代理写代码或跑代码之前、报告一次运行结果时、"它能行"要变成事实时 | [`skills/experiment-protocol/SKILL.md`](../skills/experiment-protocol/SKILL.md) |
 | 综合 `synthesis-plan` | 若干探索方向 → **一份可执行的稿**：选定路径与它赢在哪、被否决项及理由、验收标准（含失败条件）、第一步、风险与回退 | 不探索（探索在它之前就结束）；不给"再研究研究" | 探索已产出候选、需要一次承诺、你问"那我们做什么"、两条路线冲突要选一条 | [`skills/synthesis-plan/SKILL.md`](../skills/synthesis-plan/SKILL.md) |
-| 沉淀 `progress-sync` | 一轮结算成**三层**：结论与被否方向及理由进 mnemon Documents、少量跨会话要点进运行时记忆、逐轮日志进工作区 journal；事实 / 推断 / 探索分型强制 | 不发出研究的最终裁定；**过程不许当结论写** | 一轮停下、会话将结束、一个方向被否、要交接或恢复 | [`skills/progress-sync/SKILL.md`](../skills/progress-sync/SKILL.md) |
+| 沉淀 `progress-sync` | 一轮结算成**三层**：同主题**只留一篇** mnemon Document（写当前态）、少量跨会话要点进运行时记忆、逐轮日志进工作区 journal；按块分型（事实默认不标）；同主题第二篇、或 journal 超过 12 个，先合并再写 | 不发出研究的最终裁定；**过程不许当结论写**；不按轮次新建第二篇同主题文档；不写空节；不把 journal 原文合并掉 | 一轮停下、会话将结束、一个方向被否、要交接或恢复 | [`skills/progress-sync/SKILL.md`](../skills/progress-sync/SKILL.md) |
 
 **没有一条纪律负责"决定研究什么"**——那是你的。它们约束的是证据如何被分类、主张如何被质疑、活怎么交出去、
 实验怎么被记录、进度怎么沉淀。
