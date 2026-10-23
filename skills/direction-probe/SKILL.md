@@ -265,7 +265,9 @@ second section. `Zero-cost kills` and `Scores` are columns of `Moves`, not headi
 
 **Closing line** — `read-back: <path> · <n> rows`, the only evidence the write happened.
 
-**Budget** — ≤80 lines of prose (tables aside). Past it, compact before writing.
+**Budget** — ≤80 lines of prose (tables aside). Past it, cut in this order: evidence restated from its
+carrier → a second reason for the same claim → per-object detail a ledger holds → how the statement
+changed. Never cut the load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

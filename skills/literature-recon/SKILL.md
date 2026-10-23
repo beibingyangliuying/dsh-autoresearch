@@ -76,7 +76,8 @@ Give title · authors · year · venue or preprint server · one retrievable ide
 
 ### 3.3 Every claim maps to a source
 
-- **Every** claim you write must carry at least one source.
+- **Every** claim you write must carry at least one source — once, where the claim enters this file;
+  a row that already carries it is cited by its row, not re-sourced in the prose.
 - A claim with no source is either deleted or marked `[exploratory]` with an explicit "this is speculation".
 - Distinguish three kinds of absence: **not searched** / **searched and confirmed absent** / **not yet searched**. Never conflate them.
 
@@ -121,7 +122,8 @@ hierarchy wins over both: put the file where that hierarchy puts it. The file st
 
 1. `## Search question` — what is being answered, the query and its scope; replaced in place when the
    question is unchanged.
-2. `## Summary of findings` — ≤10 lines, each carrying a source id and its grade.
+2. `## Summary of findings` — ≤10 lines, each carrying its source id; the grade only where it changes
+   what the line may be used for (a `B` or `C` line is a lead, not evidence for a fact).
 3. `## Reference ledger` — the nine columns of `<layer root>/references/README.md`. This round appends
    `itemKey | year | found via | grade | depth` per candidate; `verdict | basis | re-open if | date`
    stay empty, because they are a reading round's to write.
@@ -136,7 +138,9 @@ hierarchy wins over both: put the file where that hierarchy puts it. The file st
 `<date> | <itemKey> | <old> → <new> | <basis> | <who>`; a search round adds no line. It is data, not
 prose, and is not compacted away.
 
-**Budget** — ≤60 lines of prose (ledger and log aside). Past it, compact before writing.
+**Budget** — ≤60 lines of prose (ledger and log aside). Past it, cut in this order: evidence restated
+from its carrier → a second reason for the same claim → per-object detail the ledger holds → how the
+statement changed. Never cut the load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

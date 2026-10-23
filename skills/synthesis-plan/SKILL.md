@@ -113,7 +113,9 @@ Risks and fallbacks       (each risk with its response)
 Budget                    (steps / runs / time, and the stop condition)
 ```
 
-**Budget — ≤100 lines.** Past it, link the evidence instead of restating it.
+**Budget — ≤100 lines.** Past it, cut in this order: evidence restated from its carrier → a second
+reason for the same claim → per-object detail a ledger holds → how the statement changed. Never cut the
+load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

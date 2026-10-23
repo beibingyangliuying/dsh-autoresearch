@@ -152,7 +152,9 @@ The card in §3.1 is the artifact; one line in the round's journal points at it,
 When the run decides a direction, the outcome also goes to mnemon Documents through `progress-sync` —
 the rejected path and why.
 
-**Budget** — ≤80 lines of prose (the command block aside). Past it, compact before writing.
+**Budget** — ≤80 lines of prose (the command block aside). Past it, cut in this order: evidence
+restated from its carrier → a second reason for the same claim → per-object detail a ledger holds →
+how the statement changed. Never cut the load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

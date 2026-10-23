@@ -41,11 +41,13 @@ Write the result up as a "ruler" list.
 | **The reason a contract changed**: what was wrong, what was rejected, on what grounds | **mnemon Documents** | The reason survives the change; it is what stops the same dead end being walked again |
 | A description of the state **before** a change that has already landed (a pending list, an "awaiting ruling" inventory) | workspace Markdown, marked superseded — or left unwritten | It is false the moment the change lands, and kept unmarked it reads as current fact |
 
-### 3.1 Every record must carry
+### 3.1 What every record states, once
 
-**Class** (the record's footing, stated once — a fact is the default and needs no mark; a block that
-differs from its neighbours is marked) · **Source** (which file / which ruling / which search) ·
-**Time**.
+**Class** — the block's footing, stated once; a fact is unmarked, and a block whose class differs from
+its neighbours is marked. **Source** — named once, where the claim enters the record (which file /
+which ruling / which search); a later mention of that claim is a pointer, not a fresh citation.
+**Time** — only where the line snapshots something outside the record (a count or a status as read, a
+date a search was run) or where order carries meaning; a conclusion is not dated.
 
 ### 3.2 Rejected directions are mandatory
 
@@ -82,6 +84,8 @@ root otherwise (protocol §7).
 | It is long prose intended for runtime memory | Refuse; put it in Documents or a workspace file instead. |
 | A document only describes the state before a change that has already landed | Mark it superseded, or leave it out. It is a record, not a conclusion. |
 | A document on this topic already exists | Update it in place; a second document is a duplicate, not a backup. |
+| The topic needs an inventory (one row per question, source or section) | Put it in a ledger of its own and point at it; a Document carrying rows is a ledger with a prose head. |
+| A row's cell has grown an argument | Move the argument into the state note; the cell keeps the value it is read for. |
 
 ## 5. Wording discipline
 
@@ -106,16 +110,29 @@ carry content, in this order:
 
 A fact or a conclusion already settled in a Document is cited by path, not restated here.
 
-**Budget — 60 lines of prose** (commands, tables and quoted output aside). Past it, link the artifact
-that holds the detail instead of copying it. A journal is not compacted later — it is a round's log —
-so the budget applies as it is written.
+**Budget — 60 lines of prose** (commands, tables and quoted output aside). Past it, cut in this order:
+evidence restated from its carrier → a second reason for the same claim → per-object detail a ledger
+holds → how the statement changed. Never cut the load-bearing limit or the falsification condition. A
+journal is not compacted later — it is a round's log — so the cut is made before the line lands: link
+the artifact that holds the detail instead of copying it.
 
 ### 6.2 mnemon Documents (topic-based, current state)
 
 One document per topic, not per round. `search` first; a hit is **updated**, never duplicated, and a
 second document on one topic is merged into the survivor. The title is its routing description and
-carries no date, version or revision number. The body states what holds now: `conclusions` / `evidence`
-/ `rejected alternatives and why` / `open items`, each as it currently stands. **Budget — 120 lines.**
+carries no date, version or revision number.
+
+A Document is a **state note**, not a ledger. Its opening block comes first and is where a reader
+stops: the conclusion that holds now, and what would change it. What follows is `conclusions` /
+`evidence` / `rejected alternatives and why` / `open items`, each as it currently stands — and
+`evidence` holds **pointers** to the carriers (a ledger row, a card, a note), never the evidence
+restated. A topic that needs an inventory — one row per question, source or section — keeps a
+**ledger**: a workspace file, or the study's own table. The Document points at it and never carries
+its rows; a cell that has grown an argument is moved out to the note it belongs to.
+
+**Budget — 120 lines.** Past it, cut in this order: evidence restated from its carrier → a second
+reason for the same claim → per-object detail a ledger holds → how the statement changed. Never cut the
+load-bearing limit or the falsification condition.
 
 ### 6.3 runtime memory
 
@@ -127,7 +144,7 @@ already lives in a Document.
 | Clock | Fires when | Action |
 |---|---|---|
 | Before writing | the topic already has a document; the section would be empty; the file is already over budget | update, do not create; do not write the empty section; compact first |
-| Over budget | the write would pass the file's budget | fold replaced statements into one dated `superseded <date>: <what> → <where>` line; move per-object lists into the ledger or the tool output; keep totals, exceptions and a pointer |
+| Over budget | the write would pass the file's budget | give things up in this order: evidence restated from its carrier → a second reason for the same claim → per-object detail the ledger holds → how the statement changed; never the load-bearing limit. A replaced statement becomes one dated `superseded <date>: <what> → <where>` line, and totals, exceptions and a pointer stay |
 | Settlement | two documents share a topic, or the study has more than 12 journal files | merge the documents into the survivor (conclusions, rejections, open items) and archive the rest through mnemon; add `journal/INDEX.md` instead of merging journal originals |
 
 **Receipt.** Every compaction leaves one line — in the journal for a document merge, at the file's foot
@@ -148,7 +165,9 @@ a journal file is never compacted — it is the round's log, kept as written.
 ## 8. Acceptance checklist
 
 - [ ] `search` was run first; the topic's document was updated, not duplicated
-- [ ] Every record carries class / source / time
+- [ ] Every record states its class, source and time once — not a stamp on every mention
+- [ ] The Document opens with the conclusion that holds, and `evidence` points at its carriers
+- [ ] No ledger row sits inside a Document: an inventory the topic needs is a ledger of its own
 - [ ] Rejected directions and reasons are recorded (or "no rejections this round" is stated)
 - [ ] Unevidenced content went only to the log, not to the Documents conclusions section
 - [ ] Conflicts with existing content are recorded as "revision + reason"

@@ -54,6 +54,7 @@ Check every item; if any one fails, send it back:
 | The answer depends on a quantity that is not defined yet | Define it first, or downgrade it to an "open item". |
 | The required data/asset is demonstrably unavailable | Return it, unless the user explicitly accepts a study premised on its unavailability. |
 | It is existing work under a new name | Return it, and give the path to the existing work. |
+| It restates a question the study already has, under a new name | Return it with the path of the existing item; a candidate that narrows or refines one names it. |
 
 ## 5. Wording discipline
 
@@ -80,7 +81,9 @@ the first three are written up front; the rest are written when they have conten
    undecided
 
 Start the file with a one-line summary (≤5 lines): the question + the suggested first action.
-**Budget — ≤80 lines.**
+**Budget — ≤80 lines.** Past it, cut in this order: evidence restated from its carrier → a second reason
+for the same claim → per-object detail a ledger holds → how the statement changed. Never cut the
+load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

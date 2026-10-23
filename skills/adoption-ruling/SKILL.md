@@ -281,8 +281,10 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 **Answered to the owner, not written** — the INDEX lines this round added or changed.
 
-**Budget** — ≤80 lines of prose (the candidate and ruling tables aside). Past it, compact before
-writing: each item's current state, not the history of how it got there.
+**Budget** — ≤80 lines of prose (the candidate and ruling tables aside). Past it, cut in this order:
+evidence restated from its carrier → a second reason for the same claim → per-object detail a ledger
+holds → how the statement changed. Never cut the load-bearing limit or the falsification condition.
+What remains is each item's current state, not the history of how it got there.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

@@ -78,6 +78,15 @@ for (const skill of skills) {
   check(!relativeHelperPath.test(skill.content), `no relative helper path in: ${skill.name}`)
 }
 
+// A budget without a cut order is a wish: told only to be shorter, a writer gives up whatever is
+// cheapest to give up — the load-bearing limit — and keeps what is easiest, the evidence restated.
+// So every body that states a line budget also states the order it gives things up in. The wording
+// is each discipline's own; the presence of an order is not.
+for (const skill of skills) {
+  if (!/^\*\*Budget\b.*≤/m.test(skill.content)) continue
+  check(skill.content.includes('cut in this order'), `a budget states its cut order: ${skill.name}`)
+}
+
 const namedHelpers = [
   ...new Set(
     skills.flatMap((skill) => [...skill.content.matchAll(/\{\{presetTools\}\}\/([a-z0-9-]+\.mjs)/g)].map((m) => m[1])),

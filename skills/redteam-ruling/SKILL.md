@@ -93,7 +93,9 @@ State what was received, what was not, and therefore which parts the challenge *
 and `What I do not claim` (no improving the claim, no designing experiments for the author, no issuing
 the ruling).
 
-**Budget** — ≤100 lines. Past it, compact before writing.
+**Budget** — ≤100 lines. Past it, cut in this order: evidence restated from its carrier → a second reason
+for the same claim → per-object detail a ledger holds → how the statement changed. Never cut the
+load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

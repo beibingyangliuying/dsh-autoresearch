@@ -396,7 +396,9 @@ The artifact is the notes on the library record. The report states what now hold
 **Closing line** — `read-back: <n> notes` with each note's tags as they read back. A body with no
 `/agent-note` in the read-back is a write to report as failed, not as done.
 
-**Budget** — ≤100 lines of prose (the Coverage and Sections tables aside).
+**Budget** — ≤100 lines of prose (the Coverage and Sections tables aside). Past it, cut in this order:
+evidence restated from its carrier → a second reason for the same claim → per-object detail a ledger
+holds → how the statement changed. Never cut the load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

@@ -150,7 +150,9 @@ as a second document.
 **One line each, only when non-empty** — `Not swept` (truncation, duplicate keys, already-judged rows,
 records with no abstract) and `Not judged` (no adoption, no borrowing, no note written, and why).
 
-**Budget** — ≤40 lines; the per-item grounds live in the ledger, not here.
+**Budget** — ≤40 lines; the per-item grounds live in the ledger, not here. Past it, cut in this order:
+evidence restated from its carrier → a second reason for the same claim → per-object detail a ledger
+holds → how the statement changed. Never cut the load-bearing limit or the falsification condition.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
