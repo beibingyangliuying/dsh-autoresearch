@@ -2431,3 +2431,28 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **落在何处**：[`skills/direction-probe/SKILL.md`](../skills/direction-probe/SKILL.md) · [`skills/synthesis-plan/SKILL.md`](../skills/synthesis-plan/SKILL.md)（§1 触发、§2 ruler 第五项、§4.2 两行） · [`protocol.md`](../protocol.md)（Revision 36：§4、§7 的层枚举、`INV-IDEA-1`、`INV-IDEA-2`、§9 改写） · [`surface.md`](../surface.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`cordis.patch.yml`](../cordis.patch.yml) · [`package.json`](../package.json) · [`README.md`](../README.md) · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs) · [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) · [`docs/plans/direction-probe.md`](plans/direction-probe.md)。
 
 **一处账目**：这一条原先只活在 §11 那张暂缓表里，`docs/backlog.md` 没有登记过它；本轮把暂缓表那一行改成"已解除一半"并指到这里，不另开 backlog 行。
+
+## 87. 记录可以原地修：把"修复"和"修订"分开（Revision 37，2026-10-23）
+
+**起因**：junhan 提出这套预设有一个 append 而非 inplace 的倾向——"修错字、修断公式"这类动作完全没必要走"退休 + 新写"——要求逐项裁定哪些地方可以放松。核查后确认：这条倾向不是一条明文原则，而是常驻规则 4（不许另起并行结构）与规则 7（不许覆盖，要记 revision + reason）夹出来的形状；台账其实早就是"原地推进 + 日志留历史"，只有库内笔记是"不可变 + 接替"。
+
+**判据**：这条记录是不是某个判断的**唯一载体**？论文的转写、run 的产物路径、台账读态的真值在别处，可以原地改；属主裁定、`verdict` 的变更史、契约条款的真值只在它自己身上，仍要留旧版或留一行 `old → new`。
+
+**裁定（逐项，2026-10-23，junhan）**：
+1. 库内节笔记：**修复原地、修订接替**。主张不变 → `--repair`；主张变了 → `--retire` + `--replaces`。
+2. `/reviewed`：修复不失效；动了符号、数字或等式才退回草稿。
+3. 台账行：`itemKey` / `year` / `found via` 的转写错误可原地修，仍写一条 reading log。
+4. adoption 台账：转写/锚点可修，裁定变了仍加日期行。
+5. run card：`Protocol` / `Command` / `Artifacts` 可修，`Observed` / `Validity` / `Verdict` 不可。
+6. 规范文档：零语义修正（错字、格式、死链）不升 Revision。
+7. 补闸：**属主自己的笔记只开机械修复**——`/reviewed` 只存在于 agent 正文，属主笔记没有可撤销的接受标记。
+8. 痕迹：每次修复加 `/repaired`（幂等、无日期、不影响 coverage 与 `authorityOf`/`provenanceOf`）。
+9. 提交：契约 → 工具 + 自测 → 纪律/文档。
+
+**为什么不是所有记录都能修**：`--tidy` 仍然不存在，它错在工具替人猜公式的意思；`--repair` 是人给正文、声明类别、plan 打印旧块，两者不是同一件事。属主笔记不开 substantive：agent 改完它会继续以 `record` 身份支撑 adoption，而读的人看不出来。
+
+**落点**：[`protocol.md`](../protocol.md)（Revision 37：§3 规则 7、§4 sections 行、§6 标签与记录条款、§8 `INV-NOTE-4` / `INV-EVID-5` / `INV-EVID-6` / `INV-ADOPT-3`）· [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs)（`--repair`、`REPAIRED_TAG`、`repairTags`、`changeClass`）与其自测第 [3b] / [10] 组 · [`skills/section-notes/SKILL.md`](../skills/section-notes/SKILL.md) · [`skills/adoption-ruling/SKILL.md`](../skills/adoption-ruling/SKILL.md) · [`skills/experiment-protocol/SKILL.md`](../skills/experiment-protocol/SKILL.md) · [`skills/reading-triage/SKILL.md`](../skills/reading-triage/SKILL.md) · [`project-template/references/README.md`](../project-template/references/README.md) · [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)（重生成）。
+
+**已知边界**：数学式**外面**的符号替换（`alpha` → `α`）机械判定看不见，必须由 agent 声明 `--substantive`；这道闸是下限，不是上限。
+
+**未做**：没有在真库上执行一次修复（新路径由 stub 覆盖，真库写仍要下一次逐条授权）；`INV-EVID-6` 的"按课题重复"没动——那是重复，不是改写，要动得单独一轮。

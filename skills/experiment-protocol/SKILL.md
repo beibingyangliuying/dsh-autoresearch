@@ -66,6 +66,7 @@ location — with these fields:
 | `Command` | the exact command, copy-pasteable |
 | `Config / seed` | parameters, versions, seed or latent-variable handling |
 | `Artifacts` | path(s) the run wrote, and the copy kept with the record if it wrote outside it |
+| `Corrections` | one dated line per locator that was wrong: field · old → new · why · who. Only `Protocol`, `Command` and `Artifacts` are correctable; `Observed`, `Validity` and `Verdict` are never repaired |
 | `Observed (facts)` | numbers read from the artifact, with how they were read |
 | `Interpretation (inference)` | what you think it means — marked as inference |
 | `Validity` | was this run valid, and what check establishes that |
@@ -154,6 +155,9 @@ rejected path and why.
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - Never mutate, migrate, overwrite, or vacuum an original input database or its manifest.
+- **A corrected locator resolves to the artifact the card already cited** — same command, same bytes.
+  Changing which artifact is cited is a different run, not a correction; `Observed`, `Validity` and
+  `Verdict` are never repaired, and the correction states the old value beside the new one.
 - Keep the artifact, not just the summary: a number without its file cannot be audited later.
 - If a subagent runs the experiment, it hands back **paths and commands**, never a long inline
   report — see `subagent-contract` for why (a long tool result loses its middle when the context is

@@ -194,8 +194,10 @@ also the only thing `--unclaim` will do: a note carrying a single tag is a claim
 is still the owner's to settle. **A body an agent writes is tagged `/agent-note`**, and stays a
 candidate-grade draft until the owner accepts it with `--review`, which adds `/reviewed` and never
 touches a word; `--rewrite` upgrades an **import** or an unreviewed draft in place (no workspace
-backup: the paper remains the source); a claimed record and a reviewed note are retired rather than
-rewritten; `--tidy` is gone; and `--delete` erases a `/retired` note permanently, one note at a time,
+backup: the paper remains the source); a claimed record is **repaired** in place with
+`--repair --mechanical|--substantive`, which keeps its key, claim and provenance, adds `/repaired`,
+and clears `/reviewed` when a symbol, a number or an equation changed, while a change of claim is
+still a retirement and a replacement; `--tidy` is gone; and `--delete` erases a `/retired` note permanently, one note at a time,
 after printing the plan. A write reports one of three answers — written and read back, refused with
 nothing written, or sent but unconfirmed with the key it may have left — so a failed read-back is
 never read as "nothing was written" — and every write path above answers that way, not only a note: a

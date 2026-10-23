@@ -155,7 +155,8 @@ Every item also states **what would refute it** (the observation after which we 
 
 - The paper's form is transcribed **verbatim**; our form lives in its own field. Normalizing a formula
   in place is how a formula drifts while looking transcribed — the same reasoning that makes a
-  section-note repair mechanical or nothing.
+  section-note repair declare its class and drop the owner's acceptance when it touches a symbol or a
+  number.
 - The copy's equation is **ambiguous** — a scanned symbol, a lost delimiter, a missing equation number
   the surrounding text does not pin — → the item is `ambiguous`, blocked, and reported. **Do not
   reconstruct it.** A formula nobody can read is a gap; a formula someone guessed is a defect that
@@ -178,9 +179,11 @@ a result that depends on data      we do not have that data
 
 ### 3.7 Lifecycle, staleness, re-opening
 
-- **One doc per record**, keyed by the library item key. A second reading **appends** items. A ruled item
-  is never reworded: a changed ruling is a new dated line beside the old one, so the history of the
-  judgement survives.
+- **One doc per record**, keyed by the library item key. A second reading **appends** items. A ruled
+  item's **verdict** is never reworded: a changed ruling is a new dated line beside the old one, so the
+  history of the judgement survives. Its **transcription** may be corrected in place — a wrong
+  locator, a mis-copied symbol, an anchor that resolves to nothing — recorded as a dated correction
+  line in `## 裁定`; a correction that changes no verdict is not a ruling (`INV-ADOPT-3`).
 - **Item IDs are stable**: `A-<itemKey>-NN`. Never renumber. A deleted candidate leaves its number
   unused and the doc says so.
 - **A re-run that changes nothing reports `already recorded` and writes nothing** — the same rule a
@@ -245,6 +248,7 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 | The item duplicates one in another record's doc | Link the two; do not copy the item. Two copies of one formula diverge. |
 | The paper's own code is under a licence that forbids reuse | Re-implementing the formula is the study's business; copying the code is not. Record the line and the choice. |
 | `implemented` is claimed and the target code does not exist | Report `implemented` as false and keep the item `ruled`. The ledger never runs ahead of the code. |
+| The section note an item rests on was repaired substantively | Its `/reviewed` is cleared, so the item is a `candidate` again until the owner reviews the note. Name the item and the note. |
 
 ## 5. Wording discipline
 

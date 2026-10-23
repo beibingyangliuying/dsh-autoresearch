@@ -232,6 +232,8 @@ readers of the same paper disagree quietly about notation.
 - State which sections were read and which were not reached
 - Prefer an existing note over a fresh read of the same section, and say which rung answered
 - Append a `## Reading log` line when a verdict changes, and leave the old judgement in place
+- Correct a transcription error in `itemKey` / `year` / `found via` **in place**, and write the same
+  dated line with the old and new values: a wrong key makes the row unreachable by `grep`
 - When the round spans papers, report what was screened, the round's estimate against the eight-slice
   budget, and the bill as read — before handing anything to a child (§3.8)
 
@@ -297,7 +299,8 @@ answer to the owner.
 - **Never write the ledger before the reading.** A row written first is a plan, and a plan in the
   ledger's columns reads as a judgement that was made.
 - **A row is never deleted.** A judgement that changes gets a dated `## Reading log` line beside it, so
-  the history of why it changed survives.
+  the history of why it changed survives. A transcription error in the key columns is corrected in
+  place, and that same line records the old and the new value.
 - **A subagent may read; it may not judge.** When §3.8 crosses the round's budget, the child returns
   the sections, the sentences and the offsets it covered, and the parent writes the row — one pair of
   hands on the ledger.
@@ -318,6 +321,8 @@ answer to the owner.
 - [ ] Sections not reached are reported as not reached, not as "no note needed"
 - [ ] Every slice is named by the offsets it covered, and nothing was quoted from a pruned slice
 - [ ] A changed verdict produced a dated `## Reading log` line, and no row was deleted
+- [ ] Any correction to `itemKey` / `year` / `found via` was made in place, with the old and new values
+  on the same dated log line
 - [ ] A round spanning papers reported its screening, its estimate against the eight-slice budget, and
   the bill as read; no paper was started inline after the budget was crossed, and none was handed over
   once started

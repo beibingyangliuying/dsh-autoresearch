@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). A claim round never rewrites, merges or reformats an imported note; a rewrite happens only in Part II, when the owner names that section.
+description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). A claim round never rewrites, merges or reformats an imported note; a rewrite happens only in Part II, when the owner names that section. A record is repaired in place when the correction changes no claim (`/repaired`), and a repair that touches a symbol, a number or an equation clears `/reviewed`.
 ---
 
 # section-notes — keep a paper's record section-addressable
@@ -23,12 +23,15 @@ This skill has two halves, and **the request decides which one runs**:
 |---|---|---|
 | A record carries notes pasted in from outside — a browser, a chat model, another editor | **Part I — claim and report** | a `/section-N` tag on a note that already exists, and nothing else |
 | The owner names a section and asks for a note to be written from the paper | **Part II — generate** | one new note body for that section, or a rewrite of an **import** or an **agent draft**; every body it writes carries `/agent-note` |
+| The owner asks to correct an error in an existing note — a mis-transcribed symbol, a broken formula, a citation that no longer resolves | **Part II — repair** | the corrected body **in place**, under `--repair`: `/repaired` is added, and `/reviewed` is cleared when a symbol, a number or an equation changed |
 | It is not clear which | neither: report and ask | nothing |
 
 **Part I is the default, and it is where most rounds stop.** It writes no note body, never rewrites,
 merges, retires or reformats an imported note, and never opens the paper's PDF. Its rules are §2 and
 §2.1, its report is §6.1, its checklist is §8.1. Part II's criteria (§3), wording (§5) and generation
-checks (§8.2) apply **only** while Part II is running.
+checks (§8.2) apply **only** while Part II is running. A repair is Part II's smallest act: it changes
+how the note states something, never what it claims, and it keeps the note's key, its section and its
+provenance.
 
 A claim is a write to the reference library: one note per invocation, dry run first, under the owner's
 authorization (`INV-EVID-3`). The report states how many tags the round wrote.
@@ -43,6 +46,9 @@ authorization (`INV-EVID-3`). The report states how many tags the round wrote.
   factor you need the exact definition of). This is **Part II**.
 - **The owner asks for a section to be explained again**, because the note that claims it explains it
   badly or its formulas are unreadable. This is **Part II** as well.
+- **A record carries a transcription error** — a symbol the paper does not use, a formula whose
+  delimiter broke, a citation that resolves to nothing — while what the note claims still holds. This
+  is **Part II — repair**: correct the text in place and keep the note, its claim and its provenance.
 
 **Not applicable**: deciding whether a paper is worth reading to its end — that is a per-question
 judgement made section by section and recorded in the topic's ledger (`literature-recon` appends the
@@ -77,6 +83,10 @@ Read-only, before claiming or writing anything:
    **The tool does not parse prose.** A note is coverage only if it carries `/section-N`; a note
    without one is `unknown`, and the judgement is yours. The tool's `covered` line is a claim about a
    tag, not about the note's content.
+
+   A note carrying `/repaired` was corrected in place: its claim and its provenance are what they
+   were, and when the correction touched a symbol, a number or an equation it no longer carries
+   `/reviewed`, so it reads as a draft and supports no more than a candidate.
 
 2. **Read every `unknown` note before claiming or writing.** Take its first paragraph from the plan; open the whole
    note with `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000` when the paragraph is not
@@ -236,12 +246,12 @@ is in the report — and **never split a section to stay inside that range**.
 - **Four classes, and the tags say which.** The class is what decides whether a body may be replaced
   in place:
 
-  | Tags on the note | Class | Rewritten in place? |
-  |---|---|---|
-  | `/section-N` + `/imported` | an import the owner pasted | yes |
-  | `/section-N` + `/agent-note` (no `/reviewed`) | an agent draft | yes |
-  | `/section-N` + `/agent-note` + `/reviewed` | a record the owner accepted | **no** — retire and replace |
-  | `/section-N` alone | the owner's record | **no** — retire and replace |
+  | Tags on the note | Class | Rewritten in place? | Repaired in place? |
+  |---|---|---|---|
+  | `/section-N` + `/imported` | an import the owner pasted | yes | no — rewrite it |
+  | `/section-N` + `/agent-note` (no `/reviewed`) | an agent draft | yes | no — rewrite it |
+  | `/section-N` + `/agent-note` + `/reviewed` | a record the owner accepted | **no** | **yes** — mechanical keeps `/reviewed`, substantive clears it |
+  | `/section-N` alone | the owner's record | **no** | **yes, mechanically only** |
 
   A note carrying both `/imported` and `/agent-note` is an import an agent rewrote: it stays
   rewritable, and its provenance is `agent`, because the prose is the agent's now.
@@ -277,9 +287,22 @@ is in the report — and **never split a section to stay inside that range**.
   does not change, and no workspace backup is written: a section note transcribes the paper, the paper
   remains the source, and the plan prints the old first block before the write. If the note changed in
   the application while the draft was being written, the tool refuses rather than overwrite it.
-- **A record is not rewritten in place.** An owner's note and a reviewed agent note are records: retire
-  one and write the replacement (§3.3). `--review --note <key> --undo` is the way back to a draft when
-  the owner withdraws their acceptance; it changes a tag, never a word.
+- **A record is not rewritten in place, and it may be repaired.** An owner's note and a reviewed agent
+  note are records. `--repair --note <key> --file <body> --reason "<why>"` corrects one without
+  replacing it: the key, the claim and the provenance stay, `/repaired` is added, and the plan prints
+  the old and new first blocks with the reason. **Declare the class**, exactly one of:
+  - `--mechanical` for a correction that changes no symbol, number or equation — a misspelling, a
+    broken delimiter, a citation that resolves to nothing. It keeps `/reviewed`.
+  - `--substantive` for one that does change a symbol, a number or an equation. It clears
+    `/reviewed`, so the body reads as a draft until the owner accepts it again.
+
+  The tool refuses `--mechanical` when the change carries a digit, falls inside `$…$`, or rewrites
+  more than half the body, and it reports which one it saw. **A record the owner wrote is repaired
+  mechanically only**: no tag records the owner re-accepting a changed statement, so a substantive
+  correction there is a retirement and a replacement, or the owner's own edit in the application.
+  Anything that changes what the note claims is a retirement and a replacement too — that is the line
+  between a repair and a revision. `--review --note <key> --undo` is the way back to a draft when the
+  owner withdraws their acceptance; it changes a tag, never a word.
 - **The formula shape is the agent's responsibility**: `$…$` inline, `$$` alone on its own lines for
   display, every symbol defined at first use, the paper's own equation number in prose. If the text
   layer is unreadable, climb the reading ladder and read the rendered page as an image (§7) before
@@ -292,6 +315,8 @@ is in the report — and **never split a section to stay inside that range**.
 - Report the section list **before** writing: ordinal, the paper's own heading, and note / no-note with
   the reason for each.
 - Read every `unknown` note before claiming or writing; say which ones you claimed, rewrote, or retired.
+- Prefer **repairing** a record to replacing it when the claim did not change: one note stays one note,
+  and a later reader can see the correction as `/repaired` rather than reconstructing two notes.
 - Keep one note per top-level section, and name the section by the ordinal the paper itself uses.
 - Say which attachment the text came from, and how many characters of it were read.
 - Say which notes are agent drafts and whether the owner has reviewed them. An unreviewed
@@ -319,6 +344,9 @@ record carries an attachment: it reads the notes, not the paper. Two rows belong
 | The text layer is unreadable, or a formula only exists in the image | Read the rendered page as an image (`--render` + `read_image`); say which rung answered. Do not trust the text layer for mathematics. |
 | A create is refused because the record carries `unknown` notes | Read them first. If none explains the section, `--acknowledge-unknown "<what you read, and why none covers §N>"` is the only way past the refusal — never claim "no note exists" from `covered: none`. |
 | The section is claimed by an **unreviewed agent draft** | Report it as a draft, not as the owner's note. Do not treat its prose as settled, and do not rest a record on it. |
+| The correction would change what the note claims | **Not a repair.** Retire it and write the replacement with `--replaces`: the claim is the record, and a changed claim is a revision. |
+| The note is the owner's own record, and the fix changes a symbol, a number or an equation | Report it. Retire and replace, or the owner corrects their own note in the application: no tag records their re-acceptance here. |
+| The note is an import or an unreviewed draft | `--rewrite`, not `--repair`: there is no acceptance to preserve, and rewriting is the shorter path. |
 
 ## 5. Wording discipline (Part II)
 
@@ -370,10 +398,14 @@ The artifact is the notes on the library record. The report is what a later roun
    reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
    was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
    stored nowhere else: this section is where it is written down.
-9. `## Provenance` — one line per note this round wrote or rewrote: note key · section · `agent` or
-   `agent+reviewed`, quoted from the read-back, plus the tags it reads back with. This is the line a
-   later ruling quotes; a body with no `/agent-note` in the read-back is a write to report as failed,
-   not as done.
+9. `## Repaired` — one line per note corrected in place: note key · the section it claims ·
+   `mechanical` or `substantive` · **the change** (`old → new`, cut to the first difference) · whether
+   `/reviewed` was kept or cleared · the reason. A substantive repair clears the owner's acceptance,
+   so this section also names the adoption items that now rest on a draft.
+10. `## Provenance` — one line per note this round wrote, rewrote or repaired: note key · section ·
+    `agent` or `agent+reviewed`, quoted from the read-back, plus the tags it reads back with. This is
+    the line a later ruling quotes; a body with no `/agent-note` in the read-back is a write to report
+    as failed, not as done.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -415,6 +447,12 @@ The artifact is the notes on the library record. The report is what a later roun
   body; `--review --note <key> --undo --write` puts it back. Only an `/agent-note` has that state, the
   body is never touched, and a reviewed note is a record. The owner's sentence is the ground; the tag
   is where a later round reads it.
+- **A repair states its class, and the tool checks the claim.** `--repair` takes exactly one of
+  `--mechanical` or `--substantive`, plus `--reason`, and it refuses `--mechanical` when the changed
+  span carries a digit, falls inside `$…$`, or rewrites more than half the body. Read that refusal as
+  the answer to "which class is this", not as an obstacle: re-run with `--substantive`, or retire the
+  note if the claim changed. `--repair` never writes a second note and never adds a `/replaces-`
+  pointer — if the plan offers one, the request was a revision, not a repair.
 - **A failed write is reported, never worked around.** If the tool fails, quote the command, the exit
   code and the output, and stop. Do not hand-roll a write script: a write outside this tool's gate has
   no read-back, and the library keeps no trace of which hand wrote it. A workaround the owner
@@ -483,7 +521,14 @@ The artifact is the notes on the library record. The report is what a later roun
 - [ ] Sections the reading never reached are reported as `not reached`, with the ledger verdict that
   stopped it, rather than as "no note needed"
 - [ ] Every note carries `/section-N` and the paper's own ordinal and heading
-- [ ] Every note this round wrote or rewrote carries `/agent-note`, quoted from the read-back
+- [ ] Every note this round wrote or rewrote carries `/agent-note`, quoted from the read-back; a
+  repaired note keeps the provenance it already had
+- [ ] Every repair declared `--mechanical` or `--substantive`, and the class matches what the change
+  did: no digit, no math and no half-body rewrite was passed off as mechanical
+- [ ] A substantive repair cleared `/reviewed`, and the report names the adoption items that now rest
+  on a draft
+- [ ] A repair kept the note's key, its `/section-N` and its provenance, and wrote no `/replaces-`
+  pointer
 - [ ] No `/reviewed` was written by this round: that tag is the owner's, and only `--review` after
   their answer may add it
 - [ ] A create on a record with `unknown` notes was preceded by reading them, or
@@ -516,8 +561,13 @@ The artifact is the notes on the library record. The report is what a later roun
 - Do not delete a note that is not retired, and do not delete one to free its section: retiring frees
   it, and deletion is permanent. Do not retire a note you have not read: retiring asserts that the note
   is wrong, and that is a claim you have to be able to state the grounds for.
-- Do not rewrite a `/section-N` record in place; retire it and write the replacement. Only an
+- Do not rewrite a `/section-N` record in place: **repair** it (`--repair`, with its class and reason)
+  when the claim did not change, and retire it and write the replacement when it did. Only an
   `/imported` note and an unreviewed `/agent-note` draft are rewritten in place.
+- Do not call a repair a revision, or the reverse: a changed claim is a retirement even if the diff is
+  one word, and a corrected formula is a repair even though it is a large edit.
+- Do not repair a record the owner wrote substantively. No tag records their re-acceptance; retire and
+  replace, or leave it to them.
 - Do not present an unreviewed `/agent-note` as the owner's note, and do not add `/reviewed` yourself:
   that tag records the owner's judgement, and an agent that writes it has ruled for them.
 - Do not call an agent draft an import, and do not let `--claim` add `/imported` to one.

@@ -12,7 +12,10 @@ nothing here decides whether a paper is used.
   produce them; a file here copies the value it was given and never refines it. A round that wants a
   different grade re-reads the paper and says so, rather than editing the word.
 - **Rows are added or advanced, never rewritten.** The reading log below the table is what makes a changed
-  judgement traceable; a previous round's note is never edited by a later one.
+  judgement traceable: the state columns (`grade`, `depth`, `verdict`, `basis`, `re-open if`, `date`) are
+  advanced in place and the log carries the history. A transcription error in the key columns (`itemKey`,
+  `year`, `found via`) is corrected in place with the same dated line — a wrong key is a row no later
+  `grep` can find, so it is worth one correction and one line rather than a new row beside it.
 - **Adoption is decided elsewhere.** What may be borrowed, on what terms, and the number that proves the
   code belongs to the adoption chain and its own ledger. A row here saying a paper was read is not a claim
   that anything was taken from it.
@@ -30,7 +33,7 @@ One row per (research question × paper), keyed by the library `itemKey`:
 
 | Column | Written by | Means |
 |---|---|---|
-| `itemKey` `year` `found via` | the round that found it, append-only | which record, which year, and which query or collection produced it |
+| `itemKey` `year` `found via` | the round that found it; a transcription error may be corrected with a dated log line | which record, which year, and which query or collection produced it |
 | `grade` | the round that read it | how firmly a sentence about this paper stands — the grade the `literature-recon` skill defines |
 | `depth` | the round that read it | how far the paper itself was read |
 | `verdict` | a reading round | why the reading stopped there, or nothing while the paper is still queued |
