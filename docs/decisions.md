@@ -2119,6 +2119,6 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 
 **落点**：[`protocol.md`](../protocol.md)（Revision 38：§3 规则 1/5/12、§4 产物形状、§8 `INV-DISC-2` / `INV-DOC-2`）· [`cordis.patch.yml`](../cordis.patch.yml)（persona 规则 1/5/12、头部注释）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（11 → 12）· 12 条纪律的 §6（`metadata-query` 无固定节，未动）· [`skills/progress-sync`](../skills/progress-sync/SKILL.md) §6.4 · [`project-template`](../project-template/00_scoping.md)（`00_scoping` / `references/README`）· [`docs/coverage.md`](coverage.md)（重扫；README 无陈旧声明）· [`docs/plans/compaction.md`](plans/compaction.md)。
 
-**已知边界**：模板的"空节 / 预算"**没有**机器护栏——文本质量不是机械可判的，不为它造脆判据；现有 80 篇 Documents 不批量重写，由下一次 `progress-sync` 按同主题合并并写回执。
+**已知边界**：模板的"空节 / 预算"**没有**机器护栏——文本质量不是机械可判的，不为它造脆判据；现有 81 篇 Documents 不批量重写（含本轮稍后自动生成的一篇），由下一次 `progress-sync` 按同主题合并并写回执。
 
 **未做**：仓库 docs 的条目压缩（B4，下一轮）；真实课题上的第一轮实测（判据：一轮之后 journal ≤ 60 行、同主题不再出现第二篇）。

@@ -714,7 +714,7 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 
 **仍然未做**：
 
-- 80 篇旧 Documents 的合并**只出了清单**（[`plans/documents-merge.md`](plans/documents-merge.md)），未执行；
+- 81 篇旧 Documents 的合并**只出了清单**（[`plans/documents-merge.md`](plans/documents-merge.md)），未执行；
   且闲时 review 可能在每轮自动新建一篇（推断，未做对照实测）。
 - `decisions.md` / `releases.md` 旧条目的压缩未做（B4）。
 - Revision 38 的预算与三档时钟**没有在真实课题上跑过**；判据是一轮之后 journal ≤60 行、
