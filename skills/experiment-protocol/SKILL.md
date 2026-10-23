@@ -148,9 +148,11 @@ is disproportionately often the one that would have tested the load-bearing conf
 
 ## 6. Report shape
 
-The card in §3.1, plus one line appended to the round's journal pointing at it. When the run decides
-a direction, the outcome also goes to mnemon Documents through `progress-sync` — including the
-rejected path and why.
+The card in §3.1 is the artifact; one line in the round's journal points at it, never a copy of it.
+When the run decides a direction, the outcome also goes to mnemon Documents through `progress-sync` —
+the rejected path and why.
+
+**Budget** — ≤80 lines of prose (the command block aside). Past it, compact before writing.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

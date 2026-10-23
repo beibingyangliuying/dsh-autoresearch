@@ -98,6 +98,9 @@ the original deliverable's verdict.
 **Return** (what you require): `report path` · `artifact paths` · `exact command` ·
 `observed numbers` · `not done` · `surprises` · `own confidence and why`.
 
+The return is a message with paths, not a document and not pasted content: the parent reads the
+artifact before treating anything in it as a fact.
+
 The parent then writes the accepted part into the study's record through `progress-sync`, keeping
 the attribution.
 

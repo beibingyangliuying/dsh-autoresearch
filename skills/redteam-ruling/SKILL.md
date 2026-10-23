@@ -80,17 +80,20 @@ State what was received, what was not, and therefore which parts the challenge *
 
 ## 6. Report shape
 
-Artifact: `<layer root>/rulings/ruling_<target>_<YYYYMMDD>.md`, where the **layer root** is `research/` if
-the study has one and the study root otherwise (protocol §7).
+**Artifact** — `<layer root>/rulings/ruling_<target>_<YYYYMMDD>.md`, where the **layer root** is
+`research/` if the study has one and the study root otherwise (protocol §7).
 
-Fixed sections:
+1. `## Claim under challenge` — the **original sentence, quoted**, plus its source
+2. `## Objections` — one row each: the sentence it targets · the evidence or falsification path (the
+   locator) · its strength. The locator column is the evidence list; the same paths are not listed again
+3. `## Candidate verdicts` — `falsified` / `insufficient evidence` / `outside current scope`, one line
+   each with its reason
 
-1. `## Claim under challenge` — the **original sentence, quoted** + its source
-2. `## Objections` — item by item; each with: which sentence it targets · the evidence or falsification path · its strength
-3. `## Evidence list` — locatable (file path / literature identifier)
-4. `## My independence and limits` — what I received, what I did not, what I cannot reach
-5. `## Candidate verdicts` — `falsified` / `insufficient evidence` / `outside current scope`, each with its reason
-6. `## What I do not claim` — explicit boundary-keeping (no improving the original claim, no designing experiments for the author, no issuing the ruling)
+**One line each** — `Independence and limits` (what was received, what was not, what cannot be reached)
+and `What I do not claim` (no improving the claim, no designing experiments for the author, no issuing
+the ruling).
+
+**Budget** — ≤100 lines. Past it, compact before writing.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

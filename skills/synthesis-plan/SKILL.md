@@ -99,10 +99,11 @@ confident about is usually the inference.
 
 ## 6. Report shape
 
-Fixed sections of the executable draft:
+Fixed sections of the executable draft; `Question being answered` is the header line, and `Open items`
+is written only while something is undecided:
 
 ```text
-Question being answered   (one line, from the scoping document)
+Question being answered   (header, one line, from the scoping document)
 Chosen path               (one sentence)
 Why it won                (the criteria, and the alternatives' scores)
 Rejected                  (what, and on what grounds)
@@ -110,8 +111,9 @@ Acceptance criterion      (what counts as success; what would refute it)
 First step                (concrete, startable now)
 Risks and fallbacks       (each risk with its response)
 Budget                    (steps / runs / time, and the stop condition)
-Open items                (what is still undecided, and who decides)
 ```
+
+**Budget — ≤100 lines.** Past it, link the evidence instead of restating it.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

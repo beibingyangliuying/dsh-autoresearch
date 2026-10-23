@@ -264,21 +264,25 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 
 ## 6. Report shape
 
-The artifact is `<layer root>/adoption/<recordKey>.md`, plus the line it contributes to
-`<layer root>/adoption/INDEX.md`. The report is what a later round needs:
+**Artifact** — `<layer root>/adoption/<recordKey>.md`, plus one line in
+`<layer root>/adoption/INDEX.md`. It states where the record stands now:
 
-1. `## Record` — key, title, the ledger's `grade` and `depth`, the attachment read and how many
-   characters, the section notes read (**each with its provenance**), and the sections not covered with
-   how many `unknown` notes were read before saying so.
-2. `## Ruler` — what was checked: the ledger row, the section notes, scoping document, domain invariants,
-   existing adoption doc, existing rulings.
-3. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
-4. `## Rulings` — what the owner ruled this round, dated, item by item.
-5. `## Refusals and gaps` — every ambiguous formula, undefined symbol, uncheckable precondition, missing
-   note, missing target, and domain conflict.
-6. `## Index` — the module-index lines added or changed, or "none".
-7. `## Read-back` — the path and the item count as it reads back after the write. The read-back is the
-   only evidence the write happened.
+1. `## Record` — key, title, the ledger's `grade` and `depth`, and the section notes the items rest on
+   (**each with its provenance**). One `Ruler:` line names what was checked — the ledger row, the notes,
+   the scoping document, the domain invariants, this file, the rulings.
+2. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
+3. `## Rulings` — the owner's rulings, dated, one row each. A correction row states the old value beside
+   the new one; a verdict that changed is a new dated row, never a rewrite of the old one.
+4. `## Refusals and gaps` — only what still blocks a decision: an ambiguous formula, an undefined
+   symbol, an uncheckable precondition, a missing note or target, a domain conflict, and every section
+   no note covers with how many `unknown` notes were read before saying so.
+
+**Closing line** — `read-back: <path> · <n> items`, the only evidence the write happened.
+
+**Answered to the owner, not written** — the INDEX lines this round added or changed.
+
+**Budget** — ≤80 lines of prose (the candidate and ruling tables aside). Past it, compact before
+writing: each item's current state, not the history of how it got there.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

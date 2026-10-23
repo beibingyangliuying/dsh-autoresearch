@@ -365,47 +365,38 @@ record carries an attachment: it reads the notes, not the paper. Two rows belong
 The artifact is the tags on the record plus this table. **No file is written for it**: a gap is
 recomputable from the tags, so a saved copy would only age. Where the owner wants it kept, they say so.
 
-1. `## Record` — key, title, and where the notes came from if the owner said.
-2. `## Coverage` — one line per top-level section of the paper: ordinal · the paper's own heading ·
+1. `## Coverage` — one line per top-level section of the paper: ordinal · the paper's own heading ·
    **the note key that claims it, or `none`** · what the claim was judged on.
-3. `## Claimed` — note key · section, one line each, or "none", with the tag read back after the write.
-4. `## Left alone` — every note read this round and not claimed, with the reason: no section number ·
-   the ordinal disagrees · more than one section · whole-paper summary · subsection key · nothing to
-   check the ordinal against.
-5. `## Missing` — the sections with no note, in the paper's own order. **This is the hand-off**: the
-   owner brings an explanation for each from wherever they write them, and nothing is generated here.
-6. `## Not established` — the section boundaries this round could not settle, and what would settle
-   them.
+2. `## Claimed` — note key · section · the tag read back after the write, or `none`.
+3. `## Missing` — the sections with no note, in the paper's own order. **This is the hand-off**: the
+   owner brings an explanation for each, and nothing is generated here.
+
+**One line each, only when non-empty** — `Left alone` (a note read and not claimed: no section number ·
+the ordinal disagrees · more than one section · whole-paper summary · subsection key · nothing to check
+the ordinal against) and `Not established` (a boundary this round could not settle, and what would).
 
 ### 6.2 Part II — generation report
 
-The artifact is the notes on the library record. The report is what a later round needs:
+The artifact is the notes on the library record. The report states what now holds:
 
-1. `## Record` — key, title, the attachment read and how many characters of it.
-2. `## Coverage` — one line per section of the paper that matters: ordinal · the paper's heading ·
+**Header line** — `record: <key> · <title> · <attachment read, characters>`.
+
+1. `## Coverage` — one line per section of the paper that matters: ordinal · the paper's heading ·
    **the note key that claims it, or `none`** · what it was judged on. Counted per **top-level** section.
-3. `## Unknown notes` — every note read from the plan's `unknown` list, and what was done with it:
-   claimed · rewritten · retired · left as a non-section note.
-4. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped / not reached** and
+2. `## Sections` — one line each: ordinal · the paper's heading · **note / skipped / not reached** and
    the reason. A section the reading never reached is `not reached`, and the line names the ledger's
    `verdict` that stopped the reading.
-5. `## Notes written` — note key · section · characters, one line each, or "none".
-6. `## Refusals and what was left alone` — every duplicate, ambiguous tag, missing file, unreadable
-   boundary, and any note left as an import.
-7. `## Read-back` — each note key and size as it read back after the write, which is the only evidence
-   that the write happened.
-8. `## Retired` — one line per note retired this round: note key · the section it claimed · **the
-   reason** · the key of the note that replaced it, or `nothing names a replacement yet` · **whether it
-   was then deleted** and the read-back that proved it. A tag cannot hold prose, so the reason is
-   stored nowhere else: this section is where it is written down.
-9. `## Repaired` — one line per note corrected in place: note key · the section it claims ·
-   `mechanical` or `substantive` · **the change** (`old → new`, cut to the first difference) · whether
-   `/reviewed` was kept or cleared · the reason. A substantive repair clears the owner's acceptance,
-   so this section also names the adoption items that now rest on a draft.
-10. `## Provenance` — one line per note this round wrote, rewrote or repaired: note key · section ·
-    `agent` or `agent+reviewed`, quoted from the read-back, plus the tags it reads back with. This is
-    the line a later ruling quotes; a body with no `/agent-note` in the read-back is a write to report
-    as failed, not as done.
+3. `## Notes written` — note key · section · characters, one line each, or `none`.
+4. `## Changes` — one table row per note that left the happy path (unknown note · refusal · retired ·
+   repaired · provenance): note key · action · **the reason** · the replacement or `nothing names one
+   yet` · the read-back that proved it. A tag cannot hold prose, so a retirement's reason is stored
+   nowhere else — it is a row here, not its own section. A substantive repair names the adoption items
+   that now rest on a draft.
+
+**Closing line** — `read-back: <n> notes` with each note's tags as they read back. A body with no
+`/agent-note` in the read-back is a write to report as failed, not as done.
+
+**Budget** — ≤100 lines of prose (the Coverage and Sections tables aside).
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -506,7 +497,7 @@ The artifact is the notes on the library record. The report is what a later roun
 - [ ] Any `ambiguous` note was either resolved with `--unclaim`, one tag at a time and quoted from the
   plan, or reported unresolved with both tags named — never guessed at, and no single-tag note was
   unclaimed
-- [ ] Every note left unclaimed appears in `## Left alone` with its reason
+- [ ] Every note left unclaimed is reported, one line each, with its reason
 - [ ] The `## Missing` list is in the paper's own order, and nothing in it was generated
 - [ ] The number of tags the round wrote is stated
 - [ ] The round was not recorded as a reading in the topic's ledger

@@ -247,23 +247,25 @@ not looked.
 
 ## 6. Report shape
 
-The artifact is `<layer root>/directions/<topic>.md`; the report is what the next round needs. Fixed
-sections — Part I fills the first six, Part II adds the seventh:
+**Artifact** — `<layer root>/directions/<topic>.md`. It states the move ledger as it now stands:
 
 ```text
 ## Record            topic, layer root, which half ran, what triggers it (exclusion / owner asked)
-## Ruler             which tables were read, and which were not reachable
-## Seeds             S1-S6 table: class, locator, count; classes with nothing, stated as empty
-## Moves             ID · one line · seed · conjecture · kill condition · scores · state
-## Zero-cost kills   every move the non-goal screen or a ruling killed, one line of ground each
-## Scores            the table as scored; "none — screened only" when the ceiling was hit
-## Directions        (Part II only) ID · moves taken · moves dropped · the one new component · difference
-                    from a rejected direction · kill condition · cost · answer
-## Refusals          what could not become a move and why, with the [exploratory] list and its count
-## Read-back         the path and the row count as it reads back after the write
+## Seeds             S1-S6 table: class, locator, count (data; a class with nothing is one row, "none")
+## Moves             ID · one line · seed · conjecture · kill condition · scores · state · ground
+## Directions        (Part II) ID · moves taken · moves dropped · the one new component · the
+                     difference from a rejected direction · kill condition · cost · answer
+## Refusals          open refusals only, one line each, with a pointer to the reason
 ```
 
-**Read-back is the only evidence the write happened.** A path with no row count is a file nobody checked.
+A killed move stays as one row whose ground names the observation that killed it; it does not get a
+second section. `Zero-cost kills` and `Scores` are columns of `Moves`, not headings.
+
+**Answered to the owner, not written** — which tables were reachable when the ruler was read.
+
+**Closing line** — `read-back: <path> · <n> rows`, the only evidence the write happened.
+
+**Budget** — ≤80 lines of prose (tables aside). Past it, compact before writing.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

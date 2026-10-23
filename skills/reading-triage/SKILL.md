@@ -266,22 +266,22 @@ readers of the same paper disagree quietly about notation.
 
 ## 6. Report shape
 
-The artifact is the row and the log line. The report is what the next round reads:
+The artifact is the row and the log line, in the question's own file. The report is answered to the
+owner and is not saved as a second document:
 
-1. `## Record` — `itemKey`, title, and which attachment the reading used.
+1. `## Record` — `itemKey`, title, the attachment the reading used, and the sections read with their
+   own ordinals (the `depth` the row records).
 2. `## Question` — the question id and, in one line, the claim or number this paper was read for.
-3. `## Depth` — the sections read, their own ordinals and headings, and the offset range each slice
-   covered. When the round spans papers, also the screening result, the estimate against the
-   eight-slice budget, and the bill as read (§3.8).
-4. `## Verdict` — `enough` · `stop` · `park` · in progress, and the named target sentence (§3.3).
-5. `## Basis` — the section and the sentence that decided it; the rung that answered, when a note was
+3. `## Verdict` — `enough` · `stop` · `park` · in progress, and the named target sentence (§3.3).
+4. `## Basis` — the section and the sentence that decided it; the rung that answered, when a note was
    reused.
-6. `## Re-open if` — the condition that would make this row be judged again.
-7. `## Not judged` — what this round did not decide: sections not reached, a question not asked, a
-   quality judgement deliberately not made.
+5. `## Re-open if` — one line, written into the row.
 
-The ledger row and the log line are written to the question's own file; the report is the round's
-answer to the owner.
+When the round spans papers, the screening result and the bill against the eight-slice budget (§3.8)
+are one line each.
+
+**Not written** — what the round did not decide (sections not reached, a question not asked, a quality
+judgement deliberately not made): one line to the owner.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

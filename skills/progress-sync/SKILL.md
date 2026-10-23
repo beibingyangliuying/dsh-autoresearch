@@ -33,7 +33,7 @@ Write the result up as a "ruler" list.
 
 | Content | Destination | Reason |
 |---|---|---|
-| Conclusions (evidence-backed) | **mnemon Documents** | Project knowledge that can be revisited across sessions |
+| Conclusions (evidence-backed) | **mnemon Documents** — one document per topic, current state | Project knowledge that can be revisited across sessions |
 | **Rejected directions + the reason** | **mnemon Documents** | The single most valuable entry later: it prevents walking the same dead end twice |
 | Ruling outcomes (from `redteam-ruling`) | **mnemon Documents** | Decision grounds must be traceable |
 | The few cross-session essentials (notation conventions, current main line, user rulings) | **runtime memory** | Needed every round, but **size-capped** |
@@ -43,7 +43,9 @@ Write the result up as a "ruler" list.
 
 ### 3.1 Every record must carry
 
-**Type** (`fact` / `inference` / `[exploratory]`) · **Source** (which file / which ruling / which search) · **Time**.
+**Class** (the record's footing, stated once — a fact is the default and needs no mark; a block that
+differs from its neighbours is marked) · **Source** (which file / which ruling / which search) ·
+**Time**.
 
 ### 3.2 Rejected directions are mandatory
 
@@ -65,7 +67,8 @@ root otherwise (protocol §7).
 ### 4.1 Do
 
 - `search` before writing, so the same fact is not stored twice
-- Organise mnemon Documents **by topic**, not by round
+- Organise mnemon Documents **by topic**, not by round: a hit is updated in place, and a second
+  document on one topic is merged into the survivor rather than kept beside it
 - Keep each runtime-memory entry to one line and self-contained
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** force it in)
@@ -78,6 +81,7 @@ root otherwise (protocol §7).
 | It exceeds the runtime-memory cap | Push it down into Documents; **never** squeeze or truncate it into an unreadable line. |
 | It is long prose intended for runtime memory | Refuse; put it in Documents or a workspace file instead. |
 | A document only describes the state before a change that has already landed | Mark it superseded, or leave it out. It is a record, not a conclusion. |
+| A document on this topic already exists | Update it in place; a second document is a duplicate, not a backup. |
 
 ## 5. Wording discipline
 
@@ -88,28 +92,54 @@ root otherwise (protocol §7).
 
 ## 6. Report shape
 
-### 6.1 Workspace journal (append-only)
+### 6.1 Workspace journal (append-only, one file per round)
 
-`<layer root>/journal/<YYYYMMDD>_<short-topic>.md`, fixed sections:
+`<layer root>/journal/<YYYYMMDD>_<short-topic>.md`. Sections are optional — write only the ones that
+carry content, in this order:
 
 1. `## Goal of this round`
 2. `## What was done`
 3. `## Observed (facts)`
 4. `## Inferences`
-5. `## Exploratory ideas` (always marked `[exploratory]`)
+5. `## Exploratory ideas` (at most three lines; point at `directions/` when it exists)
 6. `## Unresolved`
 
-### 6.2 mnemon Documents (topic-based)
+A fact or a conclusion already settled in a Document is cited by path, not restated here.
 
-The title is its routing description; the body contains: `conclusions` / `evidence` / `rejected alternatives and why` / `open items`.
+**Budget — 60 lines of prose** (commands, tables and quoted output aside). Past it, link the artifact
+that holds the detail instead of copying it. A journal is not compacted later — it is a round's log —
+so the budget applies as it is written.
+
+### 6.2 mnemon Documents (topic-based, current state)
+
+One document per topic, not per round. `search` first; a hit is **updated**, never duplicated, and a
+second document on one topic is merged into the survivor. The title is its routing description and
+carries no date, version or revision number. The body states what holds now: `conclusions` / `evidence`
+/ `rejected alternatives and why` / `open items`, each as it currently stands. **Budget — 120 lines.**
 
 ### 6.3 runtime memory
 
-Only the few facts needed across sessions; each self-contained and not duplicating Documents.
+Only the few rules needed across sessions; each self-contained, and never a copy of a conclusion that
+already lives in a Document.
+
+### 6.4 Compaction — the three clocks
+
+| Clock | Fires when | Action |
+|---|---|---|
+| Before writing | the topic already has a document; the section would be empty; the file is already over budget | update, do not create; do not write the empty section; compact first |
+| Over budget | the write would pass the file's budget | fold replaced statements into one dated `superseded <date>: <what> → <where>` line; move per-object lists into the ledger or the tool output; keep totals, exceptions and a pointer |
+| Settlement | two documents share a topic, or the study has more than 12 journal files | merge the documents into the survivor (conclusions, rejections, open items) and archive the rest through mnemon; add `journal/INDEX.md` instead of merging journal originals |
+
+**Receipt.** Every compaction leaves one line — in the journal for a document merge, at the file's foot
+for a compaction: `compacted <date>: <file> −N lines (<what moved where>)`. Compaction never deletes a
+judgement: it moves it to its carrier, and git keeps the old text. Journal originals are not merged, and
+a journal file is never compacted — it is the round's log, kept as written.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - mnemon Documents are **managed storage**: write only through the managed tools, **never** through file-editing tools.
+- A Document is **updated in place**, not appended to round by round: an append-only Document is the
+  failure this discipline exists to prevent.
 - Do not delete existing Documents; if something must be retired, use mnemon's own archive flow — the
   study's `archive/` is a different place, and moving a document there is the owner's act, not a round's.
 - Runtime memory is hard-capped; check current usage before writing.
@@ -117,8 +147,8 @@ Only the few facts needed across sessions; each self-contained and not duplicati
 
 ## 8. Acceptance checklist
 
-- [ ] `search` was run first; no duplicate entry
-- [ ] Every record carries type / source / time
+- [ ] `search` was run first; the topic's document was updated, not duplicated
+- [ ] Every record carries class / source / time
 - [ ] Rejected directions and reasons are recorded (or "no rejections this round" is stated)
 - [ ] Unevidenced content went only to the log, not to the Documents conclusions section
 - [ ] Conflicts with existing content are recorded as "revision + reason"
@@ -126,6 +156,8 @@ Only the few facts needed across sessions; each self-contained and not duplicati
 - [ ] Every "done" in the log carries an artifact path
 - [ ] A contract, invariant or ruling revised this round is recorded now, not only at close-out
 - [ ] Change **reasons** are recorded; pre-change state descriptions are marked superseded
+- [ ] No empty section was written, and the journal and Document budgets were kept
+- [ ] Every merge or compaction left its one-line receipt
 
 ## 9. Don't
 

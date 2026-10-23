@@ -136,15 +136,21 @@ and which sections those papers have (from their own outlines), as an expectatio
 
 ## 6. Report shape
 
+The artifact is the ledger rows this round wrote; the report is answered to the owner and is not saved
+as a second document.
+
 1. `## This round` — question id, collection key and name, date, the anchor-set line it came from
 2. `## Enumeration` — total rows · rows read · records vs notes/attachments · whether it was complete
-3. `## Screening` — ruled out N (one line each: `itemKey` · the abstract sentence), in scope M, unreadable K
-4. `## Budget` — estimated characters · the 8-slice budget · slices actually spent · papers still queued
-5. `## Handover` — the `itemKey`s going to `reading-triage` and their order, and which top-level
-   sections each paper has (from its own outline) — a structural fact about the paper, not a promise
-   that a note will exist
-6. `## Not swept` — truncation, duplicate keys, already-judged rows, records with no abstract
-7. `## Not judged` — one line: no adoption, no borrowing, and no note was written this round, and why
+3. `## Screening` — ruled out N, in scope M, unreadable K. Each ruled-out item's ground is its ledger
+   row's `basis`; the report gives the count, not the list.
+4. `## Budget` — the estimate, the eight-slice budget, slices actually spent, papers still queued
+5. `## Handover` — the `itemKey`s going to `reading-triage` and their order; each paper's top-level
+   sections only where they differ from its own outline
+
+**One line each, only when non-empty** — `Not swept` (truncation, duplicate keys, already-judged rows,
+records with no abstract) and `Not judged` (no adoption, no borrowing, no note written, and why).
+
+**Budget** — ≤40 lines; the per-item grounds live in the ledger, not here.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

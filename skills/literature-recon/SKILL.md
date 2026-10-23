@@ -117,19 +117,26 @@ Literature that contradicts your expectation or the target claim gets its own se
 
 Artifact: `<layer root>/references/<topic>.md`, relative to the study's **layer root** — `research/`
 where that directory exists, the study root otherwise (protocol §7). A study with its own document
-hierarchy wins over both: put the file where that hierarchy puts it.
+hierarchy wins over both: put the file where that hierarchy puts it. The file states the current state:
 
-Fixed sections:
-
-1. `## Search question` — what I am answering, the query and its scope
-2. `## Summary of findings` — ≤10 lines, each carrying a source id and its grade
+1. `## Search question` — what is being answered, the query and its scope; replaced in place when the
+   question is unchanged.
+2. `## Summary of findings` — ≤10 lines, each carrying a source id and its grade.
 3. `## Reference ledger` — the nine columns of `<layer root>/references/README.md`. This round appends
    `itemKey | year | found via | grade | depth` per candidate; `verdict | basis | re-open if | date`
    stay empty, because they are a reading round's to write.
-4. `## Contradicting evidence` — literature conflicting with the summary; if none, write "none found" and state the search scope
-5. `## Gaps and unknowns` — what was not found, and whether that is "not searched" or "confirmed absent"
-6. `## Reading log` — appended when a verdict changes, in `<date> | <itemKey> | <old> → <new> | <basis> | <who>`. A search round adds no line.
-7. `## Non-normative declaration` — one fixed line: **this file is a non-normative reference and must not by itself ground an experiment design or a conclusion**
+4. `## Contradicting evidence` — the sources that conflict with the summary; when there are none, one
+   line `absent: <targeted check> · <scope> · 0 hits`.
+5. `## Gaps and unknowns` — only what still blocks a conclusion, and whether it is "not searched" or
+   "confirmed absent".
+
+**Header line** — `non-normative: this file grounds no experiment design and no conclusion`.
+
+**Data** — `## Reading log` is appended when a verdict changes, in
+`<date> | <itemKey> | <old> → <new> | <basis> | <who>`; a search round adds no line. It is data, not
+prose, and is not compacted away.
+
+**Budget** — ≤60 lines of prose (ledger and log aside). Past it, compact before writing.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 

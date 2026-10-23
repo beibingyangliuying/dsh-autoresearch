@@ -58,23 +58,29 @@ Check every item; if any one fails, send it back:
 ## 5. Wording discipline
 
 - **Forbidden**: "study further", "explore in more depth", "of great significance", "promising" — all unfalsifiable.
-- **Three-way typing is mandatory**: `**fact**` (evidence-backed, reproducible) / `**inference**` (reasoning chain but unverified) / `[exploratory]` (unverified and undecided). Mark every statement in the document.
+- **Typing is by block**: `**fact**` (evidence-backed, reproducible) / `**inference**` (reasoning chain but unverified) / `[exploratory]` (unverified and undecided). A fact is the default and carries no mark; mark only the block whose class differs from its neighbours.
 - Scope words ("some", "may", "most") must be quantified or explicitly marked as undecided.
 - Never write a hypothesis as a conclusion; never write "I found no counterexample" as "it holds".
 
 ## 6. Report shape
 
-Seven fixed sections, **in this order** (later skills and reviewers cite them by section):
+The file keeps these seven section names, because later skills and reviewers cite them by name. Only
+the first three are written up front; the rest are written when they have content:
 
 1. `## Question` — one-line positioning + 1–3 candidates
 2. `## Boundary` — what is in scope
-3. `## Non-goals` — **at least 3**, each with "why not now"
-4. `## Decidability` — each candidate's falsification condition and "counts as answered" criterion
-5. `## Prerequisites` — what is needed, what exists now, what is missing
-6. `## Notation` — symbols used by this study and their definitions (**every new symbol is registered here**)
-7. `## Open items` — undecided questions, all marked `[exploratory]`
+3. `## Decidability` — each candidate's falsification condition and "counts as answered" criterion
+4. `## Non-goals` — **1–3**, each with "why not now". A third invented to reach a count is a false
+   boundary
+5. `## Prerequisites` — what is needed, what exists now, what is missing; one line when nothing is
+   missing
+6. `## Notation` — the symbols used by this study and their definitions (**every new symbol is
+   registered here**); written once a symbol appears
+7. `## Open items` — undecided questions, each marked `[exploratory]`; written only while something is
+   undecided
 
 Start the file with a one-line summary (≤5 lines): the question + the suggested first action.
+**Budget — ≤80 lines.**
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
@@ -86,10 +92,11 @@ Start the file with a one-line summary (≤5 lines): the question + the suggeste
 ## 8. Acceptance checklist
 
 - [ ] Every candidate question has a falsification condition
-- [ ] Non-goals: at least 3, each with a reason
+- [ ] Non-goals: 1–3, each with a reason
 - [ ] No undeclared weight / threshold / score anywhere
 - [ ] New symbols registered; no old symbol reused
-- [ ] Three-way typing complete
+- [ ] Typing is complete by block: a fact is unmarked, an inference carries its chain, an exploratory
+  item says what would settle it
 - [ ] Every "has this been done" judgement carries the path it came from
 - [ ] If the project has an existing document hierarchy, the artifact location follows it
 
