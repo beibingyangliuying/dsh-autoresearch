@@ -1,15 +1,15 @@
 # 04 — 工具链的能力与边界
 
 **非规范，且是派生文档。** 契约永远是 [`protocol.md`](../protocol.md)。本页由
-[`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) 生成，只回答一个问题：**手上这件工具现在能做什么、
+[`tools/dev/toolchain-page.mjs`](../tools/dev/toolchain-page.mjs) 生成，只回答一个问题：**手上这件工具现在能做什么、
 明确拒绝什么、撞上了怎么办。**
 
 它的价值全在一个性质上——**每一行都挂着一条能被机械校验的出处**，所以一句声明无法比它描述的代码活得更久：
 
 ```powershell
-node tools\toolchain-page.mjs --check    # 页面是否与生成器一致、每条出处是否还在
-node tools\toolchain-page.mjs --write    # 重新生成
-node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
+node tools\dev\toolchain-page.mjs --check    # 页面是否与生成器一致、每条出处是否还在
+node tools\dev\toolchain-page.mjs --write    # 重新生成
+node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 ```
 
 ## 一、先看这几条（不知道它们，会各花掉一轮）
@@ -353,7 +353,7 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 ## 三、这套校验能证明什么、不能证明什么
 
 - **能证明**：这一行所依据的那段源码/契约/实测记录**还在**。重命名、删常量、改消息，都会让
-  [`tools/toolchain-selftest.mjs`](../tools/toolchain-selftest.mjs) 变红，而不是让一句话悄悄过期。
+  [`tools/tests/toolchain-selftest.mjs`](../tools/tests/toolchain-selftest.mjs) 变红，而不是让一句话悄悄过期。
 - **不能证明**：这句话是对那段源码的**公平概括**。概括是人写的，机械的只是"它站的那块地在不在"。
   这是刻意的分工：能机械化的部分窄到可信，判断留在读得懂两边的人手上。
 

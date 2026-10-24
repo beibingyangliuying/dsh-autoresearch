@@ -43,7 +43,7 @@ bundle ...`, the composition carries an error-level diagnostic, and the preset n
 new-session list — absent and loud, rather than present and failing every request. The range states
 only "not tested here". What this preset actually depends on — the prompt variables the kernel
 registers, and the row packages it mounts — is checked against the installed kernel by
-`tools/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
+`tools/tests/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
 **To install: nothing beyond DSH itself.** Three dependencies, all published on npm and all permissive
 (`@deepseek-ai/schemastery` for the row's configuration; `@hyzyla/pdfium` and `pdfjs-dist` for the two
@@ -126,7 +126,7 @@ node tools\zotero-link-attachments.mjs --target <linked-attachment-base> --write
 
 # bulk migration: set CONFIG.targetDir in the file first, then paste the whole file into the
 # reference manager's Run JavaScript window.
-tools\zotero-link-snippet.js
+tools\owner\zotero-link-snippet.js
 ```
 
 One channel needs setup outside this repository:
@@ -208,7 +208,7 @@ never read as "nothing was written" — and every write path above answers that 
 record, a field or a tag, a collection, an attachment. `zotero-edit.mjs` changes its fields and tags,
 `zotero-collection.mjs` creates, renames and
 files, `zotero-link-attachments.mjs` turns stored PDFs into linked files. A whole-library migration is
-not one of them: `tools/zotero-link-snippet.js` is a snippet the owner runs inside the reference
+not one of them: `tools/owner/zotero-link-snippet.js` is a snippet the owner runs inside the reference
 manager, at their own keyboard and under no API authorization at all. Together they replace an MCP row whose
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
 tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
@@ -279,8 +279,8 @@ between "searched and absent" and "not searched at all".
 ## Start a study
 
 ```powershell
-.\tools\new-project.ps1 -Target D:\path\to\new-study -DryRun   # show what would be created
-.\tools\new-project.ps1 -Target D:\path\to\new-study           # create it
+.\tools\owner\new-project.ps1 -Target D:\path\to\new-study -DryRun   # show what would be created
+.\tools\owner\new-project.ps1 -Target D:\path\to\new-study           # create it
 ```
 
 The scaffolder is PowerShell today, so this step is Windows-only. Copy `project-template/` by hand
@@ -317,7 +317,7 @@ stops the round with a question instead of being quietly adapted.
 
 The contract states this layout itself in [`protocol.md`](protocol.md) §7, and the scaffold's own README
 says what to do first rather than repeating the map. Two statements of one layout is still the shape that
-drifts, so `tools/scaffold-selftest.mjs` holds the contract's version and the block above to each other and
+drifts, so `tools/tests/scaffold-selftest.mjs` holds the contract's version and the block above to each other and
 to what is on disk: a directory added to one and forgotten in the other is a failure rather than a silent
 divergence. (It found one on its first run — see [`docs/decisions.md`](docs/decisions.md) §45.)
 
@@ -340,7 +340,10 @@ skills/                the on-demand disciplines, one <name>/SKILL.md each
                        is not a discipline, it reaches only sessions opened in this checkout, and the
                        preset's users never see it (skills.js reads skills/ alone)
 project-template/      the study scaffold, copied per study
-tools/                 self-tests, probes, the CLI helpers and the scaffolder
+tools/                 the helper programs: the one namespace a discipline may address by absolute path
+tools/tests/           the offline self-tests, one per helper and one per guard
+tools/dev/             probes and release tooling that only this repository runs
+tools/owner/           the two programs the OWNER runs: the study scaffolder, and the in-app snippet
 docs/                  Chinese review aids: the coverage map, the review, the decisions, the frozen log
 ```
 
@@ -355,87 +358,87 @@ npm test
 # the same set one line at a time, when a single test is what a change touches
 # preset structure: composition, persona, routing, leak guards, and the counts the prose declares
 dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt
+node tools\tests\preset-selftest.mjs .tmp\composed-web.txt
 
 # the preset's own plugins, without DSH
-node tools\isolation-selftest.mjs        # tool isolation
-node tools\contact-bridge-selftest.mjs   # configurable values -> prompt
-node tools\skills-selftest.mjs           # shipped disciplines parse and register
-node tools\client-selftest.mjs           # the browser half parses, loads and registers
+node tools\tests\isolation-selftest.mjs        # tool isolation
+node tools\tests\contact-bridge-selftest.mjs   # configurable values -> prompt
+node tools\tests\skills-selftest.mjs           # shipped disciplines parse and register
+node tools\tests\client-selftest.mjs           # the browser half parses, loads and registers
 
 # documentation structure (contract/index split; the coverage map's roster and its paths)
-node tools\doc-selftest.mjs
-node tools\toolchain-selftest.mjs          # the generated capability page: citations and drift
+node tools\tests\doc-selftest.mjs
+node tools\tests\toolchain-selftest.mjs          # the generated capability page: citations and drift
 
 # the study scaffold: one layout, stated in the contract, in this README and in the table a study
 # inherits — the check that catches a directory added to one of them and forgotten in the others
-node tools\scaffold-selftest.mjs
+node tools\tests\scaffold-selftest.mjs
 
 # the preprint channel helper: the query url, Atom parsing and error feeds, without the network
-node tools\arxiv-selftest.mjs
+node tools\tests\arxiv-selftest.mjs
 
 # the bibliographic channel helper: the urls, the inverted-index abstract, the four kinds of nothing,
 # and the refusals — without the network
-node tools\metadata-selftest.mjs
+node tools\tests\metadata-selftest.mjs
 
 # the discovery helper: seven source shapes, routing, RRF dedup, and the measured 429/challenge
 # failures — without the network
-node tools\scholarly-selftest.mjs
+node tools\tests\scholarly-selftest.mjs
 
 # the open-access reader: arXiv HTML, JATS sectioning, section lookup, and the route failures — offline
-node tools\scholarly-read-selftest.mjs
+node tools\tests\scholarly-read-selftest.mjs
 
 # the journal-ranking channel: one journal's provider reading, the key it needs and never prints, and
 # the ISSN the provider answers about something else — without the network or a key
-node tools\journal-rank-selftest.mjs
+node tools\tests\journal-rank-selftest.mjs
 
 # the shared voice every helper fails through: the block it renders, the cause it appends, and the two
 # exit codes — no library, no network, and nothing that leaves a process
-node tools\refusal-selftest.mjs
+node tools\tests\refusal-selftest.mjs
 
 # the reference-library helpers: their pure halves run without a library, and write nothing
-node tools\zotero-read-selftest.mjs       # hit collapsing, citation fields, notes, BM25 retrieval, facets, changes
-node tools\zotero-export-selftest.mjs     # the translator pipeline paths, the record filter, and citation order
-node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
-node tools\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
-node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
-node tools\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
-node tools\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, unclaim one of two tags, and the deletion path
-node tools\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
-node tools\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
-node tools\zotero-ensure-selftest.mjs     # where the application could be, and the seam that forbids launching for a stub
+node tools\tests\zotero-read-selftest.mjs       # hit collapsing, citation fields, notes, BM25 retrieval, facets, changes
+node tools\tests\zotero-export-selftest.mjs     # the translator pipeline paths, the record filter, and citation order
+node tools\tests\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
+node tools\tests\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
+node tools\tests\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
+node tools\tests\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
+node tools\tests\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, unclaim one of two tags, and the deletion path
+node tools\tests\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
+node tools\tests\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
+node tools\tests\zotero-ensure-selftest.mjs     # where the application could be, and the seam that forbids launching for a stub
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
 # RAN rather than the value its own record carries (docs/decisions.md #26)
-node tools\dump-session-selftest.mjs
+node tools\tests\dump-session-selftest.mjs
 
 # release check: what the working tree says, and what a NEW user would install. The second form reads
 # the PUBLISHED package at a tag - the local suite cannot see unpublished commits, which is how a
 # version that still mounted two MCP servers was publishable with everything green.
-node tools\release-check.mjs --local
-node tools\release-check.mjs --tag vX.Y.Z
+node tools\dev\release-check.mjs --local
+node tools\dev\release-check.mjs --tag vX.Y.Z
                               # exit 0 verified | 1 the artifact is wrong | 3 a check could not RUN (no
                               # network, no git) - 3 is not a softer 1: nothing was examined there
-node tools\release-check-selftest.mjs      # its pure halves, offline, with negative controls
+node tools\tests\release-check-selftest.mjs      # its pure halves, offline, with negative controls
 
 # evaluating a CANDIDATE MCP server, without DSH. This preset mounts none: these probes are how a
 # candidate's surface gets measured before anyone mounts it, and how the two rows were measured
 # before they were dropped (docs/decisions.md #24, #29, #31).
-$env:ZOTERO_LOCAL='true'; node tools\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
+$env:ZOTERO_LOCAL='true'; node tools\dev\mcp-probe.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what a candidate server's tool schema would cost per request, and which version answered
-node tools\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
+node tools\dev\mcp-toolsize.mjs -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # call one tool and keep the FULL result (mcp-probe truncates a result at 1500 characters)
-$env:ZOTERO_LOCAL='true'; node tools\mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
+$env:ZOTERO_LOCAL='true'; node tools\dev\mcp-call.mjs zotero_get_collections -- uvx --from 'zotero-mcp-server==0.14.1' zotero-mcp
 
 # what this preset's OWN sessions actually call, and whether a masked tool is still named in a prompt.
 # The cost decisions rest on these numbers (docs/decisions.md #54, #56), so they are re-run rather
 # than recalled: a keep-list entry no session calls is a claim nobody has checked, and the prompt text
 # that names tools is assembled from plugin state rather than from the tool registry.
-node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_
-node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_
-node tools\session-helper-modes.mjs --preset autoresearch
+node tools\dev\session-tool-usage.mjs --preset autoresearch --prefix mnemon_
+node tools\dev\session-prompt-names.mjs --preset autoresearch --prefix mnemon_
+node tools\dev\session-helper-modes.mjs --preset autoresearch
 
 # reference library writes: dry run first; --write makes Zotero ask you to Allow
 node tools\zotero-write.mjs --arxiv 1706.03762
@@ -454,11 +457,11 @@ it registers them. A path relative to this repository names nothing where the ag
 
 ```powershell
 # which preset each session RAN: the last selection, with the creation-time value when they differ
-node tools\dump-session.mjs --scan %USERPROFILE%\.dsh\sessions
-node tools\dump-session.mjs <sessionDir> [outFile]        # decompress one transcript
-node tools\session-shape.mjs <session.jsonl>             # structural shape, bounded output
-node tools\probe-session.mjs <session.jsonl> <needle>    # record census + context around a needle
-node tools\list-tools.mjs <session.jsonl>                # tool names its request header carried
+node tools\dev\dump-session.mjs --scan %USERPROFILE%\.dsh\sessions
+node tools\dev\dump-session.mjs <sessionDir> [outFile]        # decompress one transcript
+node tools\dev\session-shape.mjs <session.jsonl>             # structural shape, bounded output
+node tools\dev\probe-session.mjs <session.jsonl> <needle>    # record census + context around a needle
+node tools\dev\list-tools.mjs <session.jsonl>                # tool names its request header carried
 ```
 
 These read the transcripts alone, and together they answer "which preset did that session really run,

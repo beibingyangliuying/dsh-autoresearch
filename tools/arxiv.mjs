@@ -400,7 +400,7 @@ async function main() {
   if (options.selftest) {
     // The checks live beside this file, mirroring it. They report through `failedChecks` instead of
     // calling process.exit themselves, which would trip Node's unsettled-top-level-await check.
-    const { failedChecks } = await import('./arxiv-selftest.mjs')
+    const { failedChecks } = await import('./tests/arxiv-selftest.mjs')
     if (failedChecks) process.exit(1)
     return
   }

@@ -81,7 +81,7 @@ npm test                                  # the whole offline suite: every *-sel
                                           #   0 all passed | 1 something failed | 3 nothing failed, but one
                                           #   could not run (no `dsh` on PATH, so no dump was made)
 
-node tools\release-check.mjs --local      # after the suite: the artifact's shape, its exports, the README
+node tools\dev\release-check.mjs --local      # after the suite: the artifact's shape, its exports, the README
                                           #   roster, and a clean tree
 ```
 
@@ -133,7 +133,7 @@ measurement into an assertion.
 3. **Annotated** tag, with a message a reader can act on: what this version is, how to install it, and
    what changed relative to the previous one.
 4. Push the branch, then push the tag.
-5. **Verify what a new user gets**: `node tools/release-check.mjs --tag vX.Y.Z`. It reads the published
+5. **Verify what a new user gets**: `node tools/dev/release-check.mjs --tag vX.Y.Z`. It reads the published
    `package.json`, the published composition and the published helper programs over the network. This is
    the only check that can see the defect that mattered most here — 47 commits of green local work that
    nobody could install.

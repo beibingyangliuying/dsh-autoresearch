@@ -5,7 +5,7 @@
 > [`decisions.md`](decisions.md)。
 >
 > 本文是**被机械校验的第二份名单**。`overview.md` 立过一条规矩——"两处列同一批名字必然漂移"——它的病因
-> 不是名单多，而是**没有一份名单有仪器校**。所以这份地图的名册由 `tools/doc-selftest.mjs` 校验：纪律名册与
+> 不是名单多，而是**没有一份名单有仪器校**。所以这份地图的名册由 `tools/tests/doc-selftest.mjs` 校验：纪律名册与
 > `skills/*/SKILL.md` **一一对应**（漏一条、多一条都失败），本文点名的每个路径都必须存在。它与 `surface.md`
 > 回答的不是同一个问题：那里是"概念 ↔ 名字"，这里是"部分 ↔ 覆盖什么、拒绝什么"。
 
@@ -75,10 +75,10 @@
 | 改条目的字段与标签 | [`tools/zotero-edit.mjs`](../tools/zotero-edit.mjs) |
 | 建 / 改名 / 归档分类 | [`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs) |
 | 把"存储型附件"转成链接附件（增量） | [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) |
-| 整库迁移（**你在应用里自己跑**） | [`tools/zotero-link-snippet.js`](../tools/zotero-link-snippet.js) |
+| 整库迁移（**你在应用里自己跑**） | [`tools/owner/zotero-link-snippet.js`](../tools/owner/zotero-link-snippet.js) |
 
 每个 helper **能做什么、明确拒绝什么、撞上了怎么办**，逐条列在 [`docs/toolchain.md`](toolchain.md)：
-那是一份**生成物**（`tools/toolchain-page.mjs`），每一行都挂着一条能被机械校验的出处，所以它不会比它描述的
+那是一份**生成物**（`tools/dev/toolchain-page.mjs`），每一行都挂着一条能被机械校验的出处，所以它不会比它描述的
 代码活得更久。本页回答"哪一部分归谁"，那份回答"手上这一件工具现在的边界在哪"。
 
 写这一侧的三条共同规矩：**每次写入先陈述改动、且默认干跑**（`--write` 才真写）；**一次调用一件事**；

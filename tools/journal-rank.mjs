@@ -408,7 +408,7 @@ async function main() {
   if (options.selftest) {
     // The checks live beside this file, mirroring it. They report through `failedChecks` instead of
     // exiting themselves, which would trip Node's unsettled-top-level-await check.
-    const { failedChecks } = await import('./journal-rank-selftest.mjs')
+    const { failedChecks } = await import('./tests/journal-rank-selftest.mjs')
     if (failedChecks) process.exitCode = 1
     return
   }

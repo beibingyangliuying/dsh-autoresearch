@@ -75,9 +75,9 @@ npm test                                   # 全套离线自测（从磁盘发�
                                            #   契约与覆盖图 / 脚手架 / 每个 helper 的纯半边。一条命令，退出码 0·1·3
                                            #   每条自测的一句话说明在 README 的 "Develop it"，这里不再抄第二份
 
-node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）
-node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_  # 常驻提示里点名了哪些工具（隔离挡不住散文）
-node tools\session-helper-modes.mjs --preset autoresearch                  # 读侧 flag 语法有没有真实误用
+node tools\dev\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）
+node tools\dev\session-prompt-names.mjs --preset autoresearch --prefix mnemon_  # 常驻提示里点名了哪些工具（隔离挡不住散文）
+node tools\dev\session-helper-modes.mjs --preset autoresearch                  # 读侧 flag 语法有没有真实误用
 ```
 
 ## 一条最容易被误解的设计
