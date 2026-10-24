@@ -724,3 +724,25 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 [`cordis.patch.yml`](../cordis.patch.yml) · [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs) ·
 12 条纪律的 §6 · [`plans/compaction.md`](plans/compaction.md) · [`plans/documents-merge.md`](plans/documents-merge.md) ·
 [`decisions.md`](decisions.md) §88 · [`coverage.md`](coverage.md) · [`project-template/`](../project-template/)。
+
+## §96 · 0.18.0 发布：三个够不着的 helper 交到手上，`tools/` 收敛成 agent 的命名空间（2026-10-24）
+
+**为什么是 minor**：本版没有新增 helper 程序，但 agent 能做的事多了三件——期刊分区、OA 全文、库内记录的正式引用，此前都是"发得出去、点不到"。版本号跟能力走，不跟代码行数走。
+
+**相对 0.17.0 的 31 个提交，按四组看**：
+
+1. **契约 Revision 39–41**。39：一条记录按读者决定的粒度回答——一节要么是台账要么是状态记，预算带削减顺序，来源与日期只在声明进入记录处点一次（`INV-DOC-2` / `INV-DOC-3`）。40：纪律的**触发**移进各自的目录条目，常驻层只留循环的顺序与规则的强制力（`§2` / `§8`）。41：固定节收敛成**七**个，禁令只住在"何时停"那张表里；`00_state.md` 获得可选角色——本轮问题、主线、已裁定、未决各一行、只放指针（`§4` / `§7`）。
+2. **发现与阅读**。跨源发现 [`scholarly.mjs`](../tools/scholarly.mjs)（7 个索引、加权 RRF、引用图、库内标记；DBLP 显式请求报 `blocked`，S2 无 key 报 `no-key`）；OA 全文阅读 [`scholarly-read.mjs`](../tools/scholarly-read.mjs)（arXiv HTML → ar5iv → arXiv PDF → PMC JATS → OpenAlex OA PDF，分节 / BM25 / 分片读）；[`metadata.mjs`](../tools/metadata.mjs) 增加 `--cite`（doi.org 内容协商）/ `--verify`（Crossref＋撤稿）/ `--related`；[`journal-rank.mjs`](../tools/journal-rank.mjs)。
+3. **参考库读写面**。[`zotero-read.mjs`](../tools/zotero-read.mjs) 扩到题录字段、笔记正文、BM25 段落检索、附件定位、结构、变更游标、按 DOI 查重；[`zotero-export.mjs`](../tools/zotero-export.mjs) 走库自己的 translator（citation / bibliography / bibtex / biblatex / ris / csljson）；[`zotero-edit.mjs`](../tools/zotero-edit.mjs) 写前按 itemType 拒收不属于该类型的字段。
+4. **目录与仪器（本轮）**。`tools/` 只留 17 个 agent 可点名的程序，自测进 `tools/tests/`、探针与发布工具进 `tools/dev/`、属主程序进 `tools/owner/`；`npm test` 从磁盘派生整套自测；`unclassifiedTools` 把"目录里有未分类的文件"变成红——它第一次跑就抓到 `zotero-export.mjs` **不在名册上**，一个缺它的 tag 本会静默发出"有纪律点名、包里没有"的导出器（[`decisions.md`](decisions.md) §95）。
+
+**验证在最终树上**：26/26 离线自测 PASS（0.17.0 时是 23；本轮之前那批改动带来了三个新自测）；`release-check --local` PASS 且工作树干净；新护栏各自带反向控制——把一个未登记的文件放进 `tools/`、把一个文件放进未声明的目录、把发布流程的清单换回手抄名单，三种都必须红。**远端复核**：`node tools/dev/release-check.mjs --tag v0.18.0`（推送后执行，四项检查逐条 OK、exit 0 才算完成）。
+
+**仍然未做**：
+
+- `package.json` 没有 `files` 字段：发布件仍带 26 个自测与 13 个探针（它们不再占 agent 的命名空间，但仍占包体积）。
+- `new-project.ps1` 仍无自测——"永不覆盖 / `-DryRun`"目前只有文档断言。
+- `backlog` 第 8 条（读侧模式改子命令）未做，它是一次 167 处文本的改名，等触发条件。
+- Revision 39–41 的文档预算与 `00_state.md` 只在契约与纪律里成立，**没有在真实课题上跑过一轮**。
+
+**落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 39–41）· [`cordis.patch.yml`](../cordis.patch.yml) · [`tools/`](../tools/) 的新布局 · [`skills/`](../skills/) · [`docs/decisions.md`](decisions.md) §95 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)（生成物）。
