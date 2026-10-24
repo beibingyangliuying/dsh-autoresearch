@@ -2144,3 +2144,23 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **已知边界**：课题级台账（如那份 16 问题台账）一条不改——问题怎么组织是属主的裁定，预设只给形状；81 篇 Documents 不重写，下一次 `progress-sync` 按新形状合并并写回执；散文质量仍无机器护栏，新断言只判"有没有次序"，不判"次序写得对不对"。
 
 **未做**：真实课题上的第一轮实测（判据：状态记开篇可停、同主题不再长出第二篇、按序删完仍答得出原问题）。
+
+## 90. 时钟留下、日程不留：一次"抄行表漂移"的结账（2026-10-24）
+
+**起因**：junhan 问"我们这套预设和 standard 差在哪"，逐行 diff 两份 patch 时撞见两处**没有决策记录**的缺席：`time-context` 与 `tool-schedule`（standard 都声明，本预设都没有，而 selftest 只守 `present`/`tool-ralph`）；同一轮还发现四条 delegation 行都带 `backgroundMode`，可 `dsh-tool-subagent` 的 Config 只有 provider / toolName / modelSelectionSettings / agentOptions / maxDepth。
+
+**判据**：一行缺席会不会让某条承重义务无法履行？`time-context` 会——规则 12 要"带日期的一行"，而组合里没有第二个来源告诉 agent 今天是几号（Web 宿主组合不挂这一行）。`tool-schedule` 不会——研究闭环里没有"定时"，四个 schema 每请求都要付。
+
+**裁定（junhan 逐项确认，2026-10-24）**：
+
+1. 补 `time-context`（standard 同款、无配置），并进 selftest 的必备行。
+2. `tool-schedule` 明确不补，进"裁定删除"名单，与 `present`/`tool-ralph` 同待遇。
+3. 四处 `backgroundMode` 一律删（两条 `continuable`、两条 `one-shot`）：字段不在 Config 里，留着会被读成"子代理可续聊"已实现。
+
+**为什么不是"跟 standard 整表同步"**：本预设的行表是 standard 的一次**拷贝**（改前 28 个同名 row），同步意味着每次 DSH 升级都重审全表；而缺席只有两种——被裁掉的（有记录）与被时间甩掉的（没记录，就是本条）。两者各给一条护栏比每次全表 diff 便宜，也正是护栏让下一次缺席必须自报家门。
+
+**落点**：[`cordis.patch.yml`](../cordis.patch.yml)（头注三行、`time-context` 行、四处死字段）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（必备行 + 删除名单 + 死字段护栏；三条护栏各用一次变异证实会红）。
+
+**已知边界**：`time-context` 每步最多多一行（默认 10 分钟节流），成本随步数而非请求数增长，且注入的是一条 user-role 消息；`tool-schedule` 若研究闭环真需要"定时改数据"，重开本条。
+
+**未做**：未对 standard 其余行做全表复核（只 diff 了行名与同名行的 config）；`tool-plugin-market` 的差异（standard 声明 `disabled: true`、本预设整行省略）净效果相同，保持现状。

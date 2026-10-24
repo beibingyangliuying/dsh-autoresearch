@@ -231,6 +231,7 @@ if (!existsSync(composedFile)) {
   for (const id of [
     'persona',
     'agent-instructions',
+    'time-context',
     'skill-filesystem',
     'tool-skill',
     'tool-web',
@@ -282,7 +283,10 @@ if (!existsSync(composedFile)) {
       }
     })
   ok(unresolvable.length === 0, 'every row name resolves through Node from the profile', unresolvable.join(', '))
-  for (const id of ['present', 'tool-ralph']) {
+  // Absent by decision, and named so a later "sync with standard" cannot quietly re-add it. The issue
+  // is not the tool but the row: research work has no clock-driven task, and the four schemas would be
+  // paid on every request. `time-context` is the neighbouring case with the opposite answer (#90).
+  for (const id of ['present', 'tool-ralph', 'tool-schedule']) {
     ok(!rowIds.includes(id), `removed by decision: ${id} absent`)
   }
   // A config field the row's own Config does not declare is not cosmetic - it reads as an implemented

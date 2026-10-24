@@ -11,7 +11,13 @@
 #     refreshed at each assembly and kept current across `cd`), so dropping the suffix loses
 #     nothing. Do not put an unregistered `{{name}}` back: the self-test checks every placeholder
 #     against the kernel's registry. See #47 of docs/decisions.md.
-#   - `present` and `tool-ralph` rows are dropped (not needed for research work).
+#   - `present`, `tool-ralph` and `tool-schedule` rows are dropped (not needed for research work).
+#   - `time-context` IS declared, as `standard` does: rule 12 asks a record for a dated line, and no
+#     other row here tells the agent what day it is. It costs at most one line per STEP (10-minute
+#     throttle), not one per request.
+#   - This row list is a COPY of `standard`'s, not a delta on top of it, so rows `standard` gains later
+#     do not arrive on their own. A row deliberately absent gets a line here and a guard in
+#     tools/preset-selftest.mjs (#90 of docs/decisions.md).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
 #   - NO MCP server is mounted. All three external channels ship as command-line helpers named by the
 #     disciplines (tools/arxiv.mjs, tools/metadata.mjs and tools/zotero-*.mjs), which cost nothing on a request that does
@@ -80,6 +86,13 @@
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
               maxBytes: 65536
+
+          # ── clock ──────────────────────────────────────────────────────────
+
+          # Rule 12 asks every record for a dated line; without this row the agent has no way to know
+          # what day it is. Same row `standard` declares, no configuration.
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
 
           # ── shell ──────────────────────────────────────────────────────────
 
