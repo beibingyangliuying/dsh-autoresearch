@@ -221,7 +221,10 @@ A partial answer says `partial`; it is never presented as the index's whole answ
 joins only when `AUTORESEARCH_S2_KEY` is set, and DBLP is never in the default route because this
 client cannot pass its bot-challenge page — naming it explicitly reports `blocked` rather than an empty
 list. The output is a **lead**: confirming a work still means `metadata.mjs --doi`, and reading its
-full text still means `metadata.mjs --oa` followed by `zotero-pdf.mjs --url`.
+full text means `scholarly-read.mjs --id`, which tries arXiv HTML → ar5iv → the arXiv PDF, PMC JATS, or
+an open-access PDF OpenAlex knows about, then offers `--outline`, `--section` and BM25 `--query`.
+Mathematical markup in HTML/JATS is duplicated and must not be quoted as text; a formula still goes
+through `zotero-pdf.mjs --render` and is read as an image.
 
 **What a failure says.** Every helper fails through one renderer (`tools/refusal.mjs`): the line that says
 what did not happen, and — when exactly one next action is known — a `fix` line carrying it, and a `try`

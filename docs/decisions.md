@@ -2238,4 +2238,38 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 
 **落点**：[`tools/scholarly.mjs`](../tools/scholarly.mjs) · [`tools/scholarly-sources.mjs`](../tools/scholarly-sources.mjs) · [`tools/scholarly-selftest.mjs`](../tools/scholarly-selftest.mjs) · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) · [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md)。
 
-**未做**：structured OA read；`literature-recon` 点名 `scholarly.mjs`；protocol §6 的通道措辞（等 junhan 审）。
+**未做**：`literature-recon` 点名 `scholarly.mjs`；protocol §6 的通道措辞（等 junhan 审）。structured OA read 见 §94。
+
+---
+
+## 94. OA 全文阅读：arXiv HTML → PMC JATS → PDF，分节与 BM25 落地（2026-10-24）
+
+**决策**：新增 [`tools/scholarly-read.mjs`](../tools/scholarly-read.mjs)，把选项 B 的结构化 OA 阅读补上：一个标识符（DOI / arXiv / PMID / PMCID / URL）按路由取正文，输出带 `#` 标题的结构化文本，支持 `--outline` / `--section` / BM25 `--query` / 分片读。
+
+**先验（2026-10-24 本机，全部实发请求）**：
+
+1. `https://arxiv.org/html/1706.03762` 200，47,959 字符，LaTeXML 的 `<hN>` 可直接转成标题；页面 chrome 里有一个 `<h2>Report GitHub Issue</h2>`，必须按标题黑名单丢掉。
+2. `https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8371605/fullTextXML` 200，49,660 字符；`<body>` 外有 `<back><ref-list>`，不能读进正文；`<sec>` 嵌套决定标题层级。
+3. 同一条 DOI 若 Europe PMC 没有 PMCID、OpenAlex 也没有 OA 位置，拒绝信息必须把两条路由都点名；只写 "routes tried: none" 是缺陷，已修。
+4. 直接给 PDF URL 走 PDFium 文字层；`--outline` 对无目录的 PDF 只能回 unstructured，不伪造标题。
+
+**设计要点**：
+
+- **路由顺序**：arXiv HTML → ar5iv HTML → arXiv PDF；DOI/PMID 先查 Europe PMC PMCID → JATS，再查 OpenAlex 的 `best_oa_location.pdf_url` / `oa_url`；URL 直接读。
+- **HTML/JATS → 文本**：标题转 `#`，段落/`<br>` 转换行，脚本/样式/引用列表不读；实体解码复用 `arxiv.mjs` 的 `decodeXml`。
+- **节**：`extractSections` 记录每条标题的 `[start,end]`；一节的范围到下一个同级或更高级标题为止，因此父节含子节。`--section` 支持数字（`3`、`3.1`）与标题子串，精确标题优先。
+- **BM25**：复用 `zotero-read.mjs` 的 `chunkText` / `rankPassages`；`--query` 在整篇或指定节内排段落，报绝对字符区间。
+- **边界**：HTML 5M 字符、PDF 80MB；不缓存、不重试；不读付费墙；每条失败路由写进 refusal 的 `fix`。
+- **数学**：LaTeXML/JATS 的公式是重复、带标记的文本（`d_{k}` 与 `d k d_{k}` 并排），**不能当文本引用**；公式仍走 `zotero-pdf --url --render` + `read_image`。
+
+**验收**：
+
+- arXiv 1706.03762：outline 32 个标题；`--query "scaled dot-product attention"` 命中 3.2.1；`--section "3.2"` 读到 6,295 字符。
+- DOI `10.1038/s41586-021-03819-2`：Europe PMC JATS PMC8371605，outline 25 个标题；BM25 命中 Evoformer 段。
+- DOI `10.1126/science.342.6165.1432`：无 PMCID、无 OA 位置，exit 1，refusal 点名两条路由。
+- 直接 PDF URL：40,435 字符、unstructured、0 标题，分片读正常。
+- `scholarly-read-selftest` 覆盖 HTML/JATS 解析、节查找、参数边界；全部离线自测通过。
+
+**落点**：[`tools/scholarly-read.mjs`](../tools/scholarly-read.mjs) · [`tools/scholarly-read-selftest.mjs`](../tools/scholarly-read-selftest.mjs) · [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs)（`extractPdfText` / `pdfOutline` 抽出复用） · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) · [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) · [`tools/release-check.mjs`](../tools/release-check.mjs)。
+
+**未做**：全文缓存；出版商 HTML 的正文抽取（只认 arXiv/ar5iv 与 OA PDF/JATS）；PDF 目录到节的映射（无目录 PDF 仍是 unstructured）；`literature-recon` 点名 reader；protocol §6。

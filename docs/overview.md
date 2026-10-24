@@ -81,6 +81,7 @@ node tools\scaffold-selftest.mjs                       # 脚手架布局：契�
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
 node tools\scholarly-selftest.mjs                      # 跨源发现：7 个源的形状 / 路由 / RRF 去重 / 429 与 202 两种失败（不出网）
+node tools\scholarly-read-selftest.mjs                 # OA 阅读：arXiv HTML 解析 / JATS 分节 / 节查找 / 路由失败（不出网）
 node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 题录块 / 笔记文本 / BM25 检索 / 分面 / 变更（不连库）
 node tools\zotero-export-selftest.mjs                  # 导出：translator 三条管线 / 记录过滤 / 引用顺序（不连库）
 node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED / 命令行走桩库的 0·1·3（不连真库）

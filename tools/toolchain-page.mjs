@@ -403,12 +403,38 @@ export const HELPERS = [
     ],
     when: [
       '文献发现第一轮用它：先看有哪些工作，再对候选逐条 `metadata --doi` 确认',
-      '要读 OA 全文 → 从结果里的 `pdf:` 或 `metadata --oa` 取 URL，交给 `zotero-pdf --url`',
+      '要读 OA 全文 → 用 `scholarly-read.mjs --id`（arXiv HTML/JATS/PDF），或从结果的 `pdf:` 取 URL 交给 `zotero-pdf --url`',
       '库里有没有这条 → `--mark-library`；`unavailable` 时停下说库没答，不要说"不在库"',
     ],
     cites: [
       cite('tools/scholarly.mjs', 'fusePapers', 'routeSources', 'markLibrary', 'sourcesFailed', '--mark-library'),
       cite('tools/scholarly-sources.mjs', 'SourceError', 'searchDblp', 'searchSemanticScholar', 'searchPubMed'),
+    ],
+  },
+  {
+    name: 'scholarly-read.mjs',
+    role: 'OA 全文阅读：arXiv HTML/ar5iv/PDF · PMC JATS · OpenAlex OA PDF；分节 / BM25 / 切片',
+    can: [
+      '`--id <doi|arxiv|pmid|pmcid|url>` 依次试 arXiv HTML → ar5iv → arXiv PDF → PMC JATS → OpenAlex OA PDF；每条路由失败都点名',
+      '`--outline`：按标题层级列节与字符区间；`--section "3"` / `"3.1"` / 标题读一节（含子节）',
+      '`--query "<terms>"`：把该文本切块后 BM25 排段落，报 score 与绝对字符区间',
+      '`--start` / `--max-chars`：分片读，输出 `next: --start N`；`--json` 只给元数据与切片，不把全文塞进一条 JSON',
+    ],
+    refuses: [
+      '不读付费墙：没有 OA 路由时 exit 1，并把每条路由的失败原因列出，不说"大概是付费墙"',
+      '不缓存、不重试；HTML 超 5M 字符、PDF 超 80MB 都拒绝',
+      'LaTeXML/JATS 里的数学是重复、带标记的文本：**公式不能当文本引用**，要读公式仍走 `zotero-pdf --render` + `read_image`',
+      '没有标题的 PDF 是 `unstructured`：只能切片或 BM25，不能 `--outline`/`--section`',
+    ],
+    when: [
+      '发现之后要正文：先 `--outline` 看结构，再 `--section` 读那一节，最后 `--query` 定位句子',
+      '数学/公式必须核验 → 记下 PDF URL，用 `zotero-pdf --url ... --render --pages` 渲成图再读',
+      '引用时写明 `source` 与 `url`：arXiv HTML、PMC JATS 和 OA PDF 是三种不同来源',
+    ],
+    cites: [
+      cite('tools/scholarly-read.mjs', 'parseHtmlToText', 'parseJatsToText', 'extractSections', 'resolveFullText', 'routeFailure'),
+      cite('tools/scholarly-sources.mjs', 'resolveIdentifier'),
+      cite('tools/zotero-pdf.mjs', 'extractPdfText', 'pdfOutline'),
     ],
   },
 ]
@@ -463,7 +489,7 @@ const CHANNELS = [
   { title: '参考库通道', match: (helper) => helper.name.startsWith('zotero-') },
   { title: '预印本通道', match: (helper) => helper.name === 'arxiv.mjs' },
   { title: '书目元数据通道', match: (helper) => helper.name === 'metadata.mjs' },
-  { title: '学术发现通道', match: (helper) => helper.name === 'scholarly.mjs' },
+  { title: '学术发现通道', match: (helper) => helper.name.startsWith('scholarly') },
 ]
 
 /**
