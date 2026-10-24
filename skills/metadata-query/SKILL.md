@@ -83,6 +83,32 @@ URL was actually fetched, and report a dead or wrong-version link as a failed le
 silently. Retrieving a copy does not raise a source's grade: the grade still follows what was read, and
 whether a copy is fetched and read is the reading channels' business.
 
+**Fetching it is a reading act with a tool of its own.** When the free copy is a PDF or an HTML article,
+`{{presetTools}}/scholarly-read.mjs --id <doi|arxiv|pmid|pmcid|url>` routes arXiv HTML → ar5iv → arXiv
+PDF → PMC JATS → an OpenAlex OA PDF, and names each route it failed; `--outline` lists sections,
+`--section "3"` reads one, `--query "<terms>"` ranks passages (BM25), `--start/--max-chars` reads a slice.
+It reads open access only — no route means exit 1, never a paywall bypass. A formula printed from HTML or
+JATS is markup, not text: read the page image instead (`zotero-pdf --url ... --render --pages`).
+
+### 3.2 The venue's record — a provider's reading, never the paper's standing
+
+`{{presetTools}}/journal-rank.mjs --journal "<exact title>"` (or `--doi <doi>`, which resolves the real
+title first) asks the ranking provider the reference manager's own plugin trusts, and prints what it holds
+with the provider's labels kept apart: `sci` is the current JCR quartile (one collapsed value per journal,
+with the per-category detail in `sciUpSmall`/`xrSmall`), `sciUp` the current CAS-upgraded partition, `xr`
+the XinRui partition. `--json` keeps the whole context.
+
+- **Ask with the exact title, or with a DOI.** An ISSN is rejected: asked for one, the provider answered a
+  record about something else, so it does not fail closed. A near-miss name fails closed (`all: null`),
+  which is the good case.
+- **It is a transcription with no edition stamp.** The payload names no journal and no year; the output
+  says "provider says" and repeats the retrieval date for that reason. Quote it that way — never as a JCR
+  export, never as a property of the paper.
+- **Exit 2 is "this machine cannot ask"** (no key), not a coverage gap. A throttle is its own answer: wait
+  a moment and ask again — the helper does not retry, and a retry loop against a metered endpoint is how a
+  working key gets spent on nothing.
+
+
 ## 4. Do vs don't
 
 ### 4.1 Do

@@ -77,6 +77,12 @@ it; none restates it, so a change lands in one place.
 Give title · authors · year · venue or preprint server · one retrievable identifier (DOI / arXiv id /
 URL). **If it has no retrievable identifier, it does not go in.**
 
+**The citation text comes from the library, not from memory.** For a record the owner already holds,
+`{{presetTools}}/zotero-export.mjs --item <key> --format citation|bibliography|bibtex|biblatex|ris|csljson`
+asks the library's own CSL translator (`--style` / `--locale` for CSL); `--collection <key>` does the batch,
+50 keys per call — a larger set is the next call, never a silent split. A note or an attachment is not a
+work and is refused; a record the library fails to answer is named rather than printed as a blank line.
+
 ### 3.3 Every claim maps to a source
 
 - **Every** claim carries at least one source — once, where the claim enters the file; a row that already
