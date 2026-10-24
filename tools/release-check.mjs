@@ -47,6 +47,7 @@ export const REQUIRED_HELPERS = [
   'preset-paths.js',
   'tools/arxiv.mjs',
   'tools/metadata.mjs',
+  'tools/scholarly.mjs',
   'tools/zotero-read.mjs',
   'tools/zotero-pdf.mjs',
   'tools/zotero-write.mjs',

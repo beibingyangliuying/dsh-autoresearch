@@ -88,6 +88,7 @@ node tools\toolchain-selftest.mjs
 node tools\scaffold-selftest.mjs
 node tools\arxiv-selftest.mjs
 node tools\metadata-selftest.mjs
+node tools\scholarly-selftest.mjs
 node tools\journal-rank-selftest.mjs
 node tools\refusal-selftest.mjs
 node tools\zotero-read-selftest.mjs

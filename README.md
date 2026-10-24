@@ -359,6 +359,10 @@ node tools\arxiv-selftest.mjs
 # and the refusals — without the network
 node tools\metadata-selftest.mjs
 
+# the discovery helper: seven source shapes, routing, RRF dedup, and the measured 429/challenge
+# failures — without the network
+node tools\scholarly-selftest.mjs
+
 # the journal-ranking channel: one journal's provider reading, the key it needs and never prints, and
 # the ISSN the provider answers about something else — without the network or a key
 node tools\journal-rank-selftest.mjs
