@@ -40,8 +40,13 @@ const DEFAULT_REPO = 'beibingyangliuying/dsh-autoresearch'
  * Two directions are checked, and only one of them is this list: `namedHelperProblems` derives the
  * DEMAND side from the text a discipline hands an agent, and fails when this roster does not carry a
  * helper it names. An entry here is therefore not a claim that the helper is named anywhere - the
- * shared transport, the in-app snippet and the attachment tool are listed because a channel stops
+ * shared modules, the in-app snippet and the attachment tool are listed because a channel stops
  * working without them.
+ *
+ * The third direction closes the directory: every file under `tools/` must be either an entry on this
+ * roster or inside a declared sub-directory (`TOOLS_CLASSES`). A roster cannot see a file nobody
+ * registered, and a directory with no declared classes is how 26 tests and 10 probes came to sit in the
+ * namespace a discipline addresses. `unclassifiedTools` is that closure.
  */
 export const REQUIRED_HELPERS = [
   'preset-paths.js',
@@ -49,7 +54,10 @@ export const REQUIRED_HELPERS = [
   'tools/metadata.mjs',
   'tools/scholarly.mjs',
   'tools/scholarly-read.mjs',
+  'tools/scholarly-sources.mjs',
+  'tools/journal-rank.mjs',
   'tools/zotero-read.mjs',
+  'tools/zotero-export.mjs',
   'tools/zotero-pdf.mjs',
   'tools/zotero-write.mjs',
   'tools/zotero-edit.mjs',
@@ -260,6 +268,62 @@ function gitReason(error) {
 }
 
 /**
+ * The declared classes under `tools/`, in the order a reader should meet them.
+ *
+ * `tools/` itself is the agent's namespace: a program there may be handed to an agent by absolute path.
+ * Everything else has an audience that is not the agent, and saying so in the layout is what keeps the
+ * namespace honest.
+ */
+export const TOOLS_CLASSES = ['tests', 'dev', 'owner']
+
+/**
+ * Which files under `tools/` have no declared class.
+ *
+ * `tools/` top level is the shipped surface, so a file there must be on the roster (which is what the
+ * published-package check fetches). A sub-directory must be one of `TOOLS_CLASSES`. Anything else -
+ * a new helper nobody registered, a directory nobody classified - is reported rather than absorbed:
+ * "there is a file there" is the only evidence a roster cannot produce on its own.
+ *
+ * @param {string[]} files Paths relative to `tools/`, with `/` separators, at any depth.
+ * @param {string[]} roster Paths spelled as {@link REQUIRED_HELPERS} spells them.
+ * @returns {string[]} One message per unclassified file; empty when every file has a class.
+ */
+export function unclassifiedTools(files, roster) {
+  const known = new Set(roster)
+  const problems = []
+  for (const file of files) {
+    const segments = String(file).split('/')
+    if (segments.length > 1) {
+      if (!TOOLS_CLASSES.includes(segments[0])) {
+        problems.push(`tools/${file} is under no declared class (${TOOLS_CLASSES.join(', ')})`)
+      }
+      continue
+    }
+    if (!known.has(`tools/${file}`)) problems.push(`tools/${file} is neither on the roster nor in a declared class`)
+  }
+  return problems
+}
+
+/**
+ * Every file under `tools/`, relative to it, with `/` separators.
+ *
+ * @param {string} dir Absolute path of `tools/`.
+ * @returns {string[]} Sorted relative paths.
+ */
+export function toolFiles(dir) {
+  const found = []
+  const walk = (base, prefix) => {
+    for (const name of readdirSync(base, { withFileTypes: true })) {
+      const rel = prefix === '' ? name.name : `${prefix}/${name.name}`
+      if (name.isDirectory()) walk(join(base, name.name), rel)
+      else found.push(rel)
+    }
+  }
+  walk(dir, '')
+  return found.sort()
+}
+
+/**
  * The three outcomes, and the exit code each one means.
  *
  * A check that could not RUN is not a failed check. When the network or git is unavailable the artifact
@@ -330,10 +394,23 @@ function checkLocal() {
   const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
   report(tally, 'every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
 
-  // The roster's helpers, read against the one renderer they are supposed to share. The two files that
-  // live in tools/ without being programs - the transport and the voice - are not on the roster and
-  // never fail on their own, so they are not read here.
-  const sharedModules = new Set(['tools/zotero-local-api.mjs', 'tools/refusal.mjs'])
+  // The third direction: the directory itself. A file that enters `tools/` without a class is invisible
+  // to every roster, and a new sub-directory would join the namespace a discipline addresses if nothing
+  // looked. Both are reported from what is on disk, so the answer does not depend on anyone remembering.
+  report(
+    tally,
+    'every file under tools/ is a rostered helper or in a declared class',
+    unclassifiedTools(toolFiles(join(ROOT, 'tools')), REQUIRED_HELPERS),
+  )
+
+  // The roster's helpers, read against the one renderer they are supposed to share. The shared modules
+  // on the roster - the transport, the voice and the source shapes - are libraries: they fail through no
+  // exit code of their own, so they are not read here.
+  const sharedModules = new Set([
+    'tools/zotero-local-api.mjs',
+    'tools/refusal.mjs',
+    'tools/scholarly-sources.mjs',
+  ])
   const helperSources = REQUIRED_HELPERS.filter((path) => path.endsWith('.mjs') && !sharedModules.has(path)).map((path) => ({
     name: path,
     text: readFileSync(join(ROOT, path), 'utf8'),

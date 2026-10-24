@@ -24,6 +24,8 @@ import {
   summary,
   taggedCommit,
   tagRefQuery,
+  toolFiles,
+  unclassifiedTools,
   versionOfTag,
   versionProblems,
 } from '../dev/release-check.mjs'
@@ -174,6 +176,30 @@ check(
 )
 const absent = REQUIRED_HELPERS.filter((path) => !existsSync(join(ROOT, path)))
 check(absent.length === 0, 'every path on the roster exists in this tree - a typo would fail every tag', absent.join(', '))
+
+console.log('\n[5c] every file under tools/ has a declared class')
+
+// The roster above is a list, and a list cannot see a file nobody registered. This closes the directory
+// instead: top level is the shipped surface (so the file must be on the roster), and a sub-directory
+// must be one of the declared classes. Before this check, 26 tests and 10 probes sat in the namespace a
+// discipline addresses and no instrument looked at the arrangement at all.
+const toolsDir = join(ROOT, 'tools')
+const underTools = toolFiles(toolsDir)
+const stray = unclassifiedTools(underTools, REQUIRED_HELPERS)
+check(stray.length === 0, 'every file under tools/ is rostered or in a declared class', stray.join('; '))
+check(underTools.includes('tests/arxiv-selftest.mjs') && underTools.includes('arxiv.mjs'), 'the walker reaches both levels')
+check(
+  unclassifiedTools(['stray.mjs'], REQUIRED_HELPERS).length === 1,
+  'a helper nobody rostered is reported - this check can fail',
+)
+check(
+  unclassifiedTools(['scratch/notes.mjs'], REQUIRED_HELPERS).length === 1,
+  'a sub-directory nobody declared is reported - this check can fail',
+)
+check(
+  unclassifiedTools(['arxiv.mjs', 'tests/arxiv-selftest.mjs', 'dev/probe-session.mjs'], REQUIRED_HELPERS).length === 0,
+  'a rostered helper and a declared class are both accepted',
+)
 
 console.log('\n[5b] every helper that can fail speaks through one voice')
 
