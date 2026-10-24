@@ -267,17 +267,16 @@ not been read. Say which it is in the report rather than adjusting the numbers.
 **Artifact** — `<layer root>/adoption/<recordKey>.md`, plus one line in
 `<layer root>/adoption/INDEX.md`. It states where the record stands now:
 
-1. `## Record` — key, title, the ledger's `grade` and `depth`, and the section notes the items rest on
-   (**each with its provenance**). One `Ruler:` line names what was checked — the ledger row, the notes,
-   the scoping document, the domain invariants, this file, the rulings.
+1. `## Record` — key, title, the ledger's `grade` and `depth`, the section notes the items rest on
+   (**each with its provenance**), and one `Basis:` line naming what grounds the ruling — the ledger row,
+   the notes, the scoping document, the domain invariants, this file, the rulings. It is a pointer, not
+   an account of what the round did.
 2. `## Candidates` — the table: ID · one line · recommended verdict · target · anchor present?
 3. `## Rulings` — the owner's rulings, dated, one row each. A correction row states the old value beside
    the new one; a verdict that changed is a new dated row, never a rewrite of the old one.
 4. `## Refusals and gaps` — only what still blocks a decision: an ambiguous formula, an undefined
    symbol, an uncheckable precondition, a missing note or target, a domain conflict, and every section
    no note covers with how many `unknown` notes were read before saying so.
-
-**Closing line** — `read-back: <path> · <n> items`, the only evidence the write happened.
 
 **Answered to the owner, not written** — the INDEX lines this round added or changed.
 

@@ -2164,3 +2164,24 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **已知边界**：`time-context` 每步最多多一行（默认 10 分钟节流），成本随步数而非请求数增长，且注入的是一条 user-role 消息；`tool-schedule` 若研究闭环真需要"定时改数据"，重开本条。
 
 **未做**：未对 standard 其余行做全表复核（只 diff 了行名与同名行的 config）；`tool-plugin-market` 的差异（standard 声明 `disabled: true`、本预设整行省略）净效果相同，保持现状。
+
+
+## 91. 触发下移到 catalog，常驻层只留次序；顺带退回 plan-mode 的措辞与删掉一处过程证据（Revision 40，2026-10-24）
+
+**起因**：junhan 问 persona 要不要和 standard 对齐，并追了三问：12 条纪律会不会让文档变臃肿、"Which skill to load" 能不能删（DSH 不是自有 skill 注入吗）、plan mode 与 compaction 是不是必须覆盖写。
+
+**实测**：① 12 条里 9 条减字或中性，只有规则 5（`absent:` 行）与规则 7（修订行）条件性加一行；§88 测出的七个臃肿成因没有一条在 persona 里。② 模型看到的 skill 目录只渲染 `name: description`（`dsh-tool-skill` 第 1022 行），description 截断到 **500 字符**（`catalogDescriptionMaxLength` 默认 500），**`whenToUse` 不进模型目录**；13 条 description 的触发句都在前 500 字符内，4 条被截（共 561 字符），截掉的是负面边界。③ `compaction` 与 standard **逐字相同**；plan-mode 那段是唯一措辞偏离，且 `dsh-plan-mode` 头注写明它 "while active … included in each model request"，不常驻。
+
+**裁定（junhan 逐项确认，2026-10-24）**：
+
+1. **路由下移**：删掉 13 条 bullet，常驻层只留三样 catalog 说不出来的东西——次序、强制力、外来 skill 的处置。persona 6,325 → **4,431 字符（≈1,757 → 1,231 tokens）**。
+2. **plan-mode 措辞退回 standard 原文**：语义等价，偏离零收益。
+3. **adoption-ruling §6 去过程证据**：`Ruler:` 改 `Basis:`（指针，不是过程记），删掉 `read-back:` 收尾行（文件本身即证据）。
+
+**为什么不是"把 description 也改短"**：两条载体分工不同——description 是模型选用的触发句，persona 只给次序；删 description 的触发句会让目录只剩主题词，等于把第二载体让给一个更差的位置。
+
+**落点**：[`protocol.md`](../protocol.md)（Revision 40：§2 路由分两段、§8 外来条目措辞）· [`cordis.patch.yml`](../cordis.patch.yml)（头注、persona 路由块、plan-mode 段）· [`tools/preset-selftest.mjs`](../tools/preset-selftest.mjs)（`ROUTED_NAMES` → `SHIPPED_NAMES`；四条新断言：零 bullet、次序、强制力、外来条措辞；`resident layer names no discipline` 反向护栏）· [`skills/adoption-ruling`](../skills/adoption-ruling/SKILL.md) §6 · [`README.md`](../README.md) 与 [`docs/overview.md`](overview.md) 的两处"路由表"措辞。
+
+**已知边界**：路由现在完全靠 description 的触发句，而 catalog 把它截在 500 字符——**没有任何机器护栏能判"触发句还在不在前 500 内"**；把 `catalogDescriptionMaxLength` 抬到 800 可以消掉这个静默失效（约 +150 tokens），本轮没做。同形的 `read-back:` 收尾行还留在 `direction-probe` 与 `section-notes`，是同一判据，本轮未动。
+
+**未做**：未重写 13 条 description；未量化"删掉路由 bullet 后触发率是否下降"（需要真实会话的 `session-tool-usage` 才判得出）。
