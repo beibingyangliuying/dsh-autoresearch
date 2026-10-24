@@ -161,7 +161,7 @@ arXiv DOI answered with the work's other DOI), and every citation count is print
 gave it and the date it was read, because the same work measured 43,412 citations on one source and
 46,513 on the other.
 
-**What the reference-library channel is.** Eight helper programs, not a server. Every one of them reaches
+**What the reference-library channel is.** Nine helper programs, not a server. Every one of them reaches
 the library through the application's own local API, so a reference manager that is not running fails all
 of them at once: `tools/zotero-ensure.mjs` is the way out — it probes the address, starts the application
 when nothing answers and no process is running, and prints one of four states (`already answering`,
@@ -171,10 +171,14 @@ writes a preference, never kills or restarts anything, and it **refuses to launc
 application. The library is read only through that API: when it does not answer, the round says so and
 stops rather than reading the database file or picking stored attachments out by path — a reading that
 cannot name its record can be written onto nothing. Then `tools/zotero-read.mjs`
-reads — search, one record, one note's body, an attachment's text in slices, the collection tree — and
-`tools/zotero-pdf.mjs` reads the attachment **itself** where the library's index cannot answer: the file's
+reads — search (with sort, item type and trashed filters), one record **with the citation fields a
+reference needs**, one note's body as text, BM25-ranked passages across abstract/notes/full text, the
+collection tree, the item-type schema, and a changes cursor — and `tools/zotero-pdf.mjs` reads the
+attachment **itself** where the library's index cannot answer: the file's
 own text layer, the paper's own table of contents (measured on one library: 11 of 20 papers carried one),
-and the page rendered to an image — the rung that answers mathematics no text layer holds. **What each
+and the page rendered to an image — the rung that answers mathematics no text layer holds; the same rung
+also reads an open-access PDF by URL. `tools/zotero-export.mjs` asks the library's own translator for the
+citation, bibliography, BibTeX, RIS or CSL JSON, so a reference is never written from memory. **What each
 helper can do, what it refuses, and what to do when the refusal lands is one page**:
 [`docs/toolchain.md`](docs/toolchain.md), generated from the tools themselves, with every line
 citing something a self-test looks at. Each kind of

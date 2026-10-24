@@ -80,7 +80,8 @@ node tools\doc-selftest.mjs                            # 契约/索引 的分工
 node tools\scaffold-selftest.mjs                       # 脚手架布局：契约 §7 与本仓 README 是同一份名单；模板里不许有 AGENTS.md
 node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
 node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
-node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 年份 / 附件挑选 / 切片（不连库）
+node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 题录块 / 笔记文本 / BM25 检索 / 分面 / 变更（不连库）
+node tools\zotero-export-selftest.mjs                  # 导出：translator 三条管线 / 记录过滤 / 引用顺序（不连库）
 node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写 / 命令行走桩库的 0·1·3（不连真库）
 node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表 / 命令行走桩库的 0·1·3（不连真库）

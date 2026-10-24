@@ -74,7 +74,7 @@ export const FACTS = [
   },
   {
     says: '本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。',
-    cites: [cite('docs/coverage.md', '不做 OCR'), cite('README.md', 'Eight helper programs')],
+    cites: [cite('docs/coverage.md', '不做 OCR'), cite('README.md', 'Nine helper programs')],
   },
   {
     says: 'helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。',
@@ -132,36 +132,76 @@ export const HELPERS = [
   },
   {
     name: 'zotero-read.mjs',
-    role: '读：检索 / 一条记录 / 笔记正文 / 附件文本切片 / 分类树 / 分类扫描 / 标签',
+    role: '读：检索（含分面与排序）/ 一条记录 / 笔记正文 / 段落检索 / 附件文本切片 / 附件定位 / 分类 / 结构 / 变更 / 库内查重',
     can: [
-      '`--search`（默认搜摘要＋笔记＋附件全文）· `--item`（笔记会打印正文**和它的 `tags :`**）',
-      '`--fulltext --offset/--limit/--grep`：按片读附件文本，上一片会打印 `next --offset`',
-      '`--collections` / `--collection <key>` / `--tags`',
-      '`--collection <key> --screen`：把整个分类读满（`start` 分页），每篇印一条摘要；notes/attachments 跳过并计数',
+      '`--search`（默认搜摘要＋笔记＋附件全文）· `--sort` / `--direction` / `--item-type` / `--trash` / `--library user:0|group:<id>`',
+      '`--item`：题录块（venue/卷期页/publisher/repository 等）＋笔记正文按**可读文本**印，`--json` 保留原始 HTML 与题录字段',
+      '`--retrieve <key> --query "<terms>" [--passages N] [--sources abstract,notes,fulltext]`：BM25 排段落，每条带 sourceRef/offset/score；缺的源进 `sourcesSkipped`',
+      '`--locate <key>`：最佳附件是本地 path（并报 exists）还是 web URL',
+      '`--changes [--since N]`：基线版本或增量 diff；`--item-types` / `--item-fields <type>` / `--saved-searches`',
+      '`--find-doi <doi>`：按 DOI 反查本库，返回 key/ref',
+      '`--fulltext --offset/--limit/--grep`：按片读附件文本，上一片会打印 `next --offset`；`--collection <key> --screen` 把整个分类读满',
     ],
-    refuses: ['一次只允许一种模式', '没有索引的附件：它报的是**库自己的状态**，不是"这篇没有正文"'],
+    refuses: [
+      '一次只允许一种模式',
+      '没有索引的附件：404 现在给出 `zotero-pdf --extract` 的可执行命令，而不是只说"重开应用"',
+      '批注 reader **不做**：Zotero 把批注挂在 PDF 附件下，本工具只列直接 children；需要时再补',
+      '`--library` 只接受 `user:0` 或 `group:<id>`，不猜别人的 user id',
+    ],
     when: [
+      '要写一条可定位引用 → `--item` 看 venue/卷期页；要引原文 → `--retrieve` 或 `--fulltext --grep`',
       '读到空文本 → 换 `zotero-pdf.mjs --extract`（文件自己的文字层）；输出头里的 `rung` 行会说明这一级是谁',
-      '文本很长 → 按 `--offset` 接着读，别让裁剪器替你做决定',
+      '问"这本书/这篇还在我库里吗" → `--find-doi`，不要用标题猜',
+      '问"上次之后库里多了什么" → 先 `--changes` 记下 cursor，下一轮 `--changes --since <version>`',
     ],
-    cites: [cite('tools/zotero-read.mjs', "rung   : (1) the library's indexed text", 'nextOffset'), cite('tools/zotero-pdf.mjs', '(2) the file')],
+    cites: [
+      cite('tools/zotero-read.mjs', '--retrieve', '--changes', '--find-doi', 'citationLines', 'tokenize'),
+      cite('tools/zotero-local-api.mjs', 'changedItemsSince', 'fieldNamesForType'),
+    ],
+  },
+  {
+    name: 'zotero-export.mjs',
+    role: '导出：逐条 citation / 整段 bibliography / bibtex / biblatex / ris / csljson',
+    can: [
+      '`--item <key>`（可重复）或 `--collection <key>`；`--format` 选一种；`--style` / `--locale` 给 CSL',
+      'citation 走 `include=citation`，bibliography 走 `format=bib`，其余格式原样走 translator；逐条保留请求顺序',
+      '一次最多 50 个 key（Zotero 的 itemKey 上限）；更大的集合是下一次调用，不静默拆批',
+    ],
+    refuses: [
+      'notes / attachments 不进引用：它们不是作品',
+      '库漏答某条 citation 时**拒绝并点名**，不印空行',
+      '导出文本不中途截断：超过上限就报错，而不是给半段',
+    ],
+    when: [
+      '写论文/笔记要引用 → 先用它生成，不要凭记忆写 BibTeX 或作者年份',
+      '要引一整批 → 先 `--collection`，再按 `--limit` 分批；每批不超过 50',
+    ],
+    cites: [cite('tools/zotero-export.mjs', 'buildExportPath', 'selectExportKeys', 'orderCitations', 'ITEMKEY_CAP')],
   },
   {
     name: 'zotero-pdf.mjs',
-    role: '读附件本身（梯级 2/3/4）：文件文字层 · 论文自带目录 · 页面渲成图',
+    role: '读附件本身（梯级 2/3/4）：文件文字层 · 论文自带目录 · 页面渲成图；也可读一个 OA PDF URL',
     can: [
       '`--outline`：论文**自带**的目录，条目映射成写入侧认的序号（`I Introduction` → `§1`）',
       '`--extract`：文件自己的文字层，补"库里没索引"的洞',
       '`--render --pages 3-5 --scale 1.5`：把页面渲成 PNG，默认落到 `.section-notes/<recordKey>/pages/`',
+      '`--url <https-pdf>`：同一个梯级读一个库外的开放获取 PDF；输出来源是 URL，不是库记录',
     ],
     refuses: [
       '一次一级：`one rung per invocation`',
       '`--render` 不给 `--pages`（一轮不许把整篇渲出来）',
       '页号超出文件页数；`--pages` 不是页号或区间',
       '文件没有自带目录时，rung 3 **明说空手**并 exit 1',
+      '`--url` 只收 http(s)，并且要真的是 PDF：落地页不是文件，空 body 与超过 80 MB 都拒绝',
     ],
-    when: ['公式读出来是乱码 → `--render` 后用 `read_image` **当图像读**（不许当文本引用）', '没索引 → `--extract`，注意它和索引读的是**同一张编码表**，修不了字体编码的洞'],
-    cites: [cite('tools/zotero-pdf.mjs', 'one rung per invocation', '--render needs --pages', 'no table of contents, so rung (3) has nothing to give')],
+    when: [
+      '公式读出来是乱码 → `--render` 后用 `read_image` **当图像读**（不许当文本引用）',
+      '没索引 → `--extract`，注意它和索引读的是**同一张编码表**，修不了字体编码的洞',
+      '库里没有、OA 有 → 先 `metadata --oa` 拿 PDF URL，再 `--url` 读；引用时写明来源是 URL',
+    ],
+    cites: [
+      cite('tools/zotero-pdf.mjs', 'one rung per invocation', '--render needs --pages', 'no table of contents, so rung (3) has nothing to give', 'urlSlug', '--url takes an http(s) URL'),
+    ],
   },
   {
     name: 'zotero-section-note.mjs',
@@ -223,15 +263,19 @@ export const HELPERS = [
   },
   {
     name: 'zotero-edit.mjs',
-    role: '改一条记录的字段与标签',
-    can: ['白名单字段（`EDITABLE_FIELDS`）与标签（`--add-tag` / `--remove-tag`，写成一个 diff）'],
+    role: '改一条记录的字段与标签；写前按 itemType 校验字段',
+    can: [
+      '白名单字段（`EDITABLE_FIELDS`）与标签（`--add-tag` / `--remove-tag`，写成一个 diff）',
+      '写前读 `/itemTypeFields`：字段不属于该类型时**拒绝并点名**，给出 `zotero-read --item-fields` 的命令',
+    ],
     refuses: [
       '结构化字段（`REFUSED_FIELDS`）：creators · itemType · key · version · collections · relations · 两个日期',
+      '库不提供 schema（404）时**不假装校验过**：退回静态白名单，不阻止合法编辑',
       '失败分三种答案：0 写入并回读 · 1 拒绝（冲突、4xx）· **3 已发送或已写但未确认**——5xx 或断线不等于没写，报告点名条目并说清重读看到什么',
     ],
     when: ['要改上面那些：**在应用里改**，工具会说明每条为什么不是一行能表达'],
     cites: [
-      cite('tools/zotero-edit.mjs', 'EDITABLE_FIELDS', 'REFUSED_FIELDS', 'a creator list is structured', 'OUTCOME UNKNOWN'),
+      cite('tools/zotero-edit.mjs', 'EDITABLE_FIELDS', 'REFUSED_FIELDS', 'invalidFields', '--item-fields', 'OUTCOME UNKNOWN'),
     ],
   },
   {
@@ -300,10 +344,13 @@ export const HELPERS = [
   },
   {
     name: 'metadata.mjs',
-    role: '书目元数据（不是全文通道）：解析一条记录 · 检索候选 · 它引了谁 / 谁引了它 · 有没有列免费副本',
+    role: '书目元数据（不是全文通道）：解析一条记录 · 检索候选 · 引用 / 被引 · 免费副本 · 正式引用 · 核验 · 相关作品',
     can: [
       '`--doi <doi|W-id>`（默认 OpenAlex）· `--source crossref`（出版方那一侧）',
       '`--search` 候选列表（`--rows` 1–10）· `--refs` · `--cited-by <W-id>` · `--oa <doi> --mailto <地址>`',
+      '`--cite <doi|arxiv-id> [--format bibtex|ris|csljson|text] [--style apa] [--locale en-US]`：从 doi.org 的内容协商取**正式引用**，不是从记忆写',
+      '`--verify <doi> [--expect-title …] [--expect-year …] [--expect-author …]`：Crossref 记录 + 撤稿公告 + 与声明的逐项比对',
+      '`--related <doi|W-id>`：OpenAlex 的 related_works 列表，一条线索而不是引用',
       '`--json`：打印的是**收敛后的记录**，不是原始响应（实测 24,580 字符 → 4,867）',
     ],
     refuses: [
@@ -314,11 +361,14 @@ export const HELPERS = [
       '答回来的 DOI 与问的不同：**两个都打印并标注**',
       '四种"没有"分开报：404（这个源没有它）· body 不是 JSON · 429（限流）· 请求失败',
       '摘要只在能从倒排索引**完整重建**时打印（位置有洞 ⇒ 报 absent），绝不从标题写',
+      '`--cite` 只收 DOI 或 arXiv id：PMID 需要先解析成 DOI；注册局答 HTML 落地页时**拒绝**，不把网页当引用',
+      '`--verify` 只收 DOI（OpenAlex id 没有注册局记录）；"match" 只说注册局不反驳该声明，不说论文支持它',
     ],
     when: [
       '要引用一个数字 → 抄输出那一行，它带着来源与检索日期；别把它当作品的稳定属性',
       '搜出候选 → 先 `--doi` 确认那一条；把搜索结果当元数据报告是不允许的',
       '免费副本 → 那是**线索不是取回**：没真取到就写"列在 <url>"，坏链按失败线索报',
+      '要写一条参考文献 → `--cite`；要核一条已有引用 → `--verify --expect-*`；要找相邻工作 → `--related`',
     ],
     cites: [
       cite(
@@ -327,6 +377,10 @@ export const HELPERS = [
         'DIFFERENT from the DOI asked for',
         'rebuilt from abstract_inverted_index',
         'one request per invocation',
+        'citeAccept',
+        'citeDoi',
+        'verifyWork',
+        'formatRelated',
       ),
       cite('docs/coverage.md', '书目元数据'),
     ],
