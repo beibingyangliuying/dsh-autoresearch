@@ -285,6 +285,11 @@ if (!existsSync(composedFile)) {
   for (const id of ['present', 'tool-ralph']) {
     ok(!rowIds.includes(id), `removed by decision: ${id} absent`)
   }
+  // A config field the row's own Config does not declare is not cosmetic - it reads as an implemented
+  // feature. All four delegation rows carried `backgroundMode` (two `continuable`, two `one-shot`) from
+  // 2026-10-12 to 2026-10-24, while `dsh-tool-subagent` declared only provider / toolName /
+  // modelSelectionSettings / agentOptions / maxDepth, and no check in this file could have seen it.
+  ok(!/^\s+backgroundMode:/m.test(block.join('\n')), 'no delegation config field the tool does not declare')
   // Leak guard: the preset's own plugin rows must be nested INSIDE the preset. If someone moves them
   // back into a profile-level bundle they leak into every other session in the profile (and the
   // isolation filter would then mask them here).
