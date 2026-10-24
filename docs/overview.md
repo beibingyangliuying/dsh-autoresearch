@@ -71,27 +71,10 @@ flowchart LR
 规模类数字（几行、几条纪律、常驻多少 token）**故意不写进本文**——它们会过时。要当前值就跑：
 
 ```powershell
-dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由的次序与强制力 + 常驻成本 + 通道不挂 MCP 的反向护栏
-node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
-node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
-node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
-node tools\doc-selftest.mjs                            # 契约/索引 的分工，以及覆盖地图的名册与路径
-node tools\scaffold-selftest.mjs                       # 脚手架布局：契约 §7 与本仓 README 是同一份名单；模板里不许有 AGENTS.md
-node tools\arxiv-selftest.mjs                          # 预印本 helper：查询 url / Atom 解析 / 错误 feed（不出网）
-node tools\metadata-selftest.mjs                       # 书目元数据 helper：url / 倒排索引摘要 / 四种"没有" / 拒绝（不出网）
-node tools\scholarly-selftest.mjs                      # 跨源发现：7 个源的形状 / 路由 / RRF 去重 / 429 与 202 两种失败（不出网）
-node tools\scholarly-read-selftest.mjs                 # OA 阅读：arXiv HTML 解析 / JATS 分节 / 节查找 / 路由失败（不出网）
-node tools\zotero-read-selftest.mjs                    # 参考库读取：命中折叠 / 题录块 / 笔记文本 / BM25 检索 / 分面 / 变更（不连库）
-node tools\zotero-export-selftest.mjs                  # 导出：translator 三条管线 / 记录过滤 / 引用顺序（不连库）
-node tools\zotero-write-selftest.mjs                   # 建条目：分类键进 create body / 读回没有归档就报 UNFILED / 命令行走桩库的 0·1·3（不连真库）
-node tools\zotero-edit-selftest.mjs                    # 条目编辑：字段白名单 / 标签整表 / 无变化即不写 / 命令行走桩库的 0·1·3（不连真库）
-node tools\zotero-collection-selftest.mjs              # 分类：同级重名判定 / 归档整表 / 命令行走桩库的 0·1·3（不连真库）
-node tools\zotero-section-note-selftest.mjs            # 逐节笔记：tag 身份 / claim/rewrite/repair/retire / 删除（不连库）
-node tools\zotero-link-selftest.mjs                    # 附件链接：文件名清洗 / 目标路径 / 冲突分类 / 走桩库的 convert·unconfirmed·partial（不连真库）
-node tools\zotero-local-api-selftest.mjs               # 共享层：写入成功判据（任何 2xx）/ 未 open 不许写 / 读的地址缝 / 库没应答时的那句话（不连库）
-node tools\zotero-ensure-selftest.mjs                  # 启动器：先看哪里 / 指了缝就不启动 / 一个答案或一份报告（不启动任何东西）
-node tools\dump-session-selftest.mjs                   # 会话转写：扫描会下潜到会话目录 / 报的是实际跑的预设
+npm test                                   # 全套离线自测（从磁盘发现 tools/ 下每个 *-selftest.mjs）：结构 / 纪律 / 隔离 /
+                                           #   契约与覆盖图 / 脚手架 / 每个 helper 的纯半边。一条命令，退出码 0·1·3
+                                           #   每条自测的一句话说明在 README 的 "Develop it"，这里不再抄第二份
+
 node tools\session-tool-usage.mjs --preset autoresearch --prefix mnemon_   # 会话实际调用了什么（成本决策的依据）
 node tools\session-prompt-names.mjs --preset autoresearch --prefix mnemon_  # 常驻提示里点名了哪些工具（隔离挡不住散文）
 node tools\session-helper-modes.mjs --preset autoresearch                  # 读侧 flag 语法有没有真实误用

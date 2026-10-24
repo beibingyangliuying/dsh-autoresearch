@@ -347,6 +347,12 @@ docs/                  Chinese review aids: the coverage map, the review, the de
 ## Develop it
 
 ```powershell
+# the whole offline suite in one command: every *-selftest.mjs under tools/, discovered from disk, with
+# the composed dump regenerated first. It exits 1 when a test fails and 3 when one could not run (no
+# `dsh` on PATH, so the dump was never made) - the same three answers `release-check` gives.
+npm test
+
+# the same set one line at a time, when a single test is what a change touches
 # preset structure: composition, persona, routing, leak guards, and the counts the prose declares
 dsh --profile web --dump-config > .tmp\composed-web.txt
 node tools\preset-selftest.mjs .tmp\composed-web.txt

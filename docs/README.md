@@ -33,10 +33,12 @@
 ## 怎么验证
 
 ```powershell
-node tools\doc-selftest.mjs --negative-controls   # 契约 / 索引 / 覆盖图的分工、名册与路径
-node tools\toolchain-page.mjs --check             # toolchain.md 是否与生成器一致、每条出处是否还在
-node tools\toolchain-selftest.mjs                 # 同上，外加负向控制
-node tools\scaffold-selftest.mjs                  # 契约 §7 与 README 的布局块是同一份名单；模板里不许有 AGENTS.md
+npm test                                          # 全部离线自测（从磁盘发现；含下面这些，附带负向控制的那几条也含在内）
+node tools\release-check.mjs --local              # 工作树干净、每个自测都在 README 里、组合不挂 MCP 行
 ```
+
+一条自测的名字与它守的那条性质，写在 `../README.md` 的 "Develop it" 一节（`release-check` 会核对：`tools/` 下有的自测，
+README 必须点名）。这里只回答"怎么一次跑完"，不再抄第二份名单。`doc-selftest` 与 `scaffold-selftest` 另外接受
+`--negative-controls`：把每条检查各变异一次，证明它真的会红——新加一条护栏时跑这个，别信一次全绿的普通运行。
 
 `archive/plan-v0.md` 里的链接**按当时的布局**写，不保证可解析——它记录的是历史，改它等于改写历史。

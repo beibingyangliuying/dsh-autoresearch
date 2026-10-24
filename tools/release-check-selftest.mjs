@@ -7,6 +7,7 @@
 // a green local suite over an unpublished composition that still mounted two MCP servers. So every
 // pure check is driven with a mutation that must be detected, and the composition's own comments
 // (which name the removed servers on purpose) must NOT be.
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -105,18 +106,48 @@ check(
   'both path separators are read',
 )
 
-// The release procedure carries its own ordered copy of the suite, and that copy was prose with no
-// instrument behind it. It drifted twice: a section-note test and the scaffold guard were both added
-// without it, so a release could have run "the whole suite" and skipped them. Same instrument, second
-// list - and the check is driven with a block that names one test, which must report the rest.
+// The release procedure used to carry its own ordered copy of the suite, and that copy drifted twice: a
+// section-note test and the scaffold guard were both added without it, so a release could run "the whole
+// suite" and skip them. Enumerating the tests in prose was the wrong remedy - the enumeration is what
+// drifts, and a second list of one fact is this repository's oldest defect. The procedure now runs the
+// runner, so what this check pins is the DERIVATION: the block must name the runner, and the runner's own
+// `--list` must report every self-test that exists on disk.
 const suiteBlock =
   read('.agents/skills/preset-release/SKILL.md').match(/```powershell\r?\n([\s\S]*?)```/)?.[1] ?? ''
-const suite = documentedSelftests(suiteBlock, tools)
+const namesRunner = (block) => /run-selftests\.mjs|npm test/.test(block)
 check(suiteBlock !== '', 'the release procedure still carries a runnable suite block')
-check(suite.undocumented.length === 0, 'the release procedure names every self-test', suite.undocumented.join(', '))
+check(namesRunner(suiteBlock), 'the release procedure runs the derived suite, not a hand-written copy')
 check(
-  documentedSelftests('node tools\\preset-selftest.mjs', tools).undocumented.length > 0,
-  'a self-test missing from the release procedure would be reported - this check can fail',
+  !namesRunner('node tools\\preset-selftest.mjs .tmp\\composed-web.txt'),
+  'a procedure that names tests but no runner is reported - this check can fail',
+)
+
+// The runner is the list now, so the list it derives has to be the whole suite. Asking it (`--list`) is
+// cheap, needs no `dsh`, and cannot disagree with what a run would do.
+const testNames = tools
+  .filter((name) => name.endsWith('-selftest.mjs'))
+  .map((name) => name.replace(/\.mjs$/, ''))
+const listed = execFileSync(process.execPath, [join(ROOT, 'tools', 'dev', 'run-selftests.mjs'), '--list'], {
+  cwd: ROOT,
+  encoding: 'utf8',
+})
+  .split(/\r?\n/)
+  .filter((line) => line.endsWith('-selftest.mjs'))
+  .map((line) => line.replace(/^.*[\\/]/, '').replace(/\.mjs$/, ''))
+const discoveryGaps = (reported, actual) => {
+  const have = new Set(reported)
+  return [
+    ...new Set([...actual.filter((name) => !have.has(name)), ...reported.filter((name) => !actual.includes(name))]),
+  ]
+}
+check(
+  discoveryGaps(listed, testNames).length === 0,
+  'the runner discovers every self-test that exists',
+  discoveryGaps(listed, testNames).join(', '),
+)
+check(
+  discoveryGaps(listed.slice(1), testNames).length === 1,
+  'a self-test the runner would skip is reported - this check can fail',
 )
 
 

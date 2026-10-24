@@ -3,6 +3,7 @@
   "version": "0.17.0",
   "description": "A domain-neutral research workbench for DSH: an agent preset, thirteen on-demand research disciplines, three external channels reached through shipped command-line helpers, and a study scaffold.",
   "license": "MIT",
+  "scripts": { "test": "node tools/dev/run-selftests.mjs" },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.4",
     "@hyzyla/pdfium": "^3.0.0",

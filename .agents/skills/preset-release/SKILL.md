@@ -76,37 +76,19 @@ the old sentence to be read on its own.
 ## 4. Phase 1 — the suite, in this order
 
 ```powershell
-dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # structure, persona, routing, cost, reverse guards
+npm test                                  # the whole offline suite: every *-selftest.mjs under tools/,
+                                          #   discovered from disk, the composed dump regenerated first.
+                                          #   0 all passed | 1 something failed | 3 nothing failed, but one
+                                          #   could not run (no `dsh` on PATH, so no dump was made)
 
-node tools\isolation-selftest.mjs
-node tools\contact-bridge-selftest.mjs
-node tools\skills-selftest.mjs
-node tools\client-selftest.mjs
-node tools\doc-selftest.mjs
-node tools\toolchain-selftest.mjs
-node tools\scaffold-selftest.mjs
-node tools\arxiv-selftest.mjs
-node tools\metadata-selftest.mjs
-node tools\scholarly-selftest.mjs
-node tools\scholarly-read-selftest.mjs
-node tools\journal-rank-selftest.mjs
-node tools\refusal-selftest.mjs
-node tools\zotero-read-selftest.mjs
-node tools\zotero-export-selftest.mjs
-node tools\zotero-pdf-selftest.mjs
-node tools\zotero-write-selftest.mjs
-node tools\zotero-edit-selftest.mjs
-node tools\zotero-collection-selftest.mjs
-node tools\zotero-section-note-selftest.mjs
-node tools\zotero-link-selftest.mjs
-node tools\zotero-local-api-selftest.mjs
-node tools\zotero-ensure-selftest.mjs
-node tools\dump-session-selftest.mjs
-node tools\release-check-selftest.mjs
-
-node tools\release-check.mjs --local
+node tools\release-check.mjs --local      # after the suite: the artifact's shape, its exports, the README
+                                          #   roster, and a clean tree
 ```
+
+This section used to print the suite as 26 lines, and it drifted the way a hand-written list does: two
+tests added in §41 and §45 were missing from it while the suite itself was green (`docs/releases.md`
+records that). The list is now derived from disk, so a new test is in this run the day it lands. For one
+test, `node tools\dev\run-selftests.mjs --only <substring>`; `--list` prints what a run would execute.
 
 `release-check --local` fails on a dirty working tree on purpose: that check is a precondition for
 TAGGING, not for developing. Its other checks are the ones a change actually breaks — the composition
