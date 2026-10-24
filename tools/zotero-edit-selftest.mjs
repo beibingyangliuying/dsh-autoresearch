@@ -17,7 +17,7 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { EDITABLE_FIELDS, REFUSED_FIELDS, changedFields, computeTagChange, parseSetFlags } from './zotero-edit.mjs'
+import { EDITABLE_FIELDS, REFUSED_FIELDS, changedFields, computeTagChange, invalidFields, parseSetFlags } from './zotero-edit.mjs'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
@@ -295,6 +295,14 @@ check(refusedField.stderr.includes('edit it in the application'), 'and it names 
 resetLibrary()
 const unknownField = await runAsync(['--item', 'EDIT0001', '--set', 'publisher=Someone'])
 check(unknownField.status === 2, 'a field outside the whitelist is exit 2', `status ${unknownField.status}`)
+
+// --- the item type's own schema ------------------------------------------------------------------
+
+console.log('\n[4] a field the item type does not have is refused before the write')
+const journal = new Set(['title', 'DOI', 'publicationTitle'])
+check(invalidFields({ title: 'x', DOI: '10.1/x' }, journal).length === 0, 'valid fields pass')
+check(invalidFields({ publicationTitle: 'x' }, new Set(['title'])).join(',') === 'publicationTitle', 'one invalid field is named')
+check(invalidFields({ publisher: 'x' }, null).length === 0, 'a build that cannot report its schema does not block the edit')
 
 server.close()
 

@@ -25,10 +25,13 @@
 // Exit codes: 0 applied and read back, or nothing to do | 1 refused, nothing written | 2 usage |
 // 3 sent or written but unconfirmed - the record may already carry the change, so read it, do not
 // resend it.
-import { APP_NAME, createWriteGate, mayHaveLanded, normalizeTags, patchItem, readItem, reportUnconfirmed } from './zotero-local-api.mjs'
+import { APP_NAME, createWriteGate, fieldNamesForType, mayHaveLanded, normalizeTags, patchItem, readItem, reportUnconfirmed } from './zotero-local-api.mjs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { UsageError, reportFailure } from './refusal.mjs'
+import { Refusal, UsageError, reportFailure } from './refusal.mjs'
+
+/** The reader, named in a `fix` line only as an absolute, runnable path. */
+const READ_TOOL = fileURLToPath(new URL('./zotero-read.mjs', import.meta.url))
 
 /** Set immediately before the PATCH is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
@@ -59,6 +62,21 @@ export const REFUSED_FIELDS = {
   relations: 'relations are a structured list; edit them in the application',
   dateAdded: 'the library owns this',
   dateModified: 'the library owns this',
+}
+
+/**
+ * The requested fields the item type does not accept.
+ *
+ * The whitelist in this file is item-type-agnostic; the library's schema is not. Asking the schema
+ * turns a 400 into a refusal that names the field, so the plan is corrected before a write is sent.
+ *
+ * @param {Record<string, string>} fields The fields the plan wants to set.
+ * @param {Set<string>|null} valid The type's fields, or null when the build cannot report them.
+ * @returns {string[]} The field names that are not valid for this type.
+ */
+export function invalidFields(fields, valid) {
+  if (!valid) return []
+  return Object.keys(fields).filter((field) => !valid.has(field))
 }
 
 /**
@@ -190,6 +208,14 @@ async function main() {
   const info = await gate.open()
 
   const before = await readItem(options.key)
+  const validFields = await fieldNamesForType(before.itemType)
+  const invalid = invalidFields(fields, validFields)
+  if (invalid.length > 0) {
+    throw new Refusal(`${before.itemType} has no field named ${invalid.map((field) => `'${field}'`).join(', ')}`, {
+      fix: 'read the fields this item type accepts, then correct the plan',
+      command: `node "${READ_TOOL}" --item-fields ${before.itemType}`,
+    })
+  }
   const currentTags = normalizeTags(before.tags)
   const tagChange = computeTagChange(currentTags, { add: options.add, remove: options.remove })
   const patch = { ...fields }
