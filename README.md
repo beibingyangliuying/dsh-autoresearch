@@ -364,7 +364,8 @@ node tools\journal-rank-selftest.mjs
 node tools\refusal-selftest.mjs
 
 # the reference-library helpers: their pure halves run without a library, and write nothing
-node tools\zotero-read-selftest.mjs       # hit collapsing, years, attachment choice, slicing
+node tools\zotero-read-selftest.mjs       # hit collapsing, citation fields, notes, BM25 retrieval, facets, changes
+node tools\zotero-export-selftest.mjs     # the translator pipeline paths, the record filter, and citation order
 node tools\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
 node tools\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
