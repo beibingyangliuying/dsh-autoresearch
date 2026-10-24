@@ -48,6 +48,7 @@ export const REQUIRED_HELPERS = [
   'tools/arxiv.mjs',
   'tools/metadata.mjs',
   'tools/scholarly.mjs',
+  'tools/scholarly-read.mjs',
   'tools/zotero-read.mjs',
   'tools/zotero-pdf.mjs',
   'tools/zotero-write.mjs',

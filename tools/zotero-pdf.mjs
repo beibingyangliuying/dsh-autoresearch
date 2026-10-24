@@ -273,8 +273,16 @@ async function openSource(options) {
   }
 }
 
-async function runExtract(input, options) {
-  const { attachment, path, bytes } = input
+/**
+ * The text layer of one PDF, page by page.
+ *
+ * Shared with the scholarly reader, which fetches an open-access PDF and needs the same extraction
+ * without going through a library record.
+ *
+ * @param {Uint8Array|Buffer} bytes The file.
+ * @returns {Promise<{text: string, pageCount: number}>} The text and the page count.
+ */
+export async function extractPdfText(bytes) {
   const library = await PDFiumLibrary.init()
   const document = await library.loadDocument(new Uint8Array(bytes))
   const pages = []
@@ -286,6 +294,28 @@ async function runExtract(input, options) {
   const text = pages.join('\n\n')
   document.destroy()
   library.destroy()
+  return { text, pageCount }
+}
+
+/**
+ * A PDF's own table of contents.
+ *
+ * @param {Uint8Array|Buffer} bytes The file.
+ * @returns {Promise<{rows: object[], pageCount: number}>} The outline rows and the page count.
+ */
+export async function pdfOutline(bytes) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: false, isEvalSupported: false, disableFontFace: true })
+  const document = await task.promise
+  const rows = outlineRows(await document.getOutline())
+  const pageCount = document.numPages
+  await task.destroy()
+  return { rows, pageCount }
+}
+
+async function runExtract(input, options) {
+  const { attachment, path, bytes } = input
+  const { text, pageCount } = await extractPdfText(bytes)
 
   console.log(`source  : ${input.record ? 'the attachment' : 'the open-access URL'}, text layer read from ${path}`)
   console.log(`file    : ${attachment.key}  ${attachment.data.contentType}  ${pageCount} pages  ${text.length} characters`)
@@ -304,15 +334,8 @@ async function runExtract(input, options) {
 }
 
 async function runOutline(input) {
-  const { attachment, path, bytes } = input
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  // The loading task owns the worker, so it is what gets torn down: measured on pdfjs-dist 6, the
-  // document handle the task resolves to answers `destroy is not a function`.
-  const task = pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: false, isEvalSupported: false, disableFontFace: true })
-  const document = await task.promise
-  const rows = outlineRows(await document.getOutline())
-  const pageCount = document.numPages
-  await task.destroy()
+  const { path, bytes } = input
+  const { rows, pageCount } = await pdfOutline(bytes)
 
   console.log(`source  : the paper's own table of contents, embedded in ${path}`)
   console.log(`file    : ${path}  ${pageCount} pages  ${rows.length} entries`)

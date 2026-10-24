@@ -373,6 +373,9 @@ node tools\metadata-selftest.mjs
 # failures — without the network
 node tools\scholarly-selftest.mjs
 
+# the open-access reader: arXiv HTML, JATS sectioning, section lookup, and the route failures — offline
+node tools\scholarly-read-selftest.mjs
+
 # the journal-ranking channel: one journal's provider reading, the key it needs and never prints, and
 # the ISSN the provider answers about something else — without the network or a key
 node tools\journal-rank-selftest.mjs
