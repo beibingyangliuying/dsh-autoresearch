@@ -79,8 +79,12 @@ const DEFAULT_ABSTRACT_CHARS = 600
 /** Referenced/citing ids printed before the line reports how many were held back. */
 const IDS_SHOWN = 20
 
-const MODES = ['doi', 'search', 'refs', 'cited-by', 'oa']
+const MODES = ['doi', 'search', 'refs', 'cited-by', 'oa', 'cite', 'verify', 'related']
 const SOURCES = ['openalex', 'crossref']
+/** The citation formats doi.org content negotiation serves. */
+const CITE_FORMATS = ['bibtex', 'ris', 'csljson', 'text']
+const DEFAULT_CITE_STYLE = 'apa'
+const DEFAULT_CITE_LOCALE = 'en-US'
 
 /**
  * Strip the several ways a DOI is written down before it is used as an identifier.
@@ -94,6 +98,53 @@ export function normalizeDoi(value) {
     .replace(/^doi:\s*/i, '')
     .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
     .trim()
+}
+
+/**
+ * The DOI behind a `--cite` target.
+ *
+ * doi.org negotiates citations by DOI, so an arXiv id is mapped to its registered DataCite DOI rather
+ * than sent as an arXiv URL. A PMID needs a resolver that is not this channel; it is refused with that
+ * statement instead of a silent miss.
+ *
+ * @param {string} value A DOI or an arXiv id.
+ * @returns {string} The bare DOI.
+ * @throws {Error} When the value is neither.
+ */
+export function citeDoi(value) {
+  const text = normalizeDoi(value)
+  if (/^10\.\d{4,9}\//.test(text)) return text
+  const arxiv = /^(?:arxiv:)?(\d{4}\.\d{4,5})(?:v\d+)?$/i.exec(text)
+  if (arxiv) return `10.48550/arXiv.${arxiv[1]}`
+  if (/^pmid:/i.test(text)) {
+    throw new Error('a PMID needs a resolver: resolve it to a DOI with Europe PMC first, then cite the DOI')
+  }
+  throw new Error(`--cite takes a DOI or an arXiv id, got '${text}'`)
+}
+
+/**
+ * The `Accept` value doi.org content negotiation needs for one citation format.
+ *
+ * @param {string} format One of {@link CITE_FORMATS}.
+ * @param {string} style A CSL style id, for `text`.
+ * @param {string} locale A CSL locale, for `text`.
+ * @returns {string} The `Accept` header.
+ */
+export function citeAccept(format, style, locale) {
+  if (format === 'bibtex') return 'application/x-bibtex'
+  if (format === 'ris') return 'application/x-research-info-systems'
+  if (format === 'csljson') return 'application/vnd.citationstyles.csl+json'
+  return `text/x-bibliography; style=${style}; locale=${locale}`
+}
+
+/**
+ * The resolver URL for one DOI.
+ *
+ * @param {string} doi A bare DOI.
+ * @returns {string} `https://doi.org/<doi>` with each path segment encoded.
+ */
+export function citeUrl(doi) {
+  return `https://doi.org/${String(doi).split('/').map(encodeURIComponent).join('/')}`
 }
 
 /**
@@ -228,6 +279,9 @@ export function normalizeOpenAlexWork(record) {
   const references = Array.isArray(record?.referenced_works)
     ? record.referenced_works.map((value) => openAlexIdOf(value)).filter((id) => id !== '')
     : []
+  const related = Array.isArray(record?.related_works)
+    ? record.related_works.map((value) => openAlexIdOf(value)).filter((id) => id !== '')
+    : []
   return {
     source: 'openalex',
     id: openAlexIdOf(record?.id),
@@ -242,6 +296,7 @@ export function normalizeOpenAlexWork(record) {
     oaUrl: String(record?.open_access?.oa_url ?? ''),
     abstract: reconstructAbstract(record?.abstract_inverted_index),
     references,
+    related,
   }
 }
 
@@ -275,7 +330,62 @@ export function normalizeCrossrefWork(record) {
     abstract: plainText(record?.abstract),
     references,
     referenceCount: references.length,
+    updates: (Array.isArray(record?.['update-to']) ? record['update-to'] : [])
+      .map((entry) => ({
+        type: String(entry?.type ?? ''),
+        doi: normalizeDoi(entry?.DOI ?? ''),
+        label: plainText(entry?.label ?? ''),
+      }))
+      .filter((entry) => entry.type !== '' || entry.doi !== ''),
   }
+}
+
+/**
+ * Compare one registry record against what a reference claims, and look for a retraction.
+ *
+ * The comparisons are deliberately narrow: a title is a containment match on normalized words, a year
+ * is an equality, and an author matches a surname inside a display name. A "match" here means the
+ * registry does not contradict the claim, never that the paper supports it.
+ *
+ * @param {object} work A normalized Crossref record.
+ * @param {{title?: string, year?: string|number, author?: string}} [expected] The claim to check.
+ * @returns {{checks: Array<{field: string, expected: string, found: string, ok: boolean}>, retractions: object[], retracted: boolean}}
+ *   The checks that were asked for, and the retraction notices Crossref carries.
+ */
+export function verifyWork(work, expected = {}) {
+  const normalize = (value) => String(value ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+  const checks = []
+  if (expected.title) {
+    const wanted = normalize(expected.title)
+    const found = normalize(work?.title)
+    checks.push({
+      field: 'title',
+      expected: String(expected.title),
+      found: String(work?.title ?? ''),
+      ok: wanted !== '' && found !== '' && (found.includes(wanted) || wanted.includes(found)),
+    })
+  }
+  if (expected.year !== undefined && String(expected.year) !== '') {
+    checks.push({
+      field: 'year',
+      expected: String(expected.year),
+      found: String(work?.year ?? ''),
+      ok: String(work?.year ?? '') === String(expected.year),
+    })
+  }
+  if (expected.author) {
+    const wanted = normalize(expected.author)
+    checks.push({
+      field: 'author',
+      expected: String(expected.author),
+      found: (work?.authors ?? []).join('; '),
+      ok: wanted !== '' && (work?.authors ?? []).some((author) => normalize(author).includes(wanted)),
+    })
+  }
+  const retractions = (work?.updates ?? []).filter(
+    (entry) => /retract/i.test(entry.type) || /retract/i.test(entry.label),
+  )
+  return { checks, retractions, retracted: retractions.length > 0 }
 }
 
 /**
@@ -376,6 +486,18 @@ export function buildUrl(options) {
     return url.toString()
   }
 
+  if (options.mode === 'verify') {
+    return withContact(new URL(`${CROSSREF_URL}/works/${doiPath(normalizeDoi(options.target))}`), 'mailto').toString()
+  }
+
+  if (options.mode === 'related') {
+    const reference = workRef(options.target)
+    return withContact(
+      new URL(`${OPENALEX_URL}/works/${reference.kind === 'openalex' ? reference.value : `doi:${doiPath(reference.value)}`}`),
+      'mailto',
+    ).toString()
+  }
+
   // `--doi` and `--refs` read one work record; only what is printed differs.
   const reference = workRef(options.target)
   if (options.source === 'crossref') {
@@ -391,6 +513,9 @@ const USAGE =
   '       node tools/metadata.mjs --refs <doi|openalex-id> [--source openalex|crossref] [--mailto <address>]\n' +
   '       node tools/metadata.mjs --cited-by <openalex-id> [--rows 1-10] [--mailto <address>]\n' +
   '       node tools/metadata.mjs --oa <doi> --mailto <address>\n' +
+  '       node tools/metadata.mjs --cite <doi|arxiv-id> [--format bibtex|ris|csljson|text] [--style apa] [--locale en-US]\n' +
+  '       node tools/metadata.mjs --verify <doi> [--expect-title "<title>"] [--expect-year YYYY] [--expect-author "<surname>"]\n' +
+  '       node tools/metadata.mjs --related <doi|openalex-id>\n' +
   '       node tools/metadata.mjs --selftest'
 
 /**
@@ -409,6 +534,13 @@ export function parseArgs(argv) {
     rows: DEFAULT_ROWS,
     mailto: String(process.env.AUTORESEARCH_MAILTO ?? '').trim(),
     abstractChars: DEFAULT_ABSTRACT_CHARS,
+    citeFormat: 'text',
+    citeStyle: DEFAULT_CITE_STYLE,
+    citeLocale: DEFAULT_CITE_LOCALE,
+    citeDoi: '',
+    expectTitle: '',
+    expectYear: '',
+    expectAuthor: '',
     json: false,
     selftest: false,
   }
@@ -431,15 +563,57 @@ export function parseArgs(argv) {
   }
   options.mode = present[0] ?? ''
   if (options.mode === '') {
-    if (!flag('selftest')) throw new UsageError('pass one of --doi / --search / --refs / --cited-by / --oa')
+    if (!flag('selftest')) throw new UsageError(`pass one of ${MODES.map((mode) => `--${mode}`).join(' / ')}`)
     return { ...options, selftest: true }
   }
-  options.target = ['doi', 'refs', 'cited-by', 'oa'].includes(options.mode) ? String(value(options.mode) ?? '') : ''
+  options.target = ['doi', 'refs', 'cited-by', 'oa', 'cite', 'verify', 'related'].includes(options.mode) ? String(value(options.mode) ?? '') : ''
   options.search = options.mode === 'search' ? String(value('search') ?? '') : ''
-  if (['doi', 'refs', 'cited-by', 'oa'].includes(options.mode) && options.target.trim() === '') {
+  if (['doi', 'refs', 'cited-by', 'oa', 'cite', 'verify', 'related'].includes(options.mode) && options.target.trim() === '') {
     throw new UsageError(`--${options.mode} needs its identifier`)
   }
   if (options.mode === 'search' && options.search.trim() === '') throw new UsageError('--search needs a query')
+  if (options.mode === 'cite') {
+    try {
+      options.citeDoi = citeDoi(options.target)
+    } catch (error) {
+      throw new UsageError(error.message)
+    }
+  }
+  if (options.mode === 'verify' && workRef(options.target).kind !== 'doi') {
+    throw new UsageError('--verify reads a DOI record through Crossref; an OpenAlex id has no registry record to check')
+  }
+  const expectTitle = value('expect-title')
+  if (expectTitle !== null) {
+    if (options.mode !== 'verify') throw new UsageError('--expect-title applies to --verify only')
+    options.expectTitle = String(expectTitle)
+  }
+  const expectYear = value('expect-year')
+  if (expectYear !== null) {
+    if (options.mode !== 'verify') throw new UsageError('--expect-year applies to --verify only')
+    options.expectYear = String(expectYear)
+  }
+  const expectAuthor = value('expect-author')
+  if (expectAuthor !== null) {
+    if (options.mode !== 'verify') throw new UsageError('--expect-author applies to --verify only')
+    options.expectAuthor = String(expectAuthor)
+  }
+
+  const format = value('format')
+  if (format !== null) {
+    if (options.mode !== 'cite') throw new UsageError('--format applies to --cite only')
+    if (!CITE_FORMATS.includes(format)) throw new UsageError(`--format takes ${CITE_FORMATS.join(' or ')}, got '${format}'`)
+    options.citeFormat = format
+  }
+  const style = value('style')
+  if (style !== null) {
+    if (options.mode !== 'cite') throw new UsageError('--style applies to --cite only')
+    options.citeStyle = String(style)
+  }
+  const locale = value('locale')
+  if (locale !== null) {
+    if (options.mode !== 'cite') throw new UsageError('--locale applies to --cite only')
+    options.citeLocale = String(locale)
+  }
 
   const source = value('source')
   if (source !== null) {
@@ -447,6 +621,12 @@ export function parseArgs(argv) {
     options.source = source
   }
   if (source !== null && options.mode === 'oa') throw new UsageError('--oa reads Unpaywall only; --source does not apply')
+  if (source !== null && options.mode === 'cite') throw new UsageError('--cite reads doi.org; --source does not apply')
+  if (source !== null && (options.mode === 'verify' || options.mode === 'related')) {
+    throw new UsageError(`--${options.mode} reads one channel; --source does not apply`)
+  }
+  if (options.mode === 'verify') options.source = 'crossref'
+  if (options.mode === 'related') options.source = 'openalex'
   if (source === 'crossref' && options.mode === 'cited-by') {
     throw new UsageError('--cited-by reads OpenAlex only: Crossref carries a count, not a citing list')
   }
@@ -638,6 +818,58 @@ export function formatOa(record) {
   return lines.join('\n')
 }
 
+/**
+ * One registry record as a verification report.
+ *
+ * @param {object} work A normalized Crossref record.
+ * @param {{checks: object[], retractions: object[], retracted: boolean}} verdict The comparison.
+ * @returns {string} The report.
+ */
+export function formatVerify(work, verdict) {
+  const lines = [
+    'mode     : registry record (Crossref)',
+    `doi      : ${work.doi || '(none)'}`,
+    `title    : ${work.title || '(none)'}`,
+    `authors  : ${describeAuthors(work.authors)}`,
+    `year     : ${work.year ?? '(none)'}`,
+    `venue    : ${work.venue || '(none)'}`,
+    `retracted: ${verdict.retracted ? 'YES - a retraction notice is registered' : 'no retraction notice registered'}`,
+  ]
+  for (const update of verdict.retractions) {
+    lines.push(`  notice : ${update.type} ${update.doi}${update.label ? ` - ${update.label}` : ''}`)
+  }
+  if (verdict.checks.length === 0) {
+    lines.push('match    : no expectation was given; only existence and retraction were checked')
+  } else {
+    for (const check of verdict.checks) {
+      lines.push(
+        `match    : ${check.field} ${check.ok ? 'OK' : 'MISMATCH'} · expected ${JSON.stringify(check.expected)} · found ${JSON.stringify(check.found)}`,
+      )
+    }
+  }
+  lines.push('note     : a match means the registry does not contradict the claim, not that the paper supports it')
+  return lines.join('\n')
+}
+
+/**
+ * One work's OpenAlex related list.
+ *
+ * @param {object} work A normalized OpenAlex record.
+ * @returns {string} The report.
+ */
+export function formatRelated(work) {
+  const lines = [
+    'mode     : related works (OpenAlex)',
+    `work     : ${work.title || work.id || '(none)'}`,
+    `doi      : ${work.doi || '(none)'}`,
+    `related  : ${work.related.length}`,
+  ]
+  for (const id of work.related) lines.push(`  ${id}   resolve with --doi ${id}`)
+  if (work.related.length === 0) lines.push('none     : OpenAlex lists no related works for this record; this is not a failure')
+  lines.push('note     : related works are a similarity list, not citations; resolve one with --doi before using it')
+  return lines.join('\n')
+}
+
 /** The name this round should use for the channel it asked. Unpaywall answers `--oa` only. */
 function channelName(options) {
   return options.mode === 'oa' ? 'Unpaywall' : options.source
@@ -669,6 +901,14 @@ export function missingRecordRemedy(options) {
   const target = options.target
   if (options.mode === 'cited-by') {
     return { fix: '--cited-by reads OpenAlex work ids; if this is a DOI, resolve it with --doi first' }
+  }
+  if (options.mode === 'related') {
+    return { fix: '--related reads OpenAlex works; if this is a DOI, OpenAlex answers it - check the string, then retry' }
+  }
+  if (options.mode === 'verify') {
+    return {
+      fix: 'a DOI Crossref does not register is a finding, not a channel mismatch: check the string before citing it',
+    }
   }
   if (options.mode === 'oa') {
     return {
@@ -778,6 +1018,82 @@ function jsonView(options, payload) {
   return { mode: options.mode, asked: options.target, retrieved: today(), work }
 }
 
+/** One citation request. It carries its own Accept header, which the JSON transport cannot. */
+async function fetchCitation(url, accept) {
+  const response = await fetch(url, {
+    headers: { 'user-agent': USER_AGENT, accept },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+  return {
+    status: response.status,
+    contentType: String(response.headers.get('content-type') ?? ''),
+    body: await response.text(),
+  }
+}
+
+/**
+ * Ask the DOI resolver for one authoritative citation.
+ *
+ * A landing page is not a citation: when content negotiation is unsupported the resolver answers HTML
+ * with a 200, and printing that would put a web page where a reference belongs.
+ */
+async function runCite(options) {
+  const accept = citeAccept(options.citeFormat, options.citeStyle, options.citeLocale)
+  const result = await fetchCitation(citeUrl(options.citeDoi), accept)
+  if (result.status === 404) {
+    throw new Refusal(`doi.org has no registered record for ${options.citeDoi} (404)`, {
+      fix: 'check the identifier; a DOI is not a title, and a preprint may carry a DataCite DOI instead',
+    })
+  }
+  if (result.status === 406) {
+    throw new Refusal(`the registration agency cannot answer ${options.citeDoi} as ${options.citeFormat}`, {
+      fix: 'try --format text or --format csljson, which the registration agencies answer most often',
+    })
+  }
+  if (result.status === 429) {
+    throw new Refusal('doi.org is asking this client to slow down (429)', {
+      fix: 'wait a minute and retry the same identifier once',
+    })
+  }
+  if (result.status !== 200) {
+    throw new Refusal(`doi.org answered HTTP ${result.status} for ${options.citeDoi}`, {
+      fix: 'retry once; if it repeats, the DOI resolver is unavailable rather than the record missing',
+    })
+  }
+  if (result.contentType.toLowerCase().includes('text/html')) {
+    throw new Refusal(`the registration agency answered an HTML page, not a ${options.citeFormat} citation`, {
+      fix: 'this DOI may not support content negotiation; read its Crossref record with --doi instead',
+    })
+  }
+  const text = result.body.trim()
+  if (text === '') {
+    throw new Refusal(`doi.org returned an empty ${options.citeFormat} answer for ${options.citeDoi}`, {
+      fix: 'try --format csljson, which every registration agency answers',
+    })
+  }
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          target: options.target,
+          doi: options.citeDoi,
+          format: options.citeFormat,
+          style: options.citeFormat === 'text' ? options.citeStyle : undefined,
+          locale: options.citeFormat === 'text' ? options.citeLocale : undefined,
+          retrieved: today(),
+          text,
+        },
+        null,
+        2,
+      ),
+    )
+    return 0
+  }
+  console.log(text)
+  return 0
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   if (options.selftest) {
@@ -785,6 +1101,37 @@ async function main() {
     // calling process.exit themselves, which would trip Node's unsettled-top-level-await check.
     const { failedChecks } = await import('./metadata-selftest.mjs')
     if (failedChecks) process.exit(1)
+    return
+  }
+
+  if (options.mode === 'cite') {
+    process.exitCode = await runCite(options)
+    return
+  }
+
+  if (options.mode === 'verify' || options.mode === 'related') {
+    const response = await fetchOnce(buildUrl(options))
+    const kind = classifyResponse(response)
+    if (kind !== 'json') throw channelFailure(kind, response, options)
+    const payload = JSON.parse(response.body)
+    const error = errorMessage(payload)
+    if (error !== '') throw new Error(`${options.source} reported an error at HTTP ${response.status}: ${error}`)
+    if (options.mode === 'verify') {
+      const work = normalizeCrossrefWork(payload?.message ?? {})
+      const verdict = verifyWork(work, {
+        title: options.expectTitle,
+        year: options.expectYear,
+        author: options.expectAuthor,
+      })
+      console.log(
+        options.json
+          ? JSON.stringify({ mode: 'verify', retrieved: today(), work, ...verdict }, null, 2)
+          : formatVerify(work, verdict),
+      )
+      return
+    }
+    const work = normalizeOpenAlexWork(payload ?? {})
+    console.log(options.json ? JSON.stringify({ mode: 'related', retrieved: today(), work }, null, 2) : formatRelated(work))
     return
   }
 

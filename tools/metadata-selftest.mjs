@@ -14,6 +14,9 @@
 import {
   boundedNotice,
   buildUrl,
+  citeAccept,
+  citeDoi,
+  citeUrl,
   classifyResponse,
   errorMessage,
   formatOa,
@@ -31,6 +34,7 @@ import {
   reconstructAbstract,
   referenceLabel,
   summaryOf,
+  verifyWork,
   workRef,
 } from './metadata.mjs'
 
@@ -353,6 +357,74 @@ check(oa.includes('LEAD, not a retrieval'), 'an open-access listing says what it
 check(oa.includes('https://www.nature.com/articles/s41586-021-03819-2.pdf'), 'the best copy is the pdf url')
 check(oa.includes('https://www.ncbi.nlm.nih.gov/pmc/articles/8371605'), 'and a repository copy with no pdf url falls back to its landing page')
 check(plainText('<jats:p>a &amp; b</jats:p>') === 'a & b', 'markup and entities are stripped and decoded')
+
+// --- a citation from the registry ------------------------------------------------------------------
+
+console.log('\n[10] a citation is asked of the registry, never written from memory')
+
+check(citeDoi('10.1038/s41586-021-03819-2') === '10.1038/s41586-021-03819-2', 'a DOI is used as it is')
+check(citeDoi('https://doi.org/10.1038/x') === '10.1038/x', 'a resolver URL is reduced to its DOI')
+check(citeDoi('doi: 10.1038/x') === '10.1038/x', 'a doi: prefix is stripped')
+check(citeDoi('arXiv:1706.03762') === '10.48550/arXiv.1706.03762', 'an arXiv id maps to its registered DataCite DOI')
+check(citeDoi('1706.03762v5') === '10.48550/arXiv.1706.03762', 'and a version suffix does not reach the DOI')
+throws('a PMID is refused with its resolver named, not silently sent', () => citeDoi('pmid:12345678'))
+throws('a title is refused', () => citeDoi('Attention Is All You Need'))
+
+check(citeAccept('bibtex') === 'application/x-bibtex', 'BibTeX has its own Accept value')
+check(citeAccept('ris') === 'application/x-research-info-systems', 'and so does RIS')
+check(citeAccept('csljson') === 'application/vnd.citationstyles.csl+json', 'and CSL JSON')
+check(citeAccept('text', 'apa', 'en-US') === 'text/x-bibliography; style=apa; locale=en-US', 'a formatted reference carries style and locale')
+check(citeUrl('10.1038/s41586-021-03819-2') === 'https://doi.org/10.1038/s41586-021-03819-2', 'the resolver URL keeps the DOI separators')
+check(citeUrl('10.1000/a b').endsWith('a%20b'), 'a space inside a DOI is encoded')
+
+const cite = parseArgs(['--cite', '10.1038/x', '--format', 'bibtex'])
+check(cite.mode === 'cite' && cite.citeDoi === '10.1038/x' && cite.citeFormat === 'bibtex', 'a citation target and format parse')
+check(parseArgs(['--cite', '1706.03762']).citeFormat === 'text', 'the default citation format is a formatted reference')
+check(parseArgs(['--cite', '10.1000/x', '--style', 'ieee']).citeStyle === 'ieee', 'the style parses')
+throws('a citation without an identifier is refused', () => parseArgs(['--cite']))
+throws('--format outside --cite is refused', () => parseArgs(['--doi', '10.1000/x', '--format', 'bibtex']))
+throws('--style outside --cite is refused', () => parseArgs(['--doi', '10.1000/x', '--style', 'apa']))
+throws('an unknown citation format is refused', () => parseArgs(['--cite', '10.1000/x', '--format', 'docx']))
+throws('--source does not apply to --cite', () => parseArgs(['--cite', '10.1000/x', '--source', 'crossref']))
+
+// --- verifying a reference and finding its neighbours ---------------------------------------------
+
+console.log('\n[11] a reference is checked against the registry, and related works are a lead')
+
+const RETRACTED = normalizeCrossrefWork({
+  DOI: '10.1000/x',
+  title: ['A retracted example'],
+  author: [{ given: 'Ada', family: 'Lovelace' }],
+  issued: { 'date-parts': [[2020]] },
+  'update-to': [{ type: 'retraction', DOI: '10.1000/notice', label: 'Retracted for example purposes' }],
+})
+check(RETRACTED.updates.length === 1, 'the update notice is carried on the record')
+const retractedVerdict = verifyWork(RETRACTED)
+check(retractedVerdict.retracted === true, 'a registered retraction is reported as one')
+check(retractedVerdict.checks.length === 0, 'no expectation means no comparison was invented')
+const matched = verifyWork(RETRACTED, { title: 'retracted example', year: 2020, author: 'Lovelace' })
+check(matched.checks.every((entry) => entry.ok), 'a matching title, year and author all pass')
+const mismatched = verifyWork(RETRACTED, { title: 'another paper', year: 2019, author: 'Turing' })
+check(mismatched.checks.filter((entry) => !entry.ok).length === 3, 'three disagreements are three mismatches')
+const partial = verifyWork(RETRACTED, { year: 2019 })
+check(partial.checks.length === 1 && partial.checks[0].ok === false, 'only the checks that were asked for are run')
+check(verifyWork({ title: '', authors: [] }, { title: 'anything' }).checks[0].ok === false, 'an empty registry title matches nothing - negative control')
+
+const RELATED = normalizeOpenAlexWork({
+  id: 'https://openalex.org/W1',
+  related_works: ['https://openalex.org/W2', 'W3', 'not-an-id'],
+})
+check(RELATED.related.join(',') === 'W2,W3', 'related ids are normalized and non-ids dropped', RELATED.related.join(','))
+
+const verifyArgs = parseArgs(['--verify', '10.1000/x', '--expect-title', 'A title', '--expect-year', '2020', '--expect-author', 'Lovelace'])
+check(verifyArgs.mode === 'verify' && verifyArgs.source === 'crossref', '--verify reads Crossref')
+check(verifyArgs.expectTitle === 'A title' && verifyArgs.expectYear === '2020', 'the expectation parses')
+check(parseArgs(['--related', 'W123']).mode === 'related', '--related takes an OpenAlex id')
+check(parseArgs(['--related', '10.1000/x']).source === 'openalex', 'and a DOI is resolved through OpenAlex')
+throws('--verify needs a DOI, not an OpenAlex id', () => parseArgs(['--verify', 'W123']))
+throws('an expectation outside --verify is refused', () => parseArgs(['--doi', '10.1000/x', '--expect-year', '2020']))
+throws('--source does not apply to --verify', () => parseArgs(['--verify', '10.1000/x', '--source', 'openalex']))
+throws('--source does not apply to --related', () => parseArgs(['--related', 'W123', '--source', 'crossref']))
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 export const failedChecks = failures > 0
