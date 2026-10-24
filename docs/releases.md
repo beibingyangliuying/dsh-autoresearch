@@ -746,3 +746,5 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 - Revision 39–41 的文档预算与 `00_state.md` 只在契约与纪律里成立，**没有在真实课题上跑过一轮**。
 
 **落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 39–41）· [`cordis.patch.yml`](../cordis.patch.yml) · [`tools/`](../tools/) 的新布局 · [`skills/`](../skills/) · [`docs/decisions.md`](decisions.md) §95 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)（生成物）。
+
+**远端复核结果（2026-10-24）**：`release-check --tag v0.18.0` 四项 `OK`——版本 0.18.0、组合不挂 MCP 服务器、名册上 19 个 helper 全在包内、tag 与 `main` 同为 `971780f`，**exit 0**。首次调用得 `UNVERIFIED`（`fetch failed`），同一分钟内重试即通：是传输的一次抖动，不是发布件的缺陷——这正是退出码 3 与 1 要分开的原因。
