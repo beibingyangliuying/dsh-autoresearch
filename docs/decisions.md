@@ -2273,3 +2273,26 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **落点**：[`tools/scholarly-read.mjs`](../tools/scholarly-read.mjs) · [`tools/scholarly-read-selftest.mjs`](../tools/scholarly-read-selftest.mjs) · [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs)（`extractPdfText` / `pdfOutline` 抽出复用） · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) · [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) · [`tools/release-check.mjs`](../tools/release-check.mjs)。
 
 **未做**：全文缓存；出版商 HTML 的正文抽取（只认 arXiv/ar5iv 与 OA PDF/JATS）；PDF 目录到节的映射（无目录 PDF 仍是 unstructured）；`literature-recon` 点名 reader；protocol §6。
+
+## 95. `tools/` 只放 agent 能点名的程序：测试、探针、属主程序分家（2026-10-24）
+
+**起因**：发版前 junhan 问"这批目录怎么理清楚"。实测 `tools/` 57 个文件承载四种寿命：通道 helper 17、自测 26、探针与维护 12、属主程序 2。目录名在契约里不是"脚本目录"——它是 `{{presetTools}}` 指向、纪律可以按绝对路径点名的命名空间；把后 40 个文件放进去，等于声明它们也是 agent 可点名的程序，而它们不是。
+
+**先验（2026-10-24 本机实测）**：
+
+1. **三份名册互不覆盖**。`REQUIRED_HELPERS` 不含 `zotero-export.mjs`——闭合检查第一次跑就抓到：一个缺它的 tag 会发出"纪律点名了、包里没有"的导出器，而当时所有检查全绿。`scholarly-sources.mjs` 与 `journal-rank.mjs` 同轮补登记。
+2. **三个 helper 无人点名**。`scholarly-read.mjs` / `zotero-export.mjs` / `journal-rank.mjs` 在 13 份纪律里出现 0 次，而 README 早已写"读 OA 全文＝`scholarly-read.mjs --id`"。agent 运行时拿不到 README ⇒ 这三个程序事实上不可达。§94 的"未做"里那条正是它。
+3. **手抄名单会漂**。发布流程 §4 的 26 行清单漏过两次（§48），漂的是名单本身，不是跑的人。
+
+**决策**：
+
+- `tools/` 顶层＝agent 可点名的程序，全部在 `REQUIRED_HELPERS` 上；`tools/tests/`、`tools/dev/`、`tools/owner/` 在该命名空间之外。
+- 闭合从磁盘派生：`unclassifiedTools` 要求顶层文件在名册上、子目录属于 `TOOLS_CLASSES` 三选一，新增文件不登记即红。
+- 发布流程改成 `npm test`（运行器从磁盘发现 `*-selftest.mjs`，先重生成 composed dump，跑 `isolation-selftest` 前保存报告）。原来比对"流程点名了哪些自测"的护栏改钉**派生**：流程必须点名运行器，且运行器 `--list` 必须等于盘上全集。
+- 三个无人点名的 helper 各落进问它的那一节：`metadata-query` §3.1（OA 取全文与它的拒答）、§3.2（分区＝provider 的转述，无版本无年份）、`literature-recon` §3.2（库内记录的正式引用走库自己的 CSL，与"库外记录问 doi.org"分开）。
+
+**代价与边界**：目录分家是**约定**，机械部分只校验"在不在某个类里"；"这个文件是否属于这个类"是判断，仍要人读。`decisions.md` / `releases.md` / `plans/` / `archive/` 的旧路径一律不改——它们记录当时的布局。
+
+**落点**：[`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs)（`TOOLS_CLASSES` / `unclassifiedTools` / `toolFiles` / 名册补 3 条）· [`tools/dev/run-selftests.mjs`](../tools/dev/run-selftests.mjs)（新）· [`package.json`](../package.json)（`test` 脚本）· [`tools/tests/release-check-selftest.mjs`](../tools/tests/release-check-selftest.mjs)（闭合与派生的负向控制）· 五个测试的根路径 · [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md) · [`docs/README.md`](README.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) · 生成物 [`docs/toolchain.md`](toolchain.md)。
+
+**未做**：`package.json` 的 `files` 字段（发布件仍带 26 个自测与 13 个探针，只是不再占 agent 的命名空间）；`new-project.ps1` 仍无自测（"永不覆盖 / `-DryRun`"只有文档断言）；`backlog` 第 8 条那 167 处改名。
