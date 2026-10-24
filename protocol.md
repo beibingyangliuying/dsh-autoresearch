@@ -1,9 +1,16 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 40.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 41.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 40 moves a discipline's trigger out of the resident layer
+independent of any package version. Revision 41 makes each discipline carry one carrier per rule. The
+fixed sections are **seven** — the acceptance checklist that repeated the exclusion conditions and a
+closing list of prohibitions are gone, so a discipline's prohibitions live in the table that says when
+to stop, and §4 states the shape. It also makes the round's **entry state** explicit: a study that keeps
+`00_state.md` puts the current question, the main line, the last settled judgements and the open items
+there, one line each and pointers only, so each discipline stops re-deriving the same state from four
+files; §7 states its optional role, and a study without one is not defective. Revision 40 moves a
+discipline's trigger out of the resident layer
 and leaves the **order** there: each discipline states, in its own catalog entry, the situation that
 triggers it, the resident discipline states the order the loop runs in and the force of the rule, and a
 discipline that serves a stage rather than owning one is loaded when that stage needs it. Two carriers
@@ -419,10 +426,10 @@ hard rule, not a suggestion — a trigger that is met without the discipline bei
 
 ## 4. Disciplines loaded on demand
 
-Each on-demand discipline is a written contract with fixed sections: when to use, the ruler to read
-first, criteria, local exclusion conditions, wording discipline, report shape, instrument
-discipline, an acceptance checklist, and what it does not do. The **local exclusion conditions** are
-the load-bearing part: they say when to stop rather than to make something work.
+Each on-demand discipline is a written contract with seven fixed sections: when to use, the ruler to read
+first, criteria, local exclusion conditions, wording discipline, report shape, and instrument discipline.
+The **local exclusion conditions** are the load-bearing part: they say when to stop rather than to make
+something work, and a discipline's prohibitions live in that table rather than in a closing checklist.
 
 ```text
 scoping      a vague topic becomes a decidable question; pseudo-questions are sent back
@@ -720,6 +727,15 @@ studies it was measured against had adopted, and a directory made for later says
 empty. The archive is not one of these: it holds retired documents, and moving one there is the owner's
 act, stated below.
 
+**`00_state.md` is optional, and it is a pointer index rather than a carrier.** A study that keeps one
+uses it as the round's entry state: a discipline reads it first and then follows only the pointers its
+own stage needs, instead of each discipline re-deriving the same state from four files. It carries one
+line per item — the current question and its id, the current main line, the last few settled judgements
+with their dates, and the open items — and every line names the file or row that carries the substance.
+The settlement discipline updates it at settlement. A study without one is not defective: each discipline
+then reads what its own §2 names. It is deliberately absent from the tree above, because a study that
+never needs an index should not be given an empty one.
+
 A study scaffolded before Revision 22 may still carry `research/literature/refs/`. No discipline reads
 it — a ledger now sits in each question's own literature file — and a round that finds it reports it and
 proposes removing it rather than removing it: the owner's workspace is not a round's to tidy.
@@ -772,7 +788,7 @@ Every row must be falsifiable: a check must exist that can fail.
 | `INV-NOTE-1` | One section has one **live claim**: a note with no `/section-` tag is not coverage, a retired note is not coverage, a note carrying more than one `/section-N` tag is **ambiguous** and is not coverage either — it is resolved by removing one stale tag (one per command, after the note is read), never by guessing which tag was meant — retiring is reversible, retiring changes nothing the note says, and the note that replaces a retired one names it. | The alternatives are both losses: a wrong note that blocks its section forever, or a deletion that takes the record of what was replaced with it. An ambiguous note blocks every write on its record, so leaving the ambiguity to be "worked around" is how a claim gets invented rather than read. |
 | `INV-NOTE-3` | A note is removed only after it is retired, one note per command, carrying the version it was read at as a precondition and proved gone by a read-back 404. | This channel has no trash, so a removal is irreversible; the only defensible removal is one whose target was already out of service and whose plan the owner read. |
 | `INV-NOTE-4` | A section note's body states who wrote it: an agent's body carries `/agent-note`, the owner's acceptance carries `/reviewed`, an unreviewed agent body is a draft that may be rewritten in place, and a reviewed one is a record. A record may be repaired in place but not rewritten: the repair keeps the section and the provenance, the body carries `/repaired`, and a repair that changes a symbol, a number or an equation drops `/reviewed` — so an accepted body that was corrected reads as a draft until the owner accepts it again. | A tag cannot mark a paragraph and a body may be repaired without being replaced, so authorship has to live on the whole note; otherwise an owner's transcription and an agent's draft read identically to every later round — and a corrected body that kept its acceptance would claim a review of prose the owner never read. |
-| `INV-IDEA-1` | A candidate move exists only with a position already in the study's record, a conjecture that could fail, and the observation that would kill it, with the threshold that refutes it; a move that cannot name the observation is not a candidate, and one that cannot name the position is exploratory — never scored, never a direction. | A conjecture nobody can point at reads exactly like one that cost a reading to establish, and a conjecture nothing could refute cannot be told from a preference; both are what this step exists to keep out of the record. |
+| `INV-IDEA-1` | A candidate move exists only with a position already in the study's record, a conjecture that could fail, and the observation that would kill it, with the threshold that refutes it; a move that cannot name the observation is not a candidate, and one that cannot name the position is exploratory — never gated, never a direction. | A conjecture nobody can point at reads exactly like one that cost a reading to establish, and a conjecture nothing could refute cannot be told from a preference; both are what this step exists to keep out of the record. |
 | `INV-IDEA-2` | A direction is composed of at least one surviving move and adds exactly one component, which names the record position it came from; a component nobody has established is reported as needing a reading or a run, and is never supplied by the composition. | A route allowed to invent one ingredient has already decided the question it was meant to test, and a cull can only score what already exists — which is the whole difference between this loop and a brainstorm. |
 | `INV-CTX-1` | A full text is loaded only after the cheaper rungs of the reading ladder cannot answer the question; the rungs are the library's indexed text, the attachment's own text layer, the paper's own table of contents, and the page rendered as an image, and a reading states which one answered. | Context is the scarce resource of a research session, so loading it is a spending decision rather than a default — and the rungs fail differently, so an unstated rung cannot be told from another. |
 | `INV-DEC-1` | A commitment is preceded by an executable draft that names the criteria it won on and the observation that would refute it. | A choice without criteria and without a failure condition cannot be re-examined when it fails. |
