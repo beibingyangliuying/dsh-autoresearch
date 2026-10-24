@@ -1,6 +1,6 @@
 ---
 name: section-notes
-description: Keep a paper's library record section-addressable. Default: a note pasted from outside is CLAIMED to the top-level section its own heading names — a tag, never a body edit — and the sections still carrying no note are reported, not written. A note body is generated from the paper only when the owner names the section and asks for it, and every body this skill writes is an agent draft (`/agent-note`) until the owner reviews it (`/reviewed`). A claim round never rewrites, merges or reformats an imported note; a rewrite happens only in Part II, when the owner names that section. A record is repaired in place when the correction changes no claim (`/repaired`), and a repair that touches a symbol, a number or an equation clears `/reviewed`.
+description: Use when method-section notes arrive from outside, when a record must say which sections still carry no note, or when the owner names a section to have a body written. Claims a pasted note to the section its heading names, as a tag and never a body edit, and reports the gaps.
 ---
 
 # section-notes — keep a paper's record section-addressable

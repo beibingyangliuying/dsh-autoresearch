@@ -45,6 +45,26 @@ for (const skill of skills) {
   check(problems.length === 0, `valid: ${skill.name}`, problems.join('; '))
 }
 
+// --- the catalog line ----------------------------------------------------------------------------
+// The model sees `name: description` and nothing else of a discipline until it loads one, and
+// `dsh-tool-skill` truncates the description at `catalogDescriptionMaxLength` - 500 in 0.2.1-rc.2. A
+// description that outruns the budget loses its TAIL silently, so a trigger written at the end never
+// reaches the model at all; that is how the routing became a claim that was false (#91, #92). The
+// budget here is 300, the trigger leads, and the value stays a plain YAML scalar because
+// `skill-filesystem` parses these same files with a real YAML reader (`yaml`), where a bare `: `
+// inside a plain scalar starts a nested mapping and the whole skill is dropped.
+const CATALOG_LINE_MAX = 300
+const TRIGGER_CLAUSE = /Use (when|before|after|to)\b/i
+for (const skill of skills) {
+  check(skill.description.length <= CATALOG_LINE_MAX, `fits the catalog line: ${skill.name}`, `${skill.description.length} chars`)
+  check(TRIGGER_CLAUSE.test(skill.description), `states its trigger: ${skill.name}`)
+  check(
+    !skill.description.includes(': '),
+    `is a plain YAML scalar: ${skill.name}`,
+    skill.description.includes(': ') ? 'contains ": "' : '',
+  )
+}
+
 const names = new Set(skills.map((skill) => skill.name))
 check(names.size === skills.length, 'no two shipped skills claim the same name')
 

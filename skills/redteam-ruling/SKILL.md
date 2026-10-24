@@ -1,6 +1,6 @@
 ---
 name: redteam-ruling
-description: Challenge a formed claim in a structured way and produce a "ruling request" — it must supply at least one of a counterexample, contradicting evidence, or a testable falsification path, must point at a specific sentence of the claim, and must conclude with "falsified / insufficient evidence / outside current scope". Use before committing to a plan, before a conclusion leaves the room, or when two routes conflict. Never output "should be studied further".
+description: Use before a plan is committed to, before a conclusion leaves the room, or when two routes conflict. Produces a ruling request that points at one sentence, supplies a counterexample, contradicting evidence or a falsification path, and ends in falsified, insufficient evidence, or outside scope.
 ---
 
 # redteam-ruling — structured challenge and ruling request

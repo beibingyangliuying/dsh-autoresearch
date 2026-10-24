@@ -1,6 +1,6 @@
 ---
 name: direction-probe
-description: Turn what a study's own record already settled against itself — a refused borrowable item, an unchecked precondition, a parked paper's re-open condition, two sources that disagree, a section no note covers, the boundary of a ruled item — into candidate moves that carry a conjecture which could fail and the cheapest observation that would kill it; and, only when two survivors cannot both hold, into competing directions that each name the moves they take and the one new component whose seed they can point at. It probes. It does not rule, choose, read a paper, or run anything.
+description: Use when what the record refused, an unchecked precondition, a parked re-open condition, or two disagreeing sources has to become a next step. Turns those positions into candidate moves, each with a conjecture that could fail and the cheapest observation that would kill it. It probes, never rules.
 ---
 
 # direction-probe — what the record refused becomes the next cheap question

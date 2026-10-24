@@ -1,6 +1,6 @@
 ---
 name: literature-recon
-description: Search the literature and produce a "literature reconstruction note" — every claim carries a locatable source, every source is graded for evidence strength (read the full text / read only the abstract / second-hand paraphrase), contradicting evidence must be recorded, and the note declares itself non-normative. Use to judge "has anyone already done this", to ground a method choice, to draft related work, or to supply evidence for a ruling.
+description: Use to judge whether anyone has already done this, to ground a method choice, to draft related work, or to supply evidence for a ruling. Produces a non-normative reconstruction note — every claim locatable, every source graded by what was actually read, contradicting evidence mandatory.
 ---
 
 # literature-recon — literature search and non-normative reconstruction

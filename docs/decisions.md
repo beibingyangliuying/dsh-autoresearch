@@ -2185,3 +2185,25 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **已知边界**：路由现在完全靠 description 的触发句，而 catalog 把它截在 500 字符——**没有任何机器护栏能判"触发句还在不在前 500 内"**；把 `catalogDescriptionMaxLength` 抬到 800 可以消掉这个静默失效（约 +150 tokens），本轮没做。同形的 `read-back:` 收尾行还留在 `direction-probe` 与 `section-notes`，是同一判据，本轮未动。
 
 **未做**：未重写 13 条 description；未量化"删掉路由 bullet 后触发率是否下降"（需要真实会话的 `session-tool-usage` 才判得出）。
+
+
+## 92. 目录行只留路由：13 条 description 改成触发前置、≤300 字符（2026-10-24）
+
+**起因**：§91 把路由下移之后，Revision 40 的 §2 声称"每个纪律在自己的 catalog 条目里声明触发条件"——实测不成立：`direction-probe` 与 `section-notes` 的 description 里根本没有触发句，`adoption-ruling` 的触发句从第 455 字符开始、整行 637 字符，被 `dsh-tool-skill` 的 500 字符上限切成半句。
+
+**判据**：catalog 行的读者是模型、用途是"现在要不要 load 它"，所以它只需要"什么时候用 + 产出什么"；产出规格与负面边界本来就在正文 §5/§6，重复一遍只是把 500 字符的窗口占满。
+
+**裁定（junhan 逐项确认，2026-10-24）**：
+
+1. 13 条 description 全部重写为**触发前置、≤300 字符**：登记 6,493 → **3,776 字符**，catalog 常驻 ≈1,648 → **≈1,049 tokens**（相对 §91 之前"bullet 747 + catalog 1,648 ＝ 2,395"，路由面少 1,346）。
+2. `skills-selftest` 加三条断言：**≤300 字符**、**含 `Use (when|before|after|to)`**、**是纯 YAML 标量（无 `: `）**；每条都跑过一次变异，确认会红。
+
+**顺带修掉一个静默缺陷**：`section-notes` 的 front matter 原本**不是合法 YAML**（`Default: ` 让 `yaml` 报 nested mapping），只因 `skills.js` 用自己的正则读才没炸；如果这些 skill 哪天被放进 `~/.dsh/skills/` 由 `skill-filesystem` 读，它会被**静默丢弃**。现在 13 条全部通过 `yaml.parse`。
+
+**为什么不是恢复 bullet 或抬高上限**：bullet 是同一句话的第二载体（rule 12）；抬到 800 只让 4 条不再被截，变不出那 2 条缺失的触发句，还会给所有 description 抬高上限。缩行同时解决"真假"与"成本"。
+
+**落点**：13 个 `skills/*/SKILL.md` 的 description · [`tools/skills-selftest.mjs`](../tools/skills-selftest.mjs)（三条断言）。
+
+**已知边界**：300 是**本仓自定预算**，宿主截断线是 500（`dsh-tool-skill` 0.2.1-rc.2 的 `catalogDescriptionMaxLength` 默认值），DSH 升级后两个数都要重测；护栏只判"长度与触发句是否在"，**不判触发句写得好不好**。
+
+**未做**：路由效果仍未在真实会话里量过（判据：`tools/session-tool-usage.mjs --preset autoresearch` 里 13 条纪律的 load 分布，与 §91 之前的会话对比）。

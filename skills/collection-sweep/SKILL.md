@@ -1,6 +1,6 @@
 ---
 name: collection-sweep
-description: Turn one reference-library collection into a candidate queue for one named research question — enumerate every record, judge at abstract level which ones cannot serve the question, write one ledger row per record, and hand the survivors to reading-triage in a stated order. Use when the owner points at a collection and asks which of its references can serve this topic, or when a question's anchor set needs sweeping leaf by leaf.
+description: Use when the owner points at a reference-library collection and asks which of its references can serve one named question, or when a question's anchor set has never been swept. Enumerates every record, rules out at the abstract what cannot serve it, and queues the survivors for reading-triage.
 ---
 
 # collection-sweep — which references of this collection can serve *this* question

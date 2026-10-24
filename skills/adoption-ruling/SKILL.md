@@ -1,6 +1,6 @@
 ---
 name: adoption-ruling
-description: Turn a paper already read into a ruled ledger of what this study may borrow — one verdict per borrowable item, each carrying the paper's own locator, the condition under which it holds, our normalized form beside the paper's verbatim one, the module it will become, and a numeric anchor a test can check; an item without an anchor stays a candidate, no item is adopted or rejected by the agent alone, and the document never grounds a research conclusion. Use after reading a paper the study will build on, before writing code from a paper's equations, or to audit whether code already written is actually supported by the paper it cites.
+description: Use after reading a paper the study will build on, before writing code from its equations, or to audit code that cites it. Turns it into a ruled ledger — one verdict per borrowable item, with the paper's locator, our form beside the paper's, and a number a test can assert; no verdict is the agent's.
 ---
 
 # adoption-ruling — what may be borrowed, under what condition, and what would prove it

@@ -1,6 +1,6 @@
 ---
 name: research-scoping
-description: Turn a vague topic into a decidable research question — produce "question / boundary / non-goals / decidability / prerequisites / notation / open items", and reject pseudo-questions on the spot (no falsification condition, a method disguised as a question, an old symbol reused for a new meaning). Use when starting a study, when a topic is vague, before committing to work, or to settle "what would count as answering it".
+description: Use when starting a study, when a topic is still one sentence, before committing to work, or to settle what would count as answering it. Turns the topic into a decidable question — boundary, non-goals, decidability, prerequisites, notation — and sends a pseudo-question back on the spot.
 ---
 
 # research-scoping — converge a topic into a decidable research question

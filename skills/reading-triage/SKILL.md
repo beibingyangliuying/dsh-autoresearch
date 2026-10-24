@@ -1,6 +1,6 @@
 ---
 name: reading-triage
-description: Advance through one reference section by section for one named research question, stopping when it is enough or when it is irrelevant — and record in that question's own ledger how far the paper was read, why the reading stopped, the sentence that decided it, and the condition that would reopen it. Reuse the section notes another question already wrote. Use before spending time on a paper, at a section boundary when deciding whether to go on, or when a parked paper's condition has come true.
+description: Use before spending time on a paper, at a section boundary, or when a parked paper's condition has come true. Advances one reference section by section for one named question, and records in that question's ledger the depth reached, why it stopped, and what would reopen it.
 ---
 
 # reading-triage — how far is this paper worth reading, for *this* question

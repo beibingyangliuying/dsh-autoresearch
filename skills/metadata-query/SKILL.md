@@ -1,6 +1,6 @@
 ---
 name: metadata-query
-description: Look up bibliographic metadata — DOI, venue, year, authors, citation counts, reference lists — through the free OpenAlex, Crossref and Unpaywall REST APIs, read through this preset's own helper program. Use to resolve or confirm a reference, find a canonical identifier, expand who-cites-whom, or check whether a free copy is listed. This yields metadata only, never full text, and never evidence grades.
+description: Use to resolve or confirm a reference, find a canonical identifier, expand who-cites-whom, or check whether a free copy is listed. Reads DOI, venue, year, authors, citation counts and reference lists from OpenAlex, Crossref and Unpaywall — metadata only, never full text or evidence grades.
 ---
 
 # metadata-query — bibliographic metadata over REST

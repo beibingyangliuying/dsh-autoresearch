@@ -1,6 +1,6 @@
 ---
 name: progress-sync
-description: Settle one work round into three layers — mnemon Documents hold conclusions and rejected directions with their reasons, runtime memory holds the few cross-session essentials, and the workspace journal holds the round-by-round log; fact/inference/exploratory is enforced and process may never be written as a conclusion. Use when a round ends, a session is about to end, a direction is rejected, or work must be handed off or resumed.
+description: Use when a round ends, a session is about to end, a direction is rejected, or work must be handed off or resumed. Settles it into three layers — Documents for conclusions and rejected directions, runtime memory for essentials, the journal for the round log — and never writes process as a conclusion.
 ---
 
 # progress-sync — three-layer progress settlement

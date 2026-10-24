@@ -1,6 +1,6 @@
 ---
 name: experiment-protocol
-description: Turn a run into a record that can be re-run and refuted — a protocol written before it (prediction, reference population, closed variant set, validity gates, decision rule) and a card written after (exact command, config/seed, artifact paths, what was observed, validity, verdict). Use before spawning anyone to write or run code, whenever a run's outcome is reported, and whenever "it worked" needs to become a fact. Enforces that a prediction cannot live only in the card it tests, that "ran" is not "valid", that a cited artifact must be obtainable, and that a read-only baseline is never mutated.
+description: Use before anyone is spawned to write or run code, whenever a run's outcome is reported, and whenever it worked has to become a fact. Writes a protocol before the run — prediction, variants, gates, decision rule — and a card after it, carrying command, seed, artifacts, observation and verdict.
 ---
 
 # experiment-protocol — make a run reportable

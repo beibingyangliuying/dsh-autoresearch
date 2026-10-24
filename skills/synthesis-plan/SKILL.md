@@ -1,6 +1,6 @@
 ---
 name: synthesis-plan
-description: Turn several explored directions into one executable draft — the chosen path and why it beat the alternatives, what was rejected and on what grounds, the acceptance criterion that would count as success or failure, the first concrete step, and the risks with their fallbacks. Use when exploration has produced candidates and a commitment is needed, when the user asks "so what do we do", or when two routes conflict and one must be chosen.
+description: Use when exploration has produced candidates and a commitment is needed, when the user asks what to do, or when two routes conflict. Turns them into one executable draft — the chosen path and why it won, what was rejected and why, the acceptance criterion, the first step, the risks.
 ---
 
 # synthesis-plan — from candidates to one executable draft

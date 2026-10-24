@@ -1,6 +1,6 @@
 ---
 name: subagent-contract
-description: Hand work to a subagent and receive it back without laundering claims — fix the deliverable before spawning, require artifact paths and the exact command in the return, write reports to files and pass only a pointer, and treat every subagent conclusion as unverified until the main agent re-derives it. Use when spawning an explorer or an implementer, and when deciding whether to accept what one returned.
+description: Use when spawning an explorer or an implementer, and when deciding whether to accept what one returned. Fixes the deliverable before the spawn, requires artifact paths and the exact command in the return, keeps reports in files, and treats conclusions as unverified until the parent re-derives them.
 ---
 
 # subagent-contract — what a subagent must hand back
