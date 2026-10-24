@@ -5,39 +5,39 @@ description: Use to resolve or confirm a reference, find a canonical identifier,
 
 # metadata-query — bibliographic metadata over REST
 
-This skill does exactly one thing: turn "does this work exist, and what is its canonical record"
-into API-sourced facts. It is the cheap path for metadata, and it deliberately uses no mounted server:
-these are plain REST APIs, so this preset ships **one small helper program** instead, and the helper is
-the instrument.
+This skill does exactly one thing: turn "does this work exist, and what is its canonical record" into
+API-sourced facts. It is the cheap path for metadata, and it uses no mounted server: these are plain REST
+APIs, so this preset ships **one small helper program**, and the helper is the instrument.
 
-**Scope boundary**: metadata is **not** full text and **not** evidence. Grading evidence is
-`literature-recon`'s job, and so is reading full text — through the helpers it names
-(`{{presetTools}}/arxiv.mjs` for the preprint index, `{{presetTools}}/zotero-read.mjs` for the owner's
-library). Neither is this skill's instrument: this one asks bibliographic sources what a work **is**.
+**Scope boundary**: metadata is **not** full text and **not** evidence. Reading full text and grading
+evidence are `literature-recon`'s job, through the helpers it names (`{{presetTools}}/arxiv.mjs` for the
+preprint index, `{{presetTools}}/zotero-read.mjs` for the owner's library). This skill asks bibliographic
+sources what a work **is**.
 
 ## 1. When to use
 
-- Resolving a reference to a DOI, or confirming that a DOI exists
-- Getting venue, year, authors, or a citation count for a work
-- Expanding a reference list or a citation list (who cites whom)
-- Checking whether a title you half-remember is real
+- Resolving a reference to a DOI, or confirming that a DOI exists.
+- Getting venue, year, authors, or a citation count for a work.
+- Expanding a reference list or a citation list (who cites whom).
+- Checking whether a title you half-remember is real.
 
 **Not applicable**: reading a paper's contents; judging whether a claim is supported.
 
 ## 2. First step: read the declared conventions as a ruler
 
+**The round's entry state.** If `<layer root>/00_state.md` exists, read it first: it names the current
+question, the main line, the latest settled judgements and the open items, each with a pointer. Follow
+only the pointers this stage needs, and do not re-derive what it already states.
+
 1. Read the study's citation convention — its `AGENTS.md` if it has one, and
-   `<layer root>/references/README.md`. The **layer root** is `research/` where that directory exists and
-   the study root otherwise (protocol §7). The scaffold prescribes no section order for `AGENTS.md`, so
-   read the file rather than looking for a section number.
-2. Decide which of the three questions you are answering: **find a work**, **resolve an
-   identifier**, or **expand references/citations**. They use different endpoints.
+   `<layer root>/references/README.md` (`research/` where that directory exists, the study root otherwise).
+2. Decide which question you are answering: **find a work**, **resolve an identifier**, or **expand
+   references/citations**. They use different endpoints.
 3. Note the retrieval date — citation counts are a snapshot, not a stable property.
 
-## 3. The sources, and the helper that reads them (free, no API key, reachability verified on this machine)
+## 3. The instrument, and what each source holds
 
-Run `{{presetTools}}/metadata.mjs`. One request per invocation, one source per invocation, no mounted
-row:
+Run `{{presetTools}}/metadata.mjs`. One request per invocation, one source per invocation, no mounted row:
 
 ```powershell
 node "{{presetTools}}/metadata.mjs" --doi 10.1038/s41586-021-03819-2
@@ -49,82 +49,67 @@ node "{{presetTools}}/metadata.mjs" --oa 10.1038/s41586-021-03819-2 --mailto <ad
 ```
 
 It converges the payload to a fixed field set, prints the API's own reading of a query, and prints any
-quota notice the API attaches. The tables below say what each source **holds**, which is what you need
-in order to read the answer.
+quota notice the API attaches. The three sources, and what each is for:
 
-### OpenAlex — `https://api.openalex.org/works`
+| Source | Holds | Notes |
+|---|---|---|
+| OpenAlex | works, venues, authorships, `cited_by_count`, `referenced_works` | no plain abstract field — see below |
+| Crossref | the publisher's record: `container-title`, `issued`, `author`, `is-referenced-by-count`, `reference` | the authority for what the publisher registered |
+| Unpaywall | where a free copy sits | refuses to run without a real `--mailto` |
 
-| Goal | Request |
-|---|---|
-| Search | `?search=<terms>&per-page=<n>` |
-| Resolve a DOI | `?filter=doi:10.xxxx/yyyy` |
-| Filter by year/type | `&filter=publication_year:2024,type:article` |
-| One work, with references | `https://api.openalex.org/works/doi:10.xxxx/yyyy` |
+- **Pass the contact address this preset announces in your prompt** (none if none is announced; the
+  helper then omits the parameter). It identifies the caller; it does not raise OpenAlex's shared daily
+  budget, so it is not a quota lever.
+- **OpenAlex has no plain abstract field.** It ships `abstract_inverted_index`, an `{word: [positions]}`
+  map that must be reconstructed — and it is often absent. **Do not report an abstract you did not
+  reconstruct.**
 
-Pass the address with `--mailto <address>` (the one this preset announces in your system prompt; pass
-none if none is announced, and the helper omits the parameter entirely). It is identification rather
-than a quota lever: measured 2026-10-19, OpenAlex answered a request byte-identical with and without it,
-and its own response notice states that the parameter does not raise its shared daily budget. Useful
-response fields: `id`, `doi`, `title`,
-`publication_year`, `primary_location`, `authorships`, `cited_by_count`, `referenced_works`.
-
-**Gotcha**: OpenAlex has no plain `abstract` field. It ships `abstract_inverted_index`, an
-`{word: [positions]}` map that must be reconstructed into a sentence — and it is often absent. Do not
-report an abstract you did not reconstruct.
-
-### Crossref — `https://api.crossref.org/works`
-
-| Goal | Request |
-|---|---|
-| Search | `?query=<terms>&rows=<n>` |
-| Resolve a DOI | `https://api.crossref.org/works/<doi>` |
-
-Pass the same `--mailto <address>` for Crossref, which still asks for one. Useful response fields: `DOI`, `title`,
-`container-title`, `issued`, `author`, `is-referenced-by-count`, `reference`.
-
-### Open-access fallback — before a full text is fetched by hand
+### 3.1 Open-access fallback — before a full text is fetched by hand
 
 A paywalled record is not a reason to stop: the same work is often free somewhere. This section owns the
 lookup; `literature-recon` owns the ladder it feeds.
 
 | Question | Where the answer is |
 |---|---|
-| Is any version free, and where? | the work record's `open_access.oa_status`, `open_access.oa_url`, `best_oa_location`, and `locations[].is_oa` (OpenAlex) |
-| Where is the free file itself? | `{{presetTools}}/metadata.mjs --oa <doi> --mailto <address>` (Unpaywall) — a **real** address is required, which is why that mode refuses to run without one |
+| Is any version free, and where? | the work record's `open_access.oa_status`, `oa_url`, `best_oa_location`, `locations[].is_oa` |
+| Where is the free file itself? | `metadata.mjs --oa <doi> --mailto <address>` (Unpaywall) — a **real** address is required |
 | Is there a preprint or accepted version? | the preprint index; the repository entries in `locations` |
 
 `oa_status` reads `gold` / `green` / `hybrid` / `bronze` / `closed`; `green` means a repository copy of a
-paywalled paper exists — measured on a paywalled journal article whose free copy sat in an institutional
-repository. Record the location that was actually retrieved, never the status field alone.
+paywalled paper exists. Record the location that was actually retrieved, never the status field alone.
 
 **A listed free copy is a lead, not a retrieval.** Write "a free copy is listed at <url>" only after that
 URL was actually fetched, and report a dead or wrong-version link as a failed lead instead of dropping it
-silently. Retrieving a copy does not raise a source's grade: the grade still follows what was read.
-Whether a copy is fetched and read is the reading channels' business, not this skill's.
+silently. Retrieving a copy does not raise a source's grade: the grade still follows what was read, and
+whether a copy is fetched and read is the reading channels' business.
 
 ## 4. Do vs don't
 
 ### 4.1 Do
 
-- Keep queries small: `--rows` takes 1–10, and the helper refuses more
-- Record, for every retrieved record: the identifier, the source you asked, and the date
-- Prefer resolving a DOI over searching by title when you already have the DOI
+- Keep queries small: `--rows` takes 1–10, and the helper refuses more.
+- Record, for every retrieved record: the identifier, the source you asked, and the date.
+- Prefer resolving a DOI over searching by title when you already have the DOI.
 
 ### 4.2 Local exclusion conditions (if any one hits, act on the spot — do **not** work around it)
 
 | Hit | Action |
 |---|---|
 | No JSON body was actually retrieved | Do not report the metadata at all. |
-| The abstract is absent or only an inverted index you did not reconstruct | Write "abstract not available". Never invent or paraphrase from the title. |
+| The abstract is absent, or only an inverted index you did not reconstruct | Write "abstract not available". Never invent or paraphrase from the title. |
 | HTTP 429 (rate limited) | The helper reports it and stops. Back off and report it; do not retry in a loop. Semantic Scholar behaves this way without a key — use OpenAlex and Crossref instead. |
 | Only a search-result list was retrieved, not the work record | Report it as a candidate list, not as confirmed metadata. |
 | The title differs slightly between sources | Report both and say which endpoint each came from. |
+| The DOI that came back differs from the one asked for | Report **both**; do not silently prefer one. |
+| A metadata lookup is about to be presented as reading the paper | Do not. This skill reads no text, so it supports no grade at all. |
+| A work that is not in the library is about to get a ledger row | Do not: it has no `itemKey`, so no later round's `grep` can find it. Report it under `## Candidates`. |
+| The request is about to be hand-built and sent with `web_fetch` | Do not. The helper carries the contact address, the refusals and the failure classification. |
 
 ## 5. Wording discipline
 
 - Distinguish "the metadata record says" from "the paper claims".
-- `cited_by_count` / `is-referenced-by-count` is a **snapshot on the retrieval date**; never present
-  it as a stable or authoritative number.
+- `cited_by_count` / `is-referenced-by-count` is a **snapshot on the retrieval date**; never present it as
+  a stable or authoritative number.
 - **Never infer a paper's content from its title.**
 - **A metadata lookup supports no grade at all.** A grade says what was read, and this skill reads no
   text — `B` already requires that the abstract was read. A row whose only source is metadata keeps its
@@ -135,43 +120,21 @@ Whether a copy is fetched and read is the reading channels' business, not this s
 **Two destinations, and neither is a table of its own.**
 
 1. **A work already in the library** — append one row to that question's ledger
-   (`<layer root>/references/<topic>.md`), filling `itemKey`, `year` and `found via` (the source, and
-   the date it answered: `OpenAlex, retrieved 2026-10-11`). `grade` and `depth` stay empty: nothing was
-   read, and those cells belong to a reading round.
+   (`<layer root>/references/<topic>.md`), filling `itemKey`, `year` and `found via` (the source and the
+   date it answered: `OpenAlex, retrieved 2026-10-11`). `grade` and `depth` stay empty: nothing was read,
+   and those cells belong to a reading round.
 2. **A work that is not in the library** — it has no `itemKey`, and a row without one is a row no later
    round's `grep` can find. Report it under `## Candidates` in this round's answer and hand it to
-   `literature-recon`, which decides whether the work earns a row and what it is worth.
+   `literature-recon`, which decides whether it earns a row.
 
-Do not invent a second table in that file. Its nine columns are the ledger, and a fourth shape beside
-them is a thing the next round cannot read. If the study has its own convention, follow it.
+Do not invent a second table in that file. Its nine columns are the ledger, and a fourth shape beside them
+is a thing the next round cannot read. If the study has its own convention, follow it.
 
 ## 7. Instrument discipline (where this skill most easily goes wrong)
 
 - Run `{{presetTools}}/metadata.mjs`. It makes exactly one request per invocation and refuses the
-  combinations it cannot honour, so "one at a time, never in a loop" is a property of the tool rather
-  than a rule to remember. Do not hand-build these urls and do not call them with `web_fetch`: the
-  contact address, the four-way classification of a failed answer, and the abstract rule live in the
-  helper, and a hand-built request carries none of them.
+  combinations it cannot honour, so "one at a time, never in a loop" is a property of the tool rather than
+  a rule to remember. Do not hand-build these URLs and do not call them with `web_fetch`.
 - Do not paste credentials into conversation text; these sources need none beyond the contact address.
 - Never present a metadata lookup as if it were reading the paper.
 - Do not modify anything under the layer root other than appending the ledger row a lookup earns.
-
-## 8. Acceptance checklist
-
-- [ ] Every reported record has a retrievable identifier and the source it came from
-- [ ] Every count is quoted with the source that gave it and the retrieval date
-- [ ] When the DOI that came back differs from the one asked for, **both** are reported
-- [ ] No abstract was invented; absent abstracts are stated as absent
-- [ ] A row written from a lookup carries no `grade`; `found via` names the source and the date
-- [ ] A work that is not in the library went to the report, not into the ledger
-- [ ] 429s are reported, not retried in a loop
-
-## 9. Don't
-
-- Do not read or claim to read full text: the channel helpers named in **Scope boundary** above own
-  that, not this skill
-- Do not hand-build these requests with `web_fetch`: `{{presetTools}}/metadata.mjs` carries the contact
-  address, the refusals and the classification that keep a failed lookup from reading like an answer
-- Do not assign evidence grades (that is `literature-recon`)
-- Do not cite a work you only saw in a search-result list
-- Do not build a citation graph beyond what the returned `referenced_works` / `reference` fields give
