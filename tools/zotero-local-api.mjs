@@ -35,6 +35,183 @@ import { fileURLToPath } from 'node:url'
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 23119
 
+/** The personal library every helper used before a library could be named. */
+export const PERSONAL_LIBRARY = Object.freeze({ type: 'user', id: 0 })
+
+/**
+ * The API prefix one library answers under.
+ *
+ * Only `user:0` (the personal library) and `group:<id>` are accepted. A stranger's user id is not a
+ * library this API serves, and falling back to `users/0` would read the wrong shelf without saying so.
+ *
+ * @param {{type: string, id: number}} [library] The library; defaults to the personal one.
+ * @returns {string} `/api/users/0` or `/api/groups/<id>`.
+ */
+export function libraryPrefix(library = PERSONAL_LIBRARY) {
+  const { type, id } = library ?? PERSONAL_LIBRARY
+  if (type === 'user' && id === 0) return '/api/users/0'
+  if (type === 'group' && Number.isInteger(id) && id > 0) return `/api/groups/${id}`
+  throw new Error(`unsupported library ${JSON.stringify(library)}: expected user:0 or group:<id>`)
+}
+
+/**
+ * Parse `--library` as `user:0` or `group:<id>`.
+ *
+ * @param {string} [value] The flag value; empty or absent means the personal library.
+ * @returns {{type: string, id: number}} The library.
+ * @throws {Error} When the value names a library this API cannot serve.
+ */
+export function parseLibrary(value) {
+  const text = String(value ?? '').trim()
+  if (text === '') return PERSONAL_LIBRARY
+  const match = /^(user|users|group|groups)[:/](\d+)$/.exec(text)
+  if (!match) throw new Error(`--library takes user:0 or group:<id>, got '${text}'`)
+  const type = match[1].startsWith('group') ? 'group' : 'user'
+  const id = Number(match[2])
+  if (type === 'user' && id !== 0) {
+    throw new Error('only the personal library (user:0) is served; a group is named group:<id>')
+  }
+  if (type === 'group' && id <= 0) throw new Error(`a group id must be positive, got ${id}`)
+  return { type, id }
+}
+
+/** The `zotero://` prefix one library's refs share. */
+export function libraryRef(library = PERSONAL_LIBRARY) {
+  return `zotero://${library.type}/${library.id}`
+}
+
+/**
+ * One item ref: the identity a read, a citation and a later write can all be replayed from.
+ *
+ * @param {string} key The item key.
+ * @param {{type: string, id: number}} [library] The library.
+ * @returns {string} `zotero://user/0/item/<key>`.
+ */
+export function itemRef(key, library = PERSONAL_LIBRARY) {
+  return `${libraryRef(library)}/item/${key}`
+}
+
+/** One attachment ref. */
+export function attachmentRef(key, library = PERSONAL_LIBRARY) {
+  return `${libraryRef(library)}/attachment/${key}`
+}
+
+/** One collection ref. */
+export function collectionRef(key, library = PERSONAL_LIBRARY) {
+  return `${libraryRef(library)}/collection/${key}`
+}
+
+/**
+ * The filesystem path behind a `file://` location, or '' when it is not a file URL.
+ *
+ * The local API answers an attachment read with a redirect to `file:///C:/...`; the path is what a
+ * reader can open. A linked URL is not a file and returns '' so the caller reports the URL instead of
+ * inventing a path.
+ *
+ * @param {string} location The `Location` header.
+ * @returns {string} The path, or ''.
+ */
+export function filePathFrom(location) {
+  const url = String(location ?? '')
+  if (!url.startsWith('file:')) return ''
+  return decodeURIComponent(url.replace(/^file:\/\/\/?/, '')).replace(/\//g, '\\')
+}
+
+/**
+ * Whether an attachment location is a local file or a web URL.
+ *
+ * @param {string} location The `Location` header.
+ * @returns {'file'|'url'} The kind.
+ */
+export function locationKind(location) {
+  return /^https?:/i.test(String(location ?? '')) ? 'url' : 'file'
+}
+
+/**
+ * The fields and creator types valid for one item type.
+ *
+ * The schema is the library's, not this repository's: a dataset and a patent have fields a journal
+ * article does not, and a static whitelist would either refuse a valid edit or send one the library
+ * rejects. A build that does not serve the endpoint answers 404, and `null` says "not knowable here"
+ * rather than pretending the set is empty.
+ *
+ * @param {string} itemType The Zotero item type.
+ * @returns {Promise<Set<string>|null>} The valid field names, or null when the build cannot say.
+ */
+export async function fieldNamesForType(itemType) {
+  const rows = await itemTypeFields(itemType)
+  if (rows === null) return null
+  return new Set(rows.map((row) => row?.field).filter(Boolean))
+}
+
+/**
+ * The rows `/itemTypeFields` answers for one item type.
+ *
+ * @param {string} itemType The Zotero item type.
+ * @returns {Promise<object[]|null>} The rows, or null when the build does not serve the endpoint.
+ */
+export async function itemTypeFields(itemType) {
+  const res = await localRequest('GET', `/api/itemTypeFields?itemType=${encodeURIComponent(itemType)}`)
+  if (res.status === 404) return null
+  if (res.status !== 200) throw new Error(`itemTypeFields answered ${res.status}: ${res.text.slice(0, 200)}`)
+  const rows = JSON.parse(res.text)
+  return Array.isArray(rows) ? rows : null
+}
+
+/** The item types this build serves. */
+export async function itemTypes() {
+  return getJson('/api/itemTypes')
+}
+
+/** The saved searches filed in one library. */
+export async function savedSearches(library = PERSONAL_LIBRARY) {
+  return getJson(`${libraryPrefix(library)}/searches?format=json&limit=100`)
+}
+
+/**
+ * The library's current transaction version, and the instance that reported it.
+ *
+ * @param {{type: string, id: number}} [library] The library.
+ * @returns {Promise<{version: number, serverId: string}>} The version (0 when the header is absent).
+ */
+export async function libraryVersion(library = PERSONAL_LIBRARY) {
+  const res = await localRequest('GET', `${libraryPrefix(library)}/items/top?limit=1`)
+  if (res.status !== 200) throw new Error(`the version probe answered ${res.status}: ${res.text.slice(0, 200)}`)
+  return {
+    version: Number(res.headers['last-modified-version'] ?? 0),
+    serverId: String(res.headers['zotero-server-id'] ?? ''),
+  }
+}
+
+/**
+ * The top-level items whose version is newer than `since`.
+ *
+ * A build whose tombstone history does not reach back answers 409; a build that does not serve the
+ * resource answers 404. Both mean "this range is not observable here", which is a finding the caller
+ * reports rather than an empty diff.
+ *
+ * @param {number} since The library version to diff from.
+ * @param {{type: string, id: number}} [library] The library.
+ * @returns {Promise<{keys: string[], version: number, total: number, serverId: string, unsupported: boolean}>}
+ *   The changed keys and the version the diff is pinned to.
+ */
+export async function changedItemsSince(since, library = PERSONAL_LIBRARY) {
+  const res = await localRequest('GET', `${libraryPrefix(library)}/items/top?since=${since}&format=versions`)
+  if (res.status === 404 || res.status === 409) {
+    return { keys: [], version: since, total: 0, serverId: '', unsupported: true }
+  }
+  if (res.status !== 200) throw new Error(`the changes read answered ${res.status}: ${res.text.slice(0, 200)}`)
+  const map = JSON.parse(res.text)
+  const rows = map && typeof map === 'object' && !Array.isArray(map) ? map : {}
+  return {
+    keys: Object.keys(rows),
+    version: Number(res.headers['last-modified-version'] ?? since),
+    total: Number(res.headers['total-results'] ?? Object.keys(rows).length),
+    serverId: String(res.headers['zotero-server-id'] ?? ''),
+    unsupported: false,
+  }
+}
+
 /**
  * Failures that mean "nothing answered at all", as opposed to something that answered badly.
  *
@@ -208,20 +385,38 @@ export async function serverInfo() {
  * One item's `data` object.
  *
  * @param {string} key An 8-character item key.
+ * @param {{library?: {type: string, id: number}}} [options] The library to read from.
  * @returns {Promise<object>} The item data.
  */
-export async function readItem(key) {
-  return (await getJson(`/api/users/0/items/${key}`)).data
+export async function readItem(key, { library = PERSONAL_LIBRARY } = {}) {
+  return (await getJson(`${libraryPrefix(library)}/items/${key}`)).data
 }
 
 /**
- * One item's child items - attachments, notes, annotations.
+ * One item's child items - attachments and notes, and annotations when the filter names them.
+ *
+ * A bare listing never returns annotations: Zotero stores those under the PDF attachment, not under
+ * the paper. `itemType: 'annotation'` is the filtered read that reaches them.
  *
  * @param {string} key An 8-character item key.
+ * @param {{library?: {type: string, id: number}, itemType?: string}} [options] The library, and an
+ *   optional child type filter.
  * @returns {Promise<object[]>} The children, as the API returns them.
  */
-export async function childrenOf(key) {
-  return getJson(`/api/users/0/items/${key}/children?format=json`)
+export async function childrenOf(key, { library = PERSONAL_LIBRARY, itemType = '' } = {}) {
+  const filter = itemType ? `&itemType=${encodeURIComponent(itemType)}` : ''
+  return getJson(`${libraryPrefix(library)}/items/${key}/children?format=json${filter}`)
+}
+
+/**
+ * One attachment's annotations.
+ *
+ * @param {string} key The attachment key (annotations live under the PDF, not under the paper).
+ * @param {{library?: {type: string, id: number}}} [options] The library.
+ * @returns {Promise<object[]>} The annotation children.
+ */
+export async function annotationsOf(key, { library = PERSONAL_LIBRARY } = {}) {
+  return childrenOf(key, { library, itemType: 'annotation' })
 }
 
 /**
@@ -275,10 +470,11 @@ export function visibleText(html) {
  * One collection's `data`.
  *
  * @param {string} key An 8-character collection key.
+ * @param {{library?: {type: string, id: number}}} [options] The library to read from.
  * @returns {Promise<object>} The collection data - `name`, `parentCollection`, `version`.
  */
-export async function readCollection(key) {
-  return (await getJson(`/api/users/0/collections/${key}`)).data
+export async function readCollection(key, { library = PERSONAL_LIBRARY } = {}) {
+  return (await getJson(`${libraryPrefix(library)}/collections/${key}`)).data
 }
 
 /**

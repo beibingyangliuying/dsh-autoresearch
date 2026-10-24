@@ -38,10 +38,12 @@ import { deflateSync } from 'node:zlib'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PDFiumLibrary } from '@hyzyla/pdfium'
-import { childrenOf, localRequest } from './zotero-local-api.mjs'
+import { childrenOf, filePathFrom, localRequest } from './zotero-local-api.mjs'
 import { findPassages, readItemOrRefuse, sliceText } from './zotero-read.mjs'
 import { romanToNumber } from './zotero-section-note.mjs'
 import { Refusal, UsageError, reportFailure } from './refusal.mjs'
+
+export { filePathFrom }
 
 const READABLE = ['application/pdf', 'application/epub+zip', 'text/html']
 const DEFAULT_LIMIT = 12000
@@ -53,18 +55,6 @@ export function attachmentOf(children) {
     if (hit) return hit
   }
   return undefined
-}
-
-/**
- * The path behind the library's `file://` redirect.
- *
- * @param {string} location The `Location` header.
- * @returns {string} A filesystem path, or '' when it is not a file URL.
- */
-export function filePathFrom(location) {
-  const url = String(location ?? '')
-  if (!url.startsWith('file:')) return ''
-  return decodeURIComponent(url.replace(/^file:\/\/\/?/, '')).replace(/\//g, '\\')
 }
 
 /**
@@ -227,8 +217,64 @@ async function openFile(itemKey) {
   return { record, attachment, path, bytes: readFileSync(path) }
 }
 
-async function runExtract(itemKey, options) {
-  const { attachment, path, bytes } = await openFile(itemKey)
+/**
+ * A stable directory name for a URL's rendered pages.
+ *
+ * @param {string} url The PDF URL.
+ * @returns {string} A filesystem-safe slug.
+ */
+export function urlSlug(url) {
+  try {
+    const base = new URL(url).pathname.split('/').filter(Boolean).pop() ?? 'paper'
+    const slug = base.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+    return slug || 'paper'
+  } catch {
+    return 'paper'
+  }
+}
+
+/**
+ * The bytes one invocation reads: a library attachment, or an open-access URL.
+ *
+ * A URL is a different provenance, so it is reported as one: the page image and the text layer come
+ * from that file, not from the library, and nothing here pretends otherwise.
+ */
+async function openSource(options) {
+  if (!options.url) return openFile(options.item)
+  const response = await fetch(options.url, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(60_000),
+    headers: { 'user-agent': 'dsh-autoresearch/1.0 (pdf reader)' },
+  })
+  if (!response.ok) {
+    throw new Refusal(`the URL answered HTTP ${response.status}`, {
+      fix: 'check the address; an open-access listing is a lead, and a dead or wrong-version link is a failed lead',
+    })
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  if (bytes.length === 0) throw new Refusal('the URL answered an empty body', { fix: 'try the landing page and find the PDF link again' })
+  if (bytes.length > 80 * 1024 * 1024) {
+    throw new Refusal(`the file is ${Math.round(bytes.length / 1024 / 1024)} MB, above the 80 MB guard`, {
+      fix: 'download it yourself and read the page you need; this helper will not hold a whole book in memory',
+    })
+  }
+  const head = Buffer.from(bytes.subarray(0, 5)).toString('latin1')
+  const contentType = String(response.headers.get('content-type') ?? '')
+  if (head !== '%PDF-' && !/pdf/i.test(contentType)) {
+    throw new Refusal('the URL did not answer a PDF', {
+      fix: 'an open-access landing page is not the file; follow it to the PDF link and pass that URL',
+    })
+  }
+  return {
+    record: null,
+    attachment: { key: 'url', data: { contentType: contentType || 'application/pdf' } },
+    path: options.url,
+    bytes,
+  }
+}
+
+async function runExtract(input, options) {
+  const { attachment, path, bytes } = input
   const library = await PDFiumLibrary.init()
   const document = await library.loadDocument(new Uint8Array(bytes))
   const pages = []
@@ -241,7 +287,7 @@ async function runExtract(itemKey, options) {
   document.destroy()
   library.destroy()
 
-  console.log(`source  : attachment text layer, read from ${path}`)
+  console.log(`source  : ${input.record ? 'the attachment' : 'the open-access URL'}, text layer read from ${path}`)
   console.log(`file    : ${attachment.key}  ${attachment.data.contentType}  ${pageCount} pages  ${text.length} characters`)
   console.log(RUNG.extract.join('\n'))
 
@@ -257,8 +303,8 @@ async function runExtract(itemKey, options) {
   return 0
 }
 
-async function runOutline(itemKey) {
-  const { attachment, path, bytes } = await openFile(itemKey)
+async function runOutline(input) {
+  const { attachment, path, bytes } = input
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
   // The loading task owns the worker, so it is what gets torn down: measured on pdfjs-dist 6, the
   // document handle the task resolves to answers `destroy is not a function`.
@@ -268,7 +314,7 @@ async function runOutline(itemKey) {
   const pageCount = document.numPages
   await task.destroy()
 
-  console.log(`source  : the paper's own table of contents, embedded in ${attachment.key}`)
+  console.log(`source  : the paper's own table of contents, embedded in ${path}`)
   console.log(`file    : ${path}  ${pageCount} pages  ${rows.length} entries`)
   console.log(RUNG.outline.join('\n'))
   if (rows.length === 0) {
@@ -284,15 +330,16 @@ async function runOutline(itemKey) {
   return 0
 }
 
-async function runRender(itemKey, options) {
-  const { attachment, path, bytes } = await openFile(itemKey)
+async function runRender(input, options) {
+  const { attachment, path, bytes } = input
   const library = await PDFiumLibrary.init()
   const document = await library.loadDocument(new Uint8Array(bytes))
   const indices = parsePages(options.pages, document.getPageCount())
-  const outDir = resolve(options.out || join('.section-notes', itemKey, 'pages'))
+  const base = options.item || urlSlug(options.url)
+  const outDir = resolve(options.out || (options.item ? join('.section-notes', options.item, 'pages') : join('.pdf-pages', base)))
   mkdirSync(outDir, { recursive: true })
 
-  console.log(`source  : the attachment itself, rendered to an image`)
+  console.log(`source  : ${input.record ? 'the attachment' : 'the open-access URL'}, rendered to an image`)
   console.log(`file    : ${path}  ${attachment.data.contentType}  ${document.getPageCount()} pages`)
   console.log(`out     : ${outDir}`)
   console.log(`scale   : ${options.scale ?? 1.5} (72 dpi is 1)`)
@@ -318,12 +365,13 @@ const USAGE =
   'usage: node tools/zotero-pdf.mjs --item <recordKey> --outline\n' +
   '       node tools/zotero-pdf.mjs --item <recordKey> --extract [--offset N] [--limit N] [--grep TERM]\n' +
   '       node tools/zotero-pdf.mjs --item <recordKey> --render --pages 3-5 [--scale 1.5] [--out DIR]\n' +
+  '       node tools/zotero-pdf.mjs --url <https-pdf> --outline|--extract|--render   # an open-access copy\n' +
   '       One rung per invocation. Rung (2) reads the file\'s text layer, (3) the paper\'s own table of\n' +
   '       contents, (4) the page as an image; the library\'s indexed text is zotero-read.mjs --fulltext.'
 
-function parseArgs(argv) {
-  const options = { item: '', outline: false, extract: false, render: false, offset: 0, limit: 0, grep: '', pages: '', scale: 0, out: '' }
-  const valued = ['--item', '--offset', '--limit', '--grep', '--pages', '--scale', '--out']
+export function parseArgs(argv) {
+  const options = { item: '', url: '', outline: false, extract: false, render: false, offset: 0, limit: 0, grep: '', pages: '', scale: 0, out: '' }
+  const valued = ['--item', '--url', '--offset', '--limit', '--grep', '--pages', '--scale', '--out']
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     const next = argv[index + 1]
@@ -341,7 +389,9 @@ function parseArgs(argv) {
   const rungs = [options.outline, options.extract, options.render].filter(Boolean).length
   if (rungs === 0) throw new UsageError('pass one of --outline, --extract or --render')
   if (rungs > 1) throw new UsageError('one rung per invocation: --outline, --extract and --render are three different reads')
-  if (!options.item) throw new UsageError('--item <recordKey> is required')
+  if (!options.item && !options.url) throw new UsageError('pass --item <recordKey> or --url <https-pdf>')
+  if (options.item && options.url) throw new UsageError('pass --item or --url, not both: they are two provenances')
+  if (options.url && !/^https?:\/\//i.test(options.url)) throw new UsageError('--url takes an http(s) URL')
   if (options.render && !options.pages) throw new UsageError('--render needs --pages, so a round renders the page it needs rather than the whole file')
   if (!options.render && options.pages) throw new UsageError('--pages belongs to --render')
   if (options.offset < 0 || options.limit < 0) throw new UsageError('--offset and --limit count characters and cannot be negative')
@@ -350,9 +400,10 @@ function parseArgs(argv) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
-  if (options.outline) process.exitCode = await runOutline(options.item)
-  else if (options.extract) process.exitCode = await runExtract(options.item, options)
-  else process.exitCode = await runRender(options.item, options)
+  const input = await openSource(options)
+  if (options.outline) process.exitCode = await runOutline(input)
+  else if (options.extract) process.exitCode = await runExtract(input, options)
+  else process.exitCode = await runRender(input, options)
 }
 
 const isEntryPoint = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)

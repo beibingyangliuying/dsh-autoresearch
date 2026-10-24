@@ -15,18 +15,34 @@
 //   * `date` is free text ("09/2019"), so a year is found in it, never sliced out of it.
 import {
   buildCollectionTree,
+  chunkText,
+  citationFields,
+  citationLines,
   classifyHit,
+  coverageOf,
   findPassages,
   groupHits,
   parseArgs,
   pickAttachment,
+  rankPassages,
   readItemOrRefuse,
+  sameDoi,
   screenRows,
   selectRequested,
+  shortCreators,
   sliceText,
+  tokenize,
   yearOf,
 } from './zotero-read.mjs'
-import { normalizeCollections, normalizeTags } from './zotero-local-api.mjs'
+import {
+  PERSONAL_LIBRARY,
+  itemRef,
+  libraryPrefix,
+  normalizeCollections,
+  normalizeTags,
+  parseLibrary,
+  visibleText,
+} from './zotero-local-api.mjs'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
@@ -300,6 +316,131 @@ check(other?.name !== 'Refusal' && other?.status === 500, 'a non-404 passes thro
 
 const found = await readItemOrRefuse('REALKEY1', async () => ({ key: 'REALKEY1' }))
 check(found.key === 'REALKEY1', 'and a record that exists is returned as it came')
+
+// --- the citation block, the refs and the coverage ------------------------------------------------
+
+console.log('\n[12] a record carries the fields a citation needs, under refs that name their library')
+
+const ARTICLE = {
+  itemType: 'journalArticle',
+  publicationTitle: 'Journal of Examples',
+  volume: '12',
+  issue: '3',
+  pages: '45-67',
+  DOI: '10.1000/example',
+}
+const articleFields = citationFields(ARTICLE)
+check(articleFields.venue === 'Journal of Examples', 'venue comes from publicationTitle')
+check(articleFields.volume === '12' && articleFields.pages === '45-67', 'volume and pages are kept')
+const articleLines = citationLines(ARTICLE)
+check(articleLines.includes('venue      : Journal of Examples'), 'the venue prints in the label column', articleLines.join(' | '))
+check(articleLines.includes('volume     : volume 12 · issue 3'), 'volume and issue share one line')
+check(articleLines.includes('pages      : 45-67'), 'pages print on their own line')
+const PREPRINT = citationLines({ itemType: 'preprint', repository: 'arXiv', archiveID: 'arXiv:1706.03762' })
+check(PREPRINT.includes('repository : arXiv') && PREPRINT.includes('archiveID  : arXiv:1706.03762'), 'a preprint names its repository and archive id')
+check(citationLines({ itemType: 'note' }).length === 0, 'a record with no citation fields prints no empty lines')
+check(!('abstractNote' in citationFields({ abstractNote: 'x' })), 'the abstract is not a citation field (it is metadata, per §66)')
+
+check(libraryPrefix(PERSONAL_LIBRARY) === '/api/users/0', 'the personal library is the default prefix')
+check(libraryPrefix({ type: 'group', id: 42 }) === '/api/groups/42', 'a group has its own prefix')
+check(itemRef('ABCD2345') === 'zotero://user/0/item/ABCD2345', 'an item ref names its library')
+check(itemRef('ABCD2345', { type: 'group', id: 42 }) === 'zotero://group/42/item/ABCD2345', 'and a group ref keeps the group id')
+check(parseLibrary('group:42').id === 42, 'group:42 parses')
+check(parseLibrary('user:0').id === 0 && parseLibrary('').id === 0, 'user:0 and the empty value both mean the personal library')
+throws('a user id other than 0 is refused', () => parseLibrary('user:5'))
+throws('a malformed library is refused', () => parseLibrary('shelf:1'))
+throws('a group id of zero is refused', () => parseLibrary('group:0'))
+throws('libraryPrefix refuses an unsupported library', () => libraryPrefix({ type: 'group', id: 0 }))
+
+check(coverageOf({ indexedPages: 17, totalPages: 17 }).complete, 'matching page counts are complete')
+check(!coverageOf({ indexedPages: 10, totalPages: 17 }).complete, 'a short page count is incomplete')
+check(coverageOf({ indexedChars: 500, totalChars: 500 }).complete, 'a text file is judged on characters')
+check(!coverageOf({}).complete, 'no reported axis is incomplete, not complete')
+check(!coverageOf({ indexedPages: 3, totalPages: 3, indexedChars: 5, totalChars: 6 }).complete, 'one disagreeing axis makes the whole answer incomplete')
+
+check(shortCreators([{ lastName: 'Alpha' }]) === 'Alpha', 'one author is one name')
+check(shortCreators([{ lastName: 'Alpha' }, { lastName: 'Beta' }]) === 'Alpha & Beta', 'two authors are joined')
+check(shortCreators([{ lastName: 'Alpha' }, { lastName: 'Beta' }, { lastName: 'Gamma' }]) === 'Alpha et al.', 'three or more are abbreviated')
+check(shortCreators([]) === '', 'no creators prints no author line')
+
+check(visibleText('<div data-schema-version="9"><p>Hello</p></div>') === 'Hello', 'a note body is read as text, not as its wrapper')
+
+// --- the search flags ----------------------------------------------------------------------------
+
+console.log('\n[13] search takes the facets the library documents')
+
+const sorted = parseArgs(['--search', 'x', '--sort', 'dateAdded', '--direction', 'desc'])
+check(sorted.sort === 'dateAdded' && sorted.direction === 'desc', 'sort and direction parse')
+check(parseArgs(['--search', 'x', '--item-type', 'journalArticle']).itemType === 'journalArticle', 'an item type filter parses')
+check(parseArgs(['--search', 'x', '--trash']).trash === true, '--trash includes trashed rows')
+check(parseArgs(['--item', 'k', '--library', 'group:42']).library.id === 42, 'any mode can name a group')
+throws('an unknown sort field is refused', () => parseArgs(['--search', 'x', '--sort', 'bogus']))
+throws('an unknown direction is refused', () => parseArgs(['--search', 'x', '--direction', 'up']))
+throws('a facet outside --search is refused', () => parseArgs(['--item', 'k', '--sort', 'date']))
+throws('a user library other than 0 is refused on the command line', () => parseArgs(['--search', 'x', '--library', 'user:5']))
+
+// --- evidence retrieval --------------------------------------------------------------------------
+
+console.log('\n[14] a question is ranked against the abstract, the notes and the full text')
+
+check(tokenize('Retrieval-augmented, GENERATION!').join(' ') === 'retrieval augmented generation', 'terms are lowercased and punctuation dropped')
+check(tokenize('证据分级').length > 0, 'a Chinese phrase yields terms rather than one unsegmentable blob')
+
+const chunks = chunkText('x'.repeat(2500), { size: 1000, overlap: 100 })
+check(chunks.length === 3, 'a long text is chunked', `${chunks.length}`)
+check(chunks[0].from === 0 && chunks[0].to === 1000, 'the first chunk starts at zero')
+check(chunks[1].from === 900, 'the next chunk overlaps by the overlap', `${chunks[1].from}`)
+check(chunks.at(-1).to === 2500, 'the last chunk reaches the end')
+check(chunkText('short').length === 1, 'a short text is one chunk')
+check(chunkText('').length === 0, 'no text is no chunk')
+const WORDY = 'alpha beta gamma delta epsilon zeta '.repeat(40)
+const wordChunks = chunkText(WORDY, { size: 60, overlap: 15 })
+check(wordChunks.every((chunk) => WORDY.slice(chunk.from, chunk.to) === chunk.text), 'every chunk offset still names its own text')
+check(!/^\s/.test(wordChunks[1].text), 'the next chunk starts on a word boundary, not mid-word', JSON.stringify(wordChunks[1].text.slice(0, 12)))
+
+const DOCUMENTS = [
+  { id: 'a', text: 'Retrieval augmented generation improves factuality.', order: 0 },
+  { id: 'b', text: 'Protein folding with transformers.', order: 1 },
+  { id: 'c', text: 'Retrieval practice and memory.', order: 2 },
+]
+const ranked = rankPassages(DOCUMENTS, 'retrieval augmented generation', { limit: 5 })
+check(ranked.length === 2, 'only documents with a query term are returned', `${ranked.length}`)
+check(ranked[0].id === 'a', 'the passage carrying every term ranks first')
+check(ranked[1].id === 'c', 'a partial match still ranks below the full one')
+check(ranked[0].score > ranked[1].score, 'scores are ordered')
+check(rankPassages(DOCUMENTS, 'none of these words', { limit: 5 }).length === 0, 'no match is an empty list, not a weakest guess')
+check(rankPassages(DOCUMENTS, 'retrieval', { limit: 1 }).length === 1, 'the passage cap is honoured')
+check(rankPassages([], 'retrieval').length === 0, 'no documents is no passages')
+
+const retrieval = parseArgs(['--retrieve', 'k', '--query', 'retrieval', '--passages', '2', '--sources', 'abstract,notes'])
+check(retrieval.mode === 'retrieve' && retrieval.query === 'retrieval', 'a retrieval parses its question')
+check(retrieval.passages === 2, 'the passage count parses')
+check(retrieval.sources.join(',') === 'abstract,notes', 'the source list parses')
+check(parseArgs(['--retrieve', 'k', '--query', 'x']).sources.join(',') === 'abstract,notes,fulltext', 'all three sources are the default')
+throws('a retrieval without a query is refused', () => parseArgs(['--retrieve', 'k']))
+throws('a query outside --retrieve is refused', () => parseArgs(['--item', 'k', '--query', 'x']))
+throws('an unknown source is refused', () => parseArgs(['--retrieve', 'k', '--query', 'x', '--sources', 'annotations']))
+throws('zero passages is refused', () => parseArgs(['--retrieve', 'k', '--query', 'x', '--passages', '0']))
+
+// --- structure, changes and the library marker ----------------------------------------------------
+
+console.log('\n[15] structure, changes and "is it already in my library?"')
+
+check(sameDoi('https://doi.org/10.1038/X') === '10.1038/x', 'a resolver URL and case are normalized')
+check(sameDoi('doi: 10.1038/x') === '10.1038/x', 'a doi: prefix is stripped')
+check(sameDoi('10.1038/x') === sameDoi('10.1038/X'), 'two spellings of one DOI compare equal')
+check(sameDoi('') === '', 'no DOI is empty, not a match for everything')
+
+const changes = parseArgs(['--changes', '--since', '42'])
+check(changes.mode === 'changes' && changes.since === 42, 'a changes diff parses its cursor')
+check(parseArgs(['--changes']).since === null, 'a baseline has no cursor')
+throws('a negative cursor is refused', () => parseArgs(['--changes', '--since', '-1']))
+throws('a cursor outside --changes is refused', () => parseArgs(['--item', 'k', '--since', '1']))
+check(parseArgs(['--item-types']).mode === 'item-types', '--item-types is a mode')
+check(parseArgs(['--item-fields', 'dataset']).value === 'dataset', '--item-fields takes the type')
+throws('--item-fields needs a type', () => parseArgs(['--item-fields']))
+check(parseArgs(['--saved-searches']).mode === 'saved-searches', '--saved-searches is a mode')
+check(parseArgs(['--find-doi', '10.1038/x']).value === '10.1038/x', '--find-doi takes the DOI')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

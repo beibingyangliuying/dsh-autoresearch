@@ -47,22 +47,42 @@
 //   node tools/zotero-read.mjs --tags
 //
 // Exit codes: 0 answered | 1 the library could not answer, or the record has no such text | 2 usage.
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  PERSONAL_LIBRARY,
+  attachmentRef,
+  changedItemsSince,
   childrenOf,
+  filePathFrom,
   getJson,
+  itemRef,
+  itemTypeFields,
+  itemTypes,
+  libraryPrefix,
+  libraryVersion,
   localRequest,
+  locationKind,
   normalizeCollections,
   normalizeTags,
+  parseLibrary,
   readCollection,
   readItem,
+  savedSearches,
   serverInfo,
   visibleText,
 } from './zotero-local-api.mjs'
 import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 
 const QMODES = ['everything', 'titleCreatorYear']
+/** The sort fields the library documents, and the direction it accepts. */
+const SORT_FIELDS = ['dateModified', 'dateAdded', 'date', 'title', 'creator']
+const SORT_DIRECTIONS = ['asc', 'desc']
+/** The sources one retrieval ranks; annotations are deliberately absent until the reader needs them. */
+const RETRIEVAL_SOURCES = ['abstract', 'notes', 'fulltext']
+/** Word segmentation for BM25; locale-neutral, so a Chinese abstract is not one long token. */
+const WORD_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'word' })
 /** The library's own maximum page size for /items. */
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 10
@@ -80,6 +100,8 @@ const SCREEN_PAGE = 100
 const DEFAULT_SCREEN_LIMIT = 300
 /** A ceiling on how many rows a screening pass will read, so a runaway collection stops loudly. */
 const SCREEN_CAP = 2_000
+/** The file-side reader, named in a `fix` line only as an absolute, runnable path. */
+const PDF_TOOL = fileURLToPath(new URL('./zotero-pdf.mjs', import.meta.url))
 
 /**
  * What one search row IS, and which record it belongs to.
@@ -223,13 +245,111 @@ export function findPassages(content, term, { window = 200, max = 20 } = {}) {
   return passages
 }
 
+/**
+ * Split text into the tokens BM25 scores.
+ *
+ * `Intl.Segmenter` is used rather than a whitespace split because the preset is domain-neutral: a
+ * Chinese abstract has no spaces, and a whitespace tokenizer would treat a whole sentence as one term.
+ * Punctuation and symbols carry no term, so they are dropped.
+ *
+ * @param {string} text Any text.
+ * @returns {string[]} Lowercased word-like tokens, in order.
+ */
+export function tokenize(text) {
+  const tokens = []
+  for (const part of WORD_SEGMENTER.segment(String(text ?? '').toLowerCase())) {
+    if (part.isWordLike) tokens.push(part.segment)
+  }
+  return tokens
+}
+
+/**
+ * Split one long text into overlapping chunks a reader can cite by offset.
+ *
+ * The cut prefers a line, a sentence end or a space near the size limit, so a passage does not start
+ * mid-word; the overlap keeps a sentence that straddles the cut retrievable from either side.
+ *
+ * @param {string} text The whole text.
+ * @param {{size?: number, overlap?: number}} [options] Chunk size and overlap, in characters.
+ * @returns {Array<{text: string, from: number, to: number}>} Chunks with their offsets in `text`.
+ */
+export function chunkText(text, { size = 1200, overlap = 200 } = {}) {
+  const value = String(text ?? '')
+  const chunks = []
+  for (let from = 0; from < value.length; ) {
+    let to = Math.min(value.length, from + Math.max(1, size))
+    if (to < value.length) {
+      const window = value.slice(from, to)
+      const boundary = Math.max(window.lastIndexOf('\n'), window.lastIndexOf('. '), window.lastIndexOf(' '))
+      if (boundary > Math.floor(window.length / 2)) to = from + boundary + 1
+    }
+    chunks.push({ text: value.slice(from, to), from, to })
+    if (to >= value.length) break
+    let next = Math.max(from + 1, to - Math.max(0, overlap))
+    // Start the next chunk on a word boundary when one is close, so a passage does not begin
+    // mid-word merely because the overlap landed there. The offset is adjusted with it.
+    const space = value.indexOf(' ', next)
+    if (space !== -1 && space < to) next = space + 1
+    from = next
+  }
+  return chunks
+}
+
+/**
+ * Rank passage candidates against a query with Okapi BM25.
+ *
+ * A candidate is any object with a `text`; the result is the same object plus a `score`, sorted by
+ * score and stable within one call. A candidate with no query term scores nothing and is dropped, so
+ * "no passage answers this" is an empty list rather than a weakly relevant one.
+ *
+ * @param {Array<{text: string, order?: number}>} documents The candidates.
+ * @param {string} query The user's terms.
+ * @param {{limit?: number, k1?: number, b?: number}} [options] Ranking knobs.
+ * @returns {Array<object>} The matching candidates, best first, with `score`.
+ */
+export function rankPassages(documents, query, { limit = 4, k1 = 1.5, b = 0.75 } = {}) {
+  const queryTokens = [...new Set(tokenize(query))]
+  if (queryTokens.length === 0 || documents.length === 0) return []
+  const lengths = documents.map((document) => tokenize(document.text).length)
+  const averageLength = lengths.reduce((sum, length) => sum + length, 0) / documents.length || 1
+  const documentFrequency = new Map()
+  const frequencies = documents.map((document) => {
+    const counts = new Map()
+    for (const token of tokenize(document.text)) counts.set(token, (counts.get(token) ?? 0) + 1)
+    for (const token of counts.keys()) documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1)
+    return counts
+  })
+  const scored = documents.map((document, index) => {
+    let score = 0
+    for (const token of queryTokens) {
+      const frequency = frequencies[index].get(token) ?? 0
+      if (frequency === 0) continue
+      const df = documentFrequency.get(token) ?? 0
+      const idf = Math.log(1 + (documents.length - df + 0.5) / (df + 0.5))
+      score += idf * ((frequency * (k1 + 1)) / (frequency + k1 * (1 - b + (b * lengths[index]) / averageLength)))
+    }
+    return { ...document, score }
+  })
+  return scored
+    .filter((document) => document.score > 0)
+    .sort((a, b) => b.score - a.score || (a.order ?? 0) - (b.order ?? 0))
+    .slice(0, limit)
+}
+
 const USAGE =
   'usage: node tools/zotero-read.mjs --search "<query>" [--qmode everything|titleCreatorYear] [--limit N] [--tag TAG]\n' +
+  '                                  [--sort FIELD] [--direction asc|desc] [--item-type TYPE] [--trash]\n' +
   '       node tools/zotero-read.mjs --item <key> [--offset N] [--limit N]   # a note prints its body\n' +
   '       node tools/zotero-read.mjs --fulltext <key> [--attachment <key>] [--offset N] [--limit N] [--grep TERM]\n' +
+  '       node tools/zotero-read.mjs --retrieve <key> --query "<terms>" [--passages N]\n' +
+  '                                  [--sources abstract,notes,fulltext]\n' +
+  '       node tools/zotero-read.mjs --locate <key>   # the best attachment: a local path or a web URL\n' +
   '       node tools/zotero-read.mjs --collections | --collection <key> | --tags\n' +
+  '       node tools/zotero-read.mjs --changes [--since N]   # baseline, or what changed after a version\n' +
+  '       node tools/zotero-read.mjs --item-types | --item-fields <type> | --saved-searches\n' +
+  '       node tools/zotero-read.mjs --find-doi <doi>   # is that work already in this library?\n' +
   '       node tools/zotero-read.mjs --collection <key> --screen [--screen-limit N]\n' +
-  '       [--json]\n' +
+  '       [--library user:0|group:<id>] [--json]\n' +
   '       --limit counts ROWS for a search (at most 100, the library\'s page size) and CHARACTERS for a\n' +
   '       read (default 12000, at most 100000).\n' +
   '       --screen enumerates a whole collection and prints one abstract per record; --screen-limit sets\n' +
@@ -256,6 +376,19 @@ export function parseArgs(argv) {
     screen: false,
     screenLimit: DEFAULT_SCREEN_LIMIT,
     json: false,
+    libraryRaw: '',
+    library: PERSONAL_LIBRARY,
+    sort: '',
+    direction: '',
+    itemType: '',
+    trash: false,
+    query: '',
+    passages: 4,
+    passagesGiven: false,
+    sourcesRaw: '',
+    sources: [...RETRIEVAL_SOURCES],
+    since: null,
+    sinceRaw: '',
   }
   const integer = (name, raw, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) => {
     const parsed = Number(raw)
@@ -271,8 +404,12 @@ export function parseArgs(argv) {
       case '--search':
       case '--item':
       case '--fulltext':
+      case '--locate':
+      case '--retrieve':
       case '--collection':
-        if (options.mode) throw new UsageError(`pass one of --search/--item/--fulltext/--collections/--collection/--tags, not both`)
+      case '--find-doi':
+      case '--item-fields':
+        if (options.mode) throw new UsageError('pass one mode, not two')
         if (!next) throw new UsageError(`${flag} needs a value`)
         options.mode = flag.slice(2)
         options.value = next
@@ -280,8 +417,53 @@ export function parseArgs(argv) {
         break
       case '--collections':
       case '--tags':
-        if (options.mode) throw new UsageError('pass one of --search/--item/--fulltext/--collections/--collection/--tags, not both')
+      case '--item-types':
+      case '--saved-searches':
+      case '--changes':
+        if (options.mode) throw new UsageError('pass one mode, not two')
         options.mode = flag.slice(2)
+        break
+      case '--library':
+        options.libraryRaw = next ?? ''
+        index += 1
+        break
+      case '--sort':
+        if (!SORT_FIELDS.includes(next)) throw new UsageError(`--sort takes one of ${SORT_FIELDS.join(', ')}, got '${next}'`)
+        options.sort = next
+        index += 1
+        break
+      case '--direction':
+        if (!SORT_DIRECTIONS.includes(next)) {
+          throw new UsageError(`--direction takes one of ${SORT_DIRECTIONS.join(', ')}, got '${next}'`)
+        }
+        options.direction = next
+        index += 1
+        break
+      case '--item-type':
+        if (!next) throw new UsageError('--item-type needs an item type (for example journalArticle)')
+        options.itemType = next
+        index += 1
+        break
+      case '--trash':
+        options.trash = true
+        break
+      case '--since':
+        options.since = integer('since', next, { min: 0 })
+        options.sinceRaw = next
+        index += 1
+        break
+      case '--query':
+        options.query = next ?? ''
+        index += 1
+        break
+      case '--passages':
+        options.passages = integer('passages', next, { min: 1, max: 20 })
+        options.passagesGiven = true
+        index += 1
+        break
+      case '--sources':
+        options.sourcesRaw = next ?? ''
+        index += 1
         break
       case '--qmode':
         if (!QMODES.includes(next)) throw new UsageError(`--qmode takes one of ${QMODES.join(', ')}, got '${next}'`)
@@ -324,7 +506,35 @@ export function parseArgs(argv) {
         throw new UsageError(`unrecognised argument '${flag}'`)
     }
   }
-  if (!options.mode) throw new UsageError('pass --search, --item, --fulltext, --collections, --collection or --tags')
+  if (!options.mode) throw new UsageError('pass one mode (--search, --item, --fulltext, --retrieve, --locate, --collections, --collection, --tags, --changes, --item-types, --item-fields, --saved-searches, --find-doi)')
+  try {
+    options.library = parseLibrary(options.libraryRaw)
+  } catch (error) {
+    throw new UsageError(error.message)
+  }
+  const searchOnly = options.sort !== '' || options.direction !== '' || options.itemType !== '' || options.trash
+  if (searchOnly && options.mode !== 'search') {
+    throw new UsageError('--sort, --direction, --item-type and --trash apply to --search only')
+  }
+  const retrievalOnly = options.query !== '' || options.passagesGiven || options.sourcesRaw !== ''
+  if (options.mode === 'retrieve') {
+    if (!options.query.trim()) throw new UsageError('--retrieve needs --query "<terms>"')
+    if (options.sourcesRaw !== '') {
+      const requested = options.sourcesRaw.split(',').map((source) => source.trim()).filter(Boolean)
+      if (requested.length === 0) throw new UsageError(`--sources needs at least one of ${RETRIEVAL_SOURCES.join(', ')}`)
+      for (const source of requested) {
+        if (!RETRIEVAL_SOURCES.includes(source)) {
+          throw new UsageError(`--sources takes ${RETRIEVAL_SOURCES.join(', ')}, got '${source}'`)
+        }
+      }
+      options.sources = [...new Set(requested)]
+    }
+  } else if (retrievalOnly) {
+    throw new UsageError('--query, --passages and --sources apply to --retrieve only')
+  }
+  if (options.sinceRaw !== '' && options.mode !== 'changes') {
+    throw new UsageError('--since applies to --changes only')
+  }
   if (options.screen && options.mode !== 'collection') {
     throw new UsageError('--screen applies to --collection <key> only')
   }
@@ -366,19 +576,19 @@ async function paginatedJson(path) {
 }
 
 /** Records by key, asking for at most `MULTI_GET_CHUNK` at a time and keeping only what was asked for. */
-async function recordsByKey(keys) {
+async function recordsByKey(keys, library) {
   const records = new Map()
   for (let start = 0; start < keys.length; start += MULTI_GET_CHUNK) {
     const chunk = keys.slice(start, start + MULTI_GET_CHUNK)
-    const rows = await getJson(`/api/users/0/items?itemKey=${chunk.join(',')}&format=json`)
+    const rows = await getJson(`${libraryPrefix(library)}/items?itemKey=${chunk.join(',')}&format=json`)
     for (const [key, data] of selectRequested(rows, chunk)) records.set(key, data)
   }
   return records
 }
 
 /** Collection key -> name, for printing a record's filing in words rather than as bare keys. */
-async function collectionNames() {
-  const rows = await getJson('/api/users/0/collections?format=json&limit=200')
+async function collectionNames(library) {
+  const rows = await getJson(`${libraryPrefix(library)}/collections?format=json&limit=200`)
   return new Map(rows.map((row) => [row.key, row.data?.name ?? '(unnamed)']))
 }
 
@@ -395,14 +605,124 @@ function describeCreators(creators = []) {
   return `${names.length}  (${shown.join('; ')})`
 }
 
+/** The one-line author form a search result uses, so triage does not need a second read. */
+export function shortCreators(creators = []) {
+  const names = creators.map((creator) => creator?.name ?? creator?.lastName ?? '').filter(Boolean)
+  if (names.length === 0) return ''
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} & ${names[1]}`
+  return `${names[0]} et al.`
+}
+
+/**
+ * The citation-relevant fields a record carries, keyed by the label a citation uses.
+ *
+ * The library stores different fields for different item types: a journal article carries
+ * `publicationTitle`, a conference paper `proceedingsTitle`, a book `publisher`, a thesis `university`.
+ * One label may therefore be filled from several fields; the first non-empty one wins.
+ */
+const CITATION_SOURCES = [
+  ['venue', ['publicationTitle', 'proceedingsTitle', 'conferenceName', 'bookTitle', 'websiteTitle']],
+  ['publisher', ['publisher', 'university', 'institution']],
+  ['volume', ['volume']],
+  ['issue', ['issue']],
+  ['pages', ['pages']],
+  ['edition', ['edition']],
+  ['series', ['series', 'seriesTitle']],
+  ['ISBN', ['ISBN']],
+  ['ISSN', ['ISSN']],
+  ['repository', ['repository']],
+  ['archiveID', ['archiveID']],
+]
+
+/**
+ * The citation fields present on one record.
+ *
+ * `abstractNote` is deliberately absent: it is library metadata, possibly edited by hand, and it is not
+ * the paper's own abstract. The reading ladder reaches that through the indexed text instead.
+ *
+ * @param {object} [data] A record's `data`.
+ * @returns {Record<string, string>} The present fields, by citation label.
+ */
+export function citationFields(data = {}) {
+  const fields = {}
+  for (const [label, sources] of CITATION_SOURCES) {
+    const value = sources.map((source) => data[source]).find((entry) => typeof entry === 'string' && entry.trim() !== '')
+    if (value) fields[label] = value.trim()
+  }
+  return fields
+}
+
+/**
+ * The citation block one record prints: venue, publisher, volume/issue, pages and the type-specific
+ * identifiers, each only when the record carries it.
+ *
+ * @param {object} [data] A record's `data`.
+ * @returns {string[]} Lines already padded for the reader's label column.
+ */
+export function citationLines(data = {}) {
+  const fields = citationFields(data)
+  const lines = []
+  for (const label of ['venue', 'publisher']) {
+    if (fields[label]) lines.push(`${label.padEnd(11)}: ${fields[label]}`)
+  }
+  const volume = [fields.volume && `volume ${fields.volume}`, fields.issue && `issue ${fields.issue}`].filter(Boolean)
+  if (volume.length > 0) lines.push(`volume     : ${volume.join(' · ')}`)
+  if (fields.pages) lines.push(`pages      : ${fields.pages}`)
+  for (const label of ['edition', 'series', 'ISBN', 'ISSN', 'repository', 'archiveID']) {
+    if (fields[label]) lines.push(`${label.padEnd(11)}: ${fields[label]}`)
+  }
+  return lines
+}
+
+/**
+ * Full-text indexing coverage, from the library's own two axes.
+ *
+ * `complete` is true only when at least one axis was reported and every reported axis agrees: a text
+ * file has chars and no pages, a PDF has both, and a response that reports neither is incomplete rather
+ * than a guess.
+ *
+ * @param {object} [payload] The `/fulltext` body.
+ * @returns {{indexedPages?: number, totalPages?: number, indexedChars?: number, totalChars?: number, complete: boolean}}
+ *   The coverage.
+ */
+export function coverageOf(payload = {}) {
+  const indexedPages = Number.isInteger(payload.indexedPages) ? payload.indexedPages : undefined
+  const totalPages = Number.isInteger(payload.totalPages) ? payload.totalPages : undefined
+  const indexedChars = Number.isInteger(payload.indexedChars) ? payload.indexedChars : undefined
+  const totalChars = Number.isInteger(payload.totalChars) ? payload.totalChars : undefined
+  const pages = indexedPages !== undefined && totalPages !== undefined ? indexedPages === totalPages : undefined
+  const chars = indexedChars !== undefined && totalChars !== undefined ? indexedChars === totalChars : undefined
+  const axes = [pages, chars].filter((value) => value !== undefined)
+  return {
+    ...(indexedPages !== undefined ? { indexedPages } : {}),
+    ...(totalPages !== undefined ? { totalPages } : {}),
+    ...(indexedChars !== undefined ? { indexedChars } : {}),
+    ...(totalChars !== undefined ? { totalChars } : {}),
+    complete: axes.length > 0 && axes.every(Boolean),
+  }
+}
+
+/** Ask the library where an attachment's file is. The answer is a `file://` or a web location. */
+async function attachmentLocation(key, library) {
+  const res = await localRequest('GET', `${libraryPrefix(library)}/items/${key}/file`)
+  const location = res.headers.location ?? ''
+  if (!location) throw new Error(`the library did not hand over a path for ${key} (HTTP ${res.status})`)
+  return location
+}
+
 async function runSearch(options) {
   const params = new URLSearchParams({ q: options.value, limit: String(options.limit), format: 'json' })
   params.set('qmode', options.qmode)
   for (const tag of options.tags) params.append('tag', tag)
-  const { rows, total } = await paginatedJson(`/api/users/0/items?${params}`)
+  if (options.sort) params.set('sort', options.sort)
+  if (options.direction) params.set('direction', options.direction)
+  if (options.itemType) params.set('itemType', options.itemType)
+  if (options.trash) params.set('includeTrashed', '1')
+  const { rows, total } = await paginatedJson(`${libraryPrefix(options.library)}/items?${params}`)
   const groups = groupHits(rows)
   const missing = groups.filter((group) => !group.record).map((group) => group.parentKey)
-  const fetched = missing.length > 0 ? await recordsByKey(missing) : new Map()
+  const fetched = missing.length > 0 ? await recordsByKey(missing, options.library) : new Map()
   for (const group of groups) if (!group.record && fetched.has(group.parentKey)) group.record = fetched.get(group.parentKey)
 
   if (options.json) {
@@ -412,9 +732,19 @@ async function runSearch(options) {
           query: options.value,
           qmode: options.qmode,
           tags: options.tags,
+          library: options.library,
+          sort: options.sort || undefined,
+          direction: options.direction || undefined,
+          itemType: options.itemType || undefined,
+          includeTrashed: options.trash,
           total,
           hits: rows.length,
-          records: groups.map((group) => ({ key: group.parentKey, sources: group.sources, record: group.record })),
+          records: groups.map((group) => ({
+            key: group.parentKey,
+            ref: itemRef(group.parentKey, options.library),
+            sources: group.sources,
+            record: group.record,
+          })),
         },
         null,
         2,
@@ -424,6 +754,12 @@ async function runSearch(options) {
   }
 
   console.log(`query   : qmode=${options.qmode}  "${options.value}"${options.tags.length ? `  tags=${options.tags.join(',')}` : ''}`)
+  const filters = [
+    options.itemType ? `type=${options.itemType}` : '',
+    options.sort ? `sort=${options.sort}${options.direction ? `/${options.direction}` : ''}` : '',
+    options.trash ? 'trashed included' : '',
+  ].filter(Boolean)
+  if (filters.length > 0) console.log(`filter  : ${filters.join(' · ')}`)
   console.log(
     `scope   : total ${total} · rows ${rows.length} · records ${groups.length} · limit ${options.limit}` +
       (rows.length < total ? '  (the total is the library\'s, the rows are this page)' : ''),
@@ -446,6 +782,8 @@ async function runSearch(options) {
     const type = record?.itemType ?? 'unknown type'
     const title = record?.title || '(no title on this record)'
     console.log(`${index + 1}. ${group.parentKey}  ${year || '????'}  [${type}]  ${title}`)
+    const authors = shortCreators(record?.creators)
+    if (authors) console.log(`   by   : ${authors}`)
     const parts = group.sources.map((source) =>
       source.kind === 'item'
         ? 'metadata'
@@ -476,16 +814,36 @@ export async function readItemOrRefuse(key, read = readItem) {
 
 async function runItem(options) {
   const key = options.value
-  const [data, children, names] = await Promise.all([readItemOrRefuse(key), childrenOf(key), collectionNames()])
+  const [data, children, names] = await Promise.all([
+    readItemOrRefuse(key, (candidate) => readItem(candidate, { library: options.library })),
+    childrenOf(key, { library: options.library }),
+    collectionNames(options.library),
+  ])
   const collections = normalizeCollections(data.collections)
   const picked = pickAttachment(children)
   if (options.json) {
-    console.log(JSON.stringify({ key, data, children: children.map((c) => c.data), fulltextSource: picked }, null, 2))
+    console.log(
+      JSON.stringify(
+        {
+          key,
+          ref: itemRef(key, options.library),
+          library: options.library,
+          citation: citationFields(data),
+          data,
+          children: children.map((child) => child.data),
+          fulltextSource: picked,
+        },
+        null,
+        2,
+      ),
+    )
     return
   }
   console.log(`item       : ${key}  [${data.itemType}]  "${data.title ?? ''}"`)
+  console.log(`ref        : ${itemRef(key, options.library)}`)
   console.log(`creators   : ${describeCreators(data.creators)}`)
   console.log(`date       : ${data.date ?? '(none)'}`)
+  for (const line of citationLines(data)) console.log(line)
   if (data.DOI) console.log(`DOI        : ${data.DOI}`)
   if (data.url) console.log(`url        : ${data.url}`)
   console.log(`collections: ${collections.length === 0 ? 'none' : collections.map((c) => `${c} (${names.get(c) ?? 'unknown'})`).join(' · ')}`)
@@ -503,9 +861,9 @@ async function runItem(options) {
   // A note IS its body. Printing only its metadata made an existing note unreadable, which left the
   // section-note discipline naming a ruler it could not open.
   if (data.itemType === 'note') {
-    const note = data.note ?? ''
+    const note = visibleText(data.note ?? '')
     const slice = sliceText(note, { offset: options.offset, limit: options.limit })
-    console.log(`note       : ${note.length} characters (HTML) · showing ${slice.from}-${slice.to}`)
+    console.log(`note       : ${note.length} characters (visible text; --json keeps the stored HTML) · showing ${slice.from}-${slice.to}`)
     if (slice.nextOffset !== null) console.log(`             next: --offset ${slice.nextOffset}`)
     console.log('---')
     console.log(slice.text)
@@ -514,7 +872,11 @@ async function runItem(options) {
 
 async function runFulltext(options) {
   const key = options.value
-  const record = await readItemOrRefuse(key)
+  const library = options.library
+  const record = await readItemOrRefuse(key, (candidate) => readItem(candidate, { library }))
+  // `zotero-pdf` reads a record's attachment, so a command that works as printed names the record,
+  // not the attachment key the reader happened to pass.
+  const recordKey = record.parentItem ?? key
   let attachmentKey = options.attachment
   let source = null
   let children = []
@@ -523,7 +885,7 @@ async function runFulltext(options) {
       attachmentKey = key
       source = { key, contentType: record.contentType ?? '', linkMode: record.linkMode ?? '', title: record.title ?? '' }
     } else {
-      children = await childrenOf(key)
+      children = await childrenOf(key, { library })
       const picked = pickAttachment(children)
       if (!picked) {
         throw new Refusal(
@@ -538,7 +900,7 @@ async function runFulltext(options) {
       source = picked
     }
   } else {
-    const attachment = await readItem(attachmentKey)
+    const attachment = await readItem(attachmentKey, { library })
     source = {
       key: attachmentKey,
       contentType: attachment.contentType ?? '',
@@ -547,31 +909,37 @@ async function runFulltext(options) {
     }
   }
 
-  const res = await localRequest('GET', `/api/users/0/items/${attachmentKey}/fulltext?format=json`)
+  const res = await localRequest('GET', `${libraryPrefix(library)}/items/${attachmentKey}/fulltext?format=json`)
   if (res.status === 404) {
-    throw new Error(
-      `the library has no indexed text for attachment ${attachmentKey}. It indexes an attachment when ` +
-        'the application is open and its index drain runs; open the reference manager once and retry.',
-    )
+    throw new Refusal(`the library has no indexed text for attachment ${attachmentKey} (404)`, {
+      fix: 'the index is not the file: read the attachment itself, which needs no index',
+      command: `node "${PDF_TOOL}" --item ${recordKey} --extract`,
+    })
   }
   if (res.status !== 200) throw new Error(`fulltext answered ${res.status}: ${res.text.slice(0, 200)}`)
   const body = JSON.parse(res.text)
   const content = body.content ?? ''
+  const coverage = coverageOf(body)
   const others = children.filter((child) => child.key !== attachmentKey)
+  const slice = sliceText(content, { offset: options.offset, limit: options.limit })
 
   if (options.json) {
-    const slice = sliceText(content, { offset: options.offset, limit: options.limit })
     console.log(
       JSON.stringify(
         {
           key,
+          ref: itemRef(key, library),
+          attachmentRef: attachmentRef(attachmentKey, library),
           source,
+          coverage,
           indexedPages: body.indexedPages,
           totalPages: body.totalPages,
           characters: content.length,
           from: slice.from,
           to: slice.to,
           nextOffset: slice.nextOffset,
+          truncated: options.grep ? false : slice.nextOffset !== null,
+          sourcesSkipped: [],
           text: options.grep ? undefined : slice.text,
           passages: options.grep ? findPassages(content, options.grep) : undefined,
         },
@@ -583,6 +951,7 @@ async function runFulltext(options) {
   }
 
   console.log(`item   : ${key}  "${record.title ?? ''}"`)
+  console.log(`ref    : ${itemRef(key, library)}`)
   console.log(`source : attachment ${source.key}  ${source.contentType || 'unknown type'}  ${source.linkMode}`)
   if (others.length > 0) {
     console.log(
@@ -596,6 +965,10 @@ async function runFulltext(options) {
   console.log(`rung   : (1) the library's indexed text - cheapest, and the rung that can be missing or stale.`)
   console.log(`         An empty text here is a statement about the index. tools/zotero-pdf.mjs reads the`)
   console.log(`         others: (2) the file's own text layer, (3) its table of contents, (4) the page as an image.`)
+  if (content === '') {
+    console.log(`next   : nothing is indexed for this attachment. Read the file itself with:`)
+    console.log(`         node "${PDF_TOOL}" --item ${recordKey} --extract`)
+  }
 
   if (options.grep) {
     const passages = findPassages(content, options.grep)
@@ -609,7 +982,6 @@ async function runFulltext(options) {
     return
   }
 
-  const slice = sliceText(content, { offset: options.offset, limit: options.limit })
   console.log(
     `slice  : showing ${slice.total === 0 ? '0' : slice.from + 1}-${slice.to} of ${slice.total}` +
       (slice.nextOffset === null ? '   (end of text)' : `    next: --offset ${slice.nextOffset}`),
@@ -617,8 +989,372 @@ async function runFulltext(options) {
   console.log(`\n${slice.text}`)
 }
 
+/**
+ * Where an item's best attachment actually is.
+ *
+ * This is the escalation path for a PDF the library has not indexed: it hands back a path or a URL, and
+ * says which environment the path belongs to. A missing file is reported as missing rather than as a
+ * path the reader may trust.
+ */
+async function runLocate(options) {
+  const key = options.value
+  const library = options.library
+  const record = await readItemOrRefuse(key, (candidate) => readItem(candidate, { library }))
+  let attachment = null
+  if (record.itemType === 'attachment') {
+    attachment = { key, contentType: record.contentType ?? '', linkMode: record.linkMode ?? '', title: record.title ?? '' }
+  } else {
+    attachment = pickAttachment(await childrenOf(key, { library }))
+  }
+  if (!attachment) {
+    throw new Refusal(`record ${key} has no PDF, EPUB or HTML attachment`, {
+      fix: 'attach the file to the record in the library; a record without one has no file to locate',
+    })
+  }
+  const location = await attachmentLocation(attachment.key, library)
+  const kind = locationKind(location)
+  const path = kind === 'file' ? filePathFrom(location) : ''
+  if (kind === 'file' && path === '') {
+    throw new Error(`the library answered a location that is neither a file nor a URL: ${location}`)
+  }
+  const exists = kind === 'file' ? existsSync(path) : null
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          ref: itemRef(key, library),
+          attachmentRef: attachmentRef(attachment.key, library),
+          attachment,
+          kind,
+          ...(kind === 'file' ? { path, exists } : { url: location }),
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.log(`item       : ${key}  "${record.title ?? ''}"`)
+  console.log(`attachment : ${attachment.key}  ${attachment.contentType || 'unknown type'}  ${attachment.linkMode}`)
+  console.log(`kind       : ${kind}`)
+  if (kind === 'file') {
+    console.log(`path       : ${path}`)
+    console.log(`exists     : ${exists ? 'yes' : 'NO - the library points at a file that is not there'}`)
+  } else {
+    console.log(`url        : ${location}`)
+  }
+}
+
+/**
+ * Rank the abstract, the notes and the indexed full text against one question.
+ *
+ * Every passage keeps its source: which attachment or note it came from, and its offsets in that
+ * source. Full text is chunked with overlap so a sentence across a cut is still retrievable. A source
+ * the item does not have is reported in `sourcesSkipped`, never silently treated as "nothing relevant".
+ */
+async function runRetrieve(options) {
+  const { library, value: key, query } = options
+  const record = await readItemOrRefuse(key, (candidate) => readItem(candidate, { library }))
+  const wanted = new Set(options.sources)
+  const documents = []
+  const skipped = []
+  let attachment = null
+  let coverage = null
+  let order = 0
+
+  const push = (document) => documents.push({ ...document, order: order++ })
+
+  if (wanted.has('abstract') && record.abstractNote) {
+    const text = visibleText(record.abstractNote)
+    if (text) push({ source: 'abstract', sourceRef: itemRef(key, library), offsets: { from: 0, to: text.length }, text })
+  }
+
+  if (wanted.has('notes')) {
+    if (record.itemType === 'note') {
+      const text = visibleText(record.note ?? '')
+      if (text) push({ source: 'note', sourceRef: itemRef(key, library), offsets: { from: 0, to: text.length }, text })
+    } else {
+      const notes = (await childrenOf(key, { library })).filter((child) => child.data?.itemType === 'note')
+      for (const note of notes) {
+        const text = visibleText(note.data?.note ?? '')
+        for (const chunk of chunkText(text)) {
+          push({
+            source: 'note',
+            sourceRef: itemRef(note.key, library),
+            offsets: { from: chunk.from, to: chunk.to },
+            text: chunk.text,
+          })
+        }
+      }
+    }
+  }
+
+  if (wanted.has('fulltext')) {
+    attachment =
+      record.itemType === 'attachment'
+        ? { key, contentType: record.contentType ?? '', linkMode: record.linkMode ?? '', title: record.title ?? '' }
+        : pickAttachment(await childrenOf(key, { library }))
+    if (!attachment) {
+      skipped.push('fulltext')
+    } else {
+      const res = await localRequest('GET', `${libraryPrefix(library)}/items/${attachment.key}/fulltext?format=json`)
+      if (res.status === 404) {
+        skipped.push('fulltext')
+      } else if (res.status !== 200) {
+        throw new Error(`fulltext answered ${res.status}: ${res.text.slice(0, 200)}`)
+      } else {
+        const body = JSON.parse(res.text)
+        coverage = coverageOf(body)
+        for (const chunk of chunkText(body.content ?? '')) {
+          push({
+            source: 'fulltext',
+            sourceRef: attachmentRef(attachment.key, library),
+            attachmentRef: attachmentRef(attachment.key, library),
+            offsets: { from: chunk.from, to: chunk.to },
+            text: chunk.text,
+          })
+        }
+      }
+    }
+  }
+
+  const matches = rankPassages(documents, query, { limit: documents.length })
+  const evidence = matches.slice(0, options.passages).map((document) => ({
+    ...document,
+    score: Number(document.score.toFixed(4)),
+  }))
+  const truncated = matches.length > evidence.length
+  if (wanted.has('abstract') && !documents.some((document) => document.source === 'abstract')) skipped.push('abstract')
+  if (wanted.has('notes') && !documents.some((document) => document.source === 'note')) skipped.push('notes')
+  const counts = {
+    abstract: documents.filter((document) => document.source === 'abstract').length,
+    notes: documents.filter((document) => document.source === 'note').length,
+    fulltext: documents.filter((document) => document.source === 'fulltext').length,
+  }
+
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          ref: itemRef(key, library),
+          query,
+          sources: [...wanted],
+          attachmentRef: attachment ? attachmentRef(attachment.key, library) : undefined,
+          coverage,
+          counts,
+          evidence,
+          truncated,
+          sourcesSkipped: skipped,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+
+  console.log(`item   : ${key}  "${record.title ?? ''}"`)
+  console.log(`ref    : ${itemRef(key, library)}`)
+  console.log(`query  : "${query}"`)
+  console.log(`sources: ${[...wanted].join(' · ')}  (abstract ${counts.abstract} · notes ${counts.notes} chunk(s) · fulltext ${counts.fulltext} chunk(s))`)
+  if (coverage) {
+    console.log(
+      `covered: ${coverage.indexedPages ?? '?'} of ${coverage.totalPages ?? '?'} indexed pages` +
+        (coverage.complete ? '  complete' : '  INCOMPLETE'),
+    )
+  }
+  if (skipped.length > 0) {
+    console.log(`skipped: ${skipped.join(', ')} - the item does not provide it`)
+    if (skipped.includes('fulltext')) {
+      console.log(`         read the file itself with: node "${PDF_TOOL}" --item ${record.parentItem ?? key} --extract`)
+    }
+  }
+  if (evidence.length === 0) {
+    console.log('\n0 passages - the sources were searched and none matched the query. This is not a failure.')
+    return
+  }
+  console.log('')
+  evidence.forEach((document, index) => {
+    const where = document.source === 'fulltext' ? document.sourceRef : document.sourceRef
+    console.log(
+      `${index + 1}. [${document.source} ${where} @${document.offsets.from}-${document.offsets.to}]  score ${document.score}`,
+    )
+    console.log(document.text.trim())
+    console.log('')
+  })
+  if (truncated) console.log(`truncated : showing ${evidence.length} of ${matches.length} matching passages; raise --passages.`)
+}
+
+/**
+ * A DOI as the library and a resolver write it: lowercased, without a resolver prefix or whitespace.
+ *
+ * @param {string} value A DOI in any of the forms a reader copies.
+ * @returns {string} The normalized DOI.
+ */
+export function sameDoi(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^doi:\s*/, '')
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//, '')
+}
+
+/**
+ * The items in this library that carry the DOI asked for.
+ *
+ * A DOI search is a text search, so the answer is filtered: a record whose title merely contains the
+ * string is not the work with that identifier.
+ */
+async function runFindDoi(options) {
+  const target = sameDoi(options.value)
+  if (target === '') throw new UsageError('--find-doi needs a DOI')
+  const params = new URLSearchParams({
+    q: options.value,
+    qmode: 'everything',
+    format: 'json',
+    limit: String(options.limit),
+  })
+  const { rows, total } = await paginatedJson(`${libraryPrefix(options.library)}/items?${params}`)
+  const groups = groupHits(rows)
+  const missing = groups.filter((group) => !group.record).map((group) => group.parentKey)
+  const fetched = missing.length > 0 ? await recordsByKey(missing, options.library) : new Map()
+  for (const group of groups) if (!group.record && fetched.has(group.parentKey)) group.record = fetched.get(group.parentKey)
+  const matches = groups
+    .filter((group) => sameDoi(group.record?.DOI) === target)
+    .map((group) => ({
+      key: group.parentKey,
+      ref: itemRef(group.parentKey, options.library),
+      title: group.record?.title ?? '',
+      itemType: group.record?.itemType ?? '',
+    }))
+
+  if (options.json) {
+    console.log(JSON.stringify({ doi: target, library: options.library, searched: total, matches }, null, 2))
+    return
+  }
+  console.log(`doi    : ${target}`)
+  console.log(`matches: ${matches.length} of ${groups.length} candidate(s) from a text search`)
+  if (matches.length === 0) {
+    console.log('\nnot in this library - the search was answered and no record carries that DOI. This is not a failure.')
+    return
+  }
+  for (const match of matches) console.log(`${match.key}  ${match.ref}  ${match.itemType}  ${match.title}`)
+}
+
+/** What changed in the library since a version, or the baseline a later call can diff from. */
+async function runChanges(options) {
+  const library = options.library
+  const current = await libraryVersion(library)
+  if (current.version === 0) {
+    throw new Refusal('this build reports no library version, so no diff can be attributed to one snapshot', {
+      fix: 'read the library directly; the changes cursor needs Zotero 10, which reports Last-Modified-Version',
+    })
+  }
+  if (options.since === null) {
+    if (options.json) {
+      console.log(
+        JSON.stringify(
+          { library, serverId: current.serverId, version: current.version, since: null, changed: [], total: 0 },
+          null,
+          2,
+        ),
+      )
+      return
+    }
+    console.log(`server  : ${current.serverId}`)
+    console.log(`version : ${current.version}`)
+    console.log(`cursor  : pass --since ${current.version} on the next call to see what changed after this reading`)
+    return
+  }
+
+  const diff = await changedItemsSince(options.since, library)
+  if (diff.unsupported) {
+    throw new Refusal(`this build cannot diff from version ${options.since}`, {
+      fix: 'take a baseline with --changes, then pass the version it prints',
+    })
+  }
+  const changed = diff.keys.map((key) => ({ key, ref: itemRef(key, library) }))
+  if (options.json) {
+    console.log(
+      JSON.stringify(
+        {
+          library,
+          serverId: diff.serverId || current.serverId,
+          version: diff.version,
+          since: options.since,
+          total: diff.total,
+          changed,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.log(`server  : ${diff.serverId || current.serverId}`)
+  console.log(`since   : ${options.since}`)
+  console.log(`version : ${diff.version}`)
+  console.log(`changed : ${diff.total} top-level item(s)${changed.length < diff.total ? ` (listing ${changed.length})` : ''}`)
+  for (const entry of changed) console.log(`  ${entry.key}  ${entry.ref}`)
+  console.log(`next    : --since ${diff.version}`)
+}
+
+/** The item types this build serves, sorted. */
+async function runItemTypes(options) {
+  const rows = await itemTypes()
+  const types = rows
+    .map((row) => ({ itemType: row?.itemType ?? row?.name ?? '', localized: row?.localized ?? '' }))
+    .filter((row) => row.itemType !== '')
+    .sort((a, b) => a.itemType.localeCompare(b.itemType))
+  if (options.json) {
+    console.log(JSON.stringify({ total: types.length, itemTypes: types }, null, 2))
+    return
+  }
+  console.log(`item types: ${types.length}`)
+  for (const type of types) console.log(`${type.itemType}${type.localized ? `  (${type.localized})` : ''}`)
+}
+
+/** The fields and creator types one item type accepts. */
+async function runItemFields(options) {
+  const type = options.value
+  const fields = await itemTypeFields(type)
+  if (fields === null) {
+    throw new Refusal(`this build does not expose the field schema for ${type} (404)`, {
+      fix: 'the editable-field whitelist remains the only check on this build; try a known field instead',
+    })
+  }
+  const creators = await getJson(`/api/itemTypeCreatorTypes?itemType=${encodeURIComponent(type)}`).catch(() => [])
+  const names = fields.map((row) => row?.field).filter(Boolean).sort()
+  const creatorTypes = (Array.isArray(creators) ? creators : [])
+    .map((row) => row?.creatorType)
+    .filter(Boolean)
+    .sort()
+  if (options.json) {
+    console.log(JSON.stringify({ itemType: type, fields: names, creatorTypes }, null, 2))
+    return
+  }
+  console.log(`item type : ${type}`)
+  console.log(`fields    : ${names.join(' · ')}`)
+  console.log(`creators  : ${creatorTypes.join(' · ') || '(none reported)'}`)
+}
+
+/** The saved searches filed in one library. */
+async function runSavedSearches(options) {
+  const rows = await savedSearches(options.library)
+  const searches = (Array.isArray(rows) ? rows : []).map((row) => ({
+    key: row?.key ?? '',
+    name: row?.data?.name ?? row?.name ?? '(unnamed)',
+  }))
+  if (options.json) {
+    console.log(JSON.stringify({ library: options.library, total: searches.length, savedSearches: searches }, null, 2))
+    return
+  }
+  console.log(`saved searches: ${searches.length}`)
+  for (const search of searches) console.log(`${search.key}  ${search.name}`)
+}
+
 async function runCollections(options) {
-  const { rows, total } = await paginatedJson('/api/users/0/collections?format=json&limit=200')
+  const { rows, total } = await paginatedJson(`${libraryPrefix(options.library)}/collections?format=json&limit=200`)
   const tree = buildCollectionTree(rows)
   if (options.json) {
     console.log(JSON.stringify({ total, collections: tree }, null, 2))
@@ -636,7 +1372,7 @@ async function runCollections(options) {
 
 async function runCollectionItems(options) {
   const { rows, total } = await paginatedJson(
-    `/api/users/0/collections/${options.value}/items?format=json&limit=${options.limit}`,
+    `${libraryPrefix(options.library)}/collections/${options.value}/items?format=json&limit=${options.limit}`,
   )
   if (options.json) {
     console.log(JSON.stringify({ collection: options.value, total, rows: rows.length, items: rows.map((row) => row.data) }, null, 2))
@@ -682,12 +1418,12 @@ async function runCollectionItems(options) {
  * @returns {Promise<{rows: object[], total: number, complete: boolean}>} Rows in library order, the
  *   library's own total, and whether every one of them was read.
  */
-async function collectionRows(key) {
+async function collectionRows(key, library = PERSONAL_LIBRARY) {
   const rows = []
   let total = 0
   for (let start = 0; start < SCREEN_CAP; start += SCREEN_PAGE) {
     const page = await paginatedJson(
-      `/api/users/0/collections/${key}/items?format=json&limit=${SCREEN_PAGE}&start=${start}`,
+      `${libraryPrefix(library)}/collections/${key}/items?format=json&limit=${SCREEN_PAGE}&start=${start}`,
     )
     total = page.total
     rows.push(...page.rows)
@@ -746,8 +1482,8 @@ export function screenRows(rows, { limit = DEFAULT_SCREEN_LIMIT } = {}) {
  * record has readable text needs its children, which is the reading round's errand, not this one's.
  */
 async function runCollectionScreening(options) {
-  const { rows, total, complete } = await collectionRows(options.value)
-  const name = await readCollection(options.value)
+  const { rows, total, complete } = await collectionRows(options.value, options.library)
+  const name = await readCollection(options.value, { library: options.library })
     .then((data) => data?.name ?? '')
     .catch(() => '')
   const { records, skipped, budget, withAbstract } = screenRows(rows, { limit: options.screenLimit })
@@ -803,7 +1539,7 @@ async function runCollectionScreening(options) {
 }
 
 async function runTags(options) {
-  const { rows, total } = await paginatedJson('/api/users/0/tags?format=json&limit=100')
+  const { rows, total } = await paginatedJson(`${libraryPrefix(options.library)}/tags?format=json&limit=100`)
   const tags = rows.map((row) => ({
     tag: row.tag,
     count: row.meta?.numItems ?? 0,
@@ -822,13 +1558,23 @@ async function runTags(options) {
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   await printIdentity()
+  if (options.library.type !== 'user' || options.library.id !== 0) {
+    console.log(`shelf   : ${options.library.type}:${options.library.id}`)
+  }
   const modes = {
     search: runSearch,
     item: runItem,
     fulltext: runFulltext,
+    retrieve: runRetrieve,
+    locate: runLocate,
     collections: runCollections,
     collection: options.screen ? runCollectionScreening : runCollectionItems,
     tags: runTags,
+    changes: runChanges,
+    'item-types': runItemTypes,
+    'item-fields': runItemFields,
+    'saved-searches': runSavedSearches,
+    'find-doi': runFindDoi,
   }
   await modes[options.mode](options)
 }

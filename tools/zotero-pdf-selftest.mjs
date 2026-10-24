@@ -15,8 +15,10 @@ import {
   filePathFrom,
   headingOrdinal,
   outlineRows,
+  parseArgs,
   parsePages,
   pngChunk,
+  urlSlug,
 } from './zotero-pdf.mjs'
 
 let failures = 0
@@ -119,9 +121,20 @@ console.log('\n[7] the file reads its own documentation the way the disciplines 
 const source = readFileSync(new URL('./zotero-pdf.mjs', import.meta.url), 'utf8')
 check(source.includes('① the library') && source.includes('(2) the file') && source.includes('(3) the paper') && source.includes('(4) the page'), 'all four rungs are named, so a reader can see where this sits')
 check(!/['"]DELETE['"]/.test(source), 'this helper never sends a DELETE: it reads and renders')
-check(source.includes("join('.section-notes', itemKey, 'pages')"), 'rendered pages default into the study draft directory, not into the checkout')
+check(source.includes("join('.section-notes', options.item, 'pages')"), 'rendered pages default into the study draft directory, not into the checkout')
 check(/--render needs --pages/.test(source), 'and rendering refuses to run without naming pages, so one round cannot render a whole library')
 check(!/require\(/.test(source), 'the helper is ESM, like the rest of the suite')
+
+console.log('\n[8] an open-access URL is a provenance, not an attachment')
+same(urlSlug('https://example.org/papers/abc.pdf'), 'abc.pdf', 'a URL slug comes from its file name')
+same(urlSlug('https://example.org/'), 'paper', 'a URL without a file name still gets a directory')
+same(urlSlug('not a url'), 'paper', 'and so does a malformed one')
+const fromUrl = parseArgs(['--url', 'https://example.org/abc.pdf', '--extract'])
+check(fromUrl.url === 'https://example.org/abc.pdf' && fromUrl.item === '', 'a URL is a source')
+refused(() => parseArgs(['--url', 'https://example.org/abc.pdf', '--item', 'ABCD2345', '--extract']), 'two sources are refused: they are two provenances')
+refused(() => parseArgs(['--extract']), 'no source is refused')
+refused(() => parseArgs(['--url', 'file:///C:/x.pdf', '--extract']), 'a non-http source is refused')
+refused(() => parseArgs(['--url', 'https://example.org/abc.pdf', '--render']), 'a URL render still names its pages')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)
