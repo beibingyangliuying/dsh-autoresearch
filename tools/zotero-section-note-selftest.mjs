@@ -10,6 +10,7 @@ import {
   AGENT_TAG,
   REPAIRED_TAG,
   REVIEWED_TAG,
+  allowedMoves,
   authorityOf,
   changeClass,
   changedSpan,
@@ -212,6 +213,26 @@ same(plan.coverage.unknown.sort().join(' '), 'DOT SUM', 'unknown notes are liste
 same(plan.coverage.ambiguous.join(' '), 'AMB', 'ambiguous notes are listed, never guessed at')
 same(plan.notes.find((note) => note.key === 'LIVE3').imported, true, 'the imported claim is stated')
 same(plan.notes.find((note) => note.key === 'DOT').invalidSectionTags.join(' '), '/section-3.1', 'an invalid tag is reported')
+same(plan.notes.find((note) => note.key === 'LIVE2').moves.join(' '), 'repair(mechanical) retire', 'the machine plan states the moves, not only the class')
+same(plan.notes.find((note) => note.key === 'DIG').moves.join(' '), 'leave', 'a legacy summary permits no write')
+
+console.log('\n[6b] the moves a record permits, derived once')
+same(allowedMoves({ tags: [], token: '' }).join(' '), 'claim retire', 'a note claiming no section may be claimed or retired')
+same(allowedMoves({ tags: ['/section-2', '/imported'], token: '2' }).join(' '), 'rewrite retire', 'an import is rewritten in place, never repaired')
+same(
+  allowedMoves({ tags: ['/section-2', '/agent-note'], token: '2' }).join(' '),
+  'rewrite retire review(owner)',
+  'an unreviewed draft is rewritable, and the review is the owner\'s',
+)
+same(
+  allowedMoves({ tags: ['/section-2', '/agent-note', '/reviewed'], token: '2' }).join(' '),
+  'repair(mechanical|substantive) retire',
+  'a reviewed agent body is a record: repaired, never rewritten',
+)
+same(allowedMoves({ tags: ['/section-2'], token: '2' }).join(' '), 'repair(mechanical) retire', 'the owner\'s own record is repaired mechanically only')
+same(allowedMoves({ tags: ['/section-2', '/retired'], token: '2', retired: true }).join(' '), 'unretire delete', 'a tombstone may be restored or deleted')
+same(allowedMoves({ tags: ['/digest'], digest: true }).join(' '), 'leave', 'a legacy whole-paper summary is left alone')
+same(allowedMoves({ tags: ['/section-2', '/section-3'], ambiguous: true }).join(' '), 'unclaim', 'an ambiguous note may only lose one tag')
 
 console.log('\n[7] the tool still says what it is doing')
 const source = readFileSync(fileURLToPath(new URL('./zotero-section-note.mjs', import.meta.url)), 'utf8')
@@ -400,6 +421,15 @@ same(machine.counts.retired, 1, 'and the tombstone')
 same(machine.counts.drafts, 1, 'and the agent draft')
 same(machine.coverage.unknown.sort().join(' '), 'AGU UNK', 'the untagged notes are named, not guessed at')
 same(machine.coverage.drafts[0].note, 'AGU', 'the draft is named apart from the records')
+same(
+  machine.notes.find((note) => note.key === 'AGU').moves.join(' '),
+  'claim retire',
+  'a draft that claims no section may be claimed or retired, and nothing else',
+)
+const prosePlan = await runAsync(['--item', 'REC1'])
+same(prosePlan.status, 0, 'the prose plan exits 0')
+check(prosePlan.stdout.includes('moves:'), 'the prose plan prints the moves beside the class')
+check(prosePlan.stdout.includes('class: agent'), 'and the class word the discipline reads')
 
 const bodyFile = join(scratch, 'new.html')
 writeFileSync(bodyFile, '<p>new body</p>', 'utf8')

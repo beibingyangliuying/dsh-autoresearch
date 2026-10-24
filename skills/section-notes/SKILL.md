@@ -63,9 +63,11 @@ Read-only, before claiming or writing anything:
    | `ambiguous` | notes carrying more than one `/section-` tag; **read them, then remove the stale tag** — `--unclaim --note <key> --section <ordinal>`, one tag per command |
 
    **The tool does not parse prose.** A note is coverage only if it carries `/section-N`; `covered` is a
-   claim about a tag, not about content. A note carrying `/repaired` was corrected in place: its claim
-   and provenance are what they were, and when the correction touched a symbol, number or equation it no
-   longer carries `/reviewed`, so it supports no more than a candidate.
+   claim about a tag, not about content. Every note's line also prints `class:` and the `moves:` the record
+   permits — which of those moves this round may take is this discipline's call, not the tool's. A note
+   carrying `/repaired` was corrected in place: its claim and provenance are what they were, and when the
+   correction touched a symbol, number or equation it no longer carries `/reviewed`, so it supports no more
+   than a candidate.
 
 2. **Read every `unknown` note before claiming or writing** — its first paragraph from the plan; open the
    whole note with `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000` when that is not
@@ -195,20 +197,14 @@ is in the report — and **never split a section to stay inside that range**.
 - **`--claim` is how an existing note enters coverage.** It writes `/section-N` and leaves the body
   alone; a note that had no section tag also gets `/imported`, unless it is an `/agent-note`.
 
-**Four classes, and the tags say which.** The class decides whether a body may be replaced in place:
-
-| Tags on the note | Class | Rewritten in place? | Repaired in place? |
-|---|---|---|---|
-| `/section-N` + `/imported` | an import the owner pasted | yes | no — rewrite it |
-| `/section-N` + `/agent-note` (no `/reviewed`) | an agent draft | yes | no — rewrite it |
-| `/section-N` + `/agent-note` + `/reviewed` | a record the owner accepted | **no** | **yes** — mechanical keeps `/reviewed`, substantive clears it |
-| `/section-N` alone | the owner's record | **no** | **yes, mechanically only** |
-
-A note carrying both `/imported` and `/agent-note` is an import an agent rewrote: it stays rewritable,
-and its provenance is `agent`. **A body this discipline writes carries `/agent-note` from the moment it
-is created**, and a rewrite stamps it too. `/reviewed` is written only by `--review --note <key>`, after
-the owner says the body is right; it is a tag, never a body edit. A note created as an agent draft never
-receives `/imported`, and a claim never adds it.
+**The class is stated, not derived.** Each note's line carries `class:` — `owner`, `import`, `agent` or
+`agent+reviewed` — and `moves:`, the writes that class permits. An import and an unreviewed draft are
+rewritten in place; a reviewed body and the owner's own record are repaired in place, mechanically only
+for the latter; a legacy summary is left alone. A note carrying both `/imported` and `/agent-note` is an
+import an agent rewrote: it stays rewritable, and its provenance is `agent`. **A body this discipline
+writes carries `/agent-note` from the moment it is created**, and a rewrite stamps it too. `/reviewed` is
+written only by `--review --note <key>`, after the owner says the body is right; it is a tag, never a body
+edit. A note created as an agent draft never receives `/imported`, and a claim never adds it.
 
 - **A wrong note is retired, never rewritten.** `--retire --note <noteKey> --reason "<why>"` leaves the
   body as it stands, makes the note a tombstone rather than coverage, and frees the section. The

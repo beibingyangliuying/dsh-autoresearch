@@ -310,6 +310,30 @@ export function authorityOf(tags, token) {
 }
 
 /**
+ * The writes this record permits on one note, as words a plan can print.
+ *
+ * The class a note belongs to is mechanical — four combinations of `/imported`, `/agent-note` and
+ * `/reviewed` — and deriving it from tags is the step a reader most easily gets wrong. The plan states
+ * it instead, so the discipline keeps only what this tool cannot know: which of these moves the round
+ * is authorized to take (a claim round may claim, unclaim or leave; a write needs the owner's answer).
+ *
+ * @param {{tags: string[], token?: string, retired?: boolean, digest?: boolean, ambiguous?: boolean}} state
+ *   The note's tags, and the shape `noteChildren` reports for it.
+ * @returns {string[]} Move words, in the order a round would consider them.
+ */
+export function allowedMoves({ tags, token = '', retired = false, digest = false, ambiguous = false }) {
+  if (digest) return ['leave']
+  if (retired) return ['unretire', 'delete']
+  if (ambiguous) return ['unclaim']
+  if (!token) return ['claim', 'retire']
+  const provenance = provenanceOf(tags)
+  if (provenance === 'owner') return ['repair(mechanical)', 'retire']
+  if (provenance === 'agent') return ['rewrite', 'retire', 'review(owner)']
+  if (provenance === 'agent+reviewed') return ['repair(mechanical|substantive)', 'retire']
+  return ['rewrite', 'retire']
+}
+
+/**
  * The tag list a review leaves behind: every existing tag, plus or minus `/reviewed`.
  *
  * Idempotent in both directions, and it never drops a tag it did not put there.
@@ -633,6 +657,13 @@ export function planJson({ record, attachment, notes }) {
       reviewed: isReviewed(note.tags),
       provenance: provenanceOf(note.tags),
       authority: authorityOf(note.tags, note.claim.token),
+      moves: allowedMoves({
+        tags: note.tags,
+        token: note.claim.token,
+        retired: note.retired,
+        digest: note.digest,
+        ambiguous: note.claim.ambiguous,
+      }),
       section: note.claim.token,
       sectionTags: note.claim.tags,
       invalidSectionTags: note.claim.invalid,
@@ -704,6 +735,15 @@ async function runPlan(itemKey, { json = false } = {}) {
     )
     console.log(`      ${firstBlockText(note.html).slice(0, 96)}`)
     if (note.tags.length) console.log(`      tags: ${note.tags.join(' · ')}`)
+    console.log(
+      `      class: ${provenanceOf(note.tags)}   moves: ${allowedMoves({
+        tags: note.tags,
+        token: note.claim.token,
+        retired: note.retired,
+        digest: note.digest,
+        ambiguous: note.claim.ambiguous,
+      }).join(' · ')}`,
+    )
   }
 
   const live = notes.filter((note) => note.claim.token && !note.retired && !note.digest)
@@ -748,18 +788,11 @@ async function runPlan(itemKey, { json = false } = {}) {
         : 'none'
     }`,
   )
-  console.log('\nNOTE: `covered` is what explicit /section-N tags claim, counted per TOP-LEVEL section.')
-  console.log('`unknown` notes have no claim: read the first paragraph above (the whole note with')
-  console.log('zotero-read.mjs --item <noteKey> when it is not enough), then --claim it, --rewrite it, or')
-  console.log('--retire it. An `ambiguous` note carries MORE THAN ONE /section- tag: it is not coverage, so')
-  console.log("read it, then remove the stale tag with --unclaim --note <noteKey> --section <that tag's ordinal>")
-  console.log('(one tag per command). --unclaim refuses a single-tag note: that is a claim, and a reading that')
-  console.log('disagrees with a claim stops the round for the owner. A note marked RETIRED is a tombstone: it is')
-  console.log('NOT coverage, and only a retired note is deletable. A legacy /digest note is an earlier version\'s')
-  console.log('whole-paper summary: not a section note, and never claimed for one. An AGENT note was written by')
-  console.log('an agent from the paper: until it also carries /reviewed it is a DRAFT - rewritable in place, and')
-  console.log('candidate-grade only. --review --note <key> records the owner\'s acceptance as a tag; the body is')
-  console.log('never touched.')
+  console.log("\nNOTE: `covered` is what explicit /section-N tags claim, per TOP-LEVEL section. `unknown`")
+  console.log("means no claim: read the first paragraph above, and the whole note with zotero-read.mjs")
+  console.log("--item <noteKey> when that is not enough. Each note prints `class:` and the `moves:` the")
+  console.log("record permits; which of them this round may take is the discipline's call, and a write")
+  console.log("still needs the owner's answer.")
 }
 
 /**
