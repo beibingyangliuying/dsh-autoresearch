@@ -2207,3 +2207,35 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **已知边界**：300 是**本仓自定预算**，宿主截断线是 500（`dsh-tool-skill` 0.2.1-rc.2 的 `catalogDescriptionMaxLength` 默认值），DSH 升级后两个数都要重测；护栏只判"长度与触发句是否在"，**不判触发句写得好不好**。
 
 **未做**：路由效果仍未在真实会话里量过（判据：`tools/session-tool-usage.mjs --preset autoresearch` 里 13 条纪律的 load 分布，与 §91 之前的会话对比）。
+
+---
+
+## 93. 跨源发现复刻：7 个 adapter + RRF，但 S2 要 key、DBLP 在本机被反爬（2026-10-24）
+
+**决策**：新增 [`tools/scholarly.mjs`](../tools/scholarly.mjs) + [`tools/scholarly-sources.mjs`](../tools/scholarly-sources.mjs)，把 dsh-zotero 的学术发现层复刻为**命令行 helper**：7 个源、短语路由、加权 RRF 去重、引用图、库内标记。仍然**零常驻**、不依赖插件；它不是新的证据通道，而是对既有预印本/书目索引的一次跨源查询。
+
+**先验（2026-10-24 本机、无 key，全部实发请求）**：
+
+1. Semantic Scholar 无 key 回 **HTTP 429**（共享池）；OpenAlex 无 key 仍可用，但只有共享日预算。
+2. DBLP 回 **HTTP 202 + Anubis 反爬 HTML**，换浏览器 UA 仍 202 ⇒ 本机不可达；插件在这里同样会失败。⇒ **DBLP 不进默认路由**，显式 `--sources dblp` 报 `blocked`，不伪装成空结果。
+3. PubMed esearch **200**；Europe PMC **200**。PubMed 一次搜索实际是 **esearch + esummary 两个请求**（JSON，不用 efetch XML，因此不引入 XML 解析依赖）。
+4. 我们已有的：`metadata.mjs` 覆盖 OpenAlex/Crossref/Unpaywall，`arxiv.mjs` 覆盖 arXiv，`--refs/--cited-by/--related` 覆盖引用图，`--verify/--cite` 覆盖核验与正式引用，`zotero-pdf --url` 覆盖 OA PDF 阅读。缺的只是 **4 个源 + 路由 + 融合 + 批量标记 + OA 解析器**。
+
+**设计要点**：
+
+- **每源一次请求**（PubMed 两次），并行，不重试；单源失败不拖垮全局。全源失败 exit 1；部分失败标 `partial` 并逐源打印 `code: message`。
+- **路由**：短语级 computing/biomedical 表；裸 `attention`、`vision` 等普通词落回 general；显式 `--sources` 永远优先。
+- **融合**：canonical ID（DOI/arXiv/PMID/PMCID/OpenAlex/S2）+ 标题 fuzzy。fuzzy 阈值从 0.75 提到 **0.9**：实测 0.75 会把 “Active RAG / Corrective RAG / Retrieval-Augmented Generation for …” 合成一条（15 条记录 → 1 条），0.9 只合并近似同一标题。**宁可留重复，不丢不同论文。**
+- **标记**：`--mark-library` 只查前 10 条；DOI 查不到时回退标题；`in` / `not-in` / `unavailable` 三态，库不应答不等于是“不在库”。
+- **凭据**：S2/NCBI/OpenAlex key 只从环境变量读（`AUTORESEARCH_S2_KEY` 等），不进配置、不进提示词、不上命令行；无 S2 key 时该源报 `no-key`，不先撞 429。
+
+**代价与边界**：
+
+- 一次调用是**有界 fan-out**，打破了 `metadata.mjs` 的“一次一个请求”惯例；这一条写进 helper 头注释与 toolchain 页，不伪装成单请求。
+- **不做结构化 OA 阅读**：arXiv HTML / PMC JATS 的分节与 BM25 仍留给后续；目前全文走 `metadata --oa` + `zotero-pdf --url`（PDF-only）。
+- **不升 protocol §6**：发现层是对既有三类通道的查询，不是第四类证据；纪律文本暂未点名它，避免在契约未审时先改路由。
+- 真实库验收：默认查询 3 源融合、生物医学路由 4 源、`--citations` 两向、`--mark-library` 命中一条本库记录，均通过；公网 `--sources dblp`/`--sources semanticscholar` 分别报 `blocked`/`no-key`。
+
+**落点**：[`tools/scholarly.mjs`](../tools/scholarly.mjs) · [`tools/scholarly-sources.mjs`](../tools/scholarly-sources.mjs) · [`tools/scholarly-selftest.mjs`](../tools/scholarly-selftest.mjs) · [`tools/toolchain-page.mjs`](../tools/toolchain-page.mjs) · [`README.md`](../README.md) · [`docs/coverage.md`](coverage.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md)。
+
+**未做**：structured OA read；`literature-recon` 点名 `scholarly.mjs`；protocol §6 的通道措辞（等 junhan 审）。

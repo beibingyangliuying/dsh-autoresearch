@@ -299,6 +299,33 @@ node tools\toolchain-selftest.mjs        # 同一件事，外加负向控制
 
 **出处**：`tools/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation` · `citeAccept` · `citeDoi` · `verifyWork` · `formatRelated`<br>`docs/coverage.md` · `书目元数据`
 
+### 学术发现通道
+
+#### `scholarly.mjs` — 跨源发现：7 个索引 · 短语路由 · 加权 RRF 去重 · 引用图 · 库内标记
+
+**能做**
+
+- `--search`：每源一次请求（PubMed 两次），并行；显式 `--sources` 覆盖路由
+- 加权 RRF + canonical ID + 标题 fuzzy 去重；`--sort` / `--year-from` / `--year-to` / `--open-access`
+- `--citations <id> --direction citations|references|related`：DOI/arXiv/PMID/PMCID 经 OpenAlex 解析
+- `--mark-library`：只查前 10 条；`in` / `not-in` / `unavailable` 三态，失败不当作不在库
+- `--json`：`sourcesAsked` / `sourcesAnswered` / `sourcesFailed` / `partial` / `totalFetched`
+
+**明确拒绝**（这一栏是没人读到、直到它开火的那一栏）
+
+- DBLP **默认不进路由**：显式 `--sources dblp` 会报 `blocked`（202 反爬页），不伪装成空结果
+- Semantic Scholar 没有 `AUTORESEARCH_S2_KEY` 时报 `no-key`，不先撞一次 429
+- 不重试、不读全文、不写库；全源失败 exit 1，部分失败标 `partial` 并逐源报原因
+- 融合后的记录只是**线索**：不是证据等级，确认单篇仍要 `metadata --doi`，读全文仍要 `metadata --oa` + `zotero-pdf --url`
+
+**撞上怎么办**
+
+- 文献发现第一轮用它：先看有哪些工作，再对候选逐条 `metadata --doi` 确认
+- 要读 OA 全文 → 从结果里的 `pdf:` 或 `metadata --oa` 取 URL，交给 `zotero-pdf --url`
+- 库里有没有这条 → `--mark-library`；`unavailable` 时停下说库没答，不要说"不在库"
+
+**出处**：`tools/scholarly.mjs` · `fusePapers` · `routeSources` · `markLibrary` · `sourcesFailed` · `--mark-library`<br>`tools/scholarly-sources.mjs` · `SourceError` · `searchDblp` · `searchSemanticScholar` · `searchPubMed`
+
 ## 三、这套校验能证明什么、不能证明什么
 
 - **能证明**：这一行所依据的那段源码/契约/实测记录**还在**。重命名、删常量、改消息，都会让

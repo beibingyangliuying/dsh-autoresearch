@@ -213,6 +213,16 @@ manager, at their own keyboard and under no API authorization at all. Together t
 35-tool surface cost 59,758 characters (~16.6k tokens) of prompt on *every* request, for a handful of
 tools the disciplines call ([`docs/decisions.md`](docs/decisions.md) #31).
 
+**What discovery is.** `tools/scholarly.mjs` is the one helper that fans a query out across the
+preprint and bibliographic indexes: each selected source is asked **once** (PubMed twice, for its ids
+and summaries), the ranked lists are fused with weighted reciprocal-rank fusion and deduplicated by
+canonical identifier or a bounded title match, and every source that failed is printed with its reason.
+A partial answer says `partial`; it is never presented as the index's whole answer. Semantic Scholar
+joins only when `AUTORESEARCH_S2_KEY` is set, and DBLP is never in the default route because this
+client cannot pass its bot-challenge page — naming it explicitly reports `blocked` rather than an empty
+list. The output is a **lead**: confirming a work still means `metadata.mjs --doi`, and reading its
+full text still means `metadata.mjs --oa` followed by `zotero-pdf.mjs --url`.
+
 **What a failure says.** Every helper fails through one renderer (`tools/refusal.mjs`): the line that says
 what did not happen, and — when exactly one next action is known — a `fix` line carrying it, and a `try`
 line carrying a command that works **as printed**. A usage error also ends with the script's **absolute

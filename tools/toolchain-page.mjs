@@ -385,6 +385,32 @@ export const HELPERS = [
       cite('docs/coverage.md', '书目元数据'),
     ],
   },
+  {
+    name: 'scholarly.mjs',
+    role: '跨源发现：7 个索引 · 短语路由 · 加权 RRF 去重 · 引用图 · 库内标记',
+    can: [
+      '`--search`：每源一次请求（PubMed 两次），并行；显式 `--sources` 覆盖路由',
+      '加权 RRF + canonical ID + 标题 fuzzy 去重；`--sort` / `--year-from` / `--year-to` / `--open-access`',
+      '`--citations <id> --direction citations|references|related`：DOI/arXiv/PMID/PMCID 经 OpenAlex 解析',
+      '`--mark-library`：只查前 10 条；`in` / `not-in` / `unavailable` 三态，失败不当作不在库',
+      '`--json`：`sourcesAsked` / `sourcesAnswered` / `sourcesFailed` / `partial` / `totalFetched`',
+    ],
+    refuses: [
+      'DBLP **默认不进路由**：显式 `--sources dblp` 会报 `blocked`（202 反爬页），不伪装成空结果',
+      'Semantic Scholar 没有 `AUTORESEARCH_S2_KEY` 时报 `no-key`，不先撞一次 429',
+      '不重试、不读全文、不写库；全源失败 exit 1，部分失败标 `partial` 并逐源报原因',
+      '融合后的记录只是**线索**：不是证据等级，确认单篇仍要 `metadata --doi`，读全文仍要 `metadata --oa` + `zotero-pdf --url`',
+    ],
+    when: [
+      '文献发现第一轮用它：先看有哪些工作，再对候选逐条 `metadata --doi` 确认',
+      '要读 OA 全文 → 从结果里的 `pdf:` 或 `metadata --oa` 取 URL，交给 `zotero-pdf --url`',
+      '库里有没有这条 → `--mark-library`；`unavailable` 时停下说库没答，不要说"不在库"',
+    ],
+    cites: [
+      cite('tools/scholarly.mjs', 'fusePapers', 'routeSources', 'markLibrary', 'sourcesFailed', '--mark-library'),
+      cite('tools/scholarly-sources.mjs', 'SourceError', 'searchDblp', 'searchSemanticScholar', 'searchPubMed'),
+    ],
+  },
 ]
 
 /** Every claim as `{ label, cites }`, so a checker has one flat list to walk. */
@@ -437,6 +463,7 @@ const CHANNELS = [
   { title: '参考库通道', match: (helper) => helper.name.startsWith('zotero-') },
   { title: '预印本通道', match: (helper) => helper.name === 'arxiv.mjs' },
   { title: '书目元数据通道', match: (helper) => helper.name === 'metadata.mjs' },
+  { title: '学术发现通道', match: (helper) => helper.name === 'scholarly.mjs' },
 ]
 
 /**
