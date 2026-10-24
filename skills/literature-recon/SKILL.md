@@ -39,7 +39,8 @@ Read-only, never from memory:
 2. index discovery                 `scholarly.mjs` fuses the indexes into ranked leads; `arxiv.mjs` for
                                    the preprint index's own syntax — newest work lives here
 3. open-access fallback            a free copy of a paywalled work: repository copy, accepted version,
-                                   author copy — still only a lead until it is actually retrieved
+                                   author copy — still only a lead until it is actually retrieved; the
+                                   retrieval route and its refusals are `metadata-query` §3.1
 4. bibliographic REST              identifiers, venues, counts (`metadata.mjs`): metadata, never evidence
 ```
 
