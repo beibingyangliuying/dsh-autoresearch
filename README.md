@@ -535,8 +535,8 @@ session still shows the earlier surface. See [`docs/decisions.md`](docs/decision
   and the profile change; what does not move is the mixing. Both available levers are unusable —
   `includeDefaultRoots: false` would also drop each study's project-level skill directory, and
   shadowing a foreign name replaces its description without removing the entry. Treat the catalog as
-  untrusted breadth: the resident discipline says a listed skill outside the routing list is not this
-  preset's method.
+  untrusted breadth: the resident discipline says a listed skill this preset does not ship is not its
+  method.
 
 ## Language
 

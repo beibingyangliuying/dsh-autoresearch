@@ -41,13 +41,13 @@ const profileEntry = join(
 const profileDir = resolve(profileEntry, '..', '..', '..')
 
 /**
- * The disciplines this preset routes to, named once.
+ * The disciplines this preset ships, named once.
  *
- * Both the disk/prose count in [2] and the bullet check in [5] need this list, and a second copy of it
- * is how a count drifts: one copy gains a name, the other keeps the old total, and each looks right on
- * its own.
+ * The disk/prose count in [2] needs this list, and a second copy of it is how a count drifts: one copy
+ * gains a name, the other keeps the old total, and each looks right on its own. It is NOT a routing
+ * list any more (Revision 40): the persona states the order and the catalog states each trigger.
  */
-const ROUTED_NAMES = [
+const SHIPPED_NAMES = [
   'research-scoping',
   'literature-recon',
   'collection-sweep',
@@ -166,25 +166,28 @@ const onDisk = readdirSync(skillsDir, { withFileTypes: true })
   .map((entry) => entry.name)
   .sort()
 ok(
-  onDisk.length === ROUTED_NAMES.length,
-  'shipped disciplines = routed disciplines',
-  `${onDisk.length} on disk, ${ROUTED_NAMES.length} routed`,
+  onDisk.length === SHIPPED_NAMES.length,
+  'shipped disciplines = the disciplines this file names',
+  `${onDisk.length} on disk, ${SHIPPED_NAMES.length} named`,
 )
-const shippedNotRouted = onDisk.filter((name) => !ROUTED_NAMES.includes(name))
-const routedNotShipped = ROUTED_NAMES.filter((name) => !onDisk.includes(name))
+const onDiskNotNamed = onDisk.filter((name) => !SHIPPED_NAMES.includes(name))
+const namedNotOnDisk = SHIPPED_NAMES.filter((name) => !onDisk.includes(name))
 ok(
-  shippedNotRouted.length === 0 && routedNotShipped.length === 0,
-  'every shipped discipline is routed, and every routed name ships',
+  onDiskNotNamed.length === 0 && namedNotOnDisk.length === 0,
+  'every discipline on disk is named here, and every name ships',
   [
-    ...shippedNotRouted.map((name) => `on disk, not routed: ${name}`),
-    ...routedNotShipped.map((name) => `routed, no directory: ${name}`),
+    ...onDiskNotNamed.map((name) => `on disk, not named: ${name}`),
+    ...namedNotOnDisk.map((name) => `named, no directory: ${name}`),
   ].join('; '),
 )
 
 // Three places of prose declare that same number, each in its own voice. A site that stops matching
 // FAILS rather than passing quietly: a guard that has stopped looking is the defect it was built for.
 const declares = [
-  ['cordis.patch.yml header', patchFile, /routing to ([\w-]+) research-discipline skills/i],
+  // The header no longer says "routing to N": Revision 40 moved the trigger into each catalog entry,
+  // so the header declares the count in the sentence that states what the resident layer carries. The
+  // pattern stays narrow to the noun phrase so it cannot match an unrelated count elsewhere in the file.
+  ['cordis.patch.yml header', patchFile, /([\w-]+) research-discipline skills/i],
   ['package.json description', 'package.json', /([\w-]+) on-demand research disciplines/i],
   ['README.md', 'README.md', /([\w-]+)\s+written disciplines ship/i],
 ]
@@ -335,16 +338,24 @@ if (!existsSync(composedFile)) {
     ok(missing.length === 0, `all ${paras.length} paragraphs intact`, missing.length ? `missing ${missing.length}` : '')
     missing.forEach((p) => console.log(`         lost: ${p.slice(0, 100)}`))
 
-    console.log('\n[5] discipline rules and routing bullets')
+    console.log('\n[5] discipline rules and routing')
     const rules = composedPersona.match(/^\d+\. \*\*/gm) ?? []
     ok(rules.length === 12, 'twelve numbered discipline rules', `found ${rules.length}`)
     // The count alone cannot tell "12 rules" from "11 rules plus a stray sentence turned rule".
     // Named on purpose: the document-shape rule is the one this preset just paid to add, and it now
     // carries two clauses — one carrier, and the current state first.
     ok(composedPersona.includes('One carrier, current state first'), 'rule 12 carries the one-carrier and state-first rule')
+    // Revision 40 moved the TRIGGER out of the resident layer: each discipline's catalog entry states
+    // it (only name + description reach the model, capped at 500 characters by `tool-skill`), and the
+    // resident layer keeps the three things the catalog cannot say — the order, the force of the rule,
+    // and how an entry this preset does not ship is treated. A bullet per discipline is the defect
+    // this check exists to prevent: 13 of them cost 747 tokens on every request to repeat the catalog.
     const flatPersona = composedPersona.replace(/\s+/g, '')
-    const bullets = ROUTED_NAMES.filter((n) => flatPersona.includes(`→\`${n}\``))
-    ok(bullets.length === ROUTED_NAMES.length, `all ${ROUTED_NAMES.length} skill-routing bullets present`, `found ${bullets.length}`)
+    const bullets = SHIPPED_NAMES.filter((n) => flatPersona.includes(`→\`${n}\``))
+    ok(bullets.length === 0, 'no per-discipline routing bullet (the catalog carries the trigger)', `found ${bullets.length}`)
+    ok(flatPersona.includes('theorderoftheloopdecides'), 'the routing states the order of the loop')
+    ok(composedPersona.includes('hard rules'), 'the routing keeps the force of the rule')
+    ok(flatPersona.includes('doesnotshipbelongstotheprofile'), 'the routing states how a foreign entry is treated')
     ok(composedPersona.includes('{{model}}'), '{{model}} placeholder intact')
     // Retired on purpose, and named so it cannot come back: 0.2.0 registered `cwd` as a prompt
     // variable and 0.2.1 replaced it with the REQUIRED runtime context "Current working directory:
@@ -360,9 +371,11 @@ if (!existsSync(composedFile)) {
         ? 'could not read the kernel registry (@deepseek-ai/dsh-agent-loop, from the profile)'
         : `${referenced.map((n) => `{{${n}}}`).join(', ') || '(none)'} / kernel registers: ${registered.join(', ') || '(none)'}`,
     )
-    for (const name of ROUTED_NAMES) {
-      ok(composedPersona.includes(name), `routing names: ${name}`)
-    }
+    // The reverse of the retired check: the resident layer must not name the disciplines, because
+    // naming one here is either a routing bullet growing back or a digest that belongs to its skill.
+    // The names stay in this file (SHIPPED_NAMES) so the count in [2] still has one authority.
+    const namedInPersona = SHIPPED_NAMES.filter((name) => composedPersona.includes(name))
+    ok(namedInPersona.length === 0, 'the resident layer names no discipline (the catalog does)', namedInPersona.join(', '))
 
     console.log('\n[6] always-on cost')
     console.log(`    persona: ${composedPersona.length} chars, ~${Math.round(composedPersona.length / 3.6)} tokens per request`)

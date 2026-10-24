@@ -1,9 +1,14 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 39.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 40.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 39 makes a record answer at the resolution its reader
+independent of any package version. Revision 40 moves a discipline's trigger out of the resident layer
+and leaves the **order** there: each discipline states, in its own catalog entry, the situation that
+triggers it, the resident discipline states the order the loop runs in and the force of the rule, and a
+discipline that serves a stage rather than owning one is loaded when that stage needs it. Two carriers
+of the same sentence is what rule 12 forbids, and thirteen triggers repeated beside the catalog that
+already prints them cost every request. §2 and §8 state it. Revision 39 makes a record answer at the resolution its reader
 decides at, not the resolution an auditor would need. A section is a **ledger** or a **state note**
 and never both: a ledger's cells hold fields, and the argument a cell would need is carried by the
 note it points at. A budget now states its **cut order** — what is given up first and what is never
@@ -406,9 +411,11 @@ reader can stop after the opening block — and that order is what makes a line 
 document that states only what holds now, and states it up front, can be compacted without losing a
 decision.
 
-The resident discipline also carries **routing**: each on-demand discipline states the situation
-that triggers it. Routing is a hard rule, not a suggestion — a trigger that is met without the
-discipline being loaded is a violation.
+The resident discipline also carries **routing**, and carries it in two parts. Each on-demand discipline
+states, in its own catalog entry, the situation that triggers it. The resident discipline states the
+order the loop runs in, so that two triggers that overlap resolve the same way in every round, and a
+discipline that serves a stage rather than owning one is loaded when that stage needs it. Routing is a
+hard rule, not a suggestion — a trigger that is met without the discipline being loaded is a violation.
 
 ## 4. Disciplines loaded on demand
 
@@ -544,8 +551,8 @@ any mechanism this preset can reach. A preset's own disciplines are registered i
 but a catalog read merges the global layer with the viewing scope's chain, and the skill registry
 exposes no restriction call that a row could apply to it — so a profile carrying other bundles
 contributes their skills to this preset's catalog as well. That is a boundary of the artifact rather
-than a defect a row can correct, and the resident discipline states how an entry outside the routing
-list is to be treated. Everything above about tool visibility is unaffected.
+than a defect a row can correct, and the resident discipline states how an entry this preset does not
+ship is to be treated. Everything above about tool visibility is unaffected.
 
 **A consequence of the same rule: a capability this preset ships cannot be masked.** Because masking
 never reaches a tool registered by a row of this preset, a write-capable capability shipped by such a

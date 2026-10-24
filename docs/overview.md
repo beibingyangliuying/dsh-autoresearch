@@ -72,7 +72,7 @@ flowchart LR
 
 ```powershell
 dsh --profile web --dump-config > .tmp\composed-web.txt
-node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由数 + 常驻成本 + 通道不挂 MCP 的反向护栏
+node tools\preset-selftest.mjs .tmp\composed-web.txt   # 结构 + 纪律数 + 路由的次序与强制力 + 常驻成本 + 通道不挂 MCP 的反向护栏
 node tools\isolation-selftest.mjs                      # 隔离的 deny 语义（不是白名单）
 node tools\skills-selftest.mjs                         # 纪律随包注册 + helper 路径占位符是否被替换
 node tools\contact-bridge-selftest.mjs                 # 可配置值 → 系统提示（含常驻的 helper 目录与写入门禁）
@@ -101,5 +101,5 @@ node tools\session-helper-modes.mjs --preset autoresearch                  # 读
 三条边界必须一起记住：
 
 1. 这个保证是**工具层面**的：**激活时那一遍是保证**，`tools/change`（注册表宣布"工具集变了"）那一遍负责补**晚注册**的插件——实测晚注册的 config-manager 5 个工具是**逐个注册、逐个被挡下**的，`config_restore` 在其中，而激活那遍根本算不到它们（[`decisions.md`](decisions.md) §33）。该遍只在 deny 集合真的变化时才施加。
-2. **skill 目录不受此机制保护**——注册表不提供限制调用，profile 里别的 bundle 的 skill 会一起出现在本预设的目录里；预设只能靠常驻纪律说明"目录里但不在路由表里的条目怎么对待"。
+2. **skill 目录不受此机制保护**——注册表不提供限制调用，profile 里别的 bundle 的 skill 会一起出现在本预设的目录里；预设只能靠常驻纪律说明"目录里但不属于本预设的条目怎么对待"。
 3. 反过来，**预设自己行注册的工具永远屏蔽不掉**——包括它自带的**写工具**。所以参考库的写入门禁不能靠隔离，只能由契约（`INV-EVID-3`／§9）与常驻纪律承担；授权的粒度是**库**：首次写入由所有者在参考管理器对话框里授予，`Always Allow` 由工具按 `Zotero-Server-ID` 保存、可随时撤销（契约 Revision 10），见 [`decisions.md`](decisions.md) §31 与 §35。

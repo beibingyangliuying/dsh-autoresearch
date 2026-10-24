@@ -2,7 +2,10 @@
 # DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
 #   - `persona` carries a resident research discipline (typing by block, one carrier and the
 #     current state first, no unfalsifiable wording, no memory-based citations, read-before-write) plus
-#     routing to thirteen research-discipline skills.
+#     the ORDER across its thirteen research-discipline skills. Each skill states its own trigger in its
+#     catalog entry, and only `name: description` reaches the model (`dsh-tool-skill`, capped at 500
+#     characters), so repeating the thirteen triggers here is a second carrier of one sentence — the
+#     thing rule 12 forbids (Revision 40, #91 of docs/decisions.md).
 #   - `persona` deliberately has NO `suffix`. The kernel registered `cwd` as a prompt variable only
 #     through 0.2.0; from 0.2.1 its registry holds `provider` and `model` alone, and prompt
 #     assembly interpolates strictly - any other name THROWS, which fails every turn before the
@@ -62,23 +65,9 @@
 
                 ## Which skill to load (workflow routing)
 
-                - Vague topic, scoping a new study, or converging on a question → `research-scoping`
-                - Needs literature support, or "has anyone already done this" → `literature-recon` (it searches, screens and grades; how far one paper is worth reading is the reading round's call)
-                - A collection of references has to become a candidate queue for one named question, or a question's anchor set has never been enumerated → `collection-sweep` (it enumerates the collection, rules out at the abstract what cannot serve the question, and hands the rest to the reading round)
-                - About to spend time reading one reference for one named question, a section boundary is asking whether to go on, or a parked paper's condition has come true → `reading-triage`
-                - A claim is about to drive work or leave the room, or two routes conflict and need a real challenge → `redteam-ruling` (the red team must run as an independent subagent)
-                - Wrapping up a work round, ending a session, handing off, or resuming → `progress-sync`
-                - Needs bibliographic metadata (DOI, venue, citation counts, reference lists) rather than full text → `metadata-query`
-                - A paper's method-section notes were pasted in from outside and have to be claimed to the sections they name, or a record has to say which sections still carry no note → `section-notes` (it claims them and reports the gaps; it writes a note body only when you name a section and ask)
-                - A paper has been read and the study will build on it, code is about to be written from its equations, or existing code cites one → `adoption-ruling`
-                - What the record refused, an unchecked precondition, a parked paper's re-open condition, two sources that disagree, or a gap in what has been covered has to become a cheap next step → `direction-probe` (it mines the record into moves that each carry a conjecture and the observation that would kill it; it composes competing directions only when two surviving moves cannot both hold)
-                - Work is about to be handed to a subagent (an explorer, or an implementer who writes or runs code) → `subagent-contract`
-                - Code is about to run to test a hypothesis, or a run's outcome is being reported → `experiment-protocol`
-                - Exploration produced several directions and one must be committed to, or the user asks "so what do we do now" → `synthesis-plan`
+                Each discipline's own entry in this session's skill catalog states the situation that triggers it. When that situation arises, load the discipline and follow it: these are **hard rules**, not suggestions. Where two triggers overlap, the order of the loop decides — converge the question → find or sweep the literature → triage the reading → rule what may be adopted → challenge the claim → synthesize one plan → run → settle the round — and a discipline that serves a stage rather than owning one is loaded when that stage needs it.
 
-                These skills are **hard rules**, not suggestions: when a trigger condition is met, load the skill and follow it.
-
-                A skill that appears in this session's catalog but not in the list above belongs to the profile, not to this workbench. Loading one is allowed, but say in one line what it is for; do not treat a foreign discipline as this preset's method.
+                A skill in this session's catalog that this preset does not ship belongs to the profile, not to this workbench. Loading one is allowed, but say in one line what it is for; do not treat a foreign discipline as this preset's method.
               # No `suffix:` - the kernel registers no `cwd` prompt variable from 0.2.1 on, and an
               # unregistered name throws during prompt assembly (see the header note and #47).
 
@@ -147,7 +136,7 @@
                 name: '@deepseek-ai/dsh-plan-mode'
                 config:
                   section: |
-                    You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+                    You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
                     Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
 
