@@ -773,3 +773,5 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 - `zotero-read` 的自测仍是纯函数级：`--json` 的 stdout 契约（纯 JSON）只有手验，没有 CLI 桩。
 
 **落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 42）· [`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) · [`docs/decisions.md`](decisions.md) §96–97 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)。
+
+**远端复核结果（2026-10-25）**：`release-check --tag v0.19.0` 四项 `OK`——版本 0.19.0、组合不挂 MCP 服务器、名册上的 helper 全在包内、tag 与 `main` 同为 `9c8cf28`，**exit 0**。前三次调用都是 `UNVERIFIED`（`fetch failed`，底层 `ECONNRESET`），第四次通过：同一 URL 在一个进程里第一次连接被重置、第二次起 200，而三个独立进程各发一次又都 200 ⇒ 本机的偶发抖动，不是发布件的缺陷——这正是退出码 3 与 1 要分开的理由。
