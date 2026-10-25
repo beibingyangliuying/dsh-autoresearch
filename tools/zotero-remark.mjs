@@ -1,28 +1,32 @@
 #!/usr/bin/env node
-// Rewrite ONLY the phrase segment of one record's `remark:` line, and leave every other character of
-// `extra` - and every other field - exactly as it was.
+// Replace ONE line of one record's `extra` field - the `remark:` line - and carry every other line
+// over untouched.
 //
 // WHY THIS FILE EXISTS
 //
-// The owner keeps a one-line digest of each paper in the record's `extra` field: `remark:` followed by
-// a bracketed verdict, three to five phrases naming what the paper does, and sometimes a sentence of
-// his own. He asked for the phrases to be drafted from the section notes. `zotero-edit.mjs --set
-// extra=...` would replace the WHOLE field, so the caller would have to rebuild the `rate:`,
-// `titleTranslation:` and `ISSN:` lines from memory - and one dropped line is a silent loss that
-// nothing in the field would ever show. `extra` also carries no provenance mark, unlike a note's tags,
-// so "which words are the owner's" has to be decided before the write rather than recorded after it.
+// The owner keeps a one-line digest of each paper in `extra`: a bracketed verdict, a few phrases naming
+// what the paper does, and sometimes a sentence of his own. `zotero-edit.mjs --set extra=...` would
+// replace the WHOLE field, so the caller would rebuild the `rate:`, `titleTranslation:` and `ISSN:`
+// lines from memory - and one dropped line is a silent loss that nothing in the field would ever show.
 //
-// So this tool is narrower than the field. The caller NAMES the two parts it means to keep - the terms
-// being replaced and the tail being preserved - and the tool refuses unless those parts add up to the
-// line exactly. It guesses nothing: no pattern decides which text is an evaluation, because a tool that
-// guessed would be making a content decision while claiming to format one.
+// WHAT THIS TOOL ASSUMES ABOUT THE LINE: NOTHING
+//
+// It does not parse phrases, does not decide where an evaluation begins, and does not require the
+// owner's usual shape. The caller hands it the whole new value and the exact value it replaces, so any
+// line is expressible - including one whose sentence sits in the middle. That was a deliberate trade
+// (2026-10-25, docs/decisions.md #96): an accounting form that made the caller name "the part I keep"
+// could prove the sentence survived, but it also fixed the line's shape to prefix + phrases + tail.
+// The owner chose a tool that assumes no shape over one that enforces a shape.
+//
+// WHAT IS THEREFORE NOT PROVEN: that the caller kept the words it did not mean to change. Two cheap
+// things remain, and both are printed rather than enforced - the exact old value must be quoted back
+// (so a line read from an earlier round is refused), and the dry run prints old and new side by side,
+// calling out a changed verdict, because the verdict is the owner's and not the agent's.
 //
 // Usage:
-//   node tools/zotero-remark.mjs --item <itemKey>                            # read the line, split
-//   node tools/zotero-remark.mjs --item <key> --terms "a；b；c"                # dry run
-//   node tools/zotero-remark.mjs --item <key> --terms "a；b；c" \
-//        --old-terms "<the exact current phrases>" --keep-eval "<owner's sentence>"   # dry run, keeps the tail
-//   node tools/zotero-remark.mjs --item <key> --terms "a；b；c" --create --write      # a record with no remark line
+//   node tools/zotero-remark.mjs --item <itemKey>                                    # read the line, split
+//   node tools/zotero-remark.mjs --item <key> --new-line "<whole new value>" --expect-current "<exact old value>"
+//   node tools/zotero-remark.mjs --item <key> --new-line "<whole new value>" --create --write
 //
 // Exit codes: 0 applied and read back, or nothing to do | 1 refused, nothing written | 2 usage |
 // 3 sent or written but unconfirmed - the record may already carry the change, so read it, do not
@@ -35,23 +39,15 @@ import { Refusal, UsageError, reportFailure } from './refusal.mjs'
 /** Set immediately before the PATCH is sent, so a failure after that point is never called a refusal. */
 let writeAttempted = false
 
-/** The fewest and most phrases one line may carry; the discipline narrows this, the tool only bounds it. */
-export const TERM_COUNT = { min: 1, max: 6 }
-
-/** One phrase is a phrase, not a paragraph. Long enough for the owner's longest, short enough to refuse a paste. */
-export const TERM_LENGTH_MAX = 60
-
-/** The separator the owner's own lines use between an entry and the next. */
-export const SEPARATOR = '；'
-
 /**
  * The line this tool owns, up to and including the space after its label.
  *
  * The space belongs to the label rather than to the value: a record its owner typed as `remark: （…）`
- * must not come back as `remark:（…）`, which reads as a different person's formatting. Case-insensitive,
- * because the field is free text the owner types.
+ * must not come back as `remark:（…）`. Case-insensitive and tolerant of the full-width colon, because
+ * the field is free text its owner types - and a `remark：` this tool failed to recognise would make
+ * `--create` add a SECOND line instead of rewriting the one that is there.
  */
-export const REMARK_LINE = /^([ \t]*)remark[ \t]*:[ \t]*/i
+export const REMARK_LINE = /^([ \t]*)remark[ \t]*[:：][ \t]*/i
 
 /** A bracketed verdict at the start of the line: full-width `（一般）` or half-width `(一般)`. */
 export const VERDICT_PREFIX = /^[ \t]*[（(][^）)]*[）)]/
@@ -72,30 +68,8 @@ export function splitLines(text) {
 }
 
 /**
- * The phrase list a `--terms` value names.
- *
- * @param {string} text Phrases separated by a full-width or half-width semicolon.
- * @returns {string[]} The non-empty phrases, trimmed.
- */
-export function splitTerms(text) {
-  return String(text ?? '')
-    .split(/[；;]/)
-    .map((phrase) => phrase.trim())
-    .filter((phrase) => phrase !== '')
-}
-
-/**
- * The `--terms` value as it is written into the line.
- *
- * @param {string[]} terms The phrases.
- * @returns {string} Joined with the owner's separator, with no trailing one.
- */
-export function formatTerms(terms) {
-  return terms.join(SEPARATOR)
-}
-
-/**
- * The verdict prefix and the rest of a remark line.
+ * The verdict prefix and the rest of a remark line. Read-only display: the write does not use it to
+ * decide anything, because deciding is the caller's.
  *
  * @param {string} value The line's value, after the `remark:` label.
  * @returns {{prefix: string, body: string}} The bracketed verdict (empty when there is none) and
@@ -124,79 +98,28 @@ export function firstDifference(left, right) {
 }
 
 /**
- * The phrase shape a caller may ask for, or a usage error naming the rule broken.
+ * The whole `extra` value after rewriting (or adding) the remark line.
  *
- * @param {string} text The raw `--terms` value.
- * @returns {string[]} The phrases.
- * @throws {UsageError} For too few, too many, a phrase carrying a newline, or one that is too long.
- */
-export function checkTermShape(text) {
-  const terms = splitTerms(text)
-  if (terms.length < TERM_COUNT.min) throw new UsageError('--terms needs at least one phrase')
-  if (terms.length > TERM_COUNT.max) {
-    throw new UsageError(`--terms takes at most ${TERM_COUNT.max} phrases, got ${terms.length}; merge them rather than lowering the bound`)
-  }
-  for (const phrase of terms) {
-    if (/\r|\n/.test(phrase)) throw new UsageError(`a phrase may not carry a line break: '${phrase.slice(0, 40)}'`)
-    if (phrase.length > TERM_LENGTH_MAX) {
-      throw new UsageError(`a phrase is at most ${TERM_LENGTH_MAX} characters, got ${phrase.length}: '${phrase.slice(0, 40)}...'`)
-    }
-  }
-  return terms
-}
-
-/**
- * The next value of one existing remark line.
- *
- * The caller must account for every character of the line: `oldTerms + keepEval` has to equal the body
- * after the verdict prefix exactly, or nothing is planned. That is the whole guard - it is what makes
- * "only the middle changes" checkable instead of trusted.
- *
- * @param {object} input
- * @param {string} input.value The current value, after the `remark:` label.
- * @param {string[]} input.terms The phrases to write.
- * @param {string} [input.oldTerms] The exact text being replaced.
- * @param {string} [input.keepEval] The exact tail being kept - the owner's own sentence.
- * @returns {{next: string, prefix: string, body: string}} The next value and the parts it was built from.
- *   The separator the old body ended with is kept, so the write changes the phrases and no punctuation.
- * @throws {Refusal} When the named parts do not add up to the current line.
- */
-export function planRewrite({ value, terms, oldTerms = '', keepEval = '' }) {
-  const { prefix, body } = splitRemarkValue(value)
-  const named = oldTerms + keepEval
-  if (body !== named) {
-    throw new Refusal(
-      `the parts you named do not add up to this line: its body is ${body.length} characters, ` +
-        `old-terms + keep-eval is ${named.length}, and they first differ at character ${firstDifference(body, named)}.`,
-      {
-        fix:
-          'pass --old-terms as the exact text you are replacing and --keep-eval as the exact tail you mean to keep; ' +
-          'together they must reproduce the body character for character. Read the line again with --item and copy from that answer.',
-      },
-    )
-  }
-  // The separator the line already ended with is kept, so a rewrite changes the words and nothing
-  // else: a line that closed its list with `；` still closes it, and one that did not still does not.
-  const closed = keepEval === '' && /[；;]$/.test(body) ? body.slice(-1) : ''
-  const next = `${prefix}${formatTerms(terms)}${closed}${keepEval === '' ? '' : `${SEPARATOR}${keepEval}`}`
-  return { next, prefix, body }
-}
-
-/**
- * The whole `extra` value after replacing (or adding) the remark line.
- *
- * Only the one line is rewritten; every other line is carried over as the string it was. A new line
- * goes FIRST, because that is where the owner keeps it (his own records read `remark:` then `rate:`),
- * and the position is stated in the plan rather than discovered afterwards.
+ * No shape is assumed about the line: `nextValue` is whatever the caller wants it to say. What is
+ * checked is structural - the value must fit on one line, an existing line must be quoted back exactly
+ * before it may be replaced, and a record with more than one candidate is refused because "which one is
+ * the digest" is not a decision this tool makes.
  *
  * @param {object} input
  * @param {string} input.extra The record's current `extra` value.
- * @param {string} input.nextValue The remark line's next value, after the label.
+ * @param {string} input.nextValue The line's whole next value, after the `remark:` label.
+ * @param {string} [input.expectCurrent] The line's exact current value; required to replace one.
  * @param {boolean} [input.create] Whether a missing remark line may be added.
- * @returns {{extra: string, index: number, created: boolean}} The next field value and what happened.
- * @throws {Refusal} For no remark line without `--create`, or for more than one.
+ * @returns {{extra: string, index: number, created: boolean, previous: string}} The next field value,
+ *   what happened, and the value that was replaced (empty when created).
+ * @throws {UsageError} When `nextValue` would break the line into more than one.
+ * @throws {Refusal} For no line without `--create`, for more than one, or when the quoted value is not
+ *   what the record says.
  */
-export function planExtra({ extra, nextValue, create = false }) {
+export function planLine({ extra, nextValue, expectCurrent = null, create = false }) {
+  if (/\r|\n/.test(nextValue)) {
+    throw new UsageError('--new-line must be one line: a line break would split the digest into two lines of extra')
+  }
   const { lines, eol } = splitLines(extra)
   const found = []
   for (let index = 0; index < lines.length; index += 1) {
@@ -208,39 +131,62 @@ export function planExtra({ extra, nextValue, create = false }) {
     })
   }
   if (found.length === 0) {
+    if (expectCurrent !== null) {
+      throw new Refusal('this record has no remark line, so --expect-current has nothing to be checked against.', {
+        fix: 'read the record again: either the line is there under a label this tool does not recognise, or --create is what adds the first one.',
+      })
+    }
     if (!create) {
       throw new Refusal('this record has no remark line in its extra field, and --create was not given.', {
-        fix: 'run again with --create to add the line, or write the bracketed verdict in the application first and then let this tool place the phrases after it.',
+        fix: 'run again with --create to add the line, or write it in the application first and then let this tool rewrite it.',
       })
     }
     const line = `remark: ${nextValue}`
     const next = lines.length === 1 && lines[0] === '' ? line : `${line}${eol}${lines.join(eol)}`
-    return { extra: next, index: 0, created: true }
+    return { extra: next, index: 0, created: true, previous: '' }
   }
   const index = found[0]
   const label = REMARK_LINE.exec(lines[index])[0]
+  const previous = lines[index].slice(label.length)
+  if (expectCurrent === null) {
+    throw new Refusal('replacing a line needs --expect-current: quote the value you are replacing, exactly as --item printed it.', {
+      fix: 'replacing without reading is how a line from an earlier round overwrites the owner’s current words. Read it, then quote it.',
+    })
+  }
+  if (previous !== expectCurrent) {
+    throw new Refusal(
+      `--expect-current is not what this line says: the record has ${previous.length} characters, the quoted value has ` +
+        `${expectCurrent.length}, and they first differ at character ${firstDifference(previous, expectCurrent)}.`,
+      { fix: 'read the line again with --item and quote that answer verbatim; the record is the one that decides.' },
+    )
+  }
   const next = [...lines]
   next[index] = `${label}${nextValue}`
-  return { extra: next.join(eol), index, created: false }
+  return { extra: next.join(eol), index, created: false, previous }
 }
 
 /**
- * The phrase count as the reader states it, singular and plural. Pure.
+ * The verdict of each value, for the one printed notice this tool still owes the owner. Pure.
  *
- * @param {number} count How many phrases.
- * @returns {string} The count with its noun.
+ * @param {string} before The line's current value.
+ * @param {string} after The line's next value.
+ * @returns {string} One line naming the change, or an empty string when the verdict did not move.
  */
-export function phraseCount(count) {
-  return `${count} phrase${count === 1 ? '' : 's'}`
+export function verdictNotice(before, after) {
+  const oldPrefix = splitRemarkValue(before).prefix
+  const newPrefix = splitRemarkValue(after).prefix
+  if (oldPrefix === newPrefix) return ''
+  const say = (prefix) => (prefix === '' ? 'none' : prefix)
+  return `NOTE: the verdict changed, ${say(oldPrefix)} -> ${say(newPrefix)}. The verdict is the owner's, not the agent's check to change.`
 }
 
 const USAGE =
-  'usage: node tools/zotero-remark.mjs --item <key>                              # read the line, split\n' +
-  '       node tools/zotero-remark.mjs --item <key> --terms "a；b；c" [--old-terms "<current>"] [--keep-eval "<tail>"] [--write]\n' +
-  '       node tools/zotero-remark.mjs --item <key> --terms "a；b；c" --create [--write]'
+  'usage: node tools/zotero-remark.mjs --item <key>                                     # read the line\n' +
+  '       node tools/zotero-remark.mjs --item <key> --new-line "<whole value>" --expect-current "<exact current value>" [--write]\n' +
+  '       node tools/zotero-remark.mjs --item <key> --new-line "<whole value>" --create [--write]'
 
 function parseArgs(argv) {
-  const options = { key: '', terms: null, oldTerms: '', keepEval: '', create: false, write: false }
+  const options = { key: '', newLine: null, expectCurrent: null, create: false, write: false }
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     if (flag === '--write' || flag === '--create') {
@@ -248,19 +194,18 @@ function parseArgs(argv) {
       else options.create = true
       continue
     }
-    if (!['--item', '--terms', '--old-terms', '--keep-eval'].includes(flag)) {
+    if (!['--item', '--new-line', '--expect-current'].includes(flag)) {
       throw new UsageError(`unrecognised argument '${flag}'`)
     }
     const next = argv[index + 1]
     if (next === undefined) throw new UsageError(`${flag} needs a value`)
     if (flag === '--item') options.key = next
-    if (flag === '--terms') options.terms = next
-    if (flag === '--old-terms') options.oldTerms = next
-    if (flag === '--keep-eval') options.keepEval = next
+    if (flag === '--new-line') options.newLine = next
+    if (flag === '--expect-current') options.expectCurrent = next
     index += 1
   }
   if (!options.key) throw new UsageError('pass --item <key>')
-  if (options.write && options.terms === null) throw new UsageError('--write needs --terms: a read is never a write')
+  if (options.write && options.newLine === null) throw new UsageError('--write needs --new-line: a read is never a write')
   return options
 }
 
@@ -283,12 +228,11 @@ function printState(data, key) {
   console.log(`remark     : ${value}`)
   console.log(`prefix     : ${prefix === '' ? '(none)' : prefix}`)
   console.log(`body       : ${body === '' ? '(empty)' : body}`)
-  console.log(`phrases    : ${phraseCount(splitTerms(body).length)} when split on the separator (a shape check only)`)
-  const rate = lines.find((line) => /^[ \t]*rate[ \t]*:/i.test(line))
+  console.log('shape      : nothing is inferred here; --new-line takes the whole value and --expect-current must quote this one')
+  const rate = lines.find((line) => /^[ \t]*rate[ \t]*[:：]/i.test(line))
   const others = lines.filter((line) => line !== remark && line !== rate && line.trim() !== '')
   for (const line of others) console.log(`other      : ${line}`)
-  if (rate !== undefined) console.log(`rate       : ${rate.replace(/^[ \t]*rate[ \t]*:/i, '').trim()}`)
-  console.log('nothing    : no boundary is inferred here - --old-terms and --keep-eval must add up to body exactly')
+  if (rate !== undefined) console.log(`rate       : ${rate.replace(/^[ \t]*rate[ \t]*[:：]/i, '').trim()}`)
 }
 
 async function runRead(options) {
@@ -301,41 +245,34 @@ async function runRead(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
-  if (options.terms === null) {
+  if (options.newLine === null) {
     await runRead(options)
     return
   }
-  const terms = checkTermShape(options.terms)
   const gate = createWriteGate({ appName: APP_NAME })
   const info = await gate.open()
   const before = await readItem(options.key)
-  const { lines } = splitLines(before.extra ?? '')
-  const remark = lines.find((line) => REMARK_LINE.test(line))
-
-  let nextValue
-  let nextExtra
-  if (remark === undefined) {
-    nextValue = formatTerms(terms)
-    nextExtra = planExtra({ extra: before.extra ?? '', nextValue, create: options.create }).extra
-  } else {
-    const label = REMARK_LINE.exec(remark)[0]
-    const value = remark.slice(label.length)
-    nextValue = planRewrite({ value, terms, oldTerms: options.oldTerms, keepEval: options.keepEval }).next
-    nextExtra = planExtra({ extra: before.extra ?? '', nextValue }).extra
-  }
+  const plan = planLine({
+    extra: before.extra ?? '',
+    nextValue: options.newLine,
+    expectCurrent: options.expectCurrent,
+    create: options.create,
+  })
 
   console.log(`library    : Zotero ${info.version} · server ${info.id}`)
   console.log(`item       : ${options.key}  [${before.itemType}]  "${before.title ?? ''}"`)
   console.log(`version    : ${before.version}`)
-  if (remark === undefined) console.log('remark     : (none)  ->  a new line, placed first in extra')
-  else console.log(`remark     : ${remark.replace(REMARK_LINE, '').trim()}`)
-  console.log(`     ->    : ${nextValue}`)
+  if (plan.created) console.log('remark     : (none)  ->  a new line, placed first in extra')
+  else console.log(`remark     : ${plan.previous}`)
+  console.log(`     ->    : ${options.newLine}`)
+  const notice = verdictNotice(plan.previous, options.newLine)
+  if (notice !== '') console.log(notice)
 
-  if (nextExtra === (before.extra ?? '')) {
+  if (plan.extra === (before.extra ?? '')) {
     console.log('\nNo change: the line already reads exactly as asked. Nothing to write.')
     return
   }
-  console.log(`body       : ${JSON.stringify({ extra: nextExtra })}`)
+  console.log(`body       : ${JSON.stringify({ extra: plan.extra })}`)
   console.log(`write      : PATCH /api/users/0/items/${options.key}  If-Unmodified-Since-Version: ${before.version}`)
   if (!options.write) {
     console.log('\nDRY RUN - nothing was written. Re-run with --write; the reference manager will then')
@@ -346,7 +283,7 @@ async function main() {
   const result = await patchItem({
     gate,
     key: options.key,
-    patch: { extra: nextExtra },
+    patch: { extra: plan.extra },
     apply: true,
     beforeWrite: () => {
       writeAttempted = true
@@ -365,7 +302,7 @@ async function main() {
       const after = await readItem(options.key).catch(() => null)
       const found = after === null
         ? 'The re-read that would settle it failed as well.'
-        : String(after.extra ?? '') === nextExtra
+        : String(after.extra ?? '') === plan.extra
           ? 'A re-read shows the line already as sent: the write landed.'
           : 'A re-read does not show the line as sent; the library may still have applied it.'
       process.exitCode = reportUnconfirmed({
@@ -380,7 +317,7 @@ async function main() {
     return
   }
   const after = result.after
-  if (String(after?.extra ?? '') !== nextExtra) {
+  if (String(after?.extra ?? '') !== plan.extra) {
     process.exitCode = reportUnconfirmed({
       key: options.key,
       what: `the library accepted the remark rewrite and the record does not read back as sent (version ${after?.version})`,

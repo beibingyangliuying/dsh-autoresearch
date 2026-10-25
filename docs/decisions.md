@@ -2311,13 +2311,21 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **决策**：
 
 - 新纪律 `key-terms`，不塞进 `section-notes`：后者明文拒写"整篇总结"，而简记正是整篇层面的东西；两份契约放一个文件里，迟早会有一句被另一句读错。
-- **写侧工具比字段窄**：`zotero-remark.mjs` 只换 `remark:` 那一行。调用方必须点名它保留的两段——`--old-terms`（替换的正文）与 `--keep-eval`（业主的句子）——**逐字**拼出原文，否则拒绝并报第一个不同的字符位置。`zotero-edit.mjs --set extra=` 能写整字段，但那要求调用方凭记忆重建 `rate:`/`titleTranslation:`/`ISSN:`，掉一行是不可见的静默丢失。
-- **工具不猜边界**。没有任何正则决定"哪一段是评价"：猜出来的就是替内容做决定，与 2026-10-17"反对宽判据"的立场相反。`remark:` 多于一行、正文里夹着句子而调用方没点名，一律停下。
+- **写侧工具比字段窄**：`zotero-remark.mjs` 只换 `remark:` 那一行，其余行逐字带过。`zotero-edit.mjs --set extra=` 能写整字段，但那要求调用方凭记忆重建 `rate:`/`titleTranslation:`/`ISSN:`，掉一行是不可见的静默丢失。
+- **工具不猜内容**。没有任何正则决定"哪一段是评价"：猜出来的就是替内容做决定，与 2026-10-17"反对宽判据"的立场相反。
 - 没有 `remark:` 行时 `--create` 新建并放在最前（业主的库都是 `remark:` 在前、`rate:` 在后），**不编括号评价**。`rate:` 永不写。
 - `zotero-read.mjs --item` 补 `extra` 行（≤12 行，超出打印标记 + `--json` 指路）：这是本次唯一改动的既有工具，读侧的成本落差就在这里。
 - **没有节笔记就没有词，也不排队提醒**（属主原话）。摘要不是兜底：从摘要抽出来的词和从方法节抽出来的词在字段里长得一模一样。
 
-**代价与边界**：工具能证明的只有"这次只改了那一行、其余逐字不变"，证明不了词对不对——词是阅读判断，落在纪律的判据里而不是护栏里。`--keep-eval` 是调用方点名，不是工具识别。真实库上"多行 `extra` 回写"尚未实测（桩库 0/1/3 已验，2026-10-25）；第一次真写要属主在 Zotero 点 Allow。
+**同日修订（属主裁定，2026-10-25 下午）——闸门从"词段账目"改成"整行 + 旧值背诵"**：
+
+第一版让调用方点名 `--old-terms` + `--keep-eval` 两段、必须逐字拼出正文。属主指出这等于**用工具限定了格式**：它假定这一行可拆成"前缀 + 可换段 + 结尾保留段"，倒装行（评价在前、词在后）就写不了。他要的是"能读、能整行重写、格式靠约定"。核对属实：库里 296 条有 **1 条**倒装（`框架可以，但是细节有点粗糙。地震风险；GMPM；…`），账目式表达不了它。
+
+改成：`--new-line` 给整行新值，`--expect-current` 必须**逐字背出当前值**。工具对行的形状**零假设**，只保留结构性拒绝——多于一行 `remark:`、新值含换行、旧值对不上、`--write` 没给 `--new-line`。括号里的评价变了会打印 `NOTE` 但**不拦**（那是业主的，工具不该裁）。同时删掉 1~6 个/60 字的词段闸（属主："闸门都可以删掉"）、认全角冒号、词与尾句之间不再固定塞 `；`。
+
+**这是有代价的，写下来**：账目式能证明"业主那句话还在"，整行式只能证明"调用方读过这一行"。差额由两件事补：干跑把**新旧两行并排打印**，以及纪律 §4 明写"他的句子只有你保留它才在"。`--expect-current` 保留，因为它不是格式闸，是仓库里到处都有的**先读后写**。
+
+**代价与边界**：工具能证明的只有"这次只改了那一行、其余逐字不变"，证明不了词对不对，也证明不了业主的话没被概括掉——前者是阅读判断，后者靠纪律与干跑。真实库上"多行 `extra` 回写"尚未实测（桩库 0/1/3 已验，2026-10-25）；第一次真写要属主在 Zotero 点 Allow。
 
 **落点**：[`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs)（新）· [`tools/tests/zotero-remark-selftest.mjs`](../tools/tests/zotero-remark-selftest.mjs)（新）· [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`extraLines`）· [`tools/tests/zotero-read-selftest.mjs`](../tools/tests/zotero-read-selftest.mjs) · [`tools/dev/toolchain-page.mjs`](../tools/dev/toolchain-page.mjs) 与生成物 [`docs/toolchain.md`](toolchain.md) · [`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs)（名册）· [`protocol.md`](../protocol.md)（Revision 42，§4 一块）· [`surface.md`](../surface.md) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md) · `cordis.patch.yml` / `package.json`（`fourteen`）。
 

@@ -6,9 +6,10 @@ texts — **this file wins**, and the implementation must be corrected. The revi
 independent of any package version. Revision 42 adds one on-demand discipline, because the owner's
 one-line digest of a paper — the phrases that say what it does — was the one annotation no discipline
 produced: the section notes explain each method section and then stop, and the digest was written by
-hand or not at all. Its boundary is the line it writes into, so the write names the two parts it means
-to keep and is refused unless they account for that line character for character; the bracketed
-verdict, the closing sentence and the rating beside the phrases are the owner's, and a record with no
+hand or not at all. Its boundary is the line it writes into: the write sends the line's whole next value
+and is refused unless the current value is quoted back exactly, so the shape of a digest stays a
+convention the discipline states rather than a pattern the tool enforces; the bracketed verdict, the
+closing sentence and the rating beside the phrases are the owner's, and a record with no
 section notes gets no phrases and no reminder. §4 states it. Revision 41 makes each discipline carry one carrier per rule. The
 fixed sections are **seven** — the acceptance checklist that repeated the exclusion conditions and a
 closing list of prohibitions are gone, so a discipline's prohibitions live in the table that says when
@@ -468,8 +469,9 @@ keyterms     what one paper does becomes three to five phrases in the record's r
              metric, an algorithm or the object a method computes rather than the topic the paper
              sits in; the phrases are drafted from the section notes and never from the abstract, a
              record with no section notes gets none and is not queued as a gap, the owner's bracketed
-             verdict, his closing sentence and his rating are not written, and the rewrite is refused
-             unless the parts it names account for the existing line character for character
+             verdict, his closing sentence and his rating are not written, and the rewrite sends the
+             line's whole next value and is refused unless the current value is quoted back exactly:
+             the shape of a digest is a convention, and the tool holds no pattern for it
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code

@@ -23,9 +23,10 @@ review would say whether the paper is any good — which is the verdict's job, a
 | `rate:` | the owner's | never read as an instruction, never written |
 
 `extra` carries **no provenance mark** — unlike a note, which says `/agent-note` or `/imported` in its
-tags. So "who wrote these words" cannot be recorded after the fact and has to be settled before the
-write: the caller names the phrases it replaces and the sentence it keeps, and the tool refuses unless
-those two account for the line exactly.
+tags. So "who wrote these words" cannot be recorded after the fact, and it has to be settled before the
+write: the tool takes the whole next line and the exact current line, and **you** are the one who decides
+what inside it is the phrases. What no tool can check is that you kept the owner's words; the dry run is
+what makes that checkable by him.
 
 ## 1. When to use
 
@@ -48,8 +49,8 @@ Read-only, in this order:
 
 1. **The line as it stands** — `{{presetTools}}/zotero-remark.mjs --item <recordKey>` prints the remark
    value, its bracketed verdict, the body after it, and every other line of `extra` the write will leave
-   alone. It **infers no boundary**: which text is his closing sentence is your reading, and you state it
-   by passing it back as `--keep-eval`.
+   alone. It **infers no boundary**: which text is his closing sentence is your reading, and the write
+   quotes that whole value back so a stale line cannot be rewritten from an earlier round.
 
 2. **The notes' own first paragraphs** — `{{presetTools}}/zotero-section-note.mjs --item <recordKey>`
    prints one block per child note: key, characters, its first paragraph, and the tags that say whether a
@@ -118,24 +119,34 @@ right for a paper with one contribution — his own line for a one-method paper 
 pad to three, and never split a contribution to reach it: a phrase list read aloud should sound like the
 paper's method sections, in order, and nothing else.
 
-## 4. The seam: what the write may touch, and what it must refuse
+## 4. The seam: the whole line, and the two things that are not yours
 
-`{{presetTools}}/zotero-remark.mjs --item <key> --terms "<a；b；c>" [--old-terms "<exact>"] [--keep-eval "<exact>"]`
+`{{presetTools}}/zotero-remark.mjs --item <key> --new-line "<the whole value>" --expect-current "<the exact current value>"`
 
-The tool plans a change only when `--old-terms` + `--keep-eval` reproduce the line's body **character for
-character**; otherwise it stops and names the first character where the two part company. So:
+**The tool assumes no shape.** It does not parse phrases, does not decide where a sentence starts, and
+accepts a line whose closing sentence sits in the middle as readily as one that ends with it. You compose
+the whole value; `--new-line` is what the line will say.
 
-- **Copy the tail from the read output**, never from memory and never retyped: a sentence that shifts by
-  one character is refused, and one that shifts by none is rewritten — the refusal is the only thing
-  standing between a typo and the loss of his judgement.
-- **A line with no closing sentence** passes `--old-terms` alone, and `--keep-eval` stays off. The write
-  then ends the way the old one ended — with the separator if it had one, without if it did not.
+What it does check is structural, and only that: the current value must be quoted back **character for
+character** (`--expect-current`), a record with more than one `remark:` line is refused, a value carrying
+a line break is refused, `--write` is refused without `--new-line`, and every other line of `extra` is
+carried over as it was. So:
+
+- **Quote the old line from the read output**, never from memory: a line read in an earlier round is
+  refused rather than allowed to overwrite what the owner has written since. That refusal is the read-before-write
+  rule, not a format rule.
+- **The verdict inside the new line is his.** The dry run prints a `NOTE` when the bracketed value changes
+  — it does not block you, and it should never print, because changing it is not yours to do.
+- **His closing sentence is yours to carry.** Nothing mechanical protects it any more: it survives only
+  because you kept it, and because the dry run prints the old line beside the new one before anything is
+  sent. That is the trade the owner chose, and it makes this paragraph the load-bearing one.
 - **A record whose `extra` has no remark line** needs `--create`; the line is added first, with no verdict
   invented and no rating. Say in the report that the line now carries phrases and no verdict.
-- **Two remark lines, or a line the tool cannot tell from the digest, are the owner's to settle** — report
-  and stop; do not rewrite one of them.
 - **`rate:` is never written.** It is his rating, it is a different line, and a write that changed it would
   be invisible in the phrases he asked for.
+- **The format is a convention, not a gate** — `（评价）词；词；我的一句话`, full-width `；`, his own
+  vocabulary. Follow it because a line that does not read like his others is a line he has to fix by hand.
+  When a record genuinely cannot take that shape, say which part and why instead of bending the format.
 
 ## 5. Do vs don't
 
@@ -154,8 +165,8 @@ character**; otherwise it stops and names the first character where the two part
 |---|---|
 | The record has no section notes | Report "no notes, no phrases". Do not draft from the abstract, and do not queue it. |
 | The notes' own headings do not say which section each explains | Report the headings found and stop; a phrase keyed to a guessed section is the wrong contribution. |
-| The line carries a closing sentence | Carry it verbatim as `--keep-eval`. If it cannot be matched exactly, stop and report — never rewrite around it. |
-| The line carries two verdicts, or a sentence in the middle | Report it. Which part is the digest is not this discipline's call. |
+| The line carries a closing sentence | Compose the new value so it survives **verbatim**, and say so in the report. Nothing checks it for you. |
+| The line's shape is not the usual one (two verdicts, a sentence in the middle) | Expressible: send the whole new value, keep every part you were not asked to change. Say in the report that the line's shape was not the usual one. |
 | The record carries more than one remark line | Report it and stop. |
 | The draft would need a sixth phrase | Merge, or drop the weakest — and say which contribution went unrepresented. |
 | A phrase is about the paper's quality, its venue, or its data | Not a phrase. That is the verdict's business. |
