@@ -23,6 +23,7 @@ import {
   extraLines,
   findPassages,
   groupHits,
+  noteHeadings,
   parseArgs,
   pickAttachment,
   rankPassages,
@@ -252,6 +253,11 @@ const read = parseArgs(['--fulltext', 'k', '--limit', '300'])
 check(read.mode === 'fulltext' && read.limit === 300, 'a read takes a character count beyond the page size', String(read.limit))
 check(parseArgs(['--fulltext', 'k']).limit === 12000, 'a read defaults to 12000 characters, inside the shell tool clip')
 check(parseArgs(['--fulltext', 'k', '--grep', 'term']).grep === 'term', 'a read can look for one term')
+check(parseArgs(['--item', 'k', '--headings']).headings === true, 'a note read can ask for its own headings')
+throws('--headings with --grep is refused, because the two answer different questions', () =>
+  parseArgs(['--item', 'k', '--headings', '--grep', 'x']),
+)
+throws('--headings outside --item is refused', () => parseArgs(['--fulltext', 'k', '--headings']))
 check(parseArgs(['--collections']).mode === 'collections' && parseArgs(['--tags']).mode === 'tags', 'the argument-less modes parse')
 
 // --- screening a whole collection ----------------------------------------------------------------
@@ -459,6 +465,50 @@ check(parseArgs(['--item-fields', 'dataset']).value === 'dataset', '--item-field
 throws('--item-fields needs a type', () => parseArgs(['--item-fields']))
 check(parseArgs(['--saved-searches']).mode === 'saved-searches', '--saved-searches is a mode')
 check(parseArgs(['--find-doi', '10.1038/x']).value === '10.1038/x', '--find-doi takes the DOI')
+
+// --- a note's own headings ----------------------------------------------------------------------
+
+console.log('\n[16] a long note is entered by its headings instead of read whole')
+
+// The shape a section note actually has: `h2`/`h3` over `<p>` prose, wrapped by the application.
+const NOTE_HTML =
+  '<div data-schema-version="9"><h2>First part</h2><p>Alpha body.</p><h3>1. Detail</h3>' +
+  '<p>Beta body.</p><h2>Second part</h2><p>Gamma body.</p></div>'
+
+const outline = noteHeadings(NOTE_HTML)
+check(outline.kind === 'heading', 'heading blocks are preferred over paragraphs', outline.kind)
+check(outline.total === 3, 'every heading is listed', String(outline.total))
+check(outline.text === visibleText(NOTE_HTML), 'the offsets are characters of the text the reader sees')
+check(outline.headings[0].offset === 0, 'the first heading starts at zero')
+// The offsets are only useful if each one really lands on its title; this checks every entry against
+// the visible text rather than against the parser's own bookkeeping.
+check(
+  outline.headings.every((heading) => outline.text.slice(heading.offset, heading.offset + heading.text.length) === heading.text),
+  'each offset lands on its own heading text',
+)
+check(
+  outline.headings[1].offset === outline.text.indexOf('1. Detail'),
+  'a nested heading is found where it really is',
+  String(outline.headings[1].offset),
+)
+// `+length` is what a reader passes as --limit, so it must reach the next section and stop there.
+check(outline.headings[0].length === outline.headings[2].offset, 'a top-level section runs to the next top-level heading', String(outline.headings[0].length))
+check(
+  outline.headings[1].length === outline.headings[2].offset - outline.headings[1].offset,
+  'a nested section runs to the next heading that ends it',
+  String(outline.headings[1].length),
+)
+check(outline.headings[2].length === outline.text.length - outline.headings[2].offset, 'the last section runs to the end of the text')
+
+const paragraphs = noteHeadings('<div><p>Alpha body.</p><p>Beta body.</p></div>')
+check(paragraphs.kind === 'paragraph', 'a note with no headings falls back to its paragraphs', paragraphs.kind)
+check(paragraphs.total === 2 && paragraphs.headings[0].offset === 0, 'and lists them from the start', String(paragraphs.total))
+check(paragraphs.headings[0].length === paragraphs.headings[1].offset, 'one paragraph runs to the next')
+check(noteHeadings('').total === 0, 'an empty note has no sections')
+check(noteHeadings(undefined).total === 0, 'and a missing body does not throw')
+check(noteHeadings(NOTE_HTML, { maxHeadings: 1 }).headings.length === 1, 'the listing can be capped without losing the total')
+check(noteHeadings(NOTE_HTML, { maxHeadings: 1 }).total === 3, 'a capped listing still says how many there are')
+check(noteHeadings('<div><p>only   spaced   text</p></div>').headings[0].text === 'only spaced text', 'whitespace is collapsed as visibleText collapses it')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

@@ -246,6 +246,62 @@ export function findPassages(content, term, { window = 200, max = 20 } = {}) {
 }
 
 /**
+ * Where a note's own sections start.
+ *
+ * A section note is `<h2>`/`<h3>` blocks over `<p>` prose, and reading a 10k-character note whole to
+ * find one section is the most expensive read this tool offers: measured, one 7th-section note was
+ * 9,795 visible characters against 27 headings that name every part of it. The offsets are characters
+ * of {@link visibleText}'s output, so they are usable as `--offset` with no conversion.
+ *
+ * Offsets are found by SEARCHING for each block's visible text in order, which stays correct however
+ * the application rewrote the markup; the cost is that a heading whose text also occurs earlier in the
+ * prose points at the earlier occurrence, so the listing is a map and `--grep` is the ruler.
+ *
+ * @param {string} html Note body as the library stores it.
+ * @param {{maxHeadings?: number}} [options] Cap on the entries returned.
+ * @returns {{text: string, kind: 'heading'|'paragraph', headings: Array<{level: number, text: string, offset: number, length: number}>, total: number}}
+ *   The visible text, which rungs were found, and each one's offset and run length.
+ */
+export function noteHeadings(html, { maxHeadings = 120 } = {}) {
+  const source = String(html ?? '')
+  const text = visibleText(source)
+  const scan = (pattern) => {
+    const found = []
+    let cursor = 0
+    for (const match of source.matchAll(pattern)) {
+      const label = visibleText(match[2])
+      if (!label) continue
+      const at = text.indexOf(label, cursor)
+      if (at === -1) continue
+      found.push({ group: match[1], text: label, offset: at })
+      cursor = at + label.length
+    }
+    return found
+  }
+  let kind = 'heading'
+  let blocks = scan(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi)
+  if (blocks.length === 0) {
+    // A note written as plain paragraphs has no headings; the paragraphs are then the sections, which
+    // is still cheaper than the whole body and does not pretend to a structure the body has not got.
+    kind = 'paragraph'
+    blocks = scan(/<(p)[^>]*>([\s\S]*?)<\/\1>/gi)
+  }
+  const levelOf = (block) => (kind === 'heading' ? Number(block.group) : 0)
+  const headings = blocks.map((block, index) => {
+    let end = text.length
+    for (let next = index + 1; next < blocks.length; next += 1) {
+      if (kind === 'paragraph' || levelOf(blocks[next]) <= levelOf(block)) {
+        end = blocks[next].offset
+        break
+      }
+    }
+    return { level: levelOf(block), text: block.text, offset: block.offset, length: Math.max(0, end - block.offset) }
+  })
+  return { text, kind, headings: headings.slice(0, maxHeadings), total: headings.length }
+}
+
+
+/**
  * Split text into the tokens BM25 scores.
  *
  * `Intl.Segmenter` is used rather than a whitespace split because the preset is domain-neutral: a
@@ -339,7 +395,9 @@ export function rankPassages(documents, query, { limit = 4, k1 = 1.5, b = 0.75 }
 const USAGE =
   'usage: node tools/zotero-read.mjs --search "<query>" [--qmode everything|titleCreatorYear] [--limit N] [--tag TAG]\n' +
   '                                  [--sort FIELD] [--direction asc|desc] [--item-type TYPE] [--trash]\n' +
-  '       node tools/zotero-read.mjs --item <key> [--offset N] [--limit N]   # a note prints its body\n' +
+  '       node tools/zotero-read.mjs --item <key> [--offset N] [--limit N] [--grep TERM | --headings]\n' +
+  '                                  # a note prints its body; --grep reads the paragraphs that mention a\n' +
+  '                                  # term, --headings lists the note\'s own headings with their offsets\n' +
   '       node tools/zotero-read.mjs --fulltext <key> [--attachment <key>] [--offset N] [--limit N] [--grep TERM]\n' +
   '       node tools/zotero-read.mjs --retrieve <key> --query "<terms>" [--passages N]\n' +
   '                                  [--sources abstract,notes,fulltext]\n' +
@@ -351,7 +409,8 @@ const USAGE =
   '       node tools/zotero-read.mjs --collection <key> --screen [--screen-limit N]\n' +
   '       [--library user:0|group:<id>] [--json]\n' +
   '       --limit counts ROWS for a search (at most 100, the library\'s page size) and CHARACTERS for a\n' +
-  '       read (default 12000, at most 100000).\n' +
+  '       read (default 12000, at most 100000). A note costs its own length on every read, so --headings\n' +
+  '       and then --offset is the cheap way into one section of a long one.\n' +
   '       --screen enumerates a whole collection and prints one abstract per record; --screen-limit sets\n' +
   '       the characters printed per abstract (default 300). --limit does not apply to a screening pass.'
 
@@ -373,6 +432,7 @@ export function parseArgs(argv) {
     tags: [],
     attachment: '',
     grep: '',
+    headings: false,
     screen: false,
     screenLimit: DEFAULT_SCREEN_LIMIT,
     json: false,
@@ -492,6 +552,9 @@ export function parseArgs(argv) {
         options.grep = next ?? ''
         index += 1
         break
+      case '--headings':
+        options.headings = true
+        break
       case '--screen':
         options.screen = true
         break
@@ -542,6 +605,17 @@ export function parseArgs(argv) {
   // conflicting notion of "how much of the collection". The character budget is `--screen-limit`.
   if (options.screen && options.limitRaw !== undefined) {
     throw new UsageError('--screen reads every row of the collection; set --screen-limit for the characters per abstract, not --limit')
+  }
+  // Both `--grep` and `--headings` read a note's TEXT, which only a note has. The item a reader
+  // probably means is the record, so the refusal names the command that would work - the silent no-op
+  // these flags used to be is what made a 10k-character read look like the only option.
+  if (options.headings && options.grep) {
+    throw new UsageError(
+      'pass --grep or --headings, not both: one reads the paragraphs around a term, the other lists where the sections start',
+    )
+  }
+  if (options.headings && options.mode !== 'item') {
+    throw new UsageError("--headings lists a note's own headings, so it applies to --item <noteKey> only")
   }
   // `--item` counts characters too, because a note's body is what an item read of a note returns.
   const reading = options.mode === 'fulltext' || options.mode === 'item'
@@ -846,6 +920,30 @@ export async function readItemOrRefuse(key, read = readItem) {
   }
 }
 
+/**
+ * Print the passages that mention a term: the "read only what answers the question" rung.
+ *
+ * One definition for both texts this tool searches, because the attachment's indexed text and a note's
+ * body are searched the same way, and two printers would drift apart on the line that a reader trusts
+ * to prove the term was looked for.
+ *
+ * @param {string} label The aligned label, e.g. `'term   '` - the leading field is padded to the mode.
+ * @param {string} term What to look for, case-insensitively.
+ * @param {string} content The text to search.
+ * @param {string} subject What was searched, named in the "0 passages" line.
+ * @returns {void}
+ */
+function printTermPassages(label, term, content, subject) {
+  const passages = findPassages(content, term)
+  console.log(`${label}: "${term}"  (case-insensitive, ${passages.length} passage(s), most 20; whitespace collapsed)`)
+  if (passages.length === 0) {
+    console.log(`\n0 passages - the term does not occur in ${subject}.`)
+    return
+  }
+  console.log('')
+  passages.forEach((passage, index) => console.log(`${index + 1}. @${passage.index}  ${passage.excerpt}`))
+}
+
 async function runItem(options) {
   const key = options.value
   const [data, children, names] = await Promise.all([
@@ -855,6 +953,18 @@ async function runItem(options) {
   ])
   const collections = normalizeCollections(data.collections)
   const picked = pickAttachment(children)
+  // A record has no body of its own, so a flag that reads text has nothing to read here. Said as a
+  // usage error rather than ignored: the ignored version printed the whole record and looked like an
+  // answer, which is how a read that costs 14k characters came to be the one people reached for.
+  if ((options.grep !== '' || options.headings) && data.itemType !== 'note') {
+    const flag = options.headings ? '--headings' : '--grep'
+    const quoted = options.grep === '' ? '' : ` "${options.grep}"`
+    throw new UsageError(
+      `${flag} reads text, and ${key} is a ${data.itemType ?? 'record'}: it has no body of its own. ` +
+        `Read its file with --fulltext ${key}${flag === '--grep' ? ` --grep${quoted}` : ''}, its abstract and ` +
+        `notes with --retrieve ${key} --query "<terms>", or one note with --item <noteKey> ${flag}${quoted}`,
+    )
+  }
   if (options.json) {
     console.log(
       JSON.stringify(
@@ -897,6 +1007,39 @@ async function runItem(options) {
   // section-note discipline naming a ruler it could not open.
   if (data.itemType === 'note') {
     const note = visibleText(data.note ?? '')
+    // Both flags answer a NOTE question, so they are answered before the `--json` branch: a flag that
+    // is silently dropped by another flag is the same bug one level up.
+    if (options.headings || options.grep !== '') {
+      if (options.headings) {
+        const outline = noteHeadings(data.note ?? '')
+        if (options.json) {
+          console.log(JSON.stringify({ key, kind: outline.kind, characters: outline.text.length, total: outline.total, headings: outline.headings }, null, 2))
+          return
+        }
+        console.log(`note       : ${note.length} characters (visible text) · ${outline.total} ${outline.kind}(s)`)
+        if (outline.total === 0) {
+          console.log(`             no <h1>-<h6> and no <p> block: nothing to outline, read it whole with --item ${key}`)
+          return
+        }
+        if (outline.total > outline.headings.length) {
+          console.log(`             listing the first ${outline.headings.length}; --grep reaches the rest`)
+        }
+        console.log('outline    : @offset  lvl  title                                     +length')
+        for (const heading of outline.headings) {
+          const level = outline.kind === 'heading' ? `h${heading.level}` : 'p '
+          const title = heading.text.length > 64 ? `${heading.text.slice(0, 61)}...` : heading.text
+          console.log(`  @${String(heading.offset).padEnd(7)} ${level.padEnd(4)} ${title}  +${heading.length}`)
+        }
+        console.log('next       : read one with --offset <@offset> --limit <+length>, or --grep "<term>" for the paragraphs that mention it')
+        return
+      }
+      if (options.json) {
+        console.log(JSON.stringify({ key, term: options.grep, passages: findPassages(note, options.grep) }, null, 2))
+        return
+      }
+      printTermPassages('term       ', options.grep, note, "this note's visible text")
+      return
+    }
     const slice = sliceText(note, { offset: options.offset, limit: options.limit })
     console.log(`note       : ${note.length} characters (visible text; --json keeps the stored HTML) · showing ${slice.from}-${slice.to}`)
     if (slice.nextOffset !== null) console.log(`             next: --offset ${slice.nextOffset}`)
@@ -1006,14 +1149,7 @@ async function runFulltext(options) {
   }
 
   if (options.grep) {
-    const passages = findPassages(content, options.grep)
-    console.log(`term   : "${options.grep}"  (case-insensitive, ${passages.length} passage(s), most 20; whitespace collapsed)`)
-    if (passages.length === 0) {
-      console.log('\n0 passages - the term does not occur in this attachment\'s indexed text.')
-      return
-    }
-    console.log('')
-    passages.forEach((passage, index) => console.log(`${index + 1}. @${passage.index}  ${passage.excerpt}`))
+    printTermPassages('term   ', options.grep, content, "this attachment's indexed text")
     return
   }
 
