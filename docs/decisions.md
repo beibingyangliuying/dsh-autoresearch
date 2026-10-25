@@ -2325,7 +2325,9 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 
 **这是有代价的，写下来**：账目式能证明"业主那句话还在"，整行式只能证明"调用方读过这一行"。差额由两件事补：干跑把**新旧两行并排打印**，以及纪律 §4 明写"他的句子只有你保留它才在"。`--expect-current` 保留，因为它不是格式闸，是仓库里到处都有的**先读后写**。
 
-**代价与边界**：工具能证明的只有"这次只改了那一行、其余逐字不变"，证明不了词对不对，也证明不了业主的话没被概括掉——前者是阅读判断，后者靠纪律与干跑。真实库上"多行 `extra` 回写"尚未实测（桩库 0/1/3 已验，2026-10-25）；第一次真写要属主在 Zotero 点 Allow。
+**代价与边界**：工具能证明的只有"这次只改了那一行、其余逐字不变"，证明不了词对不对，也证明不了业主的话没被概括掉——前者是阅读判断，后者靠纪律与干跑。
+
+**实测（2026-10-25）**：真实库上多行 `extra` 回写已验，不再是空白——`DSPZ6AG3`（原本只有 `（一般）级联故障模型`）写入四条短语，`rate: 2` 与 `titleTranslation` 行原样保留，版本 5071→5133，回读由 `zotero-read.mjs --item` 独立确认（不是工具自报）。
 
 **落点**：[`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs)（新）· [`tools/tests/zotero-remark-selftest.mjs`](../tools/tests/zotero-remark-selftest.mjs)（新）· [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`extraLines`）· [`tools/tests/zotero-read-selftest.mjs`](../tools/tests/zotero-read-selftest.mjs) · [`tools/dev/toolchain-page.mjs`](../tools/dev/toolchain-page.mjs) 与生成物 [`docs/toolchain.md`](toolchain.md) · [`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs)（名册）· [`protocol.md`](../protocol.md)（Revision 42，§4 一块）· [`surface.md`](../surface.md) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md) · `cordis.patch.yml` / `package.json`（`fourteen`）。
 
