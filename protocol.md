@@ -1,9 +1,15 @@
 # Autoresearch protocol — what the research preset guarantees, and where its boundary is
 
-**Status: normative. Revision 41.** This file is the contract of the Autoresearch preset. Where it
+**Status: normative. Revision 42.** This file is the contract of the Autoresearch preset. Where it
 conflicts with the implementation — the composition file, the isolation plugin, the discipline
 texts — **this file wins**, and the implementation must be corrected. The revision number is
-independent of any package version. Revision 41 makes each discipline carry one carrier per rule. The
+independent of any package version. Revision 42 adds one on-demand discipline, because the owner's
+one-line digest of a paper — the phrases that say what it does — was the one annotation no discipline
+produced: the section notes explain each method section and then stop, and the digest was written by
+hand or not at all. Its boundary is the line it writes into, so the write names the two parts it means
+to keep and is refused unless they account for that line character for character; the bracketed
+verdict, the closing sentence and the rating beside the phrases are the owner's, and a record with no
+section notes gets no phrases and no reminder. §4 states it. Revision 41 makes each discipline carry one carrier per rule. The
 fixed sections are **seven** — the acceptance checklist that repeated the exclusion conditions and a
 closing list of prohibitions are gone, so a discipline's prohibitions live in the table that says when
 to stop, and §4 states the shape. It also makes the round's **entry state** explicit: a study that keeps
@@ -14,7 +20,7 @@ discipline's trigger out of the resident layer
 and leaves the **order** there: each discipline states, in its own catalog entry, the situation that
 triggers it, the resident discipline states the order the loop runs in and the force of the rule, and a
 discipline that serves a stage rather than owning one is loaded when that stage needs it. Two carriers
-of the same sentence is what rule 12 forbids, and thirteen triggers repeated beside the catalog that
+of the same sentence is what rule 12 forbids, and fourteen triggers repeated beside the catalog that
 already prints them cost every request. §2 and §8 state it. Revision 39 makes a record answer at the resolution its reader
 decides at, not the resolution an auditor would need. A section is a **ledger** or a **state note**
 and never both: a ledger's cells hold fields, and the argument a cell would need is carried by the
@@ -457,6 +463,13 @@ sections     one `/section-N` note per TOP-LEVEL section, attached to its librar
              and one record carries one explanation per section and no paper-level summary; an
              ambiguous note — more than one `/section-N` — claims nothing, is read before it is
              touched, and is resolved by removing one stale tag, one tag per command
+keyterms     what one paper does becomes three to five phrases in the record's remark line: one
+             phrase per method section, in the paper's own order, each naming a representation, a
+             metric, an algorithm or the object a method computes rather than the topic the paper
+             sits in; the phrases are drafted from the section notes and never from the abstract, a
+             record with no section notes gets none and is not queued as a gap, the owner's bracketed
+             verdict, his closing sentence and his rating are not written, and the rewrite is refused
+             unless the parts it names account for the existing line character for character
 adoption     what a paper read may lend becomes a ruled ledger: the paper's own locator, the
              condition it holds under, our normalized form beside the paper's, the module it
              becomes, and the number a test can assert — the owner rules, nothing enters code

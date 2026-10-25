@@ -2296,3 +2296,30 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 **落点**：[`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs)（`TOOLS_CLASSES` / `unclassifiedTools` / `toolFiles` / 名册补 3 条）· [`tools/dev/run-selftests.mjs`](../tools/dev/run-selftests.mjs)（新）· [`package.json`](../package.json)（`test` 脚本）· [`tools/tests/release-check-selftest.mjs`](../tools/tests/release-check-selftest.mjs)（闭合与派生的负向控制）· 五个测试的根路径 · [`skills/metadata-query/SKILL.md`](../skills/metadata-query/SKILL.md) · [`skills/literature-recon/SKILL.md`](../skills/literature-recon/SKILL.md) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md) · [`docs/README.md`](README.md) · [`docs/overview.md`](overview.md) · [`.agents/skills/preset-release/SKILL.md`](../.agents/skills/preset-release/SKILL.md) · 生成物 [`docs/toolchain.md`](toolchain.md)。
 
 **未做**：`package.json` 的 `files` 字段（发布件仍带 26 个自测与 13 个探针，只是不再占 agent 的命名空间）；`new-project.ps1` 仍无自测（"永不覆盖 / `-DryRun`"只有文档断言）；`backlog` 第 8 条那 167 处改名。
+
+## 96. 新增第十四条纪律：简记的词由节笔记欠着，写侧只准动那一行（Revision 42，2026-10-25）
+
+**起因**：junhan 问能不能把"简记里的 3~5 个关键词"抽成 skill。他给了一条例子的原文，要求 agent 只覆盖中间那一段词，评价是他的。
+
+**先验（2026-10-25 本机实测，Zotero 10.0.6，库内 684 条文献）**：
+
+1. **简记不是笔记，是 `extra` 里的 `remark:` 行**：296/684 条有它，其中 211 条有子笔记；同一字段里还躺着 `rate:`（138 条）、`titleTranslation:`（192 条）、`ISSN:` 等。
+2. **词＝方法节的主干，按论文自己的节序**，三篇互证：`X7X7Z7PN`（§2 数据与级联链表示 / §3 三类指标 / §4 递推概率模型，§5 算例不进）、`4AQLLSKX`（§2 随机交互图 / §3 特征值分析，§1、§4 不进）、`9F3THZRW`（§2 级联故障图＋随机化学采样 / §3 线路脆弱性）。
+3. **格式可统计**：全角括号评价开头（一般 115 · 不太相关 42 · 不错 36 · 垃圾 33 · 精品 14）；`；` 分隔；**100/127 条不带尾分号**；单词长度中位 8 字；具名算法保留英文（`FPG-GS 算法`、`st-GCN`）；`rate` 与评价强相关（不错=4、精品=5、不太相关=1）。
+4. **读它的代价不成比例**：`zotero-read.mjs --item` 的纯文本不打 `extra`，要看简记只能 `--json`——那次实测整条记录连所有子笔记的 HTML 一起吐了约 3 万字符，为 100 字的字段付掉半轮上下文。
+
+**决策**：
+
+- 新纪律 `key-terms`，不塞进 `section-notes`：后者明文拒写"整篇总结"，而简记正是整篇层面的东西；两份契约放一个文件里，迟早会有一句被另一句读错。
+- **写侧工具比字段窄**：`zotero-remark.mjs` 只换 `remark:` 那一行。调用方必须点名它保留的两段——`--old-terms`（替换的正文）与 `--keep-eval`（业主的句子）——**逐字**拼出原文，否则拒绝并报第一个不同的字符位置。`zotero-edit.mjs --set extra=` 能写整字段，但那要求调用方凭记忆重建 `rate:`/`titleTranslation:`/`ISSN:`，掉一行是不可见的静默丢失。
+- **工具不猜边界**。没有任何正则决定"哪一段是评价"：猜出来的就是替内容做决定，与 2026-10-17"反对宽判据"的立场相反。`remark:` 多于一行、正文里夹着句子而调用方没点名，一律停下。
+- 没有 `remark:` 行时 `--create` 新建并放在最前（业主的库都是 `remark:` 在前、`rate:` 在后），**不编括号评价**。`rate:` 永不写。
+- `zotero-read.mjs --item` 补 `extra` 行（≤12 行，超出打印标记 + `--json` 指路）：这是本次唯一改动的既有工具，读侧的成本落差就在这里。
+- **没有节笔记就没有词，也不排队提醒**（属主原话）。摘要不是兜底：从摘要抽出来的词和从方法节抽出来的词在字段里长得一模一样。
+
+**代价与边界**：工具能证明的只有"这次只改了那一行、其余逐字不变"，证明不了词对不对——词是阅读判断，落在纪律的判据里而不是护栏里。`--keep-eval` 是调用方点名，不是工具识别。真实库上"多行 `extra` 回写"尚未实测（桩库 0/1/3 已验，2026-10-25）；第一次真写要属主在 Zotero 点 Allow。
+
+**落点**：[`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs)（新）· [`tools/tests/zotero-remark-selftest.mjs`](../tools/tests/zotero-remark-selftest.mjs)（新）· [`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`extraLines`）· [`tools/tests/zotero-read-selftest.mjs`](../tools/tests/zotero-read-selftest.mjs) · [`tools/dev/toolchain-page.mjs`](../tools/dev/toolchain-page.mjs) 与生成物 [`docs/toolchain.md`](toolchain.md) · [`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs)（名册）· [`protocol.md`](../protocol.md)（Revision 42，§4 一块）· [`surface.md`](../surface.md) · [`docs/coverage.md`](coverage.md) · [`README.md`](../README.md) · `cordis.patch.yml` / `package.json`（`fourteen`）。
+
+**未做**：全库"哪些简记还缺词"的审计（属主选了单篇＋分类批量，需要时再加一个列 `remark` 的读取模式）；发布 tag（等这批改动一起发）。
+
