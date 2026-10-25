@@ -2333,3 +2333,31 @@ prefs 里 `extensions.zotero.httpServer.localAPI.enabled = true` ⇒ 起来就�
 
 **未做**：全库"哪些简记还缺词"的审计（属主选了单篇＋分类批量，需要时再加一个列 `remark` 的读取模式）；发布 tag（等这批改动一起发）。
 
+
+## 97. 读侧的账单：一条笔记按标题进、一条记录不再背全部笔记、一个分类只列论文（2026-10-25）
+
+**起因**：属主问"工具制作可以告一段落了？"，同时要"省 token 那部分也安排起来"。四个候选按实测排序交他裁定，他一次全选，排期归我。同一天还问了 Zotero 的 `Always Allow` 从哪来——答案不在 Zotero：`Always Allow` 只决定发哪种 key，弹窗照旧；不再弹窗是**本预设**把长效 key 按 `Zotero-Server-ID` 存在 `%LOCALAPPDATA%\dsh-autoresearch\zotero-local-api-key.json`（实测本机一条，建于 2026-10-15T08:37Z）。这条已在 §35，此处只记"属主知悉来源后不再追"。
+
+**先验（2026-10-25 本机真库实测，单位字符）**：
+
+1. 读一条记录（plain，已含 `extra`）**1,249**；同一条记录 `--json` **13,916**，其中 8,252 是四条子笔记的存储 HTML。
+2. 读一条笔记（`5WPRAN7G`，第七节 RESULTS）**9,795**；它自己有 **27 个标题**（7 个 `h2` + 20 个 `h3`）。
+3. **`--grep` 在笔记上是静默忽略**：那条分支只挂在 `--fulltext` 上，传了照样打全文。参数被无声吃掉，比不实现更坏。
+4. 列 `/04-2/` 分类 **56 行**，其中 **44 行**是笔记/附件；`--limit` 按**行**计数 ⇒ 默认 10 行里一条论文都没有。
+5. `--json` 的 stdout 前面还压着身份行（`library : …`），消费者必须先剥一行才能 parse；而同套工具的 `zotero-section-note.mjs --json` 早就是纯 JSON。
+
+**决策**：
+
+- `--item <noteKey> --headings`：按 `h1`–`h6` 列标题，每条给**字符 offset 与该节长度**；没有标题就退到 `p` 块（墙壁式笔记也有门）。offset 落在 `visibleText()` 的坐标系里，所以 `--offset` 直接可用。实现是**顺序搜索每块的可视文本**，因此无论参考管理器怎么重写标记都成立——代价写进注释：标题文字若在前面正文里也出现过，会指到前面那次，所以它是**地图**，`--grep` 才是尺子。
+- **`--grep` 在笔记上生效**，与 `--fulltext` 共用同一个打印函数（一处定义，两处调用）。
+- 两个 flag 用在**记录**上，从"静默忽略"改成 **exit 2 + 点名该用哪条命令**（`--fulltext … --grep`、`--retrieve … --query`、`--item <noteKey>`）。理由与 2026-10-17 那条一致：宁可响亮拒绝，也不要一个看起来像答案的空操作。
+- `--json` 不再带子笔记正文，改报 `noteCharacters`；`--json` 时身份行与 `shelf` 行改走 stderr，stdout 是可直接 `JSON.parse` 的。
+- `--collection` 默认只列**记录**，`--limit` 按记录计数，最多扫 400 行（`LISTING_SCAN`）后如实交代扫到第几行；`--all-rows` 才逐个列成员，且用在 `--collection` 之外、或与 `--screen` 同用都被拒。
+
+**实测（同一台库、同一时刻）**：那条 9,795 字符的笔记，`--headings` 花 **1,646**（约 1/6），且 `--offset 232 --limit 140` 读回的正是 `1. 数据设置` 那一节——真库读回，不是自测推的；`DSPZ6AG3 --json` 13,916 → **5,388** 并 `JSON.parse` 通过；`--collection 5X6TKUVK` 56 行 → **12 条记录 + 44 行隐藏**，`--limit 12` 列满 12 条并撤掉 truncated 行。
+
+**代价与边界**：`--grep` 对高频词仍然贵（`关键元件` 在那条笔记里命中 13 次、5,246 字符）——高频词的正确入口是 `--headings` 而不是 `--grep`；offset 是提示不是保证；笔记读仍默认 12,000 字符切片，没有"太长就只给头"的默认（属主没要，且那会让"读到了"变成猜测）。
+
+**落点**：[`tools/zotero-read.mjs`](../tools/zotero-read.mjs)（`noteHeadings` / `printTermPassages` / `itemForJson` / `LISTING_SCAN` / `printIdentity(json)`）· [`tools/tests/zotero-read-selftest.mjs`](../tools/tests/zotero-read-selftest.mjs)（+18 条断言）· [`tools/dev/toolchain-page.mjs`](../tools/dev/toolchain-page.mjs) 与生成物 [`docs/toolchain.md`](toolchain.md)。
+
+**未做**：`--json` 的 stdout 契约（纯 JSON）目前只有手验——`zotero-read` 的自测是纯函数级，没有 CLI 桩，要加桩是另一件事；读侧的"读了多少"仍靠每处打印，没有统一的字符账。

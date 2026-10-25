@@ -64,6 +64,9 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - `--search`（默认搜摘要＋笔记＋附件全文）· `--sort` / `--direction` / `--item-type` / `--trash` / `--library user:0|group:<id>`
 - `--item`：题录块（venue/卷期页/publisher/repository 等）＋笔记正文按**可读文本**印，`--json` 保留原始 HTML 与题录字段
 - `--item` 还把业主自己写在 `extra` 里的行按行印出（`remark:` / `rate:` / `titleTranslation:` 等）：这不是题录，是**库主自己的批注**；超过 12 行才印标记，`--json` 给整字段
+- `--item <noteKey> --headings`：笔记自己的 `h1`-`h6` 清单（没有标题就退到 `p`），每条带**字符 offset 与该节长度**，`--offset N --limit M` 直接读那一节；`--grep TERM` 读提到该词的段落（此前 `--grep` 只对 `--fulltext` 生效，在笔记上是**静默忽略**）；两者用在记录上会**响亮拒绝**并点名该用哪条命令
+- `--json` 不带子笔记的正文：孩子的 body 只报 `noteCharacters`，要正文就 `--item <noteKey> --json`；`--json` 时身份行改走 stderr，stdout 是可直接解析的 JSON
+- `--collection <key>` 默认只列**记录**：`--limit` 按记录计数，笔记/附件计数后隐藏（`56 row(s) · 12 record(s) · 44 note/attachment hidden`），`--all-rows` 才逐个列成员
 - `--retrieve <key> --query "<terms>" [--passages N] [--sources abstract,notes,fulltext]`：BM25 排段落，每条带 sourceRef/offset/score；缺的源进 `sourcesSkipped`
 - `--locate <key>`：最佳附件是本地 path（并报 exists）还是 web URL
 - `--changes [--since N]`：基线版本或增量 diff；`--item-types` / `--item-fields <type>` / `--saved-searches`
@@ -83,8 +86,10 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 读到空文本 → 换 `zotero-pdf.mjs --extract`（文件自己的文字层）；输出头里的 `rung` 行会说明这一级是谁
 - 问"这本书/这篇还在我库里吗" → `--find-doi`，不要用标题猜
 - 问"上次之后库里多了什么" → 先 `--changes` 记下 cursor，下一轮 `--changes --since <version>`
+- 要读一条长笔记的某一节 → 先 `--headings` 拿 offset 与长度，再 `--offset/--limit`；整篇读是最后一档（一篇 9,413 字的节笔记有 27 个标题）
+- 问"这个分类里有哪些论文" → `--collection <key>`（默认只列记录）；要连笔记一起看才加 `--all-rows`
 
-**出处**：`tools/zotero-read.mjs` · `--retrieve` · `--changes` · `--find-doi` · `citationLines` · `tokenize` · `extraLines`<br>`tools/zotero-local-api.mjs` · `changedItemsSince` · `fieldNamesForType`
+**出处**：`tools/zotero-read.mjs` · `--retrieve` · `--changes` · `--find-doi` · `citationLines` · `tokenize` · `extraLines`<br>`tools/zotero-read.mjs` · `noteHeadings` · `printTermPassages` · `itemForJson` · `LISTING_SCAN`<br>`tools/zotero-local-api.mjs` · `changedItemsSince` · `fieldNamesForType`
 
 #### `zotero-export.mjs` — 导出：逐条 citation / 整段 bibliography / bibtex / biblatex / ris / csljson
 
