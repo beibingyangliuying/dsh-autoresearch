@@ -16,7 +16,6 @@
 import {
   buildCollectionTree,
   chunkText,
-  childForJson,
   citationFields,
   citationLines,
   classifyHit,
@@ -24,6 +23,7 @@ import {
   extraLines,
   findPassages,
   groupHits,
+  itemForJson,
   noteHeadings,
   parseArgs,
   pickAttachment,
@@ -293,6 +293,12 @@ throws('--screen without --collection is refused', () => parseArgs(['--search', 
 throws('--screen with --limit is refused, because it would mean two things at once', () =>
   parseArgs(['--collection', 'k', '--screen', '--limit', '20']),
 )
+check(parseArgs(['--collection', 'k', '--all-rows']).allRows === true, 'a listing can ask for every member of the collection')
+check(parseArgs(['--collection', 'k']).allRows === false, 'and lists records unless asked otherwise')
+throws('--all-rows outside --collection is refused', () => parseArgs(['--search', 'x', '--all-rows']))
+throws('--all-rows with --screen is refused, because a screening pass already separates them', () =>
+  parseArgs(['--collection', 'k', '--screen', '--all-rows']),
+)
 
 // --- what a 404 from the library means ------------------------------------------------------------
 
@@ -516,14 +522,14 @@ check(noteHeadings('<div><p>only   spaced   text</p></div>').headings[0].text ==
 console.log('\n[17] a child note is listed by key and version, not by its stored body')
 
 const noteChild = { key: 'NOTE0001', version: 41, itemType: 'note', title: '', note: '<p>a body</p>' }
-const slimmed = childForJson(noteChild)
+const slimmed = itemForJson(noteChild)
 check(slimmed.note === undefined, 'the stored HTML is left out')
 check(slimmed.noteCharacters === 13, 'its length is reported instead', String(slimmed.noteCharacters))
 check(slimmed.key === 'NOTE0001' && slimmed.version === 41, 'the fields a write needs survive')
 check(noteChild.note === '<p>a body</p>', 'the input is not mutated')
 const pdfChild = { key: 'ATT00001', version: 9, itemType: 'attachment', contentType: 'application/pdf' }
-check(childForJson(pdfChild).noteCharacters === undefined, 'a child with no body gains no length')
-check(JSON.stringify(childForJson({})) === '{}', 'an empty child stays empty')
+check(itemForJson(pdfChild).noteCharacters === undefined, 'a child with no body gains no length')
+check(JSON.stringify(itemForJson({})) === '{}', 'an empty child stays empty')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

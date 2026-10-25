@@ -100,6 +100,15 @@ const SCREEN_PAGE = 100
 const DEFAULT_SCREEN_LIMIT = 300
 /** A ceiling on how many rows a screening pass will read, so a runaway collection stops loudly. */
 const SCREEN_CAP = 2_000
+
+/**
+ * How many rows a plain `--collection` listing reads before it stops and says so.
+ *
+ * `--limit` counts RECORDS there, and this library's "04-2" collection answers 56 rows for 12 records,
+ * so a row-sized page would show ten notes and no papers. Enough rows to find a few records, few enough
+ * that a listing stays one or two requests; `--screen` is the pass that reads a whole collection.
+ */
+const LISTING_SCAN = 400
 /** The file-side reader, named in a `fix` line only as an absolute, runnable path. */
 const PDF_TOOL = fileURLToPath(new URL('./zotero-pdf.mjs', import.meta.url))
 
@@ -402,7 +411,7 @@ const USAGE =
   '       node tools/zotero-read.mjs --retrieve <key> --query "<terms>" [--passages N]\n' +
   '                                  [--sources abstract,notes,fulltext]\n' +
   '       node tools/zotero-read.mjs --locate <key>   # the best attachment: a local path or a web URL\n' +
-  '       node tools/zotero-read.mjs --collections | --collection <key> | --tags\n' +
+  '       node tools/zotero-read.mjs --collections | --collection <key> [--all-rows] | --tags\n' +
   '       node tools/zotero-read.mjs --changes [--since N]   # baseline, or what changed after a version\n' +
   '       node tools/zotero-read.mjs --item-types | --item-fields <type> | --saved-searches\n' +
   '       node tools/zotero-read.mjs --find-doi <doi>   # is that work already in this library?\n' +
@@ -413,6 +422,8 @@ const USAGE =
   '       and then --offset is the cheap way into one section of a long one.\n' +
   '       --json reports a record with its children\'s metadata only: a child note\'s stored body is left\n' +
   '       out (its length is in `noteCharacters`), so read that note with --item <noteKey> --json.\n' +
+  '       --collection lists RECORDS, counting --limit in records and hiding the notes and attachments\n' +
+  '       filed beside them; --all-rows lists every member of the collection instead.\n' +
   '       --screen enumerates a whole collection and prints one abstract per record; --screen-limit sets\n' +
   '       the characters printed per abstract (default 300). --limit does not apply to a screening pass.'
 
@@ -435,6 +446,7 @@ export function parseArgs(argv) {
     attachment: '',
     grep: '',
     headings: false,
+    allRows: false,
     screen: false,
     screenLimit: DEFAULT_SCREEN_LIMIT,
     json: false,
@@ -557,6 +569,9 @@ export function parseArgs(argv) {
       case '--headings':
         options.headings = true
         break
+      case '--all-rows':
+        options.allRows = true
+        break
       case '--screen':
         options.screen = true
         break
@@ -607,6 +622,12 @@ export function parseArgs(argv) {
   // conflicting notion of "how much of the collection". The character budget is `--screen-limit`.
   if (options.screen && options.limitRaw !== undefined) {
     throw new UsageError('--screen reads every row of the collection; set --screen-limit for the characters per abstract, not --limit')
+  }
+  if (options.allRows && options.mode !== 'collection') {
+    throw new UsageError('--all-rows lists every member of a collection, so it applies to --collection <key> only')
+  }
+  if (options.allRows && options.screen) {
+    throw new UsageError('--screen separates records from notes already, so --all-rows has nothing to add')
   }
   // Both `--grep` and `--headings` read a note's TEXT, which only a note has. The item a reader
   // probably means is the record, so the refusal names the command that would work - the silent no-op
@@ -770,17 +791,17 @@ export function citationLines(data = {}) {
 const EXTRA_LINES_MAX = 12
 
 /**
- * A child item as `--json` reports it: its metadata and how long its body is, never the body itself.
+ * An item as `--json` reports it: its metadata and how long its stored body is, never the body itself.
  *
  * Measured on `DSPZ6AG3`: `--item --json` answered 13,916 characters, of which the record's own data was
- * under 1,400 - the rest was the stored HTML of its child notes. A machine reading this output almost
- * always wants the children's keys and versions (to write one), not their prose, and a caller that does
- * want a body reads that note directly with `--item <noteKey> --json`.
+ * under 1,400 - the rest was the stored HTML of its child notes. The same holds for a collection
+ * listing, where a note row would otherwise carry its whole body. A caller that does want a body reads
+ * that note directly with `--item <noteKey> --json`.
  *
- * @param {object} [data] One child item's `data`.
+ * @param {object} [data] One item's `data`.
  * @returns {object} That `data` without the stored note body, plus `noteCharacters` when it had one.
  */
-export function childForJson(data = {}) {
+export function itemForJson(data = {}) {
   const { note, ...rest } = data
   return note === undefined ? rest : { ...rest, noteCharacters: String(note).length }
 }
@@ -1001,7 +1022,7 @@ async function runItem(options) {
           library: options.library,
           citation: citationFields(data),
           data,
-          children: children.map((child) => childForJson(child.data)),
+          children: children.map((child) => itemForJson(child.data)),
           fulltextSource: picked,
         },
         null,
@@ -1568,24 +1589,66 @@ async function runCollections(options) {
   walk(tree, 0)
 }
 
+/**
+ * One collection's members, as records unless `--all-rows` asks for every member.
+ *
+ * A note filed in a collection is a member in its own right, so the rows arrive mixed and nothing is
+ * collapsed onto a parent - but a listing of papers is what a reader wants, and measured, "+04-2"
+ * answers 56 rows for its 12 records: a row-sized page of ten showed ten notes and no papers. So
+ * `--limit` counts RECORDS, and the notes and attachments are counted and named rather than printed.
+ *
+ * @param {object} options The parsed command line.
+ * @returns {Promise<void>} Prints the listing.
+ */
 async function runCollectionItems(options) {
-  const { rows, total } = await paginatedJson(
-    `${libraryPrefix(options.library)}/collections/${options.value}/items?format=json&limit=${options.limit}`,
-  )
+  const base = `${libraryPrefix(options.library)}/collections/${options.value}/items?format=json`
+  const shown = []
+  let records = 0
+  let scanned = 0
+  let total = 0
+  for (let start = 0; start < LISTING_SCAN; start += SCREEN_PAGE) {
+    const page = await paginatedJson(`${base}&limit=${SCREEN_PAGE}&start=${start}`)
+    total = page.total
+    for (const row of page.rows) {
+      scanned += 1
+      const itemType = row.data?.itemType
+      if (!options.allRows && (itemType === 'note' || itemType === 'attachment')) continue
+      records += 1
+      if (shown.length < options.limit) shown.push(row)
+    }
+    if (scanned >= total || shown.length >= options.limit) break
+  }
+  const complete = scanned >= total
+  const hidden = scanned - records
   if (options.json) {
-    console.log(JSON.stringify({ collection: options.value, total, rows: rows.length, items: rows.map((row) => row.data) }, null, 2))
+    console.log(
+      JSON.stringify(
+        {
+          collection: options.value,
+          total,
+          scanned,
+          complete,
+          records: options.allRows ? undefined : records,
+          hidden: options.allRows ? undefined : hidden,
+          shown: shown.length,
+          items: shown.map((row) => itemForJson(row.data ?? {})),
+        },
+        null,
+        2,
+      ),
+    )
     return
   }
-  console.log(`collection: ${options.value} · total ${total} · showing ${rows.length}`)
-  if (rows.length === 0) {
-    console.log('\n0 items in this collection.')
+  console.log(
+    `collection: ${options.value} · ${total} row(s)${complete ? '' : ` · ${scanned} read`}` +
+      (options.allRows ? '' : ` · ${records} record(s) · ${hidden} note/attachment hidden`),
+  )
+  if (shown.length === 0) {
+    console.log(`\n0 ${options.allRows ? 'items' : 'records'} in this collection.`)
     return
   }
   console.log('')
-  // Each row here is itself a member of the collection, so nothing is collapsed onto a parent: a note
-  // filed in a collection is a member in its own right, and saying "unknown item" about it would be a
-  // statement about this tool rather than about the library.
-  rows.forEach((row, index) => {
+  shown.forEach((row, index) => {
     const data = row.data ?? {}
     const label = `[${data.itemType ?? 'unknown type'}]`
     const year = yearOf(data.date) || '????'
@@ -1593,13 +1656,16 @@ async function runCollectionItems(options) {
     const parent = data.parentItem ? `   parent ${data.parentItem}` : ''
     console.log(`${index + 1}. ${row.key}  ${year}  ${label}  ${title}${parent}`)
   })
-  // A listing that silently stops at the page size reads as "this is the collection". Measured: one
-  // collection reported 34 items in the tree and the default page listed 10 of them.
-  if (rows.length < total) {
+  // A listing that silently stops reads as "this is the collection". Measured: one collection reported
+  // 34 items in the tree and the default page listed 10 of them.
+  if (!complete || shown.length < records) {
     console.log('')
+    const what = options.allRows ? 'row(s)' : 'record(s)'
     console.log(
-      `truncated : showing ${rows.length} of ${total} rows - the remaining ${total - rows.length} are NOT listed. ` +
-        'Raise --limit, or use --screen to enumerate the whole collection.',
+      `truncated : showing ${shown.length} of ${records} ${what}` +
+        (complete ? '' : `, read from the first ${scanned} of ${total} rows`) +
+        ' - the rest are NOT listed. Raise --limit' +
+        (options.allRows ? '.' : ', or use --screen to read the whole collection.'),
     )
   }
 }
