@@ -1,6 +1,6 @@
 {
   "name": "@beibingyangliuying/dsh-autoresearch-preset",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "A domain-neutral research workbench for DSH: an agent preset, fourteen on-demand research disciplines, three external channels reached through shipped command-line helpers, and a study scaffold.",
   "license": "MIT",
   "scripts": { "test": "node tools/dev/run-selftests.mjs" },
