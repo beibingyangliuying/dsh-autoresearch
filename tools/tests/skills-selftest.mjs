@@ -32,7 +32,7 @@ check(parseSkill('---\nname: a\n') === undefined, 'an unterminated front matter 
 // --- the shipped files -------------------------------------------------------------------------
 
 const skills = readSkills()
-check(skills.length === 13, 'thirteen disciplines ship with the bundle', `found=${skills.length}`)
+check(skills.length === 14, 'fourteen disciplines ship with the bundle', `found=${skills.length}`)
 
 for (const skill of skills) {
   const problems = []
@@ -82,6 +82,7 @@ for (const expected of [
   'experiment-protocol',
   'synthesis-plan',
   'direction-probe',
+  'key-terms',
 ]) {
   check(names.has(expected), `shipped: ${expected}`)
 }

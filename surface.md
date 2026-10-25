@@ -12,6 +12,7 @@ mounts no MCP server. This file answers one question only — *which name implem
 | Collection discipline — one collection becomes a candidate queue for one named question, ruled out at the abstract and recorded in that question's own ledger (§4) | `collection-sweep` |
 | Reading-triage discipline — how far one paper is worth reading for one named question, recorded in that question's own ledger (§4) | `reading-triage` |
 | Section-notes discipline — one `/section-N` explanation note per top-level method section (§4) | `section-notes` |
+| Key-terms discipline — the three to five phrases that say what one paper does, drafted from its section notes into the remark line, with the verdict and the rating left to the owner (§4) | `key-terms` |
 | Adoption discipline — what a paper read may lend, under what condition, into which module (§4) | `adoption-ruling` |
 | Direction discipline — what the record refused becomes candidate moves with a kill condition, and competing directions only when two survivors exclude each other (§4) | `direction-probe` |
 | Challenge discipline — objections, or an honest refusal (§4) | `redteam-ruling` |

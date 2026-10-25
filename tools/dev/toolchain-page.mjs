@@ -299,6 +299,7 @@ export const HELPERS = [
     ],
     cites: [
       cite('tools/zotero-remark.mjs', 'REMARK_LINE', 'planRewrite', 'planExtra', 'TERM_COUNT', 'OUTCOME UNKNOWN'),
+      cite('skills/key-terms/SKILL.md', 'key-terms'),
     ],
   },
   {

@@ -82,7 +82,7 @@ subagent from it); the change applies to agents created after the switch, not to
 - **A composition of its own.** The preset declares its own rows rather than inheriting the default
   surface, and a small isolation plugin masks the profile's other global tools so a research session
   is not buried in unrelated capabilities.
-- **Disciplines on demand.** Thirteen written disciplines ship **inside the bundle** and the preset
+- **Disciplines on demand.** Fourteen written disciplines ship **inside the bundle** and the preset
   registers them itself, so they are available to its agents — and to no other session in the
   profile — with no copying step.
 - **Three external channels.** A preprint index, the owner's local reference library (including

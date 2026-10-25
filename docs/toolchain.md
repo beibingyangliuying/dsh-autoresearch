@@ -210,7 +210,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 要给某个条目的简记补/改那 3~5 个短语 → 先 `--item` 读行，再干跑，再 `--write`
 - 业主的句子有一个字对不上 → 不要改调用方式去绕，重新读那一行照抄
 
-**出处**：`tools/zotero-remark.mjs` · `REMARK_LINE` · `planRewrite` · `planExtra` · `TERM_COUNT` · `OUTCOME UNKNOWN`
+**出处**：`tools/zotero-remark.mjs` · `REMARK_LINE` · `planRewrite` · `planExtra` · `TERM_COUNT` · `OUTCOME UNKNOWN`<br>`skills/key-terms/SKILL.md` · `key-terms`
 
 #### `zotero-collection.mjs` — 分类：列出 / 建 / 改名 / 归档 / 移出
 

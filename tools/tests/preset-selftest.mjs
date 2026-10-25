@@ -61,6 +61,7 @@ const SHIPPED_NAMES = [
   'subagent-contract',
   'experiment-protocol',
   'synthesis-plan',
+  'key-terms',
 ]
 
 /** English number words, so a prose count can be compared with an actual one. */

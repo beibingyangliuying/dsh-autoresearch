@@ -2,9 +2,9 @@
 # DOMAIN-NEUTRAL research workbench. What it changes relative to `standard`:
 #   - `persona` carries a resident research discipline (typing by block, one carrier and the
 #     current state first, no unfalsifiable wording, no memory-based citations, read-before-write) plus
-#     the ORDER across its thirteen research-discipline skills. Each skill states its own trigger in its
+#     the ORDER across its fourteen research-discipline skills. Each skill states its own trigger in its
 #     catalog entry, and only `name: description` reaches the model (`dsh-tool-skill`, capped at 500
-#     characters), so repeating the thirteen triggers here is a second carrier of one sentence — the
+#     characters), so repeating the fourteen triggers here is a second carrier of one sentence — the
 #     thing rule 12 forbids (Revision 40, #91 of docs/decisions.md).
 #   - `persona` deliberately has NO `suffix`. The kernel registered `cwd` as a prompt variable only
 #     through 0.2.0; from 0.2.1 its registry holds `provider` and `model` alone, and prompt
