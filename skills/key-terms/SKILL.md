@@ -195,11 +195,13 @@ evidence or the list of records that got nothing.
 
 ## 7. Instrument discipline
 
-- **Read the line with `zotero-remark.mjs --item`, not with `zotero-read.mjs --json`.** The JSON answer is
-  the whole record *including every child note's stored HTML*: tens of thousands of characters for a field
-  of a few dozen. A plain read prints `extra` as lines.
+- **Read the line with `zotero-remark.mjs --item`, not with `zotero-read.mjs --json`.** The remark read
+  answers with exactly what this act needs - the line, its bracketed verdict, the body, and every other
+  `extra` line the write will leave alone - in a few hundred characters; the JSON answer is the whole
+  record, of which this line is one key among forty.
 - **The notes' first paragraphs are the cheap pass.** One `zotero-section-note.mjs --item` call answers the
-  whole record; open a note in full only when its first paragraph does not settle the contribution.
+  whole record. When a first paragraph does not settle the contribution, read the part of the note that
+  does (`--headings`, then `--offset`), and the whole note only when even that does not.
 - **Dry run first, every time, and show the change.** The write is one record, and the reference manager
   asks the owner to Allow it — that dialog is his, not a formality to get past.
 - **Read the exit code as three answers.** `0` = written and read back · `1` = refused and **nothing was
