@@ -57,8 +57,11 @@ Read-only, in this order:
    section is covered. **This decides most records.** The first paragraph of a section note names the
    section's own subject, which is the phrase.
 
-3. **The whole note** — `{{presetTools}}/zotero-read.mjs --item <noteKey> --limit 12000` only when a
-   first paragraph does not settle what the section contributes. Say which notes were opened in full.
+3. **The part of the note that decides it** — `{{presetTools}}/zotero-read.mjs --item <noteKey> --headings`
+   lists the note's own headings with the offset and the length of each; `--offset N --limit M` then reads
+   just that part, and `--grep "<term>"` reads the paragraphs that mention a term. Reading the whole note
+   is the last resort, not the first: `--limit 12000` on a section note costs its entire length (measured,
+   9,413 characters for 27 headings). Say which notes were opened, and to which part of them.
 
 4. **The paper's own outline** — `{{presetTools}}/zotero-pdf.mjs --item <recordKey> --outline` only when
    the notes' headings carry no ordinal and the order is in doubt. It is authoritative about what the
