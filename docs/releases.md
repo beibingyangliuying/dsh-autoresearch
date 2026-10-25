@@ -748,3 +748,28 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 **落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 39–41）· [`cordis.patch.yml`](../cordis.patch.yml) · [`tools/`](../tools/) 的新布局 · [`skills/`](../skills/) · [`docs/decisions.md`](decisions.md) §95 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)（生成物）。
 
 **远端复核结果（2026-10-24）**：`release-check --tag v0.18.0` 四项 `OK`——版本 0.18.0、组合不挂 MCP 服务器、名册上 19 个 helper 全在包内、tag 与 `main` 同为 `971780f`，**exit 0**。首次调用得 `UNVERIFIED`（`fetch failed`），同一分钟内重试即通：是传输的一次抖动，不是发布件的缺陷——这正是退出码 3 与 1 要分开的原因。
+
+## §97 · 0.19.0 发布：简记的词有了纪律与写入器，读侧四笔账（2026-10-25）
+
+**为什么是 minor**：新增一条纪律（`key-terms`，第十四条）与一个写入器（`zotero-remark.mjs`），契约到 Revision 42；同时把读侧四个已有的读法改得**更便宜也更诚实**——`--collection` 的默认含义与 `--json` 的形状都变了，所以不是补丁版。
+
+**相对 0.18.0 的 12 个提交，按三层看**：
+
+1. **工具**。[`zotero-remark.mjs`](../tools/zotero-remark.mjs)：只换 `remark:` 那一行，整行新值 + 背诵旧值，对行的形状**零假设**（闸门从"词段账目"改掉，缘由见 `decisions.md` §96 的同日修订）。[`zotero-read.mjs`](../tools/zotero-read.mjs)：`--item` 打印 `extra` 行（此前只能 `--json`，约 3 万字符换一个 100 字的字段）；笔记可 `--headings` 按标题进、`--grep` 在笔记上**真生效**（此前静默忽略）；`--json` 不再背子笔记正文、stdout 可直接 parse；`--collection` 默认只列记录。
+2. **纪律**。`key-terms` 第十四章：词＝方法节的主干、按论文自己的节序；没有节笔记就没有词、也不排队提醒；括号评价与 `rate:` 永不代写；写侧只动那一行，格式是**约定**不是闸门。
+3. **契约与记录**。Revision 42（§4 多一块，十四个触发）；`decisions.md` §96（含属主当日裁定）与 §97（读侧实测）；`coverage.md` 与生成物 `toolchain.md` 跟上。
+
+**这一版建立在哪些实测上**：
+
+- **真实库写入**：`DSPZ6AG3` 四条短语落地、`rate: 2` 原样、版本 5071→5133，回读由独立的 `--item` 确认；`/04-2/` 分类另 8 条同类改写，逐条回读一致，四条经判断不动。
+- **读侧**：一条 9,795 字符的节笔记 → `--headings` **1,646**（27 个标题），`--offset 232 --limit 140` 读回的正是 `1. 数据设置`；同一条记录的 `--json` 13,916 → **5,388** 且 `JSON.parse` 通过；分类 56 行 → **1,668** 字符的 12 条记录。
+
+**验证在最终树上**：`npm test` → **27/27** PASS（0.18.0 时 27；本轮新增 18 条断言在既有文件里）；`node tools/dev/release-check.mjs --local` PASS 且工作树干净；`toolchain-page --check` 29 条 claim 全部有出处。**远端复核**：`node tools/dev/release-check.mjs --tag v0.19.0`（推送后执行，四项逐条 OK、exit 0 才算完成）。
+
+**仍然未做**：
+
+- 0.18.0 欠的三条照旧：`package.json` 没有 `files` 字段；`new-project.ps1` 无自测；`backlog` 第 8 条（读侧模式改子命令）等触发条件。
+- `--grep` 对**高频词**仍然贵：`关键元件` 在那条笔记里命中 13 次、5,246 字符——那种词的正确入口是 `--headings`，不是 `--grep`。
+- `zotero-read` 的自测仍是纯函数级：`--json` 的 stdout 契约（纯 JSON）只有手验，没有 CLI 桩。
+
+**落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 42）· [`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) · [`docs/decisions.md`](decisions.md) §96–97 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)。
