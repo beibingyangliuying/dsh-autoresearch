@@ -88,6 +88,14 @@ console.log('\n[3] only the named middle changes, or nothing is planned')
 
 const plain = planRewrite({ value: '（一般）旧甲；旧乙', terms: ['新甲', '新乙'], oldTerms: '旧甲；旧乙' })
 check(plain.next === '（一般）新甲；新乙', 'the phrases replace the old body, the verdict stays', plain.next)
+check(
+  planRewrite({ value: '（一般）旧甲；', terms: ['新甲'], oldTerms: '旧甲；' }).next === '（一般）新甲；',
+  'a body that ended with the separator still does, so only the words change',
+)
+check(
+  planRewrite({ value: '（一般）旧甲', terms: ['新甲'], oldTerms: '旧甲' }).next === '（一般）新甲',
+  'and a body that did not end with one still does not',
+)
 
 const kept = planRewrite({
   value: '（一般）旧甲；框架还可以',

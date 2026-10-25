@@ -158,6 +158,7 @@ export function checkTermShape(text) {
  * @param {string} [input.oldTerms] The exact text being replaced.
  * @param {string} [input.keepEval] The exact tail being kept - the owner's own sentence.
  * @returns {{next: string, prefix: string, body: string}} The next value and the parts it was built from.
+ *   The separator the old body ended with is kept, so the write changes the phrases and no punctuation.
  * @throws {Refusal} When the named parts do not add up to the current line.
  */
 export function planRewrite({ value, terms, oldTerms = '', keepEval = '' }) {
@@ -174,7 +175,10 @@ export function planRewrite({ value, terms, oldTerms = '', keepEval = '' }) {
       },
     )
   }
-  const next = `${prefix}${formatTerms(terms)}${keepEval === '' ? '' : `${SEPARATOR}${keepEval}`}`
+  // The separator the line already ended with is kept, so a rewrite changes the words and nothing
+  // else: a line that closed its list with `；` still closes it, and one that did not still does not.
+  const closed = keepEval === '' && /[；;]$/.test(body) ? body.slice(-1) : ''
+  const next = `${prefix}${formatTerms(terms)}${closed}${keepEval === '' ? '' : `${SEPARATOR}${keepEval}`}`
   return { next, prefix, body }
 }
 

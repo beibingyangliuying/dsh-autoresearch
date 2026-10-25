@@ -107,7 +107,9 @@ paper.
 - **Phrases are short.** His own lines run about eight characters at the median and rarely past twenty;
   the tool's bound is a shape check, not a target. A phrase that needs a clause is usually two phrases,
   or the wrong section.
-- **Joined by a full-width `；`, with no trailing one.** The write does that; do not hand-format.
+- **Joined by a full-width `；`.** The write joins them, and keeps the separator the line already
+  ended with — a line that closed with `；` still closes with one, so a rewrite changes the words and no
+  punctuation. Do not hand-format the line.
 
 ### 3.3 How many
 
@@ -127,7 +129,7 @@ character**; otherwise it stops and names the first character where the two part
   one character is refused, and one that shifts by none is rewritten — the refusal is the only thing
   standing between a typo and the loss of his judgement.
 - **A line with no closing sentence** passes `--old-terms` alone, and `--keep-eval` stays off. The write
-  then ends with the last phrase, which is what his own lines do.
+  then ends the way the old one ended — with the separator if it had one, without if it did not.
 - **A record whose `extra` has no remark line** needs `--create`; the line is added first, with no verdict
   invented and no rating. Say in the report that the line now carries phrases and no verdict.
 - **Two remark lines, or a line the tool cannot tell from the digest, are the owner's to settle** — report
