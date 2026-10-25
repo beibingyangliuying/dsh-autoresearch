@@ -16,6 +16,7 @@
 import {
   buildCollectionTree,
   chunkText,
+  childForJson,
   citationFields,
   citationLines,
   classifyHit,
@@ -509,6 +510,20 @@ check(noteHeadings(undefined).total === 0, 'and a missing body does not throw')
 check(noteHeadings(NOTE_HTML, { maxHeadings: 1 }).headings.length === 1, 'the listing can be capped without losing the total')
 check(noteHeadings(NOTE_HTML, { maxHeadings: 1 }).total === 3, 'a capped listing still says how many there are')
 check(noteHeadings('<div><p>only   spaced   text</p></div>').headings[0].text === 'only spaced text', 'whitespace is collapsed as visibleText collapses it')
+
+// --- what --json says about a child ---------------------------------------------------------------
+
+console.log('\n[17] a child note is listed by key and version, not by its stored body')
+
+const noteChild = { key: 'NOTE0001', version: 41, itemType: 'note', title: '', note: '<p>a body</p>' }
+const slimmed = childForJson(noteChild)
+check(slimmed.note === undefined, 'the stored HTML is left out')
+check(slimmed.noteCharacters === 13, 'its length is reported instead', String(slimmed.noteCharacters))
+check(slimmed.key === 'NOTE0001' && slimmed.version === 41, 'the fields a write needs survive')
+check(noteChild.note === '<p>a body</p>', 'the input is not mutated')
+const pdfChild = { key: 'ATT00001', version: 9, itemType: 'attachment', contentType: 'application/pdf' }
+check(childForJson(pdfChild).noteCharacters === undefined, 'a child with no body gains no length')
+check(JSON.stringify(childForJson({})) === '{}', 'an empty child stays empty')
 
 console.log(`\n${failures === 0 ? 'PASS' : `FAIL (${failures})`}`)
 process.exit(failures === 0 ? 0 : 1)

@@ -411,6 +411,8 @@ const USAGE =
   '       --limit counts ROWS for a search (at most 100, the library\'s page size) and CHARACTERS for a\n' +
   '       read (default 12000, at most 100000). A note costs its own length on every read, so --headings\n' +
   '       and then --offset is the cheap way into one section of a long one.\n' +
+  '       --json reports a record with its children\'s metadata only: a child note\'s stored body is left\n' +
+  '       out (its length is in `noteCharacters`), so read that note with --item <noteKey> --json.\n' +
   '       --screen enumerates a whole collection and prints one abstract per record; --screen-limit sets\n' +
   '       the characters printed per abstract (default 300). --limit does not apply to a screening pass.'
 
@@ -666,10 +668,19 @@ async function collectionNames(library) {
   return new Map(rows.map((row) => [row.key, row.data?.name ?? '(unnamed)']))
 }
 
-/** The header every mode prints, so a report always says which library answered. */
-async function printIdentity() {
+/**
+ * The header every mode prints, so a report always says which library answered.
+ *
+ * `--json` is for a machine, so the header goes to stderr there and stdout stays parseable - the rule
+ * the other helpers already follow (measured: `zotero-section-note.mjs --item <key> --json` answers
+ * pure JSON), and a header line in front of it is what made every consumer strip the first line.
+ *
+ * @param {boolean} [json] Whether this run's stdout is machine-readable.
+ */
+async function printIdentity(json = false) {
   const info = await serverInfo()
-  console.log(`library : Zotero ${info.version} · server ${info.id}`)
+  const write = json ? console.error : console.log
+  write(`library : Zotero ${info.version} · server ${info.id}`)
 }
 
 function describeCreators(creators = []) {
@@ -759,12 +770,28 @@ export function citationLines(data = {}) {
 const EXTRA_LINES_MAX = 12
 
 /**
+ * A child item as `--json` reports it: its metadata and how long its body is, never the body itself.
+ *
+ * Measured on `DSPZ6AG3`: `--item --json` answered 13,916 characters, of which the record's own data was
+ * under 1,400 - the rest was the stored HTML of its child notes. A machine reading this output almost
+ * always wants the children's keys and versions (to write one), not their prose, and a caller that does
+ * want a body reads that note directly with `--item <noteKey> --json`.
+ *
+ * @param {object} [data] One child item's `data`.
+ * @returns {object} That `data` without the stored note body, plus `noteCharacters` when it had one.
+ */
+export function childForJson(data = {}) {
+  const { note, ...rest } = data
+  return note === undefined ? rest : { ...rest, noteCharacters: String(note).length }
+}
+
+/**
  * The owner's `extra` field, as printed lines.
  *
  * This is where the record keeps what its owner wrote about it rather than what the catalogue says:
  * `remark:` (his one-line digest, whose phrases a discipline drafts) and `rate:` (his own rating), plus
  * the translations and identifiers the reference manager imports. It used to be reachable only through
- * `--json`, which answers with the whole record INCLUDING every child note's stored HTML - tens of
+ * `--json`, which answered with the whole record plus every child note's stored body - tens of
  * thousands of characters for a field of a few dozen.
  *
  * @param {unknown} extra The record's `extra` value.
@@ -974,7 +1001,7 @@ async function runItem(options) {
           library: options.library,
           citation: citationFields(data),
           data,
-          children: children.map((child) => child.data),
+          children: children.map((child) => childForJson(child.data)),
           fulltextSource: picked,
         },
         null,
@@ -1728,9 +1755,10 @@ async function runTags(options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
-  await printIdentity()
+  await printIdentity(options.json)
   if (options.library.type !== 'user' || options.library.id !== 0) {
-    console.log(`shelf   : ${options.library.type}:${options.library.id}`)
+    const write = options.json ? console.error : console.log
+    write(`shelf   : ${options.library.type}:${options.library.id}`)
   }
   const modes = {
     search: runSearch,
