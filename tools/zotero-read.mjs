@@ -676,8 +676,42 @@ export function citationLines(data = {}) {
 }
 
 /**
- * Full-text indexing coverage, from the library's own two axes.
+ * How many lines of the owner's `extra` field a plain read prints before it says the rest is elsewhere.
  *
+ * The field is hand-typed, so its length is not a property this preset controls. Every record measured
+ * in the owner's library held under 500 characters, and a bound with a printed marker costs nothing when
+ * it is never reached - while an unbounded print is a field a paste can make unreadable.
+ */
+const EXTRA_LINES_MAX = 12
+
+/**
+ * The owner's `extra` field, as printed lines.
+ *
+ * This is where the record keeps what its owner wrote about it rather than what the catalogue says:
+ * `remark:` (his one-line digest, whose phrases a discipline drafts) and `rate:` (his own rating), plus
+ * the translations and identifiers the reference manager imports. It used to be reachable only through
+ * `--json`, which answers with the whole record INCLUDING every child note's stored HTML - tens of
+ * thousands of characters for a field of a few dozen.
+ *
+ * @param {unknown} extra The record's `extra` value.
+ * @param {{maxLines?: number}} [options] The bound, injected so the self-test can reach it.
+ * @returns {string[]} Already padded for the reader's label column; empty when the field is blank.
+ */
+export function extraLines(extra, { maxLines = EXTRA_LINES_MAX } = {}) {
+  const text = String(extra ?? '')
+  if (text.trim() === '') return []
+  const lines = text.split(/\r?\n/)
+  const shown = lines.length <= maxLines ? lines : lines.slice(0, maxLines)
+  const out = [`extra      : ${shown[0]}`]
+  for (const line of shown.slice(1)) out.push(`             ${line}`)
+  if (shown.length < lines.length) {
+    out.push(`             ... ${lines.length - shown.length} more line(s); --json keeps the whole field`)
+  }
+  return out
+}
+
+/**
+ * Full-text indexing coverage, from the library's own two axes.
  * `complete` is true only when at least one axis was reported and every reported axis agrees: a text
  * file has chars and no pages, a PDF has both, and a response that reports neither is incomplete rather
  * than a guess.
@@ -848,6 +882,7 @@ async function runItem(options) {
   if (data.url) console.log(`url        : ${data.url}`)
   console.log(`collections: ${collections.length === 0 ? 'none' : collections.map((c) => `${c} (${names.get(c) ?? 'unknown'})`).join(' · ')}`)
   console.log(`tags       : ${normalizeTags(data.tags).join(' · ') || 'none'}`)
+  for (const line of extraLines(data.extra)) console.log(line)
   console.log(`version    : ${data.version}   (a write must send If-Unmodified-Since-Version: ${data.version})`)
   console.log(`children   : ${children.length}`)
   for (const child of children) {

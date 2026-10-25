@@ -136,6 +136,7 @@ export const HELPERS = [
     can: [
       '`--search`（默认搜摘要＋笔记＋附件全文）· `--sort` / `--direction` / `--item-type` / `--trash` / `--library user:0|group:<id>`',
       '`--item`：题录块（venue/卷期页/publisher/repository 等）＋笔记正文按**可读文本**印，`--json` 保留原始 HTML 与题录字段',
+      '`--item` 还把业主自己写在 `extra` 里的行按行印出（`remark:` / `rate:` / `titleTranslation:` 等）：这不是题录，是**库主自己的批注**；超过 12 行才印标记，`--json` 给整字段',
       '`--retrieve <key> --query "<terms>" [--passages N] [--sources abstract,notes,fulltext]`：BM25 排段落，每条带 sourceRef/offset/score；缺的源进 `sourcesSkipped`',
       '`--locate <key>`：最佳附件是本地 path（并报 exists）还是 web URL',
       '`--changes [--since N]`：基线版本或增量 diff；`--item-types` / `--item-fields <type>` / `--saved-searches`',
@@ -155,7 +156,7 @@ export const HELPERS = [
       '问"上次之后库里多了什么" → 先 `--changes` 记下 cursor，下一轮 `--changes --since <version>`',
     ],
     cites: [
-      cite('tools/zotero-read.mjs', '--retrieve', '--changes', '--find-doi', 'citationLines', 'tokenize'),
+      cite('tools/zotero-read.mjs', '--retrieve', '--changes', '--find-doi', 'citationLines', 'tokenize', 'extraLines'),
       cite('tools/zotero-local-api.mjs', 'changedItemsSince', 'fieldNamesForType'),
     ],
   },
@@ -276,6 +277,28 @@ export const HELPERS = [
     when: ['要改上面那些：**在应用里改**，工具会说明每条为什么不是一行能表达'],
     cites: [
       cite('tools/zotero-edit.mjs', 'EDITABLE_FIELDS', 'REFUSED_FIELDS', 'invalidFields', '--item-fields', 'OUTCOME UNKNOWN'),
+    ],
+  },
+  {
+    name: 'zotero-remark.mjs',
+    role: '改一条记录 `extra` 里 `remark:` 行的**词段**，其余每个字符原样保留',
+    can: [
+      '只读：`--item <key>` 把该行拆成 前缀（括号评价）/ 正文 / 其余行 / `rate`，并**说明它不推断边界**',
+      '写：`--terms "<a；b；c>" [--old-terms "<当前正文>"] [--keep-eval "<业主的句子>"]`；两者必须**逐字**拼出正文',
+      '没有 `remark:` 行时 `--create` 新建一行并放在最前；`--terms` 拆不出 1~6 段、某段含换行或超 60 字 ⇒ 用法错误',
+    ],
+    refuses: [
+      '不猜"哪一段是词、哪一句是业主的话"：边界由调用方点名，猜出来就是替内容做决定',
+      '`remark:` 行多于一行 ⇒ 拒绝（哪一行是简记不是本工具裁决的）',
+      '除该行外的任何一行变了都不写：新 `extra` 只是旧 `extra` 换掉一行，工具自比后打印整行 diff',
+      '0/1/3 三种答案同其他写侧：冲突 1 · 4xx 1 · 5xx 或断线 3',
+    ],
+    when: [
+      '要给某个条目的简记补/改那 3~5 个短语 → 先 `--item` 读行，再干跑，再 `--write`',
+      '业主的句子有一个字对不上 → 不要改调用方式去绕，重新读那一行照抄',
+    ],
+    cites: [
+      cite('tools/zotero-remark.mjs', 'REMARK_LINE', 'planRewrite', 'planExtra', 'TERM_COUNT', 'OUTCOME UNKNOWN'),
     ],
   },
   {

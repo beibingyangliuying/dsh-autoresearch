@@ -402,6 +402,7 @@ node tools\tests\zotero-export-selftest.mjs     # the translator pipeline paths,
 node tools\tests\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
 node tools\tests\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
 node tools\tests\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
+node tools\tests\zotero-remark-selftest.mjs     # the remark accounting guard, one line changed, and the CLI against a stub
 node tools\tests\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
 node tools\tests\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, unclaim one of two tags, and the deletion path
 node tools\tests\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial

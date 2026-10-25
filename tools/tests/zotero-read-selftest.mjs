@@ -20,6 +20,7 @@ import {
   citationLines,
   classifyHit,
   coverageOf,
+  extraLines,
   findPassages,
   groupHits,
   parseArgs,
@@ -340,6 +341,23 @@ const PREPRINT = citationLines({ itemType: 'preprint', repository: 'arXiv', arch
 check(PREPRINT.includes('repository : arXiv') && PREPRINT.includes('archiveID  : arXiv:1706.03762'), 'a preprint names its repository and archive id')
 check(citationLines({ itemType: 'note' }).length === 0, 'a record with no citation fields prints no empty lines')
 check(!('abstractNote' in citationFields({ abstractNote: 'x' })), 'the abstract is not a citation field (it is metadata, per §66)')
+
+// The owner's own annotation lives in `extra`. It used to be reachable only through --json, which
+// answers with the whole record including every child note's HTML; the discipline that drafts his
+// remark phrases cannot pay that for a field of a few dozen characters.
+const REMARK = 'remark: （一般）甲；乙\nrate: 3\ntitleTranslation: 某标题'
+const extraBlock = extraLines(REMARK)
+check(extraBlock[0] === 'extra      : remark: （一般）甲；乙', 'the first line of extra prints in the label column', extraBlock[0])
+check(extraBlock[1] === '             rate: 3', 'the rest are indented under it, one per line', JSON.stringify(extraBlock[1]))
+check(extraBlock.length === 3, 'and every line is printed', `${extraBlock.length} line(s)`)
+check(extraLines('').length === 0, 'a blank field prints nothing at all')
+check(extraLines('   \n  ').length === 0, 'and neither does one holding only whitespace')
+const longExtra = Array.from({ length: 20 }, (_, i) => `line ${i}`).join('\n')
+const bounded = extraLines(longExtra)
+check(bounded.length === 13, 'a field past the bound prints the bound plus one marker line', `${bounded.length} line(s)`)
+check(bounded.at(-1).includes('8 more line(s)'), 'and the marker says how many lines are elsewhere', bounded.at(-1))
+check(bounded.at(-1).includes('--json'), 'and names the read that keeps the whole field')
+
 
 check(libraryPrefix(PERSONAL_LIBRARY) === '/api/users/0', 'the personal library is the default prefix')
 check(libraryPrefix({ type: 'group', id: 42 }) === '/api/groups/42', 'a group has its own prefix')
