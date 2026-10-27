@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": { "test": "node tools/dev/run-selftests.mjs" },
   "dependencies": {
-    "@beibingyangliuying/dsh-zotero": "^0.1.0",
+    "@beibingyangliuying/dsh-zotero": "github:beibingyangliuying/dsh-zotero#v0.1.0",
     "@deepseek-ai/schemastery": "^3.18.4"
   },
   "engines": { "dsh": ">=0.2.0-rc.2 <0.3.0-0" },

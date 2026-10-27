@@ -46,12 +46,13 @@ registers, and the row packages it mounts — is checked against the installed k
 `tools/tests/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
 **To install: DSH, plus one dependency.** `@beibingyangliuying/dsh-zotero` carries every external
-channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them. It is a
-normal npm package installed with this one, so there is no build step and no second toolchain: in
-particular no channel is a server installed and launched through `uvx`, so a Python environment is not
-part of using this preset. `@deepseek-ai/schemastery` stays direct because the row's configuration form
-needs it. The PDF engines are reached only through `zotero-pdf.mjs`, so they cost nothing on a request
-that does not read an attachment.
+channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them. It is
+installed from GitHub alongside this package (`github:beibingyangliuying/dsh-zotero#v0.1.0` in
+`dependencies`), so there is no build step and no second toolchain: in particular no channel is a
+server installed and launched through `uvx`, so a Python environment is not part of using this preset.
+`@deepseek-ai/schemastery` stays a registry dependency because the row's configuration form needs it.
+The PDF engines are reached only through `zotero-pdf.mjs`, so they cost nothing on a request that does
+not read an attachment.
 
 **The profile may be bare.** Four global toolsets are used when present and never required: the memory
 layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
