@@ -1,6 +1,6 @@
 {
   "name": "@beibingyangliuying/dsh-autoresearch-preset",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "description": "A domain-neutral research workbench for DSH: an agent preset, fourteen on-demand research disciplines, a study scaffold, and the disciplines that address the external channels shipped by @beibingyangliuying/dsh-zotero.",
   "license": "MIT",
   "scripts": { "test": "node tools/dev/run-selftests.mjs" },
@@ -8,7 +8,7 @@
     "@deepseek-ai/schemastery": "^3.18.4"
   },
   "peerDependencies": {
-    "@beibingyangliuying/dsh-zotero": "^0.1.0"
+    "@beibingyangliuying/dsh-zotero": ">=0.1.0 <0.3.0"
   },
   "peerDependenciesMeta": {
     "@beibingyangliuying/dsh-zotero": {
