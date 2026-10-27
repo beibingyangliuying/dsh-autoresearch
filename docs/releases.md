@@ -775,3 +775,32 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 **落在何处**：[`package.json`](../package.json) · [`protocol.md`](../protocol.md)（Revision 42）· [`skills/key-terms/SKILL.md`](../skills/key-terms/SKILL.md) · [`tools/zotero-remark.mjs`](../tools/zotero-remark.mjs) · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) · [`docs/decisions.md`](decisions.md) §96–97 · [`docs/coverage.md`](coverage.md) · [`docs/toolchain.md`](toolchain.md)。
 
 **远端复核结果（2026-10-25）**：`release-check --tag v0.19.0` 四项 `OK`——版本 0.19.0、组合不挂 MCP 服务器、名册上的 helper 全在包内、tag 与 `main` 同为 `9c8cf28`，**exit 0**。前三次调用都是 `UNVERIFIED`（`fetch failed`，底层 `ECONNRESET`），第四次通过：同一 URL 在一个进程里第一次连接被重置、第二次起 200，而三个独立进程各发一次又都 200 ⇒ 本机的偶发抖动，不是发布件的缺陷——这正是退出码 3 与 1 要分开的理由。
+
+## §98 · 0.20.0 发布：外部通道拆成独立包，零常驻原样（2026-10-27）
+
+**为什么是 breaking**：十八个 helper 与十七个自测移出本包，进 [`@beibingyangliuying/dsh-zotero`](https://github.com/beibingyangliuying/dsh-zotero)；本包不再有 `tools/*.mjs`。**零常驻没变**：仍不注册任何工具、不挂 MCP 行，不调用它的请求为它付出的 context 仍是 0。
+
+**相对 0.19.0 的五个提交，按层看**：
+
+1. **工具层**（`174c318`）。删 18 个 helper、17 个自测与 owner snippet；`preset-paths.js` 从"指向本包 `tools/`"改为解析通道包的 `tools-dir` 入口；新增 `tools/dev/channel-package.mjs`；release-check 的 helper 名册改为**读包目录**而不是手写清单——原来那条名册注释自己就写着"清单看不见它遗漏的东西"；toolchain 页的 cite 改 `channel/` 前缀并重生成。`{{presetTools}}` 这个 token 名没动，47 处技能正文零改动。
+2. **文档**（`050253b`、`6711e08`）。coverage map 的 24 处 `../tools/x.mjs` 相对链接；composition 两段"通道是自带 helper"的注释。
+3. **依赖形式**（`09e9cf6`、`e8f6658`）。先写 `github:…#v0.1.0`，实测 pnpm 12 报 `ERR_PNPM_EXOTIC_SUBDEP`（git 解析的子依赖不被允许）⇒ 改为 `peerDependencies` + `optional`，两步安装。漏装时 `preset-paths.js` 在加载阶段停下并把两条安装命令打出来。
+4. **复核工具**（`b1f27ca`）。`release-check --api`：`raw.githubusercontent.com` 在本机 20 秒超时，`api.github.com` 1 秒应答，同一批文件、同样的 404 语义，只换传输。
+
+**这一版建立在哪些实测上**：
+
+- 新包 `npm test` **17/17**；本包 **10/10**；`release-check --local` PASS。
+- `pnpm add github:beibingyangliuying/dsh-zotero#v0.1.0` 成功（19 s）；装出的包 `tools-dir` 解析出 18 个 helper，且 `zotero-read.mjs` 可读。
+- **两步安装**（`.npmrc` 设 `node-linker=hoisted` 复刻 profile）：先通道包、再 `file:` 装的本包，`preset-paths.js` 解析到 peer 的真实目录。
+
+**仍然未做**：
+
+- 两个包都没上 npm：分发只有 GitHub，`dsh-zotero` 发新版时本包的 peer 范围要跟着改。
+- 本包 `package.json` 仍无 `files` 字段（0.18.0 起欠）。
+- 新包的测试 fixture 仍带 `D:\Store`、`D:\Apps\Zotero` 这类盘符路径——与零常驻无关，但属于"机器痕迹"那一类，下次动那个包时清。
+
+**落在何处**：[`package.json`](../package.json) · [`preset-paths.js`](../preset-paths.js) · [`tools/dev/channel-package.mjs`](../tools/dev/channel-package.mjs) · [`tools/dev/release-check.mjs`](../tools/dev/release-check.mjs) · [`README.md`](../README.md) · [`cordis.patch.yml`](../cordis.patch.yml) · 外部仓库 `beibingyangliuying/dsh-zotero`。
+
+**远端复核结果（2026-10-27）**：`release-check --tag v0.20.0 --api` 四项 `OK`——版本 0.20.0、组合不挂 MCP 服务器、peer 声明 `@beibingyangliuying/dsh-zotero: ^0.1.0`、tag 与 `main` 同为 `e8f6658`，**exit 0**。同一时刻用默认传输跑同一命令是 `UNVERIFIED`（`fetch failed`）——就是上面那条 `raw.githubusercontent.com` 不可达，不是发布件的缺陷。
+
+**tag 曾被重打过**：`v0.20.0` 第一次推的树带着 `github:` 依赖，pnpm 装不上（上面第 3 条）。它没通过过任何一次远端复核，也没有安装者，所以删掉后在 `e8f6658` 上重打——这不是"移动一个已发布版本"，是修一个从未可用的版本。
