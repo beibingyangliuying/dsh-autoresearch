@@ -40,9 +40,9 @@ Confirm it registered — the composition should carry the preset row:
 dsh --profile web --dump-config | Select-String 'preset-autoresearch'
 ```
 
-That GitHub path is verified end to end: the package lands in the profile as a real copy, pnpm
-hoists the dependency the row imports so it resolves, and the composition then carries the preset and
-its three rows. The local-link path is for developing against a checkout.
+That GitHub path is verified end to end: each package lands in the profile as a real copy, the channel
+package's `tools-dir` entry resolves from the preset's own location, and the composition then carries
+the preset and its three rows. The local-link path is for developing against a checkout.
 
 ## Requirements
 
