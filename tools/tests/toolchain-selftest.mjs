@@ -14,12 +14,14 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CHANNEL_CITE_PREFIX, channelFile } from '../dev/channel-package.mjs'
 import { HELPERS, PAGE_PATH, citationGaps, claimList, pageStatus, renderPage } from '../dev/toolchain-page.mjs'
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const readRepoFile = (file) => {
+  const path = file.startsWith(CHANNEL_CITE_PREFIX) ? channelFile(file) : resolve(ROOT, file)
   try {
-    return readFileSync(resolve(ROOT, file), 'utf8')
+    return readFileSync(path, 'utf8')
   } catch {
     return undefined
   }
@@ -40,16 +42,16 @@ const gaps = citationGaps(claimList(), readRepoFile)
 check(gaps.length === 0, `all ${claimList().length} claims hold`, only(gaps))
 
 const goneSentence = citationGaps(
-  [{ label: 'a claim resting on a sentence nobody wrote', cites: [{ file: 'tools/zotero-read.mjs', must: ['the sentence that was deleted'] }] }],
+  [{ label: 'a claim resting on a sentence nobody wrote', cites: [{ file: 'channel/zotero-read.mjs', must: ['the sentence that was deleted'] }] }],
   readRepoFile,
 )
 check(goneSentence.length === 1, 'a citation to a sentence that is gone is reported - the control for the check above', only(goneSentence))
 
-const goneFile = citationGaps([{ label: 'a claim resting on a file nobody has', cites: [{ file: 'tools/zotero-nowhere.mjs', must: ['x'] }] }], readRepoFile)
+const goneFile = citationGaps([{ label: 'a claim resting on a file nobody has', cites: [{ file: 'channel/zotero-nowhere.mjs', must: ['x'] }] }], readRepoFile)
 check(/does not exist/.test(only(goneFile)), 'a citation to a file that is gone says so, rather than throwing on the read', only(goneFile))
 
 check(
-  citationGaps([{ label: 'a claim with several citations, one of them broken', cites: [{ file: 'tools/zotero-read.mjs', must: ['nextOffset'] }, { file: 'README.md', must: ['a phrase that is not there'] }] }], readRepoFile).length === 1,
+  citationGaps([{ label: 'a claim with several citations, one of them broken', cites: [{ file: 'channel/zotero-read.mjs', must: ['nextOffset'] }, { file: 'README.md', must: ['a phrase that is not there'] }] }], readRepoFile).length === 1,
   'one broken citation among several is still caught',
 )
 
@@ -65,7 +67,7 @@ check(
 
 console.log('\n[3] the roster matches the repository')
 for (const helper of HELPERS) {
-  check(readRepoFile(`tools/${helper.name}`) !== undefined, `the page names ${helper.name}, and that program exists`)
+  check(readRepoFile(`channel/${helper.name}`) !== undefined, `the page names ${helper.name}, and that program exists`)
 }
 check(HELPERS.length >= 9, 'the roster covers the reference-library channel and the preprint channel', `${HELPERS.length} helpers`)
 

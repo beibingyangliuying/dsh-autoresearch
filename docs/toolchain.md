@@ -16,21 +16,21 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 
 | 事实 | 出处（机械校验） |
 | --- | --- |
-| 读不需要授权；写要参考管理器**当场**给一次授权，`Always Allow` 的长期 key 按 server id 存在本机。 | `tools/zotero-local-api.mjs` · `createWriteGate`<br>`README.md` · `standing grant` |
-| 写成功不只是 200：**204 无 body 也算成功**，把 200 当唯一成功会把已完成的写报成"被拒绝"。 | `tools/zotero-local-api.mjs` · `isWriteAccepted` |
-| 写后回读按**读者可见文本**比，不按字节：应用会给它碰过的笔记套 `<div data-schema-version>`，并吃掉隐形注释。 | `tools/zotero-local-api.mjs` · `visibleText`<br>`tools/zotero-section-note.mjs` · `isApplicationWrapped` |
-| **tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。 | `docs/decisions.md` · `tag 活过应用改写`<br>`tools/zotero-section-note.mjs` · `RETIRE_TAG = '/retired'` |
+| 读不需要授权；写要参考管理器**当场**给一次授权，`Always Allow` 的长期 key 按 server id 存在本机。 | `channel/zotero-local-api.mjs` · `createWriteGate`<br>`README.md` · `standing grant` |
+| 写成功不只是 200：**204 无 body 也算成功**，把 200 当唯一成功会把已完成的写报成"被拒绝"。 | `channel/zotero-local-api.mjs` · `isWriteAccepted` |
+| 写后回读按**读者可见文本**比，不按字节：应用会给它碰过的笔记套 `<div data-schema-version>`，并吃掉隐形注释。 | `channel/zotero-local-api.mjs` · `visibleText`<br>`channel/zotero-section-note.mjs` · `isApplicationWrapped` |
+| **tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。 | `docs/decisions.md` · `tag 活过应用改写`<br>`channel/zotero-section-note.mjs` · `RETIRE_TAG = '/retired'` |
 | 记录的 `version` 可能是 0：那种记录上"别人改过没有"的守卫是**空转**，不是通过。 | `docs/decisions.md` · `39.3` |
 | 回收站端点**静默忽略 `itemType`**：`?itemType=note` 会答 `Total-Results: 0`，而回收站里可能躺着几百条 note。 | `README.md` · `ignores the type filter silently` |
-| 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`tools/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
-| 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`tools/zotero-pdf.mjs` · `(4) the page as an image` |
+| 本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。 | `protocol.md` · `cannot put an item in the trash`<br>`channel/zotero-section-note.mjs` · `DELETION IS PERMANENT` |
+| 抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。 | `docs/coverage.md` · `字体编码坏掉的数学`<br>`channel/zotero-pdf.mjs` · `(4) the page as an image` |
 | 结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另有一道上限，它属于**所挂的 shell 工具**（`dsh-tool-pwsh` 在 DSH 0.2.1-rc.2 上实测每流保留**最后 64,000 字节**，超过丢**开头**并给 spill 文件）⇒ 长文本切片读（12,000），被裁的片按 offset 重取。 | `docs/coverage.md` · `8,192`<br>`docs/coverage.md` · `64,000` |
 | 本预设**不做 OCR**，也不带第二个运行时：两个阅读引擎只经 `zotero-pdf.mjs` 使用，不读附件的请求不为它们付费。 | `docs/coverage.md` · `不做 OCR`<br>`README.md` · `Nine helper programs` |
 | helper 的路径必须从 agent 的工作目录可解析：技能体里是 `{{presetTools}}`，**工作区文件不许写解析后的绝对路径**。 | `protocol.md` · `INV-HELPER-1` |
-| 失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。 | `tools/refusal.mjs` · `export function refusalLines`<br>`README.md` · `What a failure says`<br>`protocol.md` · `INV-FAIL-1` |
-| **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`tools/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
-| **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `tools/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
-| `mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。 | `tools/metadata.mjs` · `mailto parameter doesn't raise this limit` |
+| 失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。 | `channel/refusal.mjs` · `export function refusalLines`<br>`README.md` · `What a failure says`<br>`protocol.md` · `INV-FAIL-1` |
+| **同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。 | `protocol.md` · `quoted with the source that produced it`<br>`channel/metadata.mjs` · `cited_by_count` · `is-referenced-by-count` |
+| **答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。 | `channel/metadata.mjs` · `DIFFERENT from the DOI asked for`<br>`README.md` · `can answer a different DOI` |
+| `mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。 | `channel/metadata.mjs` · `mailto parameter doesn't raise this limit` |
 
 ## 二、每个 helper
 
@@ -55,7 +55,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 第一次碰参考库之前**先跑它**；exit 1 ⇒ 库不可用，说清并**停下**，不换一条路读（数据库文件、按路径挑附件）
 - 其他 helper 报 `the reference library is not answering` 时，它给出的就是这条命令
 
-**出处**：`tools/zotero-ensure.mjs` · `ZOTERO_LOCAL_API` · `ZOTERO_EXE=off` · `already answering` · `cannot start`
+**出处**：`channel/zotero-ensure.mjs` · `ZOTERO_LOCAL_API` · `ZOTERO_EXE=off` · `already answering` · `cannot start`
 
 #### `zotero-read.mjs` — 读：检索（含分面与排序）/ 一条记录 / 笔记正文 / 段落检索 / 附件文本切片 / 附件定位 / 分类 / 结构 / 变更 / 库内查重
 
@@ -89,7 +89,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 要读一条长笔记的某一节 → 先 `--headings` 拿 offset 与长度，再 `--offset/--limit`；整篇读是最后一档（一篇 9,413 字的节笔记有 27 个标题）
 - 问"这个分类里有哪些论文" → `--collection <key>`（默认只列记录）；要连笔记一起看才加 `--all-rows`
 
-**出处**：`tools/zotero-read.mjs` · `--retrieve` · `--changes` · `--find-doi` · `citationLines` · `tokenize` · `extraLines`<br>`tools/zotero-read.mjs` · `noteHeadings` · `printTermPassages` · `itemForJson` · `LISTING_SCAN`<br>`tools/zotero-local-api.mjs` · `changedItemsSince` · `fieldNamesForType`
+**出处**：`channel/zotero-read.mjs` · `--retrieve` · `--changes` · `--find-doi` · `citationLines` · `tokenize` · `extraLines`<br>`channel/zotero-read.mjs` · `noteHeadings` · `printTermPassages` · `itemForJson` · `LISTING_SCAN`<br>`channel/zotero-local-api.mjs` · `changedItemsSince` · `fieldNamesForType`
 
 #### `zotero-export.mjs` — 导出：逐条 citation / 整段 bibliography / bibtex / biblatex / ris / csljson
 
@@ -110,7 +110,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 写论文/笔记要引用 → 先用它生成，不要凭记忆写 BibTeX 或作者年份
 - 要引一整批 → 先 `--collection`，再按 `--limit` 分批；每批不超过 50
 
-**出处**：`tools/zotero-export.mjs` · `buildExportPath` · `selectExportKeys` · `orderCitations` · `ITEMKEY_CAP`
+**出处**：`channel/zotero-export.mjs` · `buildExportPath` · `selectExportKeys` · `orderCitations` · `ITEMKEY_CAP`
 
 #### `zotero-pdf.mjs` — 读附件本身（梯级 2/3/4）：文件文字层 · 论文自带目录 · 页面渲成图；也可读一个 OA PDF URL
 
@@ -135,7 +135,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 没索引 → `--extract`，注意它和索引读的是**同一张编码表**，修不了字体编码的洞
 - 库里没有、OA 有 → 先 `metadata --oa` 拿 PDF URL，再 `--url` 读；引用时写明来源是 URL
 
-**出处**：`tools/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give` · `urlSlug` · `--url takes an http(s) URL`
+**出处**：`channel/zotero-pdf.mjs` · `one rung per invocation` · `--render needs --pages` · `no table of contents, so rung (3) has nothing to give` · `urlSlug` · `--url takes an http(s) URL`
 
 #### `zotero-section-note.mjs` — 逐节解释笔记：覆盖计划（含作者） · 写 · claim · 解 ambiguous · 复核 · 原地改写 · 原地修复 · 归退 · 删除（仅 `/retired`，永久）
 
@@ -174,7 +174,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - **退出码是三种答案**：0 写入并回读 · 1 拒绝且确定没写 · 3 已发送/已写但未确认（打印 key，**不要重发**）
 - agent 草稿要升成记录：**业主**说可以之后 `--review`，工具不替业主加 `/reviewed`
 
-**出处**：`tools/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `AGENT_TAG` · `REVIEWED_TAG` · `REPAIRED_TAG` · `changeClass` · `--repair` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched` · `WRITTEN BUT UNCONFIRMED` · `SENT BUT UNCONFIRMED` · `--acknowledge-unknown` · `--unclaim` · `protocol §6`
+**出处**：`channel/zotero-section-note.mjs` · `SECTION_TAG_PREFIX` · `IMPORTED_TAG` · `AGENT_TAG` · `REVIEWED_TAG` · `REPAIRED_TAG` · `changeClass` · `--repair` · `NO PROSE PARSING` · `unknown` · `ambiguous` · `REFUSED: §` · `the body is NOT touched` · `WRITTEN BUT UNCONFIRMED` · `SENT BUT UNCONFIRMED` · `--acknowledge-unknown` · `--unclaim` · `protocol §6`
 
 #### `zotero-edit.mjs` — 改一条记录的字段与标签；写前按 itemType 校验字段
 
@@ -193,7 +193,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 
 - 要改上面那些：**在应用里改**，工具会说明每条为什么不是一行能表达
 
-**出处**：`tools/zotero-edit.mjs` · `EDITABLE_FIELDS` · `REFUSED_FIELDS` · `invalidFields` · `--item-fields` · `OUTCOME UNKNOWN`
+**出处**：`channel/zotero-edit.mjs` · `EDITABLE_FIELDS` · `REFUSED_FIELDS` · `invalidFields` · `--item-fields` · `OUTCOME UNKNOWN`
 
 #### `zotero-remark.mjs` — 整行重写一条记录 `extra` 里的 `remark:` 行，其余每个字符原样保留
 
@@ -216,7 +216,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 要给某个条目的简记补/改那些短语 → 先 `--item` 读行并照抄，再干跑（会把新旧行并排打印），再 `--write`
 - 干跑里出现 `NOTE: the verdict changed` → 停下：括号里的评价是业主的，不该被改
 
-**出处**：`tools/zotero-remark.mjs` · `REMARK_LINE` · `planLine` · `verdictNotice` · `expect-current` · `OUTCOME UNKNOWN`<br>`skills/key-terms/SKILL.md` · `key-terms`
+**出处**：`channel/zotero-remark.mjs` · `REMARK_LINE` · `planLine` · `verdictNotice` · `expect-current` · `OUTCOME UNKNOWN`<br>`skills/key-terms/SKILL.md` · `key-terms`
 
 #### `zotero-collection.mjs` — 分类：列出 / 建 / 改名 / 归档 / 移出
 
@@ -233,7 +233,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 
 - 改名被库拒绝时，工具**停下**，不会用"新建一个再搬"来假装成功（那会换 key）
 
-**出处**：`tools/zotero-collection.mjs` · `--rename <collectionKey> --name` · `The tree lists no collection`<br>`README.md` · `unreliable rather than absent`
+**出处**：`channel/zotero-collection.mjs` · `--rename <collectionKey> --name` · `The tree lists no collection`<br>`README.md` · `unreliable rather than absent`
 
 #### `zotero-write.mjs` — 新建一条记录（按 arXiv id / DOI），并可**同时**归入分类
 
@@ -255,7 +255,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - "加一篇"之前先搜一遍：重复条目在库里比缺条目更难收拾
 - 要归档又不想多写一次 → 建的时候带 `--collection`；事后补档才是 `zotero-collection.mjs --assign`
 
-**出处**：`tools/zotero-write.mjs` · `ALREADY IN THE LIBRARY` · `UNFILED` · `--selftest` · `search again before creating it twice`
+**出处**：`channel/zotero-write.mjs` · `ALREADY IN THE LIBRARY` · `UNFILED` · `--selftest` · `search again before creating it twice`
 
 #### `zotero-link-attachments.mjs` — 存储型附件 → 链接附件（增量）
 
@@ -273,7 +273,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 
 - 要动全库 → 停下来问属主，别用增量工具假装做迁移
 
-**出处**：`tools/zotero-link-attachments.mjs` · `WAKE_NOTE_MARKER` · `no matching link in the parent yet`<br>`README.md` · `A whole-library migration is`
+**出处**：`channel/zotero-link-attachments.mjs` · `WAKE_NOTE_MARKER` · `no matching link in the parent yet`<br>`README.md` · `A whole-library migration is`
 
 ### 预印本通道
 
@@ -292,7 +292,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 
 - 需要正文 → 走参考库那条路（`zotero-read` / `zotero-pdf`），预印本索引给不了
 
-**出处**：`tools/arxiv.mjs` · `node tools/arxiv.mjs --search` · `--selftest`<br>`README.md` · `not full text`
+**出处**：`channel/arxiv.mjs` · `node tools/arxiv.mjs --search` · `--selftest`<br>`README.md` · `not full text`
 
 ### 书目元数据通道
 
@@ -326,7 +326,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 免费副本 → 那是**线索不是取回**：没真取到就写"列在 <url>"，坏链按失败线索报
 - 要写一条参考文献 → `--cite`；要核一条已有引用 → `--verify --expect-*`；要找相邻工作 → `--related`
 
-**出处**：`tools/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation` · `citeAccept` · `citeDoi` · `verifyWork` · `formatRelated`<br>`docs/coverage.md` · `书目元数据`
+**出处**：`channel/metadata.mjs` · `classifyResponse` · `DIFFERENT from the DOI asked for` · `rebuilt from abstract_inverted_index` · `one request per invocation` · `citeAccept` · `citeDoi` · `verifyWork` · `formatRelated`<br>`docs/coverage.md` · `书目元数据`
 
 ### 学术发现通道
 
@@ -353,7 +353,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 要读 OA 全文 → 用 `scholarly-read.mjs --id`（arXiv HTML/JATS/PDF），或从结果的 `pdf:` 取 URL 交给 `zotero-pdf --url`
 - 库里有没有这条 → `--mark-library`；`unavailable` 时停下说库没答，不要说"不在库"
 
-**出处**：`tools/scholarly.mjs` · `fusePapers` · `routeSources` · `markLibrary` · `sourcesFailed` · `--mark-library`<br>`tools/scholarly-sources.mjs` · `SourceError` · `searchDblp` · `searchSemanticScholar` · `searchPubMed`
+**出处**：`channel/scholarly.mjs` · `fusePapers` · `routeSources` · `markLibrary` · `sourcesFailed` · `--mark-library`<br>`channel/scholarly-sources.mjs` · `SourceError` · `searchDblp` · `searchSemanticScholar` · `searchPubMed`
 
 #### `scholarly-read.mjs` — OA 全文阅读：arXiv HTML/ar5iv/PDF · PMC JATS · OpenAlex OA PDF；分节 / BM25 / 切片
 
@@ -377,7 +377,7 @@ node tools\tests\toolchain-selftest.mjs     # 同一件事，外加负向控制
 - 数学/公式必须核验 → 记下 PDF URL，用 `zotero-pdf --url ... --render --pages` 渲成图再读
 - 引用时写明 `source` 与 `url`：arXiv HTML、PMC JATS 和 OA PDF 是三种不同来源
 
-**出处**：`tools/scholarly-read.mjs` · `parseHtmlToText` · `parseJatsToText` · `extractSections` · `resolveFullText` · `routeFailure`<br>`tools/scholarly-sources.mjs` · `resolveIdentifier`<br>`tools/zotero-pdf.mjs` · `extractPdfText` · `pdfOutline`
+**出处**：`channel/scholarly-read.mjs` · `parseHtmlToText` · `parseJatsToText` · `extractSections` · `resolveFullText` · `routeFailure`<br>`channel/scholarly-sources.mjs` · `resolveIdentifier`<br>`channel/zotero-pdf.mjs` · `extractPdfText` · `pdfOutline`
 
 ## 三、这套校验能证明什么、不能证明什么
 

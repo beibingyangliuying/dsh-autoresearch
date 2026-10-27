@@ -45,13 +45,13 @@ only "not tested here". What this preset actually depends on — the prompt vari
 registers, and the row packages it mounts — is checked against the installed kernel by
 `tools/tests/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
-**To install: nothing beyond DSH itself.** Three dependencies, all published on npm and all permissive
-(`@deepseek-ai/schemastery` for the row's configuration; `@hyzyla/pdfium` and `pdfjs-dist` for the two
-attachment-side reading rungs — PDFium compiled to WebAssembly, and pdf.js for the bookmarks that build
-does not export). There is no build step and no second toolchain: in particular every external channel
-is a Node program this package ships, not a server installed and launched through `uvx`, so a Python
-environment is not part of using this preset. The two engines are reached only through
-`tools/zotero-pdf.mjs`, so they cost nothing on a request that does not read an attachment.
+**To install: DSH, plus one dependency.** `@beibingyangliuying/dsh-zotero` carries every external
+channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them. It is a
+normal npm package installed with this one, so there is no build step and no second toolchain: in
+particular no channel is a server installed and launched through `uvx`, so a Python environment is not
+part of using this preset. `@deepseek-ai/schemastery` stays direct because the row's configuration form
+needs it. The PDF engines are reached only through `zotero-pdf.mjs`, so they cost nothing on a request
+that does not read an attachment.
 
 **The profile may be bare.** Four global toolsets are used when present and never required: the memory
 layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
@@ -87,8 +87,9 @@ subagent from it); the change applies to agents created after the switch, not to
   profile — with no copying step.
 - **Three external channels.** A preprint index, the owner's local reference library (including
   paywalled full text), and a bibliographic-metadata channel over the free OpenAlex, Crossref and
-  Unpaywall APIs. All three are **helper programs this preset ships**, not mounted servers, so an
-  unused channel costs nothing; see [`protocol.md`](protocol.md) §6.
+  Unpaywall APIs. All three are **command-line programs**, not mounted servers, so an unused channel
+  costs nothing. They ship in the `@beibingyangliuying/dsh-zotero` dependency rather than in this
+  bundle — this preset supplies the disciplines that address them; see [`protocol.md`](protocol.md) §6.
 - **A study scaffold.** The layout two real studies defined the same way — a scoping document, a
   non-normative literature layer, and a draft directory for section notes — with every other directory
   created by the discipline that first writes there.
@@ -118,6 +119,11 @@ The conversion ships in two halves, and the split is deliberate: the contract fo
 write-back into the reference library, and a whole-library migration is not a write this preset performs
 at all ([`protocol.md`](protocol.md) §9). So the increment goes through the API, where the owner
 authorizes it, and the bulk migration runs inside the application, at your keyboard.
+
+**Where these programs live.** Every `tools/...` path on this page names a program inside the
+`@beibingyangliuying/dsh-zotero` dependency, not a file in this repository — run the commands below from
+that package's directory. A discipline addresses the same program as `{{presetTools}}/x.mjs`, and the
+preset fills that token with the package's absolute `tools/` directory when it registers the skill.
 
 ```powershell
 # increment: a few new stored PDFs per round. Dry run unless --write is given.
@@ -340,10 +346,12 @@ skills/                the on-demand disciplines, one <name>/SKILL.md each
                        is not a discipline, it reaches only sessions opened in this checkout, and the
                        preset's users never see it (skills.js reads skills/ alone)
 project-template/      the study scaffold, copied per study
-tools/                 the helper programs: the one namespace a discipline may address by absolute path
-tools/tests/           the offline self-tests, one per helper and one per guard
+tools/                 NOT the helper programs any more: the channels ship in
+                       @beibingyangliuying/dsh-zotero. This directory holds only what this
+                       repository runs.
+tools/tests/           the offline self-tests for the rows and guards in this repository
 tools/dev/             probes and release tooling that only this repository runs
-tools/owner/           the two programs the OWNER runs: the study scaffolder, and the in-app snippet
+tools/owner/           the study scaffolder (the in-app snippet moved with the channel package)
 docs/                  Chinese review aids: the coverage map, the review, the decisions, the frozen log
 ```
 
@@ -374,40 +382,9 @@ node tools\tests\toolchain-selftest.mjs          # the generated capability page
 # inherits — the check that catches a directory added to one of them and forgotten in the others
 node tools\tests\scaffold-selftest.mjs
 
-# the preprint channel helper: the query url, Atom parsing and error feeds, without the network
-node tools\tests\arxiv-selftest.mjs
-
-# the bibliographic channel helper: the urls, the inverted-index abstract, the four kinds of nothing,
-# and the refusals — without the network
-node tools\tests\metadata-selftest.mjs
-
-# the discovery helper: seven source shapes, routing, RRF dedup, and the measured 429/challenge
-# failures — without the network
-node tools\tests\scholarly-selftest.mjs
-
-# the open-access reader: arXiv HTML, JATS sectioning, section lookup, and the route failures — offline
-node tools\tests\scholarly-read-selftest.mjs
-
-# the journal-ranking channel: one journal's provider reading, the key it needs and never prints, and
-# the ISSN the provider answers about something else — without the network or a key
-node tools\tests\journal-rank-selftest.mjs
-
-# the shared voice every helper fails through: the block it renders, the cause it appends, and the two
-# exit codes — no library, no network, and nothing that leaves a process
-node tools\tests\refusal-selftest.mjs
-
-# the reference-library helpers: their pure halves run without a library, and write nothing
-node tools\tests\zotero-read-selftest.mjs       # hit collapsing, citation fields, notes, BM25 retrieval, facets, changes
-node tools\tests\zotero-export-selftest.mjs     # the translator pipeline paths, the record filter, and citation order
-node tools\tests\zotero-pdf-selftest.mjs        # the file-side rungs: redirect paths, heading ordinals, page specs, our own PNG
-node tools\tests\zotero-write-selftest.mjs      # the collection key, the create body, UNFILED, and the CLI against a stub: 0/1/3
-node tools\tests\zotero-edit-selftest.mjs       # the field whitelist, the tag list, the no-op rule, and the CLI against a stub
-node tools\tests\zotero-remark-selftest.mjs     # the remark accounting guard, one line changed, and the CLI against a stub
-node tools\tests\zotero-collection-selftest.mjs # the sibling duplicate check, the filing list, and the CLI against a stub: 0/1/3 per failure path
-node tools\tests\zotero-section-note-selftest.mjs  # the tag a note claims, claim/rewrite/retire, unclaim one of two tags, and the deletion path
-node tools\tests\zotero-link-selftest.mjs       # the attachment-link planner, and the CLI against a stub: convert, unconfirmed, partial
-node tools\tests\zotero-local-api-selftest.mjs  # what a write counts as accepted, and the gate's guard
-node tools\tests\zotero-ensure-selftest.mjs     # where the application could be, and the seam that forbids launching for a stub
+# the channel helpers' own suite is NOT here. The helpers ship in @beibingyangliuying/dsh-zotero, and
+# their tests ship with them: run `npm test` in that package's directory. Two suites would drift; one
+# suite next to the code it guards is the trade this preset made when the channels moved out.
 
 # the session dumper: the scan descends to where transcripts live, and reads the preset a session
 # RAN rather than the value its own record carries (docs/decisions.md #26)

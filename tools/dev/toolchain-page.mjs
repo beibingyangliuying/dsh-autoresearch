@@ -22,6 +22,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CHANNEL_CITE_PREFIX, channelFile } from './channel-package.mjs'
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)))
 
@@ -38,19 +39,19 @@ const cite = (file, ...must) => ({ file, must })
 export const FACTS = [
   {
     says: '读不需要授权；写要参考管理器**当场**给一次授权，`Always Allow` 的长期 key 按 server id 存在本机。',
-    cites: [cite('tools/zotero-local-api.mjs', 'createWriteGate'), cite('README.md', 'standing grant')],
+    cites: [cite('channel/zotero-local-api.mjs', 'createWriteGate'), cite('README.md', 'standing grant')],
   },
   {
     says: '写成功不只是 200：**204 无 body 也算成功**，把 200 当唯一成功会把已完成的写报成"被拒绝"。',
-    cites: [cite('tools/zotero-local-api.mjs', 'isWriteAccepted')],
+    cites: [cite('channel/zotero-local-api.mjs', 'isWriteAccepted')],
   },
   {
     says: '写后回读按**读者可见文本**比，不按字节：应用会给它碰过的笔记套 `<div data-schema-version>`，并吃掉隐形注释。',
-    cites: [cite('tools/zotero-local-api.mjs', 'visibleText'), cite('tools/zotero-section-note.mjs', 'isApplicationWrapped')],
+    cites: [cite('channel/zotero-local-api.mjs', 'visibleText'), cite('channel/zotero-section-note.mjs', 'isApplicationWrapped')],
   },
   {
     says: '**tag 活得过**应用对正文的重写（2026-10-18 真笔记实测）；**隐形 marker 活不过**。所以跨轮的身份标记用 tag。',
-    cites: [cite('docs/decisions.md', 'tag 活过应用改写'), cite('tools/zotero-section-note.mjs', "RETIRE_TAG = '/retired'")],
+    cites: [cite('docs/decisions.md', 'tag 活过应用改写'), cite('channel/zotero-section-note.mjs', "RETIRE_TAG = '/retired'")],
   },
   {
     says: '记录的 `version` 可能是 0：那种记录上"别人改过没有"的守卫是**空转**，不是通过。',
@@ -62,11 +63,11 @@ export const FACTS = [
   },
   {
     says: '本地 API 的 `DELETE` 即擦除、进不了回收站；进回收站、可恢复的是**应用里**删除的那条路。',
-    cites: [cite('protocol.md', 'cannot put an item in the trash'), cite('tools/zotero-section-note.mjs', 'DELETION IS PERMANENT')],
+    cites: [cite('protocol.md', 'cannot put an item in the trash'), cite('channel/zotero-section-note.mjs', 'DELETION IS PERMANENT')],
   },
   {
     says: '抽取出来的数学**不可靠**（字体编码坏了：`⩾` 变 `P`、`1⁄4` 变字形），只有把页面渲成图、**当图像读**能救。',
-    cites: [cite('docs/coverage.md', '字体编码坏掉的数学'), cite('tools/zotero-pdf.mjs', '(4) the page as an image')],
+    cites: [cite('docs/coverage.md', '字体编码坏掉的数学'), cite('channel/zotero-pdf.mjs', '(4) the page as an image')],
   },
   {
     says: '结果超过 **8,192 字符**会被重写成头 4,096 + 尾 1,024，但那发生在**压缩**时、不是到达时；单条命令的输出另有一道上限，它属于**所挂的 shell 工具**（`dsh-tool-pwsh` 在 DSH 0.2.1-rc.2 上实测每流保留**最后 64,000 字节**，超过丢**开头**并给 spill 文件）⇒ 长文本切片读（12,000），被裁的片按 offset 重取。',
@@ -83,7 +84,7 @@ export const FACTS = [
   {
     says: '失败只有**一种形状**：说清发生了什么；下一步唯一时给一行 `fix`，并且只在命令**能照抄执行**时才给 `try`。不知道该怎么做时**不写建议**——猜出来的建议会把"重试"变成"漂移"。',
     cites: [
-      cite('tools/refusal.mjs', 'export function refusalLines'),
+      cite('channel/refusal.mjs', 'export function refusalLines'),
       cite('README.md', 'What a failure says'),
       cite('protocol.md', 'INV-FAIL-1'),
     ],
@@ -92,16 +93,16 @@ export const FACTS = [
     says: '**同一个作品在不同书目源上的引用数不同**（43,412 vs 46,513，2026-10-19 分钟级相邻实测）⇒ 引用数必须带**来源与检索日期**。',
     cites: [
       cite('protocol.md', 'quoted with the source that produced it'),
-      cite('tools/metadata.mjs', 'cited_by_count', 'is-referenced-by-count'),
+      cite('channel/metadata.mjs', 'cited_by_count', 'is-referenced-by-count'),
     ],
   },
   {
     says: '**答回来的 DOI 可能不是问的那个**（实测：arXiv DOI 被 OpenAlex 答成该作品的另一个 DOI）⇒ 两个都要报，不许只报标题。',
-    cites: [cite('tools/metadata.mjs', 'DIFFERENT from the DOI asked for'), cite('README.md', 'can answer a different DOI')],
+    cites: [cite('channel/metadata.mjs', 'DIFFERENT from the DOI asked for'), cite('README.md', 'can answer a different DOI')],
   },
   {
     says: '`mailto` 在 OpenAlex **不是配额杠杆**（它自己的 notice 明说该参数不提高共享日预算），Crossref 仍要它。',
-    cites: [cite('tools/metadata.mjs', "mailto parameter doesn't raise this limit")],
+    cites: [cite('channel/metadata.mjs', "mailto parameter doesn't raise this limit")],
   },
 ]
 
@@ -128,7 +129,7 @@ export const HELPERS = [
       '第一次碰参考库之前**先跑它**；exit 1 ⇒ 库不可用，说清并**停下**，不换一条路读（数据库文件、按路径挑附件）',
       '其他 helper 报 `the reference library is not answering` 时，它给出的就是这条命令',
     ],
-    cites: [cite('tools/zotero-ensure.mjs', 'ZOTERO_LOCAL_API', 'ZOTERO_EXE=off', 'already answering', 'cannot start')],
+    cites: [cite('channel/zotero-ensure.mjs', 'ZOTERO_LOCAL_API', 'ZOTERO_EXE=off', 'already answering', 'cannot start')],
   },
   {
     name: 'zotero-read.mjs',
@@ -161,9 +162,9 @@ export const HELPERS = [
       '问"这个分类里有哪些论文" → `--collection <key>`（默认只列记录）；要连笔记一起看才加 `--all-rows`',
     ],
     cites: [
-      cite('tools/zotero-read.mjs', '--retrieve', '--changes', '--find-doi', 'citationLines', 'tokenize', 'extraLines'),
-      cite('tools/zotero-read.mjs', 'noteHeadings', 'printTermPassages', 'itemForJson', 'LISTING_SCAN'),
-      cite('tools/zotero-local-api.mjs', 'changedItemsSince', 'fieldNamesForType'),
+      cite('channel/zotero-read.mjs', '--retrieve', '--changes', '--find-doi', 'citationLines', 'tokenize', 'extraLines'),
+      cite('channel/zotero-read.mjs', 'noteHeadings', 'printTermPassages', 'itemForJson', 'LISTING_SCAN'),
+      cite('channel/zotero-local-api.mjs', 'changedItemsSince', 'fieldNamesForType'),
     ],
   },
   {
@@ -183,7 +184,7 @@ export const HELPERS = [
       '写论文/笔记要引用 → 先用它生成，不要凭记忆写 BibTeX 或作者年份',
       '要引一整批 → 先 `--collection`，再按 `--limit` 分批；每批不超过 50',
     ],
-    cites: [cite('tools/zotero-export.mjs', 'buildExportPath', 'selectExportKeys', 'orderCitations', 'ITEMKEY_CAP')],
+    cites: [cite('channel/zotero-export.mjs', 'buildExportPath', 'selectExportKeys', 'orderCitations', 'ITEMKEY_CAP')],
   },
   {
     name: 'zotero-pdf.mjs',
@@ -207,7 +208,7 @@ export const HELPERS = [
       '库里没有、OA 有 → 先 `metadata --oa` 拿 PDF URL，再 `--url` 读；引用时写明来源是 URL',
     ],
     cites: [
-      cite('tools/zotero-pdf.mjs', 'one rung per invocation', '--render needs --pages', 'no table of contents, so rung (3) has nothing to give', 'urlSlug', '--url takes an http(s) URL'),
+      cite('channel/zotero-pdf.mjs', 'one rung per invocation', '--render needs --pages', 'no table of contents, so rung (3) has nothing to give', 'urlSlug', '--url takes an http(s) URL'),
     ],
   },
   {
@@ -247,7 +248,7 @@ export const HELPERS = [
     ],
     cites: [
       cite(
-        'tools/zotero-section-note.mjs',
+        'channel/zotero-section-note.mjs',
         'SECTION_TAG_PREFIX',
         'IMPORTED_TAG',
         'AGENT_TAG',
@@ -282,7 +283,7 @@ export const HELPERS = [
     ],
     when: ['要改上面那些：**在应用里改**，工具会说明每条为什么不是一行能表达'],
     cites: [
-      cite('tools/zotero-edit.mjs', 'EDITABLE_FIELDS', 'REFUSED_FIELDS', 'invalidFields', '--item-fields', 'OUTCOME UNKNOWN'),
+      cite('channel/zotero-edit.mjs', 'EDITABLE_FIELDS', 'REFUSED_FIELDS', 'invalidFields', '--item-fields', 'OUTCOME UNKNOWN'),
     ],
   },
   {
@@ -305,7 +306,7 @@ export const HELPERS = [
       '干跑里出现 `NOTE: the verdict changed` → 停下：括号里的评价是业主的，不该被改',
     ],
     cites: [
-      cite('tools/zotero-remark.mjs', 'REMARK_LINE', 'planLine', 'verdictNotice', 'expect-current', 'OUTCOME UNKNOWN'),
+      cite('channel/zotero-remark.mjs', 'REMARK_LINE', 'planLine', 'verdictNotice', 'expect-current', 'OUTCOME UNKNOWN'),
       cite('skills/key-terms/SKILL.md', 'key-terms'),
     ],
   },
@@ -319,7 +320,7 @@ export const HELPERS = [
     ],
     when: ['改名被库拒绝时，工具**停下**，不会用"新建一个再搬"来假装成功（那会换 key）'],
     cites: [
-      cite('tools/zotero-collection.mjs', '--rename <collectionKey> --name', 'The tree lists no collection'),
+      cite('channel/zotero-collection.mjs', '--rename <collectionKey> --name', 'The tree lists no collection'),
       cite('README.md', 'unreliable rather than absent'),
     ],
   },
@@ -343,7 +344,7 @@ export const HELPERS = [
     ],
     cites: [
       cite(
-        'tools/zotero-write.mjs',
+        'channel/zotero-write.mjs',
         'ALREADY IN THE LIBRARY',
         'UNFILED',
         '--selftest',
@@ -361,7 +362,7 @@ export const HELPERS = [
     ],
     when: ['要动全库 → 停下来问属主，别用增量工具假装做迁移'],
     cites: [
-      cite('tools/zotero-link-attachments.mjs', 'WAKE_NOTE_MARKER', 'no matching link in the parent yet'),
+      cite('channel/zotero-link-attachments.mjs', 'WAKE_NOTE_MARKER', 'no matching link in the parent yet'),
       cite('README.md', 'A whole-library migration is'),
     ],
   },
@@ -371,7 +372,7 @@ export const HELPERS = [
     can: ['`--search`（索引查询）· `--id`（按标识读一条）· `--selftest`'],
     refuses: ['只给题录与摘要，**不是全文**', '上游把错误塞在形状正常的 feed 里时，它拒绝把错误当记录打印'],
     when: ['需要正文 → 走参考库那条路（`zotero-read` / `zotero-pdf`），预印本索引给不了'],
-    cites: [cite('tools/arxiv.mjs', 'node tools/arxiv.mjs --search', '--selftest'), cite('README.md', 'not full text')],
+    cites: [cite('channel/arxiv.mjs', 'node tools/arxiv.mjs --search', '--selftest'), cite('README.md', 'not full text')],
   },
   {
     name: 'metadata.mjs',
@@ -403,7 +404,7 @@ export const HELPERS = [
     ],
     cites: [
       cite(
-        'tools/metadata.mjs',
+        'channel/metadata.mjs',
         'classifyResponse',
         'DIFFERENT from the DOI asked for',
         'rebuilt from abstract_inverted_index',
@@ -438,8 +439,8 @@ export const HELPERS = [
       '库里有没有这条 → `--mark-library`；`unavailable` 时停下说库没答，不要说"不在库"',
     ],
     cites: [
-      cite('tools/scholarly.mjs', 'fusePapers', 'routeSources', 'markLibrary', 'sourcesFailed', '--mark-library'),
-      cite('tools/scholarly-sources.mjs', 'SourceError', 'searchDblp', 'searchSemanticScholar', 'searchPubMed'),
+      cite('channel/scholarly.mjs', 'fusePapers', 'routeSources', 'markLibrary', 'sourcesFailed', '--mark-library'),
+      cite('channel/scholarly-sources.mjs', 'SourceError', 'searchDblp', 'searchSemanticScholar', 'searchPubMed'),
     ],
   },
   {
@@ -463,9 +464,9 @@ export const HELPERS = [
       '引用时写明 `source` 与 `url`：arXiv HTML、PMC JATS 和 OA PDF 是三种不同来源',
     ],
     cites: [
-      cite('tools/scholarly-read.mjs', 'parseHtmlToText', 'parseJatsToText', 'extractSections', 'resolveFullText', 'routeFailure'),
-      cite('tools/scholarly-sources.mjs', 'resolveIdentifier'),
-      cite('tools/zotero-pdf.mjs', 'extractPdfText', 'pdfOutline'),
+      cite('channel/scholarly-read.mjs', 'parseHtmlToText', 'parseJatsToText', 'extractSections', 'resolveFullText', 'routeFailure'),
+      cite('channel/scholarly-sources.mjs', 'resolveIdentifier'),
+      cite('channel/zotero-pdf.mjs', 'extractPdfText', 'pdfOutline'),
     ],
   },
 ]
@@ -613,9 +614,21 @@ export function pageStatus(rendered, onDisk) {
 
 const USAGE = 'usage: node tools/dev/toolchain-page.mjs --check | --write'
 
+/**
+ * Read a file a citation names.
+ *
+ * Two roots, and the prefix is what keeps them apart: a bare path is this repository (the contract, the
+ * README, the review aids), and `channel/` is the package the helpers ship in. A silent fallback between
+ * the two would let a citation keep passing after the file was deleted from the repository, which is the
+ * one failure this page exists to prevent.
+ *
+ * @param {string} file A citation path.
+ * @returns {string|undefined} The file, or undefined when it cannot be read.
+ */
 function readRepoFile(file) {
+  const path = file.startsWith(CHANNEL_CITE_PREFIX) ? channelFile(file) : resolve(ROOT, file)
   try {
-    return readFileSync(resolve(ROOT, file), 'utf8')
+    return readFileSync(path, 'utf8')
   } catch {
     return undefined
   }

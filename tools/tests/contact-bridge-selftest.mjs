@@ -7,6 +7,7 @@
 // listener and no staleness window. The second is safety: a settings read that fails, or a value that
 // is absent, must leave the preset working rather than take it down.
 import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import * as contact from '../../contact-bridge.js'
 import {
   apply,
@@ -100,17 +101,17 @@ check(
 )
 
 // The helper directory is announced whether or not anything is configured: an agent working in a
-// study workspace has no other way to find this preset's scripts.
+// study workspace has no other way to find the channel scripts.
 check(String(helpersLine()).includes(cliToolsDir), 'the helper line names the absolute helper directory', cliToolsDir)
 check(!String(helpersLine()).includes('\\'), 'the announced directory needs no escaping in a shell command')
 check(/\/tools$/.test(cliToolsDir), 'the announced directory is the package tools directory', cliToolsDir)
 check(
-  existsSync(new URL('../zotero-write.mjs', import.meta.url)),
+  existsSync(join(cliToolsDir, 'zotero-write.mjs')),
   'the announced directory really holds the helpers (a moved tools/ makes the line a lie)',
 )
 
-// The reference-library write gate: the write path ships with this preset's own helpers, so the
-// isolation filter cannot hide it (contract §5), and the prompt carries the rule instead.
+// The reference-library write gate: the write path ships with the channel package, so the isolation
+// filter cannot hide it (contract §5), and the prompt carries the rule instead.
 check(/gated by the owner/i.test(String(writeGateLine())), 'the write gate names the owner as the one who authorizes')
 check(/once per library/i.test(String(writeGateLine())), "the write gate states the grant's granularity, which is the library")
 check(/never\s+ask/i.test(String(writeGateLine())), 'the write gate forbids the agent asking for a standing grant')

@@ -16,7 +16,9 @@
 // runs. Executing it in a sandbox goes one step further than parsing: a module that parses but throws
 // while registering also fails the boot audit.
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { Script, createContext } from 'node:vm'
+import { channelToolsDir } from '../dev/channel-package.mjs'
 
 let failures = 0
 const check = (condition, label, detail = '') => {
@@ -148,8 +150,12 @@ check(typeof section.component === 'function', 'the section carries a component'
 // The in-app snippet is pasted into the reference manager's "Run JavaScript" window, which supplies
 // the enclosing function. So its top-level `return` is legal THERE and illegal in a plain script -
 // parsing it unwrapped would report a defect that does not exist. Wrap it the way its host does.
+//
+// It ships with the channel package now, but it is still this preset's promise to its user: the
+// README still tells the owner to paste it. The check therefore reads it where it lives rather than
+// dropping the guard with the file.
 
-const snippet = read('../owner/zotero-link-snippet.js')
+const snippet = readFileSync(join(channelToolsDir(), 'owner', 'zotero-link-snippet.js'), 'utf8')
 const snippetError = parse(`log = await (async function () {\n${snippet}\n})()`, 'zotero-link-snippet.js')
 check(
   snippetError === undefined,

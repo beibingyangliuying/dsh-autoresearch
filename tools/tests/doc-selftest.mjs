@@ -16,7 +16,8 @@
 // `--negative-controls` mutates the documents in memory and asserts the checks actually fail.
 // A check that cannot fail is not a check.
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { channelToolsDir } from '../dev/channel-package.mjs'
 
 const ROOT = process.cwd()
 const PROTOCOL = join(ROOT, 'protocol.md')
@@ -112,9 +113,9 @@ function pathTokens(text) {
  * and the trap has silently emptied a list in this repository once already. Matching a file where a
  * directory was expected is harmless, because the next segment simply does not exist under it.
  */
-function documentedPathExists(token) {
+function documentedPathExists(token, bases = [ROOT]) {
   const segments = token.split('/').filter((segment) => segment !== '' && segment !== '.')
-  let frontier = [ROOT]
+  let frontier = [...bases]
   for (const segment of segments) {
     if (segment.includes('*') && segment !== '*') return false
     const next = []
@@ -244,6 +245,11 @@ const checks = [
     label: 'every path in reader-facing prose still exists',
     run: ({ protocol, surface, readme, coverage }) => {
       const rootEntries = new Set(readdirSync(ROOT))
+      // The channel helpers ship in a dependency now, and the reader-facing prose keeps spelling them
+      // `tools/x.mjs` because that is what the disciplines' token expands to. So a `tools/` path is
+      // judged against two roots: this repository, and the package's own root (whose `tools/` is the
+      // directory the token fills). Both roots must be real; a path that lives in neither is stale.
+      const channelRoot = channelToolsDir() === undefined ? undefined : dirname(channelToolsDir())
       const stale = []
       for (const [name, text] of [
         ['protocol.md', protocol],
@@ -264,7 +270,8 @@ const checks = [
           // this cannot catch a directory that was RENAMED away, because the old name is no longer a
           // root entry. Catching that case is what DOC-7 is for.
           if (head !== '.' && !rootEntries.has(head)) continue
-          if (!documentedPathExists(token)) stale.push(`${name}: ${token}`)
+          const bases = token.startsWith('tools/') && channelRoot !== undefined ? [ROOT, channelRoot] : [ROOT]
+          if (!documentedPathExists(token, bases)) stale.push(`${name}: ${token}`)
         }
       }
       return stale.length === 0 ? null : `stale path in ${stale.join('; ')}`

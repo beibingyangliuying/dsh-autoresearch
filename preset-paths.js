@@ -1,29 +1,44 @@
-// Where this preset's own command-line helpers live, as an absolute path.
+// Where the external-channel command-line helpers live, as an absolute path.
 //
-// The scripts under `tools/` are NOT DSH tools: they are Node programs the agent runs through the
-// shell. Every instruction that names one therefore needs an ABSOLUTE path, because the agent's
-// working directory is a study workspace, not this checkout — the scaffold copies no `tools/`
-// directory, so `node tools/zotero-write.mjs` resolves to nothing there.
+// The scripts are NOT DSH tools: they are Node programs the agent runs through the shell. Every
+// instruction that names one therefore needs an ABSOLUTE path, because the agent's working directory
+// is a study workspace, not this checkout — the scaffold copies no `tools/` directory, so
+// `node tools/zotero-write.mjs` resolves to nothing there.
+//
+// The helpers no longer ship in this package: they live in `@beibingyangliuying/dsh-zotero` and this
+// module resolves THAT package. The resolution is a package-subpath lookup rather than a guess, so it
+// is correct wherever the channel package is installed — a checkout, a junction in the profile, or an
+// npm install — and it fails loudly here, at preset load, when the dependency is missing. A silent
+// fallback would print a command that cannot run.
 //
 // A shipped skill is static Markdown and cannot compute an absolute path, so a body that names a
-// helper carries the `{{presetTools}}` token and this module fills it in when the skill is
-// registered. The directory comes from this module's own URL, so it is correct wherever the package
-// is installed — a checkout, or a junction in the profile — with no configuration and no rebuild.
+// helper carries the `{{presetTools}}` token and this module fills it in when the skill is registered.
 import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 /** The token a shipped skill body uses for the helper directory. */
 export const TOOLS_TOKEN = '{{presetTools}}'
 
+/** The package that ships the helpers. A dependency of this one, not a sibling checkout. */
+export const CHANNEL_PACKAGE = '@beibingyangliuying/dsh-zotero'
+
 /**
- * Absolute directory of the helpers shipped beside this module.
+ * Absolute directory of that package.
+ *
+ * `import.meta.resolve` answers the URL of its `tools-dir` entry, and the helpers sit one level below
+ * the package root. Resolving the entry rather than a guessed path is what keeps this correct under a
+ * junction: the entry resolves through the package's own `exports`, not through the profile layout.
+ */
+export const channelPackageDir = dirname(fileURLToPath(import.meta.resolve(`${CHANNEL_PACKAGE}/tools-dir`)))
+
+/**
+ * Absolute directory of the helpers.
  *
  * Forward slashes are kept deliberately: Windows accepts them, and a path pasted into a shell
  * command or a prompt needs no escaping that way. The trailing slash is dropped so a body can write
  * `{{presetTools}}/zotero-write.mjs`.
  */
-export const cliToolsDir = fileURLToPath(new URL('./tools/', import.meta.url))
-  .replace(/\\/g, '/')
-  .replace(/\/+$/, '')
+export const cliToolsDir = join(channelPackageDir, 'tools').replace(/\\/g, '/').replace(/\/+$/, '')
 
 /**
  * Replace every helper-directory token in one text.

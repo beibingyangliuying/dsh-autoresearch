@@ -115,7 +115,7 @@ const namedHelpers = [
 ]
 check(namedHelpers.length > 0, 'a shipped body names a helper through the token', namedHelpers.join(', '))
 for (const helper of namedHelpers) {
-  check(existsSync(new URL(`../../tools/${helper}`, import.meta.url)), `the token names a helper that exists: ${helper}`)
+  check(existsSync(`${cliToolsDir}/${helper}`), `the token names a helper the channel package ships: ${helper}`, cliToolsDir)
 }
 
 // --- registration ------------------------------------------------------------------------------

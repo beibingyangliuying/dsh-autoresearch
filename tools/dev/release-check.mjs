@@ -11,8 +11,8 @@
 //
 //   --local        the working tree: version, composition, row names against `exports`, and whether
 //                  every self-test that exists is documented in the README.
-//   --tag vX.Y.Z   the published package at that tag: its version, its composition, its helper
-//                  programs, and whether the tag still names the commit the branch head does.
+//   --tag vX.Y.Z   the published package at that tag: its version, its composition, its declared
+//                  channel dependency, and whether the tag still names the commit the branch head does.
 //
 // Usage:
 //   node tools/dev/release-check.mjs --local
@@ -25,52 +25,13 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CHANNEL_PACKAGE, channelHelpers, channelToolsDir } from './channel-package.mjs'
+
+// Re-exported so a reader of this file (and its self-test) never has to know the lookup moved.
+export { CHANNEL_PACKAGE, channelHelpers, channelToolsDir }
 
 const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const DEFAULT_REPO = 'beibingyangliuying/dsh-autoresearch'
-
-/**
- * Helpers whose absence means the external channels do not work in the published package.
- *
- * A hand-written roster, and a roster-based check cannot see what its own roster omits: this list was
- * written before the reading ladder existed, so the published package was checked for a helper nobody
- * had added yet, and `zotero-pdf.mjs` was missing until 6f80323. The same held for every write-side
- * helper named after that, and for `metadata.mjs`, which the disciplines name ten times.
- *
- * Two directions are checked, and only one of them is this list: `namedHelperProblems` derives the
- * DEMAND side from the text a discipline hands an agent, and fails when this roster does not carry a
- * helper it names. An entry here is therefore not a claim that the helper is named anywhere - the
- * shared modules, the in-app snippet and the attachment tool are listed because a channel stops
- * working without them.
- *
- * The third direction closes the directory: every file under `tools/` must be either an entry on this
- * roster or inside a declared sub-directory (`TOOLS_CLASSES`). A roster cannot see a file nobody
- * registered, and a directory with no declared classes is how 26 tests and 10 probes came to sit in the
- * namespace a discipline addresses. `unclassifiedTools` is that closure.
- */
-export const REQUIRED_HELPERS = [
-  'preset-paths.js',
-  'tools/arxiv.mjs',
-  'tools/metadata.mjs',
-  'tools/scholarly.mjs',
-  'tools/scholarly-read.mjs',
-  'tools/scholarly-sources.mjs',
-  'tools/journal-rank.mjs',
-  'tools/zotero-read.mjs',
-  'tools/zotero-export.mjs',
-  'tools/zotero-pdf.mjs',
-  'tools/zotero-write.mjs',
-  'tools/zotero-edit.mjs',
-  'tools/zotero-remark.mjs',
-  'tools/zotero-remark.mjs',
-  'tools/zotero-collection.mjs',
-  'tools/zotero-section-note.mjs',
-  'tools/zotero-link-attachments.mjs',
-  'tools/zotero-local-api.mjs',
-  'tools/refusal.mjs',
-  'tools/zotero-ensure.mjs',
-  'tools/owner/zotero-link-snippet.js',
-]
 
 class UsageError extends Error {}
 
@@ -200,29 +161,29 @@ export function documentedSelftests(readmeText, files) {
 }
 
 /**
- * The helpers a discipline hands an agent, against the roster the published-package check fetches.
+ * The helpers a discipline hands an agent, against what the channel package actually ships.
  *
- * Why this exists: `REQUIRED_HELPERS` is written by hand, so it only ever contained the helpers someone
- * remembered. It was written before the reading ladder, and `zotero-pdf.mjs` was missing from it while
- * Revision 17's disciplines already told an agent to run that program (closed in 6f80323). That fix
- * added the one helper the round had noticed and left the class open: every write-side helper, and
- * `metadata.mjs`, were still outside the roster while the disciplines named them in commands.
+ * Why this exists: a discipline that names a helper is handing an agent a command, and a command that
+ * does not resolve is a round spent walking into a wall. The check used to compare against a
+ * hand-written roster, which could only ever contain the helpers someone remembered; it now compares
+ * against the installed package's own directory, so the answer comes from what is there.
  *
  * The guard is deliberately narrow. It reads ONE token, `{{presetTools}}`, because that is the only way
  * a shipped discipline may address a helper at all; prose that names a path without the token is a
  * documentation question, and a regex over every path-looking string would fire on fixtures too.
  *
  * @param {string[]} texts Discipline bodies in which a helper command appears.
- * @param {string[]} roster Paths as {@link REQUIRED_HELPERS} spells them, e.g. `tools/arxiv.mjs`.
- * @returns {string[]} One message per named helper the roster does not carry; empty when it carries all.
+ * @param {string[]} helpers File names the channel package ships; defaults to what is installed.
+ * @returns {string[]} One message per named helper the package does not ship; empty when it ships all.
  */
-export function namedHelperProblems(texts, roster) {
-  const known = new Set(roster)
+export function namedHelperProblems(texts, helpers = channelHelpers()) {
+  const known = new Set(helpers)
   const problems = new Set()
   for (const text of texts) {
     for (const match of String(text).matchAll(/\{\{presetTools\}\}\/([A-Za-z0-9._-]+)/g)) {
-      const path = `tools/${match[1]}`
-      if (!known.has(path)) problems.add(`${match[1]} is handed to an agent but REQUIRED_HELPERS omits ${path}`)
+      if (!known.has(match[1])) {
+        problems.add(`${match[1]} is handed to an agent but ${CHANNEL_PACKAGE} does not ship it`)
+      }
     }
   }
   return [...problems]
@@ -272,26 +233,23 @@ function gitReason(error) {
 /**
  * The declared classes under `tools/`, in the order a reader should meet them.
  *
- * `tools/` itself is the agent's namespace: a program there may be handed to an agent by absolute path.
- * Everything else has an audience that is not the agent, and saying so in the layout is what keeps the
- * namespace honest.
+ * `tools/` no longer addresses an agent at all: the helpers that used to sit at its top level now ship
+ * in the channel package. What remains here has an audience that is not the agent - the suite and the
+ * development instruments - and keeping the top level empty is what stops a helper drifting back in.
  */
 export const TOOLS_CLASSES = ['tests', 'dev', 'owner']
 
 /**
- * Which files under `tools/` have no declared class.
+ * Which files under `tools/` break the arrangement.
  *
- * `tools/` top level is the shipped surface, so a file there must be on the roster (which is what the
- * published-package check fetches). A sub-directory must be one of `TOOLS_CLASSES`. Anything else -
- * a new helper nobody registered, a directory nobody classified - is reported rather than absorbed:
- * "there is a file there" is the only evidence a roster cannot produce on its own.
+ * A sub-directory must be one of `TOOLS_CLASSES`. A file at the TOP level is reported whatever it is:
+ * that level used to be the shipped surface, and the shipped surface now lives in another package, so a
+ * file there is either a helper left behind or something nobody classified - both worth a release stop.
  *
  * @param {string[]} files Paths relative to `tools/`, with `/` separators, at any depth.
- * @param {string[]} roster Paths spelled as {@link REQUIRED_HELPERS} spells them.
- * @returns {string[]} One message per unclassified file; empty when every file has a class.
+ * @returns {string[]} One message per file out of place; empty when the arrangement is intact.
  */
-export function unclassifiedTools(files, roster) {
-  const known = new Set(roster)
+export function unclassifiedTools(files) {
   const problems = []
   for (const file of files) {
     const segments = String(file).split('/')
@@ -301,7 +259,7 @@ export function unclassifiedTools(files, roster) {
       }
       continue
     }
-    if (!known.has(`tools/${file}`)) problems.push(`tools/${file} is neither on the roster nor in a declared class`)
+    problems.push(`tools/${file} sits at the top level; the channel helpers ship in ${CHANNEL_PACKAGE}`)
   }
   return problems
 }
@@ -390,34 +348,44 @@ function checkLocal() {
   report(tally, 'the README names no self-test that is gone', tests.stale.map((n) => `${n} is documented but does not exist`))
   console.log(`         ${tests.documented.length} self-tests documented`)
 
-  // The demand side of the roster: what the skills actually tell an agent to run. Reading it here is
-  // what makes the roster fail when a discipline starts naming a helper nobody added.
-  const skillDir = join(ROOT, 'skills')
-  const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
-  report(tally, 'every helper a discipline hands an agent is on the required roster', namedHelperProblems(disciplineTexts, REQUIRED_HELPERS))
-
-  // The third direction: the directory itself. A file that enters `tools/` without a class is invisible
-  // to every roster, and a new sub-directory would join the namespace a discipline addresses if nothing
-  // looked. Both are reported from what is on disk, so the answer does not depend on anyone remembering.
+  // The dependency the disciplines' commands stand on. A preset whose channel package does not resolve
+  // installs with every `{{presetTools}}` path empty, so "it does not resolve" is the state this line
+  // exists to catch - and it is also the reason the package has to be published before the preset.
+  const channelDir = channelToolsDir()
   report(
     tally,
-    'every file under tools/ is a rostered helper or in a declared class',
-    unclassifiedTools(toolFiles(join(ROOT, 'tools')), REQUIRED_HELPERS),
+    `the channel helper package (${CHANNEL_PACKAGE}) resolves from this checkout`,
+    channelDir === undefined
+      ? [`${CHANNEL_PACKAGE}/tools-dir does not resolve here; install it in this directory or publish it first`]
+      : [],
+  )
+  if (channelDir !== undefined) console.log(`         ${channelHelpers().length} channel helper(s) in ${channelDir}`)
+
+  // The demand side: what the skills actually tell an agent to run, against what the package ships.
+  const skillDir = join(ROOT, 'skills')
+  const disciplineTexts = readdirSync(skillDir).map((name) => readFileSync(join(skillDir, name, 'SKILL.md'), 'utf8'))
+  report(tally, 'every helper a discipline hands an agent is shipped by the channel package', namedHelperProblems(disciplineTexts))
+
+  // The third direction: the directory itself. What is left under `tools/` is the suite and the
+  // instruments, so a file at the top level is a helper that drifted back into the shipped surface.
+  report(
+    tally,
+    'every file under tools/ is in a declared class and none is a leftover helper',
+    unclassifiedTools(toolFiles(join(ROOT, 'tools'))),
   )
 
-  // The roster's helpers, read against the one renderer they are supposed to share. The shared modules
-  // on the roster - the transport, the voice and the source shapes - are libraries: they fail through no
-  // exit code of their own, so they are not read here.
-  const sharedModules = new Set([
-    'tools/zotero-local-api.mjs',
-    'tools/refusal.mjs',
-    'tools/scholarly-sources.mjs',
-  ])
-  const helperSources = REQUIRED_HELPERS.filter((path) => path.endsWith('.mjs') && !sharedModules.has(path)).map((path) => ({
-    name: path,
-    text: readFileSync(join(ROOT, path), 'utf8'),
-  }))
-  report(tally, 'every helper that can fail reports through the shared voice', refusalVoiceProblems(helperSources))
+  // The channel helpers, read against the one renderer they are supposed to share. The shared modules -
+  // the transport, the voice and the source shapes - are libraries: they fail through no exit code of
+  // their own, so they are not read here. These files live in the channel package, which is why this
+  // check reads across the dependency boundary: the preset's commands are only as good as that voice.
+  const sharedModules = new Set(['zotero-local-api.mjs', 'refusal.mjs', 'scholarly-sources.mjs'])
+  const helperSources =
+    channelDir === undefined
+      ? []
+      : channelHelpers()
+          .filter((name) => !sharedModules.has(name))
+          .map((name) => ({ name, text: readFileSync(join(channelDir, name), 'utf8') }))
+  report(tally, 'every channel helper that can fail reports through the shared voice', refusalVoiceProblems(helperSources))
 
   // The clean-tree line is a precondition for tagging, so it has to be able to say "I could not look"
   // rather than "the tree is dirty" when git itself is what failed.
@@ -542,21 +510,17 @@ async function checkTag(tag, repo) {
   )
   report(tally, 'the published composition mounts no MCP server and launches nothing', compositionProblems(patchText))
 
-  const missing = []
-  let unreadable = ''
-  for (const path of REQUIRED_HELPERS) {
-    try {
-      const response = await fetch(raw(path))
-      if (response.status === 404) missing.push(`${path} is not in the published package`)
-      else if (!response.ok) missing.push(`${path} answers HTTP ${response.status}`)
-    } catch (error) {
-      unreadable = error.message
-      break
-    }
-  }
-  const helperLabel = 'every helper program the channels need is inside the published package'
-  if (unreadable) unverified(tally, helperLabel, unreadable)
-  else report(tally, helperLabel, missing)
+  // The helpers are no longer in this package, so what a published tag must carry is the declaration
+  // that they come from somewhere. A tag whose manifest forgets the dependency installs a preset whose
+  // every channel command is dead - the same failure as a missing helper file, one level up.
+  const dependencies = JSON.parse(pkgText).dependencies ?? {}
+  report(
+    tally,
+    `the published package declares ${CHANNEL_PACKAGE}`,
+    typeof dependencies[CHANNEL_PACKAGE] === 'string'
+      ? []
+      : [`package.json has no dependencies["${CHANNEL_PACKAGE}"], so a fresh install ships no channel helpers`],
+  )
 
   // The comparison with the branch head needs git, and git needs a working network of its own. When it
   // cannot answer, that is one unexamined question - not a broken release, which is what 0.14.0's own

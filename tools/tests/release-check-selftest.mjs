@@ -12,9 +12,11 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  REQUIRED_HELPERS,
+  CHANNEL_PACKAGE,
   branchHead,
   bundleRowSpecs,
+  channelHelpers,
+  channelToolsDir,
   codeLines,
   compositionProblems,
   documentedSelftests,
@@ -154,51 +156,56 @@ check(
 )
 
 
-console.log('\n[5] the required-helper roster against the helpers a discipline names')
+console.log('\n[5] the shipped channel package against the helpers a discipline names')
 
-// The roster is hand-written, so what it OMITS is invisible to the check that reads it. This drives the
-// demand side instead - the `{{presetTools}}` commands the shipped disciplines hand an agent - and it
-// has to FAIL when a named helper is not on the roster, which is the state the roster sat in twice.
+// The helpers live in another package now, so the roster is READ from that package rather than written
+// here. What the check still owns is the demand side: the `{{presetTools}}` commands the shipped
+// disciplines hand an agent must name something the package actually ships. The old hand-written roster
+// was the defect - it could not see what it omitted - so an installed directory is the stronger source.
+const channelDir = channelToolsDir()
+check(channelDir !== undefined, `${CHANNEL_PACKAGE} resolves from this checkout`, String(channelDir))
+const helpers = channelHelpers()
+check(helpers.length > 0, 'the channel package ships helpers to read a roster from', `${helpers.length} helpers`)
+const missing = helpers.filter((name) => channelDir === undefined || !existsSync(join(channelDir, name)))
+check(missing.length === 0, 'every helper the roster reads is present in the package directory', missing.join(', '))
+
 const disciplineTexts = readdirSync(join(ROOT, 'skills')).map((name) => read(join('skills', name, 'SKILL.md')))
-const gaps = namedHelperProblems(disciplineTexts, REQUIRED_HELPERS)
-check(gaps.length === 0, 'every helper a discipline hands an agent is on the roster', gaps.join('; '))
+const gaps = namedHelperProblems(disciplineTexts)
+check(gaps.length === 0, 'every helper a discipline hands an agent is shipped by the package', gaps.join('; '))
 check(
-  namedHelperProblems(['run {{presetTools}}/invented.mjs'], REQUIRED_HELPERS).length === 1,
-  'a discipline naming a helper the roster omits is reported - this check can fail',
+  namedHelperProblems(['run {{presetTools}}/invented.mjs'], ['zotero-read.mjs']).length === 1,
+  'a discipline naming a helper the package omits is reported - this check can fail',
 )
 check(
-  namedHelperProblems(['{{presetTools}}/zotero-read.mjs and {{presetTools}}/invented.mjs'], REQUIRED_HELPERS).length === 1,
-  'a known helper is no problem, and two mentions of one gap are still one problem',
+  namedHelperProblems(['{{presetTools}}/zotero-read.mjs and {{presetTools}}/invented.mjs'], ['zotero-read.mjs']).length === 1,
+  'a shipped helper is no problem, and two mentions of one gap are still one problem',
 )
 check(
-  namedHelperProblems(['read tools/zotero-read.mjs, no token'], REQUIRED_HELPERS).length === 0,
+  namedHelperProblems(['read tools/zotero-read.mjs, no token'], ['zotero-read.mjs']).length === 0,
   'a path without the presetTools token is not read as a discipline command - the guard is narrow on purpose',
 )
-const absent = REQUIRED_HELPERS.filter((path) => !existsSync(join(ROOT, path)))
-check(absent.length === 0, 'every path on the roster exists in this tree - a typo would fail every tag', absent.join(', '))
+check(
+  namedHelperProblems(['{{presetTools}}/x.mjs'], []).length === 1,
+  'an empty package directory does not silently pass every name',
+)
 
 console.log('\n[5c] every file under tools/ has a declared class')
 
-// The roster above is a list, and a list cannot see a file nobody registered. This closes the directory
-// instead: top level is the shipped surface (so the file must be on the roster), and a sub-directory
-// must be one of the declared classes. Before this check, 26 tests and 10 probes sat in the namespace a
-// discipline addresses and no instrument looked at the arrangement at all.
+// The directory is closed from the other side: the top level used to be the shipped surface, and it now
+// has to stay empty. A helper drifting back in would be addressed by no roster and shipped by no package.
 const toolsDir = join(ROOT, 'tools')
 const underTools = toolFiles(toolsDir)
-const stray = unclassifiedTools(underTools, REQUIRED_HELPERS)
-check(stray.length === 0, 'every file under tools/ is rostered or in a declared class', stray.join('; '))
-check(underTools.includes('tests/arxiv-selftest.mjs') && underTools.includes('arxiv.mjs'), 'the walker reaches both levels')
+const stray = unclassifiedTools(underTools)
+check(stray.length === 0, 'every file under tools/ is in a declared class', stray.join('; '))
+check(underTools.includes('tests/skills-selftest.mjs') && underTools.includes('dev/run-selftests.mjs'), 'the walker reaches the declared classes')
+check(unclassifiedTools(['stray.mjs']).length === 1, 'a helper at the top level is reported - this check can fail')
 check(
-  unclassifiedTools(['stray.mjs'], REQUIRED_HELPERS).length === 1,
-  'a helper nobody rostered is reported - this check can fail',
-)
-check(
-  unclassifiedTools(['scratch/notes.mjs'], REQUIRED_HELPERS).length === 1,
+  unclassifiedTools(['scratch/notes.mjs']).length === 1,
   'a sub-directory nobody declared is reported - this check can fail',
 )
 check(
-  unclassifiedTools(['arxiv.mjs', 'tests/arxiv-selftest.mjs', 'dev/probe-session.mjs'], REQUIRED_HELPERS).length === 0,
-  'a rostered helper and a declared class are both accepted',
+  unclassifiedTools(['tests/arxiv-selftest.mjs', 'dev/probe-session.mjs']).length === 0,
+  'the declared classes are accepted',
 )
 
 console.log('\n[5b] every helper that can fail speaks through one voice')
