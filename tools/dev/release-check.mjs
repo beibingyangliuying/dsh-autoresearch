@@ -511,16 +511,19 @@ async function checkTag(tag, repo) {
   report(tally, 'the published composition mounts no MCP server and launches nothing', compositionProblems(patchText))
 
   // The helpers are no longer in this package, so what a published tag must carry is the declaration
-  // that they come from somewhere. A tag whose manifest forgets the dependency installs a preset whose
-  // every channel command is dead - the same failure as a missing helper file, one level up.
-  const dependencies = JSON.parse(pkgText).dependencies ?? {}
+  // that they come from somewhere. A tag that names them nowhere installs a preset whose every channel
+  // command is dead - the same failure as a missing helper file, one level up. It is a PEER, because
+  // pnpm refuses a git-resolved subdependency, so either field is accepted and the pin is printed.
+  const manifest = JSON.parse(pkgText)
+  const declared = manifest.dependencies?.[CHANNEL_PACKAGE] ?? manifest.peerDependencies?.[CHANNEL_PACKAGE]
   report(
     tally,
     `the published package declares ${CHANNEL_PACKAGE}`,
-    typeof dependencies[CHANNEL_PACKAGE] === 'string'
+    typeof declared === 'string'
       ? []
-      : [`package.json has no dependencies["${CHANNEL_PACKAGE}"], so a fresh install ships no channel helpers`],
+      : [`package.json names ${CHANNEL_PACKAGE} in neither dependencies nor peerDependencies, so an install never learns it is needed`],
   )
+  if (typeof declared === 'string') console.log(`         ${CHANNEL_PACKAGE}: ${declared}`)
 
   // The comparison with the branch head needs git, and git needs a working network of its own. When it
   // cannot answer, that is one unexamined question - not a broken release, which is what 0.14.0's own

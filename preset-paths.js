@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path'
 /** The token a shipped skill body uses for the helper directory. */
 export const TOOLS_TOKEN = '{{presetTools}}'
 
-/** The package that ships the helpers. A dependency of this one, not a sibling checkout. */
+/** The package that ships the helpers. A peer this preset needs installed beside it, not a sibling checkout. */
 export const CHANNEL_PACKAGE = '@beibingyangliuying/dsh-zotero'
 
 /**
@@ -28,8 +28,25 @@ export const CHANNEL_PACKAGE = '@beibingyangliuying/dsh-zotero'
  * `import.meta.resolve` answers the URL of its `tools-dir` entry, and the helpers sit one level below
  * the package root. Resolving the entry rather than a guessed path is what keeps this correct under a
  * junction: the entry resolves through the package's own `exports`, not through the profile layout.
+ *
+ * It is a PEER, and pnpm refuses a git-resolved subdependency, so the two packages are installed one
+ * after the other. That makes a missing peer a normal state rather than an impossible one, and the
+ * failure is loud on purpose: the alternative is a preset that loads and then hands an agent commands
+ * that resolve to nothing.
  */
-export const channelPackageDir = dirname(fileURLToPath(import.meta.resolve(`${CHANNEL_PACKAGE}/tools-dir`)))
+export const channelPackageDir = (() => {
+  try {
+    return dirname(fileURLToPath(import.meta.resolve(`${CHANNEL_PACKAGE}/tools-dir`)))
+  } catch (error) {
+    throw new Error(
+      `${CHANNEL_PACKAGE} is not installed, so every channel command this preset hands an agent would ` +
+        `resolve to nothing. Install it first, then this preset:\n` +
+        `  dsh plugin --profile web add github:beibingyangliuying/dsh-zotero#v0.1.0\n` +
+        `  dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch\n` +
+        `(${CHANNEL_PACKAGE}/tools-dir did not resolve: ${error?.code ?? error?.message ?? String(error)})`,
+    )
+  }
+})()
 
 /**
  * Absolute directory of the helpers.

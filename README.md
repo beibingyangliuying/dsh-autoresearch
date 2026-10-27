@@ -16,7 +16,10 @@ The preset is a DSH bundle: a package whose `package.json` points at a compositi
 the package registers the preset.
 
 ```powershell
-# from GitHub: the repository root IS the bundle, and it needs no build step
+# 1. the channel helpers first: Zotero, arXiv, bibliographic REST, discovery, journal ranking
+dsh plugin --profile web add github:beibingyangliuying/dsh-zotero#v0.1.0
+
+# 2. then the preset. The repository root IS the bundle, and it needs no build step.
 dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch
 
 # or, while developing against a checkout, install it as a bundle whose entry is a LINK to the
@@ -24,6 +27,12 @@ dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch
 # process restarts (the preset registry mounts the definition it parsed at startup)
 dsh plugin --profile web add <path-to-checkout>
 ```
+
+**The order is not a preference.** The channel package is a peer of this preset, not a dependency:
+pnpm refuses a git-resolved subdependency (`ERR_PNPM_EXOTIC_SUBDEP`), so the two are installed one
+after the other. Install them the other way round and the preset's own load stops with both commands
+printed — loud on purpose, because the alternative is a session whose every channel command resolves
+to nothing.
 
 Confirm it registered — the composition should carry the preset row:
 
@@ -45,14 +54,14 @@ only "not tested here". What this preset actually depends on — the prompt vari
 registers, and the row packages it mounts — is checked against the installed kernel by
 `tools/tests/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
-**To install: DSH, plus one dependency.** `@beibingyangliuying/dsh-zotero` carries every external
-channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them. It is
-installed from GitHub alongside this package (`github:beibingyangliuying/dsh-zotero#v0.1.0` in
-`dependencies`), so there is no build step and no second toolchain: in particular no channel is a
-server installed and launched through `uvx`, so a Python environment is not part of using this preset.
-`@deepseek-ai/schemastery` stays a registry dependency because the row's configuration form needs it.
-The PDF engines are reached only through `zotero-pdf.mjs`, so they cost nothing on a request that does
-not read an attachment.
+**To install: DSH, then two packages, in this order.** `@beibingyangliuying/dsh-zotero` carries every
+external channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them.
+It is a **peer** of this preset rather than a dependency, because pnpm refuses a git-resolved
+subdependency; see *Install* above for the two commands. There is no build step and no second
+toolchain: in particular no channel is a server installed and launched through `uvx`, so a Python
+environment is not part of using this preset. `@deepseek-ai/schemastery` stays a registry dependency
+because the row's configuration form needs it. The PDF engines are reached only through
+`zotero-pdf.mjs`, so they cost nothing on a request that does not read an attachment.
 
 **The profile may be bare.** Four global toolsets are used when present and never required: the memory
 layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
