@@ -13,10 +13,12 @@
 //                  every self-test that exists is documented in the README.
 //   --tag vX.Y.Z   the published package at that tag: its version, its composition, its declared
 //                  channel dependency, and whether the tag still names the commit the branch head does.
+//                  `--api` reads the same files through api.github.com when raw.githubusercontent.com is
+//                  not reachable from this network.
 //
 // Usage:
 //   node tools/dev/release-check.mjs --local
-//   node tools/dev/release-check.mjs --tag v0.2.0 [--repo owner/name]
+//   node tools/dev/release-check.mjs --tag v0.2.0 [--repo owner/name] [--api]
 //
 // Exit codes: 0 every check passed | 1 at least one check failed - the artifact is wrong | 2 usage |
 // 3 at least one check could not run (no network, no git) and nothing that did run failed. 3 is not a
@@ -466,17 +468,28 @@ export function branchHead(refs) {
     ?.split('\t')[0]
 }
 
-async function checkTag(tag, repo) {
-  console.log(`[${tag}] published package in ${repo}`)
+async function checkTag(tag, repo, { api = false } = {}) {
+  console.log(`[${tag}] published package in ${repo}${api ? ' (contents API)' : ''}`)
   const tally = { failed: 0, unverified: 0 }
-  const raw = (path) => `https://raw.githubusercontent.com/${repo}/${tag}/${path}`
+
+  // Two transports, because they fail in different places rather than in different ways. `raw` is the
+  // cheap path and the default; the contents API exists because raw.githubusercontent.com can be
+  // unreachable from a network where api.github.com answers (measured here: raw timed out at 20 s while
+  // the API answered in 1 s). Both answer a 404 for "not there", which is the one distinction this
+  // check depends on.
+  const raw = (path) =>
+    api
+      ? `https://api.github.com/repos/${repo}/contents/${path}?ref=${tag}`
+      : `https://raw.githubusercontent.com/${repo}/${tag}/${path}`
+  const request = (path) =>
+    api ? fetch(raw(path), { headers: { Accept: 'application/vnd.github.raw+json' } }) : fetch(raw(path))
 
   /**
    * One file from the published tag. A 404 is the answer "it is not there" - which is a statement about
    * the release - while a thrown fetch is the answer "nobody asked", which is not.
    */
   const fetchText = async (path) => {
-    const response = await fetch(raw(path))
+    const response = await request(path)
     if (response.status === 404) return { missing: true }
     if (!response.ok) throw new Error(`${raw(path)} answered HTTP ${response.status}`)
     return { text: await response.text() }
@@ -555,7 +568,7 @@ async function main() {
   if (tag === undefined && !argv.includes('--local')) {
     throw new UsageError('pass --local, or --tag <tag> to check a published package')
   }
-  const tally = tag === undefined ? checkLocal() : await checkTag(tag, repo)
+  const tally = tag === undefined ? checkLocal() : await checkTag(tag, repo, { api: argv.includes('--api') })
   const { text, code } = summary(tally)
   console.log(`\n${text}`)
   process.exit(code)
@@ -571,7 +584,7 @@ const isEntryPoint =
 if (isEntryPoint) {
   main().catch((error) => {
     if (error instanceof UsageError) {
-      console.error(`${error.message}\nUsage: node tools/dev/release-check.mjs --local | --tag <tag> [--repo owner/name]`)
+      console.error(`${error.message}\nUsage: node tools/dev/release-check.mjs --local | --tag <tag> [--repo owner/name] [--api]`)
       process.exit(2)
     }
     console.error(`\nERROR: ${error instanceof Error ? error.message : String(error)}`)
