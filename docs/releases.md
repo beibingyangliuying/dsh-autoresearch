@@ -804,3 +804,21 @@ arXiv／Crossref 的 429／503 没有真触发过；Zotero 冷启动耗时没有
 **远端复核结果（2026-10-27）**：`release-check --tag v0.20.0 --api` 四项 `OK`——版本 0.20.0、组合不挂 MCP 服务器、peer 声明 `@beibingyangliuying/dsh-zotero: ^0.1.0`、tag 与 `main` 同为 `e8f6658`，**exit 0**。同一时刻用默认传输跑同一命令是 `UNVERIFIED`（`fetch failed`）——就是上面那条 `raw.githubusercontent.com` 不可达，不是发布件的缺陷。
 
 **tag 曾被重打过**：`v0.20.0` 第一次推的树带着 `github:` 依赖，pnpm 装不上（上面第 3 条）。它没通过过任何一次远端复核，也没有安装者，所以删掉后在 `e8f6658` 上重打——这不是"移动一个已发布版本"，是修一个从未可用的版本。
+
+## §99 · 0.20.1 发布：通道包有了自己的入口（2026-10-27）
+
+**为什么是 patch**：只是放宽 peer 范围。`@beibingyangliuying/dsh-zotero` 从 0.1.0 走到 0.2.0（新增了自己的 bundle 行与一个发现工具），`^0.1.0` 不覆盖 0.2.0，改成 `>=0.1.0 <0.3.0`。本预设的产物没有变化：仍不注册工具、不挂 MCP 行。
+
+**为什么对面发的不是 patch**：0.1.0 暴露了一个当时没被说破的事实——**纯库形态等于零注入**。它没有 `dsh.bundle`，`dsh plugin add` 只是 pnpm 装一个依赖，DSH 从不加载它；除了本预设的七条 discipline，没有任何会话知道它存在。0.2.0 让它成为 bundle：一行、一个工具 `zotero`，空参列十五个程序（各带一条能跑的示例），带 `program`+`args` 就 `execFile` 跑一个（不过 shell）。常驻是一个 schema。
+
+**两个包的关系没变**：它仍是 peer（pnpm 不允许 git 解析的子依赖），两步安装。差别在这一步现在**有实际作用**——装它就装了一个插件，而不是只放一个依赖进 profile。
+
+**实测**：
+
+- 新包 `npm test` **18/18**（新增 `plugin-selftest`：注册形状、目录与磁盘一致、路径形状的程序名被拒、库不可调用、真实跑一个程序、截断与 exit code 渲染）。
+- 本包 **10/10**；`release-check --local` PASS。
+- 用一次性 profile（`dsh plugin --profile probe add link:…`，用完删除）确认组合里出现 `id: zotero-channel`，且 dump 无 error。
+
+**仍然未做**：本包仍未进任何 registry；两个包的分发只有 GitHub。本包 `package.json` 的 `files` 字段照旧欠着。
+
+**落在何处**：本包只动 [`package.json`](../package.json)（peer 范围）、[`README.md`](../README.md)（安装 pin 与两处叙述）；外部包 `beibingyangliuying/dsh-zotero` 的 `plugin.js`、`cordis.patch.yml` 与 `tools/tests/plugin-selftest.mjs`。

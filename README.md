@@ -17,7 +17,7 @@ the package registers the preset.
 
 ```powershell
 # 1. the channel helpers first: Zotero, arXiv, bibliographic REST, discovery, journal ranking
-dsh plugin --profile web add github:beibingyangliuying/dsh-zotero#v0.1.0
+dsh plugin --profile web add github:beibingyangliuying/dsh-zotero#v0.2.0
 
 # 2. then the preset. The repository root IS the bundle, and it needs no build step.
 dsh plugin --profile web add github:beibingyangliuying/dsh-autoresearch
@@ -55,13 +55,16 @@ registers, and the row packages it mounts — is checked against the installed k
 `tools/tests/preset-selftest.mjs`, and that check is the one that catches a kernel that moved underneath it.
 
 **To install: DSH, then two packages, in this order.** `@beibingyangliuying/dsh-zotero` carries every
-external channel — eighteen Node programs, their two lazy PDF engines, and the tests that guard them.
+external channel — fifteen Node programs, their two lazy PDF engines, and the tests that guard them.
 It is a **peer** of this preset rather than a dependency, because pnpm refuses a git-resolved
-subdependency; see *Install* above for the two commands. There is no build step and no second
-toolchain: in particular no channel is a server installed and launched through `uvx`, so a Python
-environment is not part of using this preset. `@deepseek-ai/schemastery` stays a registry dependency
-because the row's configuration form needs it. The PDF engines are reached only through
-`zotero-pdf.mjs`, so they cost nothing on a request that does not read an attachment.
+subdependency; see *Install* above for the two commands. That package is also a bundle in its own
+right: outside this preset it mounts one discovery tool over those programs, which is how a session
+with any other preset can find them. Inside this preset the isolation plugin masks that tool, because
+the disciplines here address the programs directly. There is no build step and no second toolchain: in
+particular no channel is a server installed and launched through `uvx`, so a Python environment is not
+part of using this preset. `@deepseek-ai/schemastery` stays a registry dependency because the row's
+configuration form needs it. The PDF engines are reached only through `zotero-pdf.mjs`, so they cost
+nothing on a request that does not read an attachment.
 
 **The profile may be bare.** Four global toolsets are used when present and never required: the memory
 layer (`mnemon_*`), page and social reading (`read_page`, `x_search`), hash-anchored editing
@@ -98,8 +101,9 @@ subagent from it); the change applies to agents created after the switch, not to
 - **Three external channels.** A preprint index, the owner's local reference library (including
   paywalled full text), and a bibliographic-metadata channel over the free OpenAlex, Crossref and
   Unpaywall APIs. All three are **command-line programs**, not mounted servers, so an unused channel
-  costs nothing. They ship in the `@beibingyangliuying/dsh-zotero` dependency rather than in this
-  bundle — this preset supplies the disciplines that address them; see [`protocol.md`](protocol.md) §6.
+  costs nothing here. They ship in the `@beibingyangliuying/dsh-zotero` peer rather than in this
+  bundle — this preset supplies the disciplines that address them, and masks that package's own
+  discovery tool so this surface stays at zero resident cost; see [`protocol.md`](protocol.md) §6.
 - **A study scaffold.** The layout two real studies defined the same way — a scoping document, a
   non-normative literature layer, and a draft directory for section notes — with every other directory
   created by the discipline that first writes there.
