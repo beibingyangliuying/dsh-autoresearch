@@ -55,28 +55,28 @@
 
 | 通道 | 覆盖什么 | 边界 |
 |---|---|---|
-| 预印本索引 · [`tools/arxiv.mjs`](../tools/arxiv.mjs) | 检索索引、按标识符读一条记录、把整个响应收敛到摘要预算 | 一次运行只发**一个**请求（索引每三秒允许一次，绝不循环）；默认按**相关度**而非日期；**不含全文**——上游失败被拒绝打印，而不是当成一条记录打印 |
-| 跨源发现 · [`tools/scholarly.mjs`](../tools/scholarly.mjs) | 一次查询路由到 arXiv/OpenAlex/Crossref/S2/PubMed/Europe PMC/DBLP，加权 RRF 去重，`--citations` 跟引用图，`--mark-library` 标库内命中；每源失败单独报 | **每源一次**请求（PubMed 两次），不重试；S2 无 key 报 `no-key`，DBLP 默认不进路由、显式请求报 `blocked`（202 反爬）；部分结果标 `partial`；融合结果是**线索**，不是证据等级 |
-| OA 阅读 · [`tools/scholarly-read.mjs`](../tools/scholarly-read.mjs) | 按标识符取 arXiv HTML → ar5iv → arXiv PDF → PMC JATS → OpenAlex OA PDF；`--outline` / `--section` / BM25 `--query` / 分片读 | 不读付费墙；每条失败路由都点名；不缓存、不重试；HTML 5M 字符、PDF 80MB 上限；**数学标记不可当文本引用**（公式仍要渲图读） |
-| 本地参考库 · [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) 等 | 搜**全文**（默认搜摘要+笔记+附件全文，含付费墙内已持有的一篇，可排序/按条目类型/含回收站）、读一条记录（含 venue/卷期页等题录字段）、读一条笔记正文（按可读文本）、按片读附件文本、**BM25 段落检索**（摘要+笔记+全文，每条带来源与 offset）、**附件定位**（本地 path 或 web URL）、按阶梯读附件本身、看分类树、条目类型/字段 schema、**变更游标**、**按 DOI 查重**、**长笔记按自身标题清单进入**（`--headings`，带字符 offset 与该节长度）、**分类列表默认只列记录**（`--limit` 按记录计数，`--all-rows` 才逐个列成员）、**导出正式引用**（citation/bibliography/bibtex/…） | 需要桌面端参考管理器**开着**并启用本地 API——没开就先跑 [`tools/zotero-ensure.mjs`](../tools/zotero-ensure.mjs)（`ZOTERO_LOCAL_API` 指了别处时它**拒绝**启动真应用）；读不到索引就明说，而不是看起来像"这条没正文"；库不应答时**停下**，不按路径读它的数据库或存储的附件；**批注不做**（Zotero 把批注挂在 PDF 附件下，本通道只列直接 children） |
-| 书目元数据 · [`tools/metadata.mjs`](../tools/metadata.mjs) | 按 DOI / OpenAlex id 解析一条作品记录（题录、年份、venue、作者、引用数、摘要重建）、检索候选列表、看它引了谁 / 谁引了它、查是否列有免费副本、**从 doi.org 取正式引用**、**Crossref 核验（含撤稿）**、**OpenAlex related 列表**、**按刊名/DOI 转述期刊分区**（[`tools/journal-rank.mjs`](../tools/journal-rank.mjs)） | **只有元数据**：不是全文，也不给证据等级；一次运行只发**一个**请求（翻页是下一次调用）；引用数**必带来源与检索日期**；**答回来的 DOI 可能与问的那个不同**（两个都要报）；Unpaywall 那条不给联系地址就拒绝发请求；`--cite` 只收 DOI/arXiv id（PMID 先解析），注册局答 HTML 落地页时**拒绝**；期刊分区是 provider 的一次转述、**不带版本与年份**，必带 provider 与检索日期，不当作品属性 |
+| 预印本索引 · `tools/arxiv.mjs` | 检索索引、按标识符读一条记录、把整个响应收敛到摘要预算 | 一次运行只发**一个**请求（索引每三秒允许一次，绝不循环）；默认按**相关度**而非日期；**不含全文**——上游失败被拒绝打印，而不是当成一条记录打印 |
+| 跨源发现 · `tools/scholarly.mjs` | 一次查询路由到 arXiv/OpenAlex/Crossref/S2/PubMed/Europe PMC/DBLP，加权 RRF 去重，`--citations` 跟引用图，`--mark-library` 标库内命中；每源失败单独报 | **每源一次**请求（PubMed 两次），不重试；S2 无 key 报 `no-key`，DBLP 默认不进路由、显式请求报 `blocked`（202 反爬）；部分结果标 `partial`；融合结果是**线索**，不是证据等级 |
+| OA 阅读 · `tools/scholarly-read.mjs` | 按标识符取 arXiv HTML → ar5iv → arXiv PDF → PMC JATS → OpenAlex OA PDF；`--outline` / `--section` / BM25 `--query` / 分片读 | 不读付费墙；每条失败路由都点名；不缓存、不重试；HTML 5M 字符、PDF 80MB 上限；**数学标记不可当文本引用**（公式仍要渲图读） |
+| 本地参考库 · `tools/zotero-read.mjs` 等 | 搜**全文**（默认搜摘要+笔记+附件全文，含付费墙内已持有的一篇，可排序/按条目类型/含回收站）、读一条记录（含 venue/卷期页等题录字段）、读一条笔记正文（按可读文本）、按片读附件文本、**BM25 段落检索**（摘要+笔记+全文，每条带来源与 offset）、**附件定位**（本地 path 或 web URL）、按阶梯读附件本身、看分类树、条目类型/字段 schema、**变更游标**、**按 DOI 查重**、**长笔记按自身标题清单进入**（`--headings`，带字符 offset 与该节长度）、**分类列表默认只列记录**（`--limit` 按记录计数，`--all-rows` 才逐个列成员）、**导出正式引用**（citation/bibliography/bibtex/…） | 需要桌面端参考管理器**开着**并启用本地 API——没开就先跑 `tools/zotero-ensure.mjs`（`ZOTERO_LOCAL_API` 指了别处时它**拒绝**启动真应用）；读不到索引就明说，而不是看起来像"这条没正文"；库不应答时**停下**，不按路径读它的数据库或存储的附件；**批注不做**（Zotero 把批注挂在 PDF 附件下，本通道只列直接 children） |
+| 书目元数据 · `tools/metadata.mjs` | 按 DOI / OpenAlex id 解析一条作品记录（题录、年份、venue、作者、引用数、摘要重建）、检索候选列表、看它引了谁 / 谁引了它、查是否列有免费副本、**从 doi.org 取正式引用**、**Crossref 核验（含撤稿）**、**OpenAlex related 列表**、**按刊名/DOI 转述期刊分区**（`tools/journal-rank.mjs`） | **只有元数据**：不是全文，也不给证据等级；一次运行只发**一个**请求（翻页是下一次调用）；引用数**必带来源与检索日期**；**答回来的 DOI 可能与问的那个不同**（两个都要报）；Unpaywall 那条不给联系地址就拒绝发请求；`--cite` 只收 DOI/arXiv id（PMID 先解析），注册局答 HTML 落地页时**拒绝**；期刊分区是 provider 的一次转述、**不带版本与年份**，必带 provider 与检索日期，不当作品属性 |
 
-发现侧不写库：跨源检索与引用图走 [`tools/scholarly.mjs`](../tools/scholarly.mjs)，OA 正文与分节/BM25 走 [`tools/scholarly-read.mjs`](../tools/scholarly-read.mjs)，单条确认与核验走 [`tools/metadata.mjs`](../tools/metadata.mjs)，预印本记录走 [`tools/arxiv.mjs`](../tools/arxiv.mjs)，期刊分区走 [`tools/journal-rank.mjs`](../tools/journal-rank.mjs)。
+发现侧不写库：跨源检索与引用图走 `tools/scholarly.mjs`，OA 正文与分节/BM25 走 `tools/scholarly-read.mjs`，单条确认与核验走 `tools/metadata.mjs`，预印本记录走 `tools/arxiv.mjs`，期刊分区走 `tools/journal-rank.mjs`。
 
 写这一侧**一类活一件工具**，没有"万能写"（书目元数据那条通道**没有写侧**：它回答"这条作品是什么"，不往任何库里写东西）：
 
 | 管哪类活 | 入口 |
 |---|---|
-| 让库答话（没启动就启动它；起不来就说清为什么） | [`tools/zotero-ensure.mjs`](../tools/zotero-ensure.mjs) |
-| 读（检索 / 记录 / 笔记正文 / BM25 段落 / 附件定位 / 分类树 / schema / 变更 / 查重） | [`tools/zotero-read.mjs`](../tools/zotero-read.mjs) |
-| 读附件本身（文件文字层 · 论文自带目录 · 页面渲染成图；也可读一个 OA PDF URL） | [`tools/zotero-pdf.mjs`](../tools/zotero-pdf.mjs) |
-| 导出正式引用（citation / bibliography / bibtex / biblatex / ris / csljson） | [`tools/zotero-export.mjs`](../tools/zotero-export.mjs) |
-| 往库里加一条条目，并可**同时**归入分类（`--collection <key>`，一次写入而不是两次） | [`tools/zotero-write.mjs`](../tools/zotero-write.mjs) |
-| 在条目上留逐节解释笔记（`/section-N`，作者是 `/agent-note`，业主复核是 `/reviewed`）；claim / 复核 / 原地改写 / 退休 / 永久删除（仅 `/retired`）；写失败分 0/1/3 三种答案 | [`tools/zotero-section-note.mjs`](../tools/zotero-section-note.mjs) |
-| 改条目的字段与标签 | [`tools/zotero-edit.mjs`](../tools/zotero-edit.mjs) |
-| 建 / 改名 / 归档分类 | [`tools/zotero-collection.mjs`](../tools/zotero-collection.mjs) |
-| 把"存储型附件"转成链接附件（增量） | [`tools/zotero-link-attachments.mjs`](../tools/zotero-link-attachments.mjs) |
-| 整库迁移（**你在应用里自己跑**） | [`tools/owner/zotero-link-snippet.js`](../tools/owner/zotero-link-snippet.js) |
+| 让库答话（没启动就启动它；起不来就说清为什么） | `tools/zotero-ensure.mjs` |
+| 读（检索 / 记录 / 笔记正文 / BM25 段落 / 附件定位 / 分类树 / schema / 变更 / 查重） | `tools/zotero-read.mjs` |
+| 读附件本身（文件文字层 · 论文自带目录 · 页面渲染成图；也可读一个 OA PDF URL） | `tools/zotero-pdf.mjs` |
+| 导出正式引用（citation / bibliography / bibtex / biblatex / ris / csljson） | `tools/zotero-export.mjs` |
+| 往库里加一条条目，并可**同时**归入分类（`--collection <key>`，一次写入而不是两次） | `tools/zotero-write.mjs` |
+| 在条目上留逐节解释笔记（`/section-N`，作者是 `/agent-note`，业主复核是 `/reviewed`）；claim / 复核 / 原地改写 / 退休 / 永久删除（仅 `/retired`）；写失败分 0/1/3 三种答案 | `tools/zotero-section-note.mjs` |
+| 改条目的字段与标签 | `tools/zotero-edit.mjs` |
+| 建 / 改名 / 归档分类 | `tools/zotero-collection.mjs` |
+| 把"存储型附件"转成链接附件（增量） | `tools/zotero-link-attachments.mjs` |
+| 整库迁移（**你在应用里自己跑**） | `tools/owner/zotero-link-snippet.js` |
 
 每个 helper **能做什么、明确拒绝什么、撞上了怎么办**，逐条列在 [`docs/toolchain.md`](toolchain.md)：
 那是一份**生成物**（`tools/dev/toolchain-page.mjs`），每一行都挂着一条能被机械校验的出处，所以它不会比它描述的
