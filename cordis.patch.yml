@@ -22,13 +22,13 @@
 #     do not arrive on their own. A row deliberately absent gets a line here and a guard in
 #     tools/preset-selftest.mjs (#90 of docs/decisions.md).
 #   - `skill-filesystem` is REQUIRED here: without it, the user skill directory and `<workspace>/.agents/skills/` are not loaded — the disciplines of THIS preset are shipped and registered by the `autoresearch-skills` row, while this row still supplies project-level ones.
-#   - NO MCP server is mounted. All three external channels ship as command-line helpers named by the
-#     disciplines (tools/arxiv.mjs, tools/metadata.mjs and tools/zotero-*.mjs), which cost nothing on a request that does
-#     not use them. The two rows they replaced cost 21,551 tokens of prompt on EVERY request for 54
-#     tools, of which the disciplines called a handful; the DSH MCP client has no field that filters
-#     a server's tool list, so the only lever was not mounting the row. See #29 and #31 of
-#     docs/decisions.md, and do not add either row back - the preset's own self-test fails if one
-#     reappears.
+#   - NO MCP server is mounted. All three external channels are command-line helpers shipped in the
+#     `@beibingyangliuying/dsh-zotero` dependency and named by the disciplines (arxiv.mjs,
+#     metadata.mjs and the zotero-*.mjs family), which cost nothing on a request that does not use
+#     them. The two rows they replaced cost 21,551 tokens of prompt on EVERY request for 54 tools, of
+#     which the disciplines called a handful; the DSH MCP client has no field that filters a server's
+#     tool list, so the only lever was not mounting the row. See #29 and #31 of docs/decisions.md,
+#     and do not add either row back - the preset's own self-test fails if one reappears.
 #   - `isolation.js` masks the profile's OTHER global tools (univer, config-manager,
 #     code-review, ...), keeping only the ones this preset deliberately retains.
 # Design record: ../docs/overview.md (what it is) and ../docs/decisions.md (why).
@@ -249,11 +249,13 @@
           # client's Config is a closed field list with no include/exclude, and `syncTools` registers
           # every tool a server lists - so the only lever was not mounting the row.
           #
-          # The channels are now tools/arxiv.mjs and tools/zotero-read.mjs / -write.mjs / -note.mjs /
-          # -edit.mjs / -collection.mjs / -link-attachments.mjs: zero resident cost, one change per
-          # invocation, and a dry run unless --write is given. Reference-library writes are gated by
-          # the owner in the reference manager, once per library rather than once per write
-          # (protocol.md Revision 10); how a write may be authorized is stated by autoresearch-contact.
+          # The channels are command-line programs in the `@beibingyangliuying/dsh-zotero` dependency:
+          # arxiv.mjs and metadata.mjs for the two metadata channels, and the zotero-read / -write /
+          # -section-note / -edit / -collection / -link-attachments family for the reference library.
+          # Zero resident cost, one change per invocation, and a dry run unless --write is given.
+          # Reference-library writes are gated by the owner in the reference manager, once per library
+          # rather than once per write (protocol.md Revision 10); how a write may be authorized is
+          # stated by autoresearch-contact.
           #
           # Do NOT add either row back: tools/preset-selftest.mjs fails when one reappears. See #29
           # (preprint) and #31 (reference library) of docs/decisions.md for the measurements.
